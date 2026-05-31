@@ -19,18 +19,19 @@ Work through: **Part 1** (read the chart) → **Part 2** (HTF context) → **Par
 ### Step 2: Identify your scenario
 | MTF state | Action |
 |-----------|--------|
-| M30+M15 both fly, same direction | Enter on M5 FLAT→UP or FLAT→DN transition |
-| M30 fly, M15/M5 shrinking | Shrink path entry — M5 transition still the trigger |
-| Only M5 shrinking | **Wait** — M5 alone is noise; M15 must also compress |
+| M30+M15 both fly, same direction | Enter on M15 FLAT→UP or FLAT→DN transition |
+| M30 fly, M15 shrinking | Shrink path entry — M15 transition is the trigger |
+| Only M5 shrinking | **Ignore** — M5 is noise; not used as trigger (V30.02+) |
 | H1/M30 SQZ, price at outer band | Cascade entry (G0b-TOUCH) if all filters pass |
 | M15+M30 both SQZ | **No entry** — G0b-PINK exits all open positions |
 | M30 mid≥3 AND M15 mid≥3 | **No new entries** — G0 or G0-HOLD depending on H1 |
 
-### Step 3: Entry trigger — always M5 transition
-The entry signal is **always a BBMidTrend change on M5**:
-- `FLAT(3) → UP(1)` or `FLAT(3) → DN(2)` → base quality 70
-- `UP(1) → DN(2)` or `DN(2) → UP(1)` (reversal) → base quality 75
-- M15 confirming fly stage → +10 to +15 quality boost
+### Step 3: Entry trigger — M15 transition (V30.02+)
+The entry signal is a **BBMidTrend change on M15** (EA runs on M5 chart, fires on M15 bar close):
+- `FLAT(3) → UP(1)` or `FLAT(3) → DN(2)` → base quality 80
+- `UP(1) → DN(2)` or `DN(2) → UP(1)` (reversal) → base quality 80
+- M30 confirming fly stage (511/512 for BUY, 521/522 for SELL) → +10 to +15 quality boost
+- Without M30 confirm on FLAT→UP/DN, quality capped at 59 (blocked by G5-WEAK)
 - Quality ≥ 90 → 1.0× size | ≥ 75 → 0.75× | ≥ 60 → 0.5× | ≥ 45 → 0.25× | < 45 → skip
 
 ### Step 4: Know your price target before entering
@@ -53,7 +54,7 @@ Block gates fire **before** the entry. If you see a DimGray or DarkOrange label,
 ### Step 6: Exit rules
 | Trigger | Gate | Act |
 |---------|------|-----|
-| M5 UP→FLAT or DN→FLAT | G5-FADE | 7 — exit all |
+| M15 UP→FLAT or DN→FLAT | G5-FADE | 7 — exit all |
 | M30+M15+H1 all mid≥3 | G0 | 7 — exit all |
 | M15+M30 both SQZ | G0b-PINK | 7 — exit all |
 | Price hits outer band (cascade context) | G8-BNDTGT | 7 — exit all |
@@ -112,8 +113,8 @@ Full backtest period for XAUUSD — 3 macro phases visible:
 
 | Timeframe | Color | BB_datas[] | Role |
 |-----------|-------|------------|------|
-| M5 | Aqua / Cyan | [0] | Entry trigger — fastest |
-| M15 | Goldenrod | [1] | Entry alignment |
+| M5 | Aqua / Cyan | [0] | Data only — no longer entry trigger (V30.02+) |
+| M15 | Goldenrod | [1] | Entry trigger (BBdiffMidTrend transition) V30.02+ |
 | M30 | GreenYellow | [2] | Primary trend driver |
 | H1 | Red | [3] | Chain anchor |
 | H4 | Yellow | [4] | Macro bias filter |

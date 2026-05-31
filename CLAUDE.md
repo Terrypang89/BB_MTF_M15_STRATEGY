@@ -28,12 +28,12 @@ BB_datas[6] = W1   — ultra-macro context (reference only)
 BB_datas[5] = D1   — daily macro context
 BB_datas[4] = H4   — macro bias filter (MAX_TF)
 BB_datas[3] = H1   — chain anchor + G0 sideway confirm
-BB_datas[2] = M30  — primary trend driver
-BB_datas[1] = M15  — entry quality filter + entry alignment gate
-BB_datas[0] = M5   — entry trigger (BBdiffMidTrend transition)
+BB_datas[2] = M30  — primary trend driver + confirmation for M15 trigger quality
+BB_datas[1] = M15  — entry trigger (BBdiffMidTrend transition) V30.02+
+BB_datas[0] = M5   — data only; no longer the entry trigger (too noisy)
 ```
 
-The **M5 transition** is the entry signal. Both M30 AND M15 stage+midtrend must agree with direction before entry is allowed. Each gate in `Trade_Strategy()` is evaluated in cascade order — any failing gate stops the flow for that bar.
+The **M15 transition** is the entry signal (V30.02+). The EA runs on M5 chart period but only fires entries on M15 bar closes. M30 stage+midtrend must agree with direction before entry is allowed. Each gate in `Trade_Strategy()` is evaluated in cascade order — any failing gate stops the flow for that bar.
 
 ### Core Data Types per TF
 

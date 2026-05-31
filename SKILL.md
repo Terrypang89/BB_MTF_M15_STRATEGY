@@ -34,16 +34,17 @@ Timeframe   Role                          Index in BB_datas[]
 ─────────── ───────────────────────────── ──────────────────
 W1          Ultra-macro context           6
 D1          Daily macro context           5
-H4          Macro bias filter (v22.12+)   4
+H4          Macro bias filter             4
 H1          Chain anchor + G0 sideway     3
-M30         Mid TF — primary trend        2
-M15         Mid TF — entry alignment      1   ← full stage+mid check
-M15         Entry trigger (transition)    1
+M30         Mid TF — primary trend + M15 confirm  2
+M15         Entry trigger (BBdiffMidTrend transition) V30.02+  1
+M5          Data only — no longer entry trigger (too noisy)    0
 ATRSL       Dynamic stop (dir 0/1/2)      separate struct
 ```
 
-**Key rule:** M15 is a full mid-timeframe, not just a confirmation flag.
-Both M30 AND M15 stage+midtrend must be checked and must agree before entry.
+**Key rule (V30.02+):** M15 BBdiffMidTrend transition is the entry signal.
+EA runs on M5 chart period but entries only fire on M15 bar closes.
+M30 must confirm direction before M15 transition quality reaches ≥60.
 
 ---
 
@@ -98,20 +99,18 @@ UP → FLAT fading    prev==1 && cur==3              0       REDUCE longs 50%
 DN → FLAT fading    prev==2 && cur==3              0       REDUCE shorts 50%
 ```
 
-**Quality boosters (+10 each) — M15 requires BOTH stage AND midtrend:**
+**Quality boosters — M15 trigger requires M30 confirmation:**
 ```
-+10  M5 midband rising (BUY) or falling (SELL)
-+10  M5 close above midband (BUY) or below midband (SELL)
++10  M15 midband rising (BUY) or falling (SELL)
++10  M15 close above midband (BUY) or below midband (SELL)
 
-FLAT→UP  BUY  boost: M15_stage==511 AND M15_mid==1   (+10)
-FLAT→DN  SELL boost: M15_stage==521 AND M15_mid==2   (+10)
-FLAT→SIDEUP  BUY  boost: M15_stage==511 AND M15_mid==1  (+20)
-FLAT→SIDEDN  SELL boost: M15_stage==521 AND M15_mid==2  (+20)
-UP→DN  SELL confirm: M15_stage∈{521,522} AND M15_mid==2 (+15)
-DN→UP  BUY  confirm: M15_stage∈{511,512} AND M15_mid==1 (+15)
+FLAT→UP  BUY  boost: M30_stage==511 AND M30_mid==1   (+10)
+FLAT→DN  SELL boost: M30_stage==521 AND M30_mid==2   (+10)
+UP→DN  SELL confirm: M30_stage∈{521,522} AND M30_mid==2 (+15)
+DN→UP  BUY  confirm: M30_stage∈{511,512} AND M30_mid==1 (+15)
 
-Rationale: midtrend alone is insufficient — M15 must also be in
-active fly expand (511/521) to confirm the M5 transition signal.
+FLAT→UP/DN without M30 confirm → quality capped at 59 → blocked by G5-WEAK.
+Rationale: M15 is the trigger; M30 must be in active fly to confirm conviction.
 ```
 
 **Quality → size:**
@@ -284,6 +283,32 @@ See `references/backtest_chart_analysis.md` Section 10 for the full cascade tabl
 
 ## 11. MQL4 Code Patterns
 
+### PredictNextTrend() — V30.02
+```cpp
+// Returns directional bias for next bar using BBW_stage + BB_diffMid_Trend across M15→W1.
+// Called each bar inside Trade_Strategy() before G0 gate; draws label on chart automatically.
+TrendPrediction PredictNextTrend(BB_MTF_Data_struct &BB_datas[])
+
+struct TrendPrediction {
+   int    direction;   // 1=BUY, 2=SELL, 0=NEUTRAL  (threshold ±22 of ±88 max)
+   int    confidence;  // 25 / 60 / 80 / 95
+   bool   reversal;    // HTF total ≥18 AND LTF+MTF ≤-12 (or mirrored) → counter-trend
+   int    htf_total;   // H4×3 + D1×2 + W1×1  (max ±48)
+   int    mtf_total;   // H1×2 + M30×2         (max ±32)
+   int    ltf_total;   // M15×1                 (max ±8)
+   string info;        // "[PRED] BUY conf:80 htf:24 mtf:16 ltf:3 tot:43"
+};
+// Per-TF score [-8,+8]: stage_bias + mid_bias + stage_transition_bonus + mid_transition_bonus
+// Chart label colors: Lime=BUY, Aqua=reversal BUY, OrangeRed=SELL, Orange=reversal SELL, Gray=NEUTRAL
+// Label placed at M30 midband every bar.
+```
+
+### TF_DirectionScore() key transitions
+```
+Stage transition bonus:  SQZ→fly ±3, fly→fly(reversal) ±3, shrink→fly ±2, fly→shrink ±1
+Mid transition bonus:    dn→up/up→dn reversal ±3, flat→up/dn ±2, fading ±1, flat→side ±1
+```
+
 ### Trade_Strategy() signature
 ```cpp
 void Trade_Strategy(
@@ -392,16 +417,16 @@ Read these when you need full detail beyond this overview:
 
 | File | Contents | When to read |
 |------|----------|--------------|
-| `scripts/TofyTrade4.mqh` | Full EA include file v22.38 — latest production code | When writing or reviewing MQL4/5 code |
+| `scripts/TofyTrade4.mqh` | Full EA include file v30.02 — latest production code | When writing or reviewing MQL4/5 code |
 | `references/backtest_chart_analysis.md` | Visual interpretation guide for backtest chart screenshots — BB color mapping, BBW_stage visual decode, ATRSL reading, gate label colors, 9 annotated reference images with analysis | When analyzing an attached chart image or explaining what EA chart elements look like visually |
 
 ---
 
 ## 15. Backtest Analysis Workflow — `/bb-mtf-strategy @path/to/version`
 
-**Trigger:** User runs `/bb-mtf-strategy @references/Backtest_data/V22.XX` or pastes backtest data and says "run analysis".
+**Trigger:** User runs `/bb-mtf-strategy @references/Backtest_data/V30.XX` (or with `_M15`/`_M30` suffix), pastes backtest data, or says "run analysis".
 
-Auto-detect `VER` from path (e.g., `V22.38`). Auto-detect `PREV_VER` as the immediately preceding version with same test period from `references/version_profit.md`.
+Auto-detect `VER` from path (e.g., `V30.01`). Auto-detect `PREV_VER` as the immediately preceding version with same test period from `references/version_profit.md`.
 
 **Goal:** Each new version must achieve **higher net profit** than PREV_VER. Every deal loss < −10 USD is a fix candidate — prioritize by highest absolute loss first.
 
@@ -415,7 +440,7 @@ Step 1  Net profit comparison              → update version_profit.md + root-c
 Step 2  Deal loss comparison               → update version_profit.md
 Step 3  Set fix priorities                 (ranked list, confirm net profit goal)
 Step 4  Root cause analysis                → update root-cause-analysis.md
-Step 5  Code fix                           → edit TofyTrade3.mqh + bump version
+Step 5  Code fix                           → edit TofyTrade4.mqh + bump version
 Step 6  Fix verification                   (confirm gate fires, check over-filtering)
 Step 7  Update Task_force.md              (targeted additions only)
 Step 8  Update all related reference files (table in Step 8 below)
@@ -540,7 +565,7 @@ Update Summary of Fixes table: new RCN=OPEN; previously fixed RCs=FIXED.
    - **Shrink (GetShrinkDecision)**: after `G4e-H4OPP` / `G4j-D1OPP`, before `return result`
    - **Fly H4-SQZ sub-path**: inside `else if(H4_in_sqz)`, after last G4X gate
 3. Key invariants: block BUY when opposing mid ∈ {2,4}; block SELL when opposing mid ∈ {1,5}; never block on mid=3 alone unless both TFs are flat (G0b-SQZLOCK pattern)
-4. Bump `#property version "22.XX"` → next version
+4. Bump `#property version "30.XX"` → next version
 5. Add new gate label to the `GATE_CLR_*` comment line
 
 > Fix only the highest-priority RC per cycle. Verify net improvement (Step 6) before committing.
@@ -580,7 +605,7 @@ Update Summary of Fixes table: new RCN=OPEN; previously fixed RCs=FIXED.
 | `references/fix.md` | Add `## vNEW.XX — [gate name] (RCNN)` section before previous version section; include root cause, code diff, expected result |
 | `references/root-cause-analysis.md` | Mark new RCs FIXED; update version comparison table; add vNEW.XX note to RC detail section |
 | `CLAUDE.md` | Bump source files version; add `## vNEW.XX Changes` section; update GATE_CLR line |
-| `SKILL.md` (this file) | Section 13: bump `TofyTrade3.mqh` version line; Section 14: update only if SOP changes |
+| `SKILL.md` (this file) | Section 13: bump `TofyTrade4.mqh` version line; Section 14: update only if SOP changes |
 | `references/decision_flow.md` | Add new gate to the gate-by-gate logic section for its path (cascade / shrink / fly) |
 | `references/log_matrix.md` | Add new gate row with its TRADEINFO key attributes |
 
@@ -593,7 +618,7 @@ For architecture diagrams: insert at the same logical position as in the code. M
 > **No reads or updates — commit all staged changes**
 
 ```bash
-git add scripts/TofyTrade3.mqh CLAUDE.md SKILL.md \
+git add scripts/TofyTrade4.mqh CLAUDE.md SKILL.md \
         references/fix.md references/root-cause-analysis.md \
         references/Task_force.md references/version_profit.md \
         references/decision_flow.md references/log_matrix.md \
