@@ -73,38 +73,7 @@ for d in ver_names_m30:
 vlist = sorted(versions.keys())
 
 periods = {
-    'V22.22': 'Jan-Apr 2026',
-    'V22.23': 'Jan 2026 only',
-    'V22.24': 'Jan-Apr 2026',
-    'V22.25': 'Jan-Apr 2026',
-    'V22.26': 'Jan-Apr 2026',
-    'V22.27': 'Jan-Apr 2026',
-    'V22.28': 'Jan-Apr 2026',
-    'V22.29': 'Jan-Apr 2026',
-    'V22.30': 'Jan-Apr 2026',
-    'V22.31': 'Jan-Apr 2026',
-    'V22.32': 'Jan-Apr 2026',
-    'V22.33': 'Jan-Apr 2026',
-    'V22.34': 'Jan-Apr 2026',
-    'V22.35': 'Jan-Apr 2026',
-    'V22.36': 'Jan-Apr 2026',
-    'V22.37': 'Jan-Apr 2026',
-    'V22.38': 'Jan-Apr 2026',
-    'V22.39': 'Jan-Apr 2026',
-    'V22.40': 'Jan-Apr 2026',
-    'V22.41': 'Jan-Apr 2026',
-    'V22.42': 'Jan-Apr 2026',
-    'V22.43': 'Jan-Apr 2026',
-    'V22.45': 'Jan-Apr 2026',
-    'V22.46': 'Jan-Apr 2026',
-    'V22.47': 'Jan-Apr 2026',
-    # multi-period variants (chart period, not test period)
-    'V22.41_M15': 'Jan-Apr 2026',
-    'V22.41_M30': 'Jan-Apr 2026',
-    'V22.42_M15': 'Jan-Apr 2026',
-    'V22.42_M30': 'Jan-Apr 2026',
-    'V22.46_M15': 'Jan-Apr 2026',
-    'V22.46_M30': 'Jan-Apr 2026',
+    'V30.01': 'Jan-Apr 2026',
 }
 
 # Collect all timestamps where any version had a loss < -10
