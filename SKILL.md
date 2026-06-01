@@ -34,16 +34,17 @@ Timeframe   Role                          Index in BB_datas[]
 ─────────── ───────────────────────────── ──────────────────
 W1          Ultra-macro context           6
 D1          Daily macro context           5
-H4          Macro bias filter (v22.12+)   4
+H4          Macro bias filter             4
 H1          Chain anchor + G0 sideway     3
-M30         Mid TF — primary trend        2
-M15         Mid TF — entry alignment      1   ← full stage+mid check
-M15         Entry trigger (transition)    1
+M30         Mid TF — primary trend + M15 confirm  2
+M15         Entry trigger (BBdiffMidTrend transition) V30.02+  1
+M5          Data only — no longer entry trigger (too noisy)    0
 ATRSL       Dynamic stop (dir 0/1/2)      separate struct
 ```
 
-**Key rule:** M15 is a full mid-timeframe, not just a confirmation flag.
-Both M30 AND M15 stage+midtrend must be checked and must agree before entry.
+**Key rule (V30.02+):** M15 BBdiffMidTrend transition is the entry signal.
+EA runs on M5 chart period but entries only fire on M15 bar closes.
+M30 must confirm direction before M15 transition quality reaches ≥60.
 
 ---
 
@@ -66,7 +67,7 @@ Code    Name                  BB Bands Behaviour         Trade Bias
 
 ---
 
-## 3. BBDiffMidTrend Values
+## 3. BB_DiffMid_Trend Values
 
 ```
 Value   Name                Description
@@ -80,9 +81,9 @@ Value   Name                Description
 
 ---
 
-## 4. M5 Midtrend Transition — Entry Trigger
+## 4. M15 diffMidtrend Transition — Entry Trigger
 
-The precise entry signal is a **BBMidTrend transition on M5**.
+The precise entry signal is a **BBdiffMidTrend transition on M15**.
 Read across `LA` (current), `LA_1` (prev), `LA_2` (prev-2).
 
 ```
@@ -98,20 +99,18 @@ UP → FLAT fading    prev==1 && cur==3              0       REDUCE longs 50%
 DN → FLAT fading    prev==2 && cur==3              0       REDUCE shorts 50%
 ```
 
-**Quality boosters (+10 each) — M15 requires BOTH stage AND midtrend:**
+**Quality boosters — M15 trigger requires M30 confirmation:**
 ```
-+10  M5 midband rising (BUY) or falling (SELL)
-+10  M5 close above midband (BUY) or below midband (SELL)
++10  M15 midband rising (BUY) or falling (SELL)
++10  M15 close above midband (BUY) or below midband (SELL)
 
-FLAT→UP  BUY  boost: M15_stage==511 AND M15_mid==1   (+10)
-FLAT→DN  SELL boost: M15_stage==521 AND M15_mid==2   (+10)
-FLAT→SIDEUP  BUY  boost: M15_stage==511 AND M15_mid==1  (+20)
-FLAT→SIDEDN  SELL boost: M15_stage==521 AND M15_mid==2  (+20)
-UP→DN  SELL confirm: M15_stage∈{521,522} AND M15_mid==2 (+15)
-DN→UP  BUY  confirm: M15_stage∈{511,512} AND M15_mid==1 (+15)
+FLAT→UP  BUY  boost: M30_stage==511 AND M30_mid==1   (+10)
+FLAT→DN  SELL boost: M30_stage==521 AND M30_mid==2   (+10)
+UP→DN  SELL confirm: M30_stage∈{521,522} AND M30_mid==2 (+15)
+DN→UP  BUY  confirm: M30_stage∈{511,512} AND M30_mid==1 (+15)
 
-Rationale: midtrend alone is insufficient — M15 must also be in
-active fly expand (511/521) to confirm the M5 transition signal.
+FLAT→UP/DN without M30 confirm → quality capped at 59 → blocked by G5-WEAK.
+Rationale: M15 is the trigger; M30 must be in active fly to confirm conviction.
 ```
 
 **Quality → size:**
@@ -123,7 +122,7 @@ active fly expand (511/521) to confirm the M5 transition signal.
 
 ## 5. Trade_Act Quick Map
 
-**v22.x production values (only these 4 are set by Trade_Strategy()):**
+**v30.x production values (only these 4 are set by Trade_Strategy()):**
 
 ```
 act  Name                    Condition
@@ -138,65 +137,10 @@ Values 3, 4, 5, 6, 11, 12 exist in the enum but are **not set** by Trade_Strateg
 
 > Version changelog (v22.11–v22.38): see `CLAUDE.md` and `references/fix.md`.
 
-**Gate Labels (current):**
-```
-[G0d-COOL] N       Post-exit cooldown N bars remaining      → act=0  (DimGray)
-[PHASE2-BUY]       Pending reversal confirmed BUY           → act=1  (Lime)
-[PHASE2-SELL]      Pending reversal confirmed SELL          → act=2  (OrangeRed)
-[PHASE2-WAIT]      Pending, MIN_HOLD_BARS not elapsed       → act=0  (Yellow)
-[PHASE2-CANCEL]    Pending cancelled (G0/G0c would fire)    → act=0  (DimGray)
-[G0]               M30+M15+H1 all sideways                  → act=7  (Crimson)
-[G0-HOLD]          M30+M15 sideways, H1 trending            → act=0  (DimGray)
-[G0b-PINK]         M15+M30 both SQZ (cascade pink zone)     → act=7  (Magenta)
-[G0b-ATRSL]        Cascade: ATRSL opposes band-touch dir    → act=0  (DimGray)
-[G0b-M15OPP]       Cascade: M15 opposing fly/shrink/SQZ     → act=0  (DimGray)
-[G0b-H4OPP]        Cascade: H4 opposing fly/shrink          → act=0  (DarkOrange)
-[G0b-M30OPP]       Cascade: M30 opposing fly/shrink (incl. 523 flat mid v22.29) → act=0 (DimGray)
-[G0b-SQZLOCK]      Cascade: H1+M30 both SQZ, both mid==3   → act=0  (Magenta)
-[G0b-TOUCH]        Cascade band touch entry                 → act=1/2 (Lime/OrangeRed)
-[G0b-WAIT]         Cascade active, no touch yet             → act=0  (Yellow)
-[G0c-SQZLOCK]      H1_SQZ + M30_cmp or M15_SQZ             → act=0  (Magenta)
-[H4-OPPOSE]        H4 opposing trade direction              → act=0  (DarkOrange)
-[H4-SQZ]           H4 SQZ: blocks fly if M5mid not confirming (v22.23) → act=0/cont (DarkOrange)
-[G1-OK]            M30 or M15 midtrend confirms             → cont.
-[G1-FAIL]          Neither M30 nor M15 confirms             → act=0  (DimGray)
-[G4-BLOCK]         M15 hard conflict (clear mid==1/2 only)  → act=0  (Red)
-[G4b-H1OPP]        Shrink: H1 full-fly opposing M30 dir     → act=0  (DimGray)
-[G4c-M15OPP]       Shrink: M15 opposing fly/shrink (523/513 v22.24) → act=0 (DimGray)
-[G4d-M30SID]       Shrink: M30 flat + M15 opposing (v22.22) → act=0 (DimGray)
-[G4e-H4OPP]        Shrink: H4 macro opposing fly/shrink     → act=0  (DimGray)
-[G4f-M30OPP]       Shrink: M30 fly/shrink/SQZ opposing (v22.26, SQZ v22.27) → act=0 (DimGray)
-[G4g-H1H4SQZ]     Fly H4-SQZ: H4+H1 both SQZ double-compressed → act=0 (DimGray)
-[G4h-H4M30SQZ]    Fly H4-SQZ: H4+M30 both SQZ macro+mid compressed → act=0 (DimGray)
-[G4i-H4M30FLY]    Fly H4-SQZ: M30 opposing committed fly → act=0  (DimGray)
-[G4j-D1OPP]       H4-SQZ contexts: D1 opposing committed fly → act=0 (DimGray)
-[G0b-H1SQZDN]     Cascade: H1-SQZ + opposing mid (4 vs BUY, 5 vs SELL, mid=2 v22.38) → act=0 (DimGray)
-[G0e-MAXLOSS]      Emergency exit: float profit < -$50    → act=7  (Crimson)
-[G8-BNDTGT]        Cascade band target: lowest fly TF outer band touch → act=7 (Crimson)
-[G5-FADE]          M5 UP/DN→FLAT fading                    → act=7  (Crimson)
-[G6-LOAD]          Midline SQZ loading, wait M5 break      → act=0  (Gold)
-[G6-ENTRY]         Midline SQZ entry fires                  → act=1/2 (Gold)
-[G6-BUY]           Shrink BUY entry                        → act=1  (Lime)
-[G6-SELL]          Shrink SELL entry                       → act=2  (OrangeRed)
-[G6-REV]           Shrink reversal                         → act=7  (Crimson)
-[PHASE1-BUY]       Reversal to BUY intercepted (close only) → act=7  (Yellow)
-[PHASE1-SELL]      Reversal to SELL intercepted (close only)→ act=7  (Yellow)
-[G7-H1OPP]         Cases 3/4 breakout blocked by H1 opposing fly → act=0 (DimGray)
-[G7-NEUTRAL]       Fell through all gates                   → act=0  (DimGray)
-[G7-NOCHAIN]       M5-only chain in breakout/sideway context → act=0 (DimGray)
-[G7-SUPPRESSED]    Lots below SYMBOL_VOLUME_MIN             → act=0  (DimGray)
-[G7-TOOSOON]       Within MIN_HOLD_BARS of last entry       → act=0  (DimGray)
-```
-
-**Pending Fix D:**
-```
-Fix D: Profit lock before reversal — if open profit >= PROFIT_LOCK_PIPS (15 pts)
-       and reversal fires → close only (act=7), no forced counter-trade.
-```
-
----
 
 ## 6. Decision Gates (top-down on each new bar)
+
+
 
 ### ⚠️ Gate 0 — M30 + M15 Dual Sideway EXIT (HIGHEST PRIORITY)
 ```
@@ -210,135 +154,37 @@ Rationale: both mid TFs lost directional conviction. No trend = no position.
 Check at very top of Trade_Strategy() before any other logic.
 
 ### Gate 1 — ATRSL Direction Block (Shrink/Cascade only — NOT during normal fly)
-> **v22.07:** During normal fly (H1/M30 in 511/512/521/522), ATRSL is used for
-> **stop placement only**. M5 may briefly squeeze (noise) and ATRSL lags.
-> Use M30 + M15 midtrend as trend reference instead.
-> Gate 1 ATRSL block still applies in cascade band touch path.
-```
-APPLIES only when M5 BBW_stage ∈ {511, 512, 521, 522}  (fly expanding)
-SKIPPED when M5 BBW_stage ∈ {513, 523}                 (shrink)
-SKIPPED when M5 BBW_stage ∈ {400–499}                  (SQZ)
-SKIPPED when M5 BBW_stage ∈ {200, 300, 0}              (other)
 
-When active:
-  ATRSL dir==1 (downtrend) AND intending BUY  → Trade_act=0 (block — old trail, no reversal yet)
-  ATRSL dir==0 (uptrend) AND intending SELL → Trade_act=0 (block — old trail, no reversal yet)
-
-Rationale:
-  During shrink/SQZ the ATRSL stop is still trailing from a prior fly.
-  Blocking new entries against it would kill valid breakout and transition signals.
-  Only enforce the block when M5 is actively expanding in the opposite direction
-  — that is a genuine trend conflict, not just a lagging stop level.
-```
+---
 
 ### Gate 2 — H1 Classification
-```
-511/512 mid=1  → BUY bias  → proceed
-521/522 mid=2  → SELL bias → proceed
-513/523        → Shrink path (see Section 7)
-400-499        → SQZ/Breakout path (see Section 8)
-200/300/0      → Stand aside
-```
-
+---
 ### Gate 3 — M30 Stage vs H1 Alignment
-```
-H1 BUY + M30=511/512  → Full alignment, size×1.0
-H1 BUY + M30=513/523  → M30 shrinking, size×0.75
-H1 BUY + M30=400-499  → M30 in SQZ, size×0.5
-H1 BUY + M30 SELL     → Conflict → WAIT
-H1 SELL mirror rules apply symmetrically
-```
-
+---
 ### Gate 4 — M15 Stage Check (full mid-TF)
-```
-M15=511/512 mid=1/5  → BUY aligned  → size maintained
-M15=521/522 mid=2/4  → SELL aligned → size maintained
-M15=513/523 mid=1    → Shrinking but uptrend → size×0.75
-M15=513/523 mid=2    → Shrinking but downtrend → size×0.75
-M15=513/523 mid=3    → Shrinking + flat → size×0.5
-M15=400-499          → SQZ, pioneer signal possible → size×0.75
-M15 opposes M30      → Conflict → WAIT (hard block)
-```
 
-### Gate 5 — M5 Midtrend Transition
+### Gate 5 — M15 diffMidtrend Transition
 ```
 See Section 4. Must detect FLAT→1 or FLAT→2 (or direct reversal) to enter.
 M5 flat (cur==3) → no new entry regardless of higher TFs.
 ```
 
+---
+
 ### Gate 6 — Shrink Depth Penalty
-```
-No shrink               → size × 1.0
-M15 only shrink         → size × 0.75
-M30 only shrink         → size × 0.75
-H1 only shrink          → size × 0.75
-M30 + H1 double shrink  → size × 0.50
-All 3 shrink            → size × 0.25
-HTF driving LTF sideway → additional × 0.5
-```
+
+---
 
 ### Gate 7 — Final Size & Suppression
-```
-Final lots = baseLot × qualityMulti × shrinkPenalty
-Round to SYMBOL_VOLUME_STEP
-If final lots < SYMBOL_VOLUME_MIN → suppress (act = 0)
-```
 
 ---
 
 ## 6. H4 Fly Scenarios (quick lookup)
 
-| H1      | M30     | M15     | M15 midtrend | Action | Size   |
-|---------|---------|---------|-------------|--------|--------|
-| 511/512 | 511/512 | 511/512 | 1 (up)      | BUY    | 1.0×   |
-| 511/512 | 511/512 | 511/512 | 5 (side-up) | BUY    | 1.0×   |
-| 511/512 | 511/512 | 511/512 | 3 (flat)    | WAIT   | 0×     |
-| 511/512 | 511/512 | 513/523 | FLAT→1      | BUY    | 0.75×  |
-| 511/512 | 511/512 | 400-499 | FLAT→1      | BUY    | 0.75×  |
-| 513/523 | 
-| 511/512 | 511/512 | 521/522 | any         | WAIT   | 0×     |
-| 521/522 | 521/522 | 521/522 | 2 (down)    | SELL   | 1.0×   |
-| 521/522 | 521/522 | 521/522 | 4 (side-dn) | SELL   | 1.0×   |
-| 521/522 | 521/522 | 521/522 | 3 (flat)    | WAIT   | 0×     |
-| 521/522 | 521/522 | 513/523 | FLAT→2      | SELL   | 0.75×  |
-
-> For full 79-scenario table → see `references/scenarios.md`
-
 ---
 
 ## 7. Fly Shrink Handling
 
-When M5, H1, M30, or M15 = 513/523:
-- That TF's BB is contracting — midband signal unreliable for that TF
-- **M5 midtrend is the primary directional proxy** during any shrink
-- Entry only on M5 transition event (FLAT→UP or FLAT→DN)
-- Apply shrink depth penalty from Gate 6
-
-**M5-only shrink (M5=523, M15 still flying):**
-- M15 provides fly direction, M5 midtrend is the trigger
-- Penalty = 0.90× (lightest — M15+ still flying cleanly)
-- Previously returned NEUTRAL incorrectly — now caught by shrink path
-
-**During shrink, do NOT:**
-- Enter based on H1/M30 stage alone
-- Enter when M5 midtrend = 3 (flat)
-- Add to position when M5 is UP→FLAT (fading)
-
-**During shrink, DO:**
-- Exit longs when M5 flips to 2 (down) during bullish shrink
-- Exit shorts when M5 flips to 1 (up) during bearish shrink
-- Reduce 50% when M5 goes UP→FLAT or DN→FLAT
-
-**Midline SQZ continuation (new):**
-- M30 shrink + M15 sideway + M5 in SQZ → `MIDLINE_SQZ_LOADING` logged
-- When M5 SQZ breaks (stage 400-499 → 521/522) → `SQZ_BREAK_DN` quality=75 → SELL
-- When M5 SQZ breaks (stage 400-499 → 511/512) → `SQZ_BREAK_UP` quality=75 → BUY
-
-**Cascade band touch (new):**
-- Separate pattern — checks BEFORE shrink path, after Gate 0
-- M15→M30→H1 cascade: each TF enters fly_shrink then SQZ
-- Trade at BB upper/lower band touch of highest active shrink TF
-- Pink zone (M15+M30 both SQZ) → NO TRADE, return immediately
 
 ---
 
@@ -404,7 +250,6 @@ TFs compress bottom-up: M5 → M15 → M30 → H1 → H4. At each stage the pric
 | Active TF State | Expected Price Behavior | Trade Rule |
 |---|---|---|
 | All TFs in fly | Price rides outer band in trend direction | Hold position; follow M5 transitions |
-| **M5 sideway** + M15/M30/H1 fly | M5 oscillates; no clear price target | **Wait** — do not enter until M15 also shrinks |
 | **M15 sideway** + M30/H1/H4 fly | Price touches M15 outer band repeatedly, then ranges | Follow M5; target = M15 outer band; exit on touch |
 | **M30 sideway** + H1/H4 fly | Price touches M30 upper band (BUY); ranges between M30 upper and midband | Follow M5; exit when price reaches M30 outer band |
 | **H1 sideway** + H4 fly | Price touches H1 outer band; ranges between H1 upper and midband | Follow M5; target = H4 midband first, then H4 outer band |
@@ -437,6 +282,32 @@ See `references/backtest_chart_analysis.md` Section 10 for the full cascade tabl
 ---
 
 ## 11. MQL4 Code Patterns
+
+### PredictNextTrend() — V30.02
+```cpp
+// Returns directional bias for next bar using BBW_stage + BB_diffMid_Trend across M15→W1.
+// Called each bar inside Trade_Strategy() before G0 gate; draws label on chart automatically.
+TrendPrediction PredictNextTrend(BB_MTF_Data_struct &BB_datas[])
+
+struct TrendPrediction {
+   int    direction;   // 1=BUY, 2=SELL, 0=NEUTRAL  (threshold ±22 of ±88 max)
+   int    confidence;  // 25 / 60 / 80 / 95
+   bool   reversal;    // HTF total ≥18 AND LTF+MTF ≤-12 (or mirrored) → counter-trend
+   int    htf_total;   // H4×3 + D1×2 + W1×1  (max ±48)
+   int    mtf_total;   // H1×2 + M30×2         (max ±32)
+   int    ltf_total;   // M15×1                 (max ±8)
+   string info;        // "[PRED] BUY conf:80 htf:24 mtf:16 ltf:3 tot:43"
+};
+// Per-TF score [-8,+8]: stage_bias + mid_bias + stage_transition_bonus + mid_transition_bonus
+// Chart label colors: Lime=BUY, Aqua=reversal BUY, OrangeRed=SELL, Orange=reversal SELL, Gray=NEUTRAL
+// Label placed at M30 midband every bar.
+```
+
+### TF_DirectionScore() key transitions
+```
+Stage transition bonus:  SQZ→fly ±3, fly→fly(reversal) ±3, shrink→fly ±2, fly→shrink ±1
+Mid transition bonus:    dn→up/up→dn reversal ±3, flat→up/dn ±2, fading ±1, flat→side ±1
+```
 
 ### Trade_Strategy() signature
 ```cpp
@@ -536,39 +407,7 @@ When the user pastes log lines, decode them as follows:
         LTF_Drive_HTF_Fly:[M15_1,H1_1]       → LTF momentum building upward
 ```
 
-### [TRADEINFO] Format (v22.22+)
-
-Every line: `[TRADEINFO] Gate:[NAME] TradeAct:N key:val...| Gate:[NAME] key:val...|act:N atrsl:N`
-
-- **First segment** always has `Gate:[NAME] TradeAct:N` + gate params
-- **Subsequent segments** append as `| Gate:[NAME] params` (no `TradeAct`)
-- **Final suffix** `|act:N atrsl:N` = resolved action + ATRSL direction
-
-```
-[TRADEINFO] Gate:[G0d-COOL] TradeAct:0 cd:4|act:0 atrsl:0
-  → post-exit cooldown, 4 bars remaining, no action
-
-[TRADEINFO] Gate:[G0] TradeAct:7 M30:3 M15:3 H1:3|act:7 atrsl:1
-  → all three TFs sideways → exit all
-
-[TRADEINFO] Gate:[G0b-TOUCH] TradeAct:0 TF:3 touch:lower_band sl:3250.50|act:1 atrsl:0
-  → cascade band touch on H1 (TF index 3) at lower band → BUY
-
-[TRADEINFO] Gate:[G1-OK] TradeAct:0 M30:1 M15:5| Gate:[FLY] dir:1 sl:3248.00 H2L:-1/-1 L2H:2/-1|act:1 atrsl:0
-  → M30 up + M15 sideway-up confirm → fly BUY, SL at 3248
-
-[TRADEINFO] Gate:[H4-SQZ] TradeAct:0| Gate:[G1-OK] M30:1 M15:1| Gate:[G4-BLOCK] M15:2|act:0 atrsl:1
-  → H4 in SQZ (noted), G1 ok, but M15 hard-opposing → blocked
-
-[TRADEINFO] Gate:[G6-SHRINK] TradeAct:0 cnt:2+M5 pen:0.75| Gate:[G5] c:1 p:3 p2:3 M15s:511 M15m:1 t:flat_up mid+ abv M15ok q:90 sz:1.0| Gate:[G6-BUY] sl:3250.50|act:1 atrsl:0
-  → shrink path, M5 FLAT→UP transition (q=90 → full size 1.0×) → BUY
-```
-
-**Gate:[G5] t: field values:** `flat_up` `flat_dn` `up_dn` `dn_up` `weak_up` `weak_dn` `sqz_brk_up` `sqz_brk_dn`
-**Quality boosters (appended if active):** `mid+` (midband aligned) `abv` (price above/below midband) `M15ok` (M15 confirms)
-**Quality → size:** `≥90→1.0×` | `≥75→0.75×` | `≥60→0.5×` | `≥45→0.25×` | `<45→0×`
-
-Full gate attribute reference: `references/log_matrix.md`
+### [TRADEINFO] Format 
 
 ---
 
@@ -578,16 +417,16 @@ Read these when you need full detail beyond this overview:
 
 | File | Contents | When to read |
 |------|----------|--------------|
-| `scripts/TofyTrade4.mqh` | Full EA include file v22.38 — latest production code | When writing or reviewing MQL4/5 code |
+| `scripts/TofyTrade4.mqh` | Full EA include file v30.02 — latest production code | When writing or reviewing MQL4/5 code |
 | `references/backtest_chart_analysis.md` | Visual interpretation guide for backtest chart screenshots — BB color mapping, BBW_stage visual decode, ATRSL reading, gate label colors, 9 annotated reference images with analysis | When analyzing an attached chart image or explaining what EA chart elements look like visually |
 
 ---
 
 ## 15. Backtest Analysis Workflow — `/bb-mtf-strategy @path/to/version`
 
-**Trigger:** User runs `/bb-mtf-strategy @references/Backtest_data/V22.XX` or pastes backtest data and says "run analysis".
+**Trigger:** User runs `/bb-mtf-strategy @references/Backtest_data/V30.XX` (or with `_M15`/`_M30` suffix), pastes backtest data, or says "run analysis".
 
-Auto-detect `VER` from path (e.g., `V22.38`). Auto-detect `PREV_VER` as the immediately preceding version with same test period from `references/version_profit.md`.
+Auto-detect `VER` from path (e.g., `V30.01`). Auto-detect `PREV_VER` as the immediately preceding version with same test period from `references/version_profit.md`.
 
 **Goal:** Each new version must achieve **higher net profit** than PREV_VER. Every deal loss < −10 USD is a fix candidate — prioritize by highest absolute loss first.
 
@@ -601,7 +440,7 @@ Step 1  Net profit comparison              → update version_profit.md + root-c
 Step 2  Deal loss comparison               → update version_profit.md
 Step 3  Set fix priorities                 (ranked list, confirm net profit goal)
 Step 4  Root cause analysis                → update root-cause-analysis.md
-Step 5  Code fix                           → edit TofyTrade3.mqh + bump version
+Step 5  Code fix                           → edit TofyTrade4.mqh + bump version
 Step 6  Fix verification                   (confirm gate fires, check over-filtering)
 Step 7  Update Task_force.md              (targeted additions only)
 Step 8  Update all related reference files (table in Step 8 below)
@@ -715,10 +554,10 @@ Update Summary of Fixes table: new RCN=OPEN; previously fixed RCs=FIXED.
 
 ### Step 5 — Code Fix
 
-> **Read: `scripts/TofyTrade3.mqh`** (locate insertion point)  
+> **Read: `scripts/TofyTrade4.mqh`** (locate insertion point)  
 > **Read: `references/Task_force.md`** (Part 4 gate templates + cascade gate order)  
-> **Read: `references/code_patterns.md`** (MQL4 patterns if writing a new gate type)  
-> **Edit: `scripts/TofyTrade3.mqh`**
+> **Read: `references/decision_flow.md`** 
+> **Edit: `scripts/TofyTrade4.mqh`**
 
 1. Copy the matching gate template from `Task_force.md` Part 4
 2. Insert at the correct position (cascade / shrink / fly sub-path — use cascade gate order from `Task_force.md`):
@@ -726,7 +565,7 @@ Update Summary of Fixes table: new RCN=OPEN; previously fixed RCs=FIXED.
    - **Shrink (GetShrinkDecision)**: after `G4e-H4OPP` / `G4j-D1OPP`, before `return result`
    - **Fly H4-SQZ sub-path**: inside `else if(H4_in_sqz)`, after last G4X gate
 3. Key invariants: block BUY when opposing mid ∈ {2,4}; block SELL when opposing mid ∈ {1,5}; never block on mid=3 alone unless both TFs are flat (G0b-SQZLOCK pattern)
-4. Bump `#property version "22.XX"` → next version
+4. Bump `#property version "30.XX"` → next version
 5. Add new gate label to the `GATE_CLR_*` comment line
 
 > Fix only the highest-priority RC per cycle. Verify net improvement (Step 6) before committing.
@@ -766,12 +605,9 @@ Update Summary of Fixes table: new RCN=OPEN; previously fixed RCs=FIXED.
 | `references/fix.md` | Add `## vNEW.XX — [gate name] (RCNN)` section before previous version section; include root cause, code diff, expected result |
 | `references/root-cause-analysis.md` | Mark new RCs FIXED; update version comparison table; add vNEW.XX note to RC detail section |
 | `CLAUDE.md` | Bump source files version; add `## vNEW.XX Changes` section; update GATE_CLR line |
-| `SKILL.md` (this file) | Section 13: bump `TofyTrade3.mqh` version line; Section 14: update only if SOP changes |
+| `SKILL.md` (this file) | Section 13: bump `TofyTrade4.mqh` version line; Section 14: update only if SOP changes |
 | `references/decision_flow.md` | Add new gate to the gate-by-gate logic section for its path (cascade / shrink / fly) |
-| `references/scenarios.md` | Update if new gate changes any of the 79 scenario outcomes |
 | `references/log_matrix.md` | Add new gate row with its TRADEINFO key attributes |
-| `references/architecture_flow.html` | Add new gate diamond node + arrow in correct subgraph; apply matching `classDef` color |
-| `references/architecture_flow.puml` | Add new gate `if` block in correct swimlane with matching `#color`; same logical position as HTML |
 
 For architecture diagrams: insert at the same logical position as in the code. Match node color to `GATE_CLR_*` palette.
 
@@ -782,11 +618,10 @@ For architecture diagrams: insert at the same logical position as in the code. M
 > **No reads or updates — commit all staged changes**
 
 ```bash
-git add scripts/TofyTrade3.mqh CLAUDE.md SKILL.md \
+git add scripts/TofyTrade4.mqh CLAUDE.md SKILL.md \
         references/fix.md references/root-cause-analysis.md \
         references/Task_force.md references/version_profit.md \
         references/decision_flow.md references/log_matrix.md \
-        references/architecture_flow.html references/architecture_flow.puml \
         scripts/gen_version_profit.py
 
 git commit -m "vNEW.XX: [gate name(s)] [brief description] (RCNN)"

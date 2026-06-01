@@ -1,6 +1,6 @@
 #property copyright "Copyright 2024, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "22.49"
+#property version   "30.02"
 #define MIN_HOLD_BARS         3     // minimum M5 bars between entries
 #define POST_EXIT_COOLDOWN    5     // M5 bars to block new entries after any act=7 exit
 #define MAX_FLOATING_LOSS_USD 50.0  // emergency exit threshold — floating loss deeper than this
@@ -66,6 +66,155 @@ double GetATRSLStop(ATRSLBUF_struct &ATRSL1BUF, int direction) {
    return 0.0;
 }
 
+// ── Gate label semantic colors ───────────────────────────────────
+#define GATE_CLR_EXIT   clrCrimson      // G0, G0b-PINK, G5-FADE, G6-REV, G0e-MAXLOSS, G8-BNDTGT  — exit all
+#define GATE_CLR_BUY    clrLime         // G0b-TOUCH buy, G6-BUY            — buy entry
+#define GATE_CLR_SELL   clrOrangeRed    // G0b-TOUCH sell, G6-SELL          — sell entry
+#define GATE_CLR_BLOCK  clrRed          // G4-BLOCK                         — hard conflict
+#define GATE_CLR_WAIT   clrYellow       // G0b-WAIT                         — cascade waiting
+#define GATE_CLR_PINK   clrMagenta      // G0b-PINK                         — pink zone
+#define GATE_CLR_LOAD   clrGold         // G6-LOAD, G6-ENTRY                — midline loading
+#define GATE_CLR_NOISE  clrDimGray      // G1-FAIL, G7-NEUTRAL, G0b-M15OPP, G0b-M30OPP — noise/skip
+#define GATE_CLR_INFO   clrSilver       // G1-OK                            — info only
+#define GATE_CLR_AQUA   clrAqua         // reversal BUY / G5 flat→up
+#define GATE_CLR_ORANGE clrOrange       // reversal SELL / G5 flat→dn
+#define GATE_CLR_H4     clrDarkOrange   // H4 oppose / H4 SQZ               — macro filter
+
+// ── Trend Prediction ──────────────────────────────────────────────
+// Predicts next-bar directional bias from stage+mid trajectory across all TFs.
+// Uses BB_datas[1..6] = M15/M30/H1/H4/D1/W1.
+
+struct TrendPrediction {
+   int    direction;   // 1=BUY, 2=SELL, 0=NEUTRAL
+   int    confidence;  // 0-100
+   bool   reversal;    // HTF opposes MTF+LTF → counter-trend setup
+   int    htf_total;   // weighted score H4×3 + D1×2 + W1×1
+   int    mtf_total;   // weighted score H1×2 + M30×2
+   int    ltf_total;   // weighted score M15×1
+   string info;
+};
+
+// Single-TF directional score from stage+mid state and 1-bar transitions. Range: [-8, +8].
+int TF_DirectionScore(int stage, int mid, int prev_stage, int prev_mid)
+{
+   // Stage structural bias
+   int stg = 0;
+   if     (stage==511)                     stg = +3;
+   else if(stage==512)                     stg = +2;
+   else if(stage==513)                     stg = +1;
+   else if(stage==521)                     stg = -3;
+   else if(stage==522)                     stg = -2;
+   else if(stage==523)                     stg = -1;
+
+   // Mid momentum bias
+   int mid_b = 0;
+   if     (mid==1) mid_b = +2;
+   else if(mid==5) mid_b = +1;
+   else if(mid==4) mid_b = -1;
+   else if(mid==2) mid_b = -2;
+
+   // Stage transition bonus (prev → cur)
+   int stg_t = 0;
+   bool prev_sqz   = (prev_stage>=400 && prev_stage<500);
+   bool prev_fly_up = (prev_stage==511||prev_stage==512);
+   bool prev_fly_dn = (prev_stage==521||prev_stage==522);
+   bool cur_fly_up  = (stage==511||stage==512);
+   bool cur_fly_dn  = (stage==521||stage==522);
+   if     (prev_sqz    && cur_fly_up)  stg_t = +3;  // SQZ breakout UP
+   else if(prev_sqz    && cur_fly_dn)  stg_t = -3;  // SQZ breakout DN
+   else if(prev_fly_dn && cur_fly_up)  stg_t = +3;  // direct reversal UP
+   else if(prev_fly_up && cur_fly_dn)  stg_t = -3;  // direct reversal DN
+   else if(prev_fly_up && stage==513)  stg_t = -1;  // fly weakening (shrink)
+   else if(prev_fly_dn && stage==523)  stg_t = +1;  // fly weakening (shrink)
+   else if(prev_stage==513 && cur_fly_up) stg_t = +2; // shrink → fly resuming UP
+   else if(prev_stage==523 && cur_fly_dn) stg_t = -2; // shrink → fly resuming DN
+
+   // Mid transition bonus (prev → cur)
+   int mid_t = 0;
+   if     (prev_mid==3 && mid==1) mid_t = +2;  // flat → uptrend
+   else if(prev_mid==3 && mid==2) mid_t = -2;  // flat → downtrend
+   else if(prev_mid==2 && mid==1) mid_t = +3;  // reversal: dn → up
+   else if(prev_mid==1 && mid==2) mid_t = -3;  // reversal: up → dn
+   else if(prev_mid==1 && mid==3) mid_t = -1;  // uptrend fading
+   else if(prev_mid==2 && mid==3) mid_t = +1;  // downtrend fading
+   else if(prev_mid==3 && mid==5) mid_t = +1;  // flat → side-up
+   else if(prev_mid==3 && mid==4) mid_t = -1;  // flat → side-dn
+
+   int raw = stg + mid_b + stg_t + mid_t;
+   if(raw >  8) raw =  8;
+   if(raw < -8) raw = -8;
+   return raw;
+}
+
+TrendPrediction PredictNextTrend(BB_MTF_Data_struct &BB_datas[])
+{
+   TrendPrediction pred;
+   pred.direction = 0; pred.confidence = 0; pred.reversal = false;
+   pred.htf_total = 0; pred.mtf_total = 0; pred.ltf_total = 0;
+   pred.info = "";
+
+   // Score each TF using current + 1-bar-prior state
+   // BB_datas[1]=M15 [2]=M30 [3]=H1 [4]=H4 [5]=D1 [6]=W1
+   int s1 = TF_DirectionScore(BB_datas[1].BBW_stage[LA], BB_datas[1].BB_diffMid_Trend[LA],
+                               BB_datas[1].BBW_stage[LA_1], BB_datas[1].BB_diffMid_Trend[LA_1]);
+   int s2 = TF_DirectionScore(BB_datas[2].BBW_stage[LA], BB_datas[2].BB_diffMid_Trend[LA],
+                               BB_datas[2].BBW_stage[LA_1], BB_datas[2].BB_diffMid_Trend[LA_1]);
+   int s3 = TF_DirectionScore(BB_datas[3].BBW_stage[LA], BB_datas[3].BB_diffMid_Trend[LA],
+                               BB_datas[3].BBW_stage[LA_1], BB_datas[3].BB_diffMid_Trend[LA_1]);
+   int s4 = TF_DirectionScore(BB_datas[4].BBW_stage[LA], BB_datas[4].BB_diffMid_Trend[LA],
+                               BB_datas[4].BBW_stage[LA_1], BB_datas[4].BB_diffMid_Trend[LA_1]);
+   int s5 = TF_DirectionScore(BB_datas[5].BBW_stage[LA], BB_datas[5].BB_diffMid_Trend[LA],
+                               BB_datas[5].BBW_stage[LA_1], BB_datas[5].BB_diffMid_Trend[LA_1]);
+   int s6 = TF_DirectionScore(BB_datas[6].BBW_stage[LA], BB_datas[6].BB_diffMid_Trend[LA],
+                               BB_datas[6].BBW_stage[LA_1], BB_datas[6].BB_diffMid_Trend[LA_1]);
+
+   // Weighted totals  (max each: H4=24, D1=16, W1=8, H1=16, M30=16, M15=8 → total ±88)
+   pred.ltf_total = s1 * 1;
+   pred.mtf_total = s2 * 2 + s3 * 2;
+   pred.htf_total = s4 * 3 + s5 * 2 + s6 * 1;
+
+   int total = pred.htf_total + pred.mtf_total + pred.ltf_total;
+
+   // Direction: threshold ±22 (~25% of max 88)
+   if     (total >=  22) pred.direction = 1;
+   else if(total <= -22) pred.direction = 2;
+
+   // Confidence: linear from 25 (±22) to 95 (±88)
+   int abs_t = MathAbs(total);
+   if     (abs_t >= 66) pred.confidence = 95;
+   else if(abs_t >= 44) pred.confidence = 80;
+   else if(abs_t >= 22) pred.confidence = 60;
+   else                 pred.confidence = 25;
+
+   // Reversal detection: HTF direction strongly opposes MTF+LTF direction
+   int ltf_mtf = pred.ltf_total + pred.mtf_total;
+   pred.reversal = (pred.htf_total >= 18 && ltf_mtf <= -12) ||
+                   (pred.htf_total <= -18 && ltf_mtf >= 12);
+   if(pred.reversal) pred.confidence = MathMin(pred.confidence, 65);
+
+   string dir_str = (pred.direction==1) ? "BUY" : (pred.direction==2) ? "SELL" : "NEUTRAL";
+   pred.info = "[PRED] "+dir_str+" conf:"+pred.confidence
+             + " htf:"+pred.htf_total+" mtf:"+pred.mtf_total+" ltf:"+pred.ltf_total
+             + " tot:"+total
+             + (pred.reversal ? " REV" : "");
+
+   // ── Draw on chart ────────────────────────────────────────────────
+   // Color: lime=continuation BUY, aqua=reversal BUY,
+   //        orange-red=continuation SELL, orange=reversal SELL, gray=neutral
+   color pred_color;
+   if     (pred.direction==1 && !pred.reversal) pred_color = GATE_CLR_BUY;
+   else if(pred.direction==1 &&  pred.reversal) pred_color = GATE_CLR_AQUA;
+   else if(pred.direction==2 && !pred.reversal) pred_color = GATE_CLR_SELL;
+   else if(pred.direction==2 &&  pred.reversal) pred_color = GATE_CLR_ORANGE;
+   else                                         pred_color = GATE_CLR_NOISE;
+
+   string rev_pfx = pred.reversal ? "R:" : "";
+   string lbl = "[PRED:" + rev_pfx + dir_str + ":" + IntegerToString(pred.confidence) + "]";
+   DrawGateLabel(lbl, BB_datas[2].BB_Mid[LA], BB_datas, pred_color, 2);
+
+   return pred;
+}
+
 M5_TransitionResult DetectM5Transition(BB_MTF_Data_struct &BB_datas[], double &close_prices[], int triggerTF = 0)
 {
    M5_TransitionResult res;
@@ -104,10 +253,10 @@ M5_TransitionResult DetectM5Transition(BB_MTF_Data_struct &BB_datas[], double &c
       if(mid_ref > mid_ref_1)                      { res.quality+=10; res.info+=" mid+"; }
       if(close_ref > mid_ref && diffMid > 0)        { res.quality+=10; res.info+=" abv"; }
       if(conf_trend==1 && conf_stage==511)          { res.quality+=10; res.info+=" cok"; }
-      // v22.45: M5-triggered FLAT→UP requires M15 in active bullish fly (511/512) to confirm.
-      // Without M15 confirm, cap quality below floor (59) so the entry is blocked by G5-WEAK.
-      if(triggerTF==0 && !(conf_trend==1 && (conf_stage==511||conf_stage==512)))
-         { res.quality = MathMin(res.quality, 59); res.info += " noM15"; }
+      // V30.02: M15-triggered FLAT→UP requires M30 in active bullish fly (511/512) to confirm.
+      // Without M30 confirm, cap quality below floor (59) so the entry is blocked by G5-WEAK.
+      if(triggerTF==1 && !(conf_trend==1 && (conf_stage==511||conf_stage==512)))
+         { res.quality = MathMin(res.quality, 59); res.info += " noM30"; }
    }
    // ── FLAT → DN (strongest SELL) ────────────────────────────────
    else if((prev==3 || prev2==3) && cur==2) {
@@ -118,9 +267,9 @@ M5_TransitionResult DetectM5Transition(BB_MTF_Data_struct &BB_datas[], double &c
       if(mid_ref < mid_ref_1)                      { res.quality+=10; res.info+=" mid-"; }
       if(close_ref < mid_ref && diffMid < 0)        { res.quality+=10; res.info+=" blw"; }
       if(conf_trend==2 && conf_stage==521)          { res.quality+=10; res.info+=" cok"; }
-      // v22.45: M5-triggered FLAT→DN requires M15 in active bearish fly (521/522) to confirm.
-      if(triggerTF==0 && !(conf_trend==2 && (conf_stage==521||conf_stage==522)))
-         { res.quality = MathMin(res.quality, 59); res.info += " noM15"; }
+      // V30.02: M15-triggered FLAT→DN requires M30 in active bearish fly (521/522) to confirm.
+      if(triggerTF==1 && !(conf_trend==2 && (conf_stage==521||conf_stage==522)))
+         { res.quality = MathMin(res.quality, 59); res.info += " noM30"; }
    }
    // ── FLAT → SIDEUP (early BUY warning) ────────────────────────
    else if((prev==3 || prev2==3) && cur==5) {
@@ -186,7 +335,7 @@ M5_TransitionResult DetectM5Transition(BB_MTF_Data_struct &BB_datas[], double &c
          // RC39 (v22.48): confirmTF must be in committed bearish fly or bearish shrink — flat mid=3 is noise
          bool sqz_brk_dn_ok = ((conf_stage==521||conf_stage==522)&&(conf_trend==2||conf_trend==4)) ||
                                (conf_stage==523&&(conf_trend==2||conf_trend==4));
-         if(!sqz_brk_dn_ok) { res.quality = MathMin(res.quality, 59); res.info += " noM15"; }
+         if(!sqz_brk_dn_ok) { res.quality = MathMin(res.quality, 59); res.info += " noM30"; }
       }
       else if(ref_was_sqz && (ref_stg_now==511||ref_stg_now==512) && (cur==1||cur==5)) {
          res.transition = M5_TRANS_FLAT_TO_UP;
@@ -197,7 +346,7 @@ M5_TransitionResult DetectM5Transition(BB_MTF_Data_struct &BB_datas[], double &c
          // RC39 (v22.48): confirmTF must be in committed bullish fly or bullish shrink — flat mid=3 is noise
          bool sqz_brk_up_ok = ((conf_stage==511||conf_stage==512)&&(conf_trend==1||conf_trend==5)) ||
                                (conf_stage==513&&(conf_trend==1||conf_trend==5));
-         if(!sqz_brk_up_ok) { res.quality = MathMin(res.quality, 59); res.info += " noM15"; }
+         if(!sqz_brk_up_ok) { res.quality = MathMin(res.quality, 59); res.info += " noM30"; }
       }
       else {
          res.info = "Gate:[G5] "+tfl+" t:stable";
@@ -304,14 +453,14 @@ ShrinkDecision GetShrinkDecision(BB_MTF_Data_struct &BB_datas[], double &close_p
    }
 
    // ── MIDLINE SQZ LOADING DETECTION ───────────────────────────
-   // M30 shrink + M15 sideway + M5 SQZ = price at M30 midline loading zone
-   // Log the state; entry fires when M5 SQZ breaks (next bar)
-   bool M5_sqz_now = (BB_datas[0].BBW_stage[LA] >= 400 &&
-                      BB_datas[0].BBW_stage[LA] < 500);
-   bool M15_sideway_now = (BB_datas[1].BB_diffMid_Trend[LA] >= 3);
+   // M30 shrink + M30 sideway + M15 SQZ = price at M30 midline loading zone (V30.02: M15 trigger)
+   // Log the state; entry fires when M15 SQZ breaks (next bar)
+   bool M15_sqz_now = (BB_datas[1].BBW_stage[LA] >= 400 &&
+                       BB_datas[1].BBW_stage[LA] < 500);
+   bool M30_sideway_now = (BB_datas[2].BB_diffMid_Trend[LA] >= 3);
    int  M30_mid_trend   = BB_datas[2].BB_diffMid_Trend[LA];
 
-   if(M5_sqz_now && M30_shrink && M15_sideway_now) {
+   if(M15_sqz_now && M30_shrink && M30_sideway_now) {
       if(M30_mid_trend == 2 || M30_mid_trend == 4)
          result.info += "| Gate:[G6-LOAD] dir:SELL";
       else if(M30_mid_trend == 1 || M30_mid_trend == 5)
@@ -320,63 +469,43 @@ ShrinkDecision GetShrinkDecision(BB_MTF_Data_struct &BB_datas[], double &close_p
          result.info += "| Gate:[G6-LOAD] dir:neutral";
    }
 
-   // Adaptive trigger TF: use highest flying TF when lower TFs are noisy (v22.42)
-   // M5 noisy (SQZ/shrink) + M15 flying → use M15 midtrend as trigger
-   // M5+M15 both noisy + M30 flying → use M30 midtrend as trigger
-   int shrinkTriggerTF = 0;
+   // Adaptive trigger TF: V30.02 — M15 is the base trigger; escalate to M30 if M15 is noisy
+   // M15 noisy (SQZ/shrink) + M30 flying → use M30 midtrend as trigger
+   int shrinkTriggerTF = 1;  // M15 is always the default trigger TF
    {
-      int m5_stg_t  = BB_datas[0].BBW_stage[LA];
       int m15_stg_t = BB_datas[1].BBW_stage[LA];
       int m30_stg_t = BB_datas[2].BBW_stage[LA];
-      bool m5_noisy  = (m5_stg_t>=400&&m5_stg_t<500)||m5_stg_t==513||m5_stg_t==523;
       bool m15_noisy = (m15_stg_t>=400&&m15_stg_t<500)||m15_stg_t==513||m15_stg_t==523;
-      bool m15_fly   = m15_stg_t==511||m15_stg_t==512||m15_stg_t==521||m15_stg_t==522;
       bool m30_fly   = m30_stg_t==511||m30_stg_t==512||m30_stg_t==521||m30_stg_t==522;
-      if(m5_noisy && m15_fly)                    shrinkTriggerTF = 1;
-      else if(m5_noisy && m15_noisy && m30_fly)  shrinkTriggerTF = 2;
+      if(m15_noisy && m30_fly) shrinkTriggerTF = 2;
    }
-   result.triggerTF = shrinkTriggerTF;  // v22.45: export for dynamic hold bars
+   result.triggerTF = shrinkTriggerTF;
    // Get transition using adaptive trigger TF
    M5_TransitionResult trans = DetectM5Transition(BB_datas, close_prices, shrinkTriggerTF);
 
-   // G4k-M5SHRKopp: adaptive trigger (triggerTF>0) + M5 in opposing shrink direction (v22.43, RC30)
-   // M5=523 (bearish shrink) opposes BUY; M5=513 (bullish shrink) opposes SELL.
-   // Blocks even mid=3 (neutral) — unlike G0b-M5OPP which only covers mid=2/4 in cascade path.
-   // RC30: Mar-04 BUY M5=523/mid=3 lost -59.24 via M15 adaptive trigger.
-   if(shrinkTriggerTF > 0 && trans.direction != 0) {
-      int  m5_stg_k       = BB_datas[0].BBW_stage[LA];
-      int  m5_mid_k       = BB_datas[0].BB_diffMid_Trend[LA];
-      bool m5_opp_buy_k   = (m5_stg_k==523)&&(m5_mid_k==2||m5_mid_k==3||m5_mid_k==4);
-      bool m5_opp_sel_k   = (m5_stg_k==513)&&(m5_mid_k==1||m5_mid_k==3||m5_mid_k==5);
-      if((trans.direction==1&&m5_opp_buy_k)||(trans.direction==2&&m5_opp_sel_k)) {
+   // G4k-M15SHRKopp: M30 as trigger (triggerTF==2) + M15 in opposing shrink direction (V30.02)
+   // When M30 is the trigger because M15 is noisy, M15 in opposing shrink still blocks.
+   // M15=523 (bearish shrink) opposes BUY; M15=513 (bullish shrink) opposes SELL.
+   if(shrinkTriggerTF == 2 && trans.direction != 0) {
+      int  m15_stg_k     = BB_datas[1].BBW_stage[LA];
+      int  m15_mid_k     = BB_datas[1].BB_diffMid_Trend[LA];
+      bool m15_opp_buy_k = (m15_stg_k==523)&&(m15_mid_k==2||m15_mid_k==3||m15_mid_k==4);
+      bool m15_opp_sel_k = (m15_stg_k==513)&&(m15_mid_k==1||m15_mid_k==3||m15_mid_k==5);
+      if((trans.direction==1&&m15_opp_buy_k)||(trans.direction==2&&m15_opp_sel_k)) {
          trans.direction = 0; trans.quality = 0;
-         trans.info += " | Gate:[G4k-M5SHRKopp] M5stg:"+IntegerToString(m5_stg_k)+" M5mid:"+IntegerToString(m5_mid_k);
+         trans.info += " | Gate:[G4k-M15SHRKopp] M15stg:"+IntegerToString(m15_stg_k)+" M15mid:"+IntegerToString(m15_mid_k);
       }
    }
-   // G4k-TRIGDIR: adaptive trigger TF stage contradicts generated direction (v22.43, RC31)
+   // G4k-TRIGDIR: trigger TF stage contradicts generated direction (v22.43, RC31)
    // When triggerTF in bullish fly (511/512) but midtrend fires SELL, or bearish fly (521/522) + BUY.
    // RC31: Apr-24 SELL tTF=2 M30=512 bullish fly, midtrend momentarily 3->2 -> -16.01.
-   if(shrinkTriggerTF > 0 && trans.direction != 0) {
+   if(trans.direction != 0) {
       int  trig_stg_k = BB_datas[shrinkTriggerTF].BBW_stage[LA];
       bool trig_bull_k = (trig_stg_k==511||trig_stg_k==512);
       bool trig_bear_k = (trig_stg_k==521||trig_stg_k==522);
       if((trans.direction==1&&trig_bear_k)||(trans.direction==2&&trig_bull_k)) {
          trans.direction = 0; trans.quality = 0;
          trans.info += " | Gate:[G4k-TRIGDIR] trigTF:"+IntegerToString(shrinkTriggerTF)+" stg:"+IntegerToString(trig_stg_k);
-      }
-   }
-   // G4k-M5STG: M5 as trigger (tTF=0) but M5 structural stage contradicts direction (v22.44, RC32)
-   // 513 (bullish shrink) + SELL: M5 structural bias is bullish, momentary mid=2 flip is noise.
-   // 523 (bearish shrink) + BUY + mid∈{2,3,4}: mid hasn't reversed yet, structural bias still bearish.
-   // RC32: Feb-02 23:25 SELL M5=513/mid=2 tTF=0 lost -64.72.
-   if(shrinkTriggerTF == 0 && trans.direction != 0) {
-      int  m5_stg_s  = BB_datas[0].BBW_stage[LA];
-      int  m5_mid_s  = BB_datas[0].BB_diffMid_Trend[LA];
-      bool stg_opp_buy  = (m5_stg_s==523)&&(m5_mid_s==2||m5_mid_s==3||m5_mid_s==4);
-      bool stg_opp_sell = (m5_stg_s==513);
-      if((trans.direction==1&&stg_opp_buy)||(trans.direction==2&&stg_opp_sell)) {
-         trans.direction = 0; trans.quality = 0;
-         trans.info += " | Gate:[G4k-M5STG] M5stg:"+IntegerToString(m5_stg_s)+" M5mid:"+IntegerToString(m5_mid_s);
       }
    }
 
@@ -741,20 +870,6 @@ void Stats_Print()
    Print("═══════════════════════════════════════════════════");
 }
 
-// ── Gate label semantic colors ───────────────────────────────────
-#define GATE_CLR_EXIT   clrCrimson      // G0, G0b-PINK, G5-FADE, G6-REV, G0e-MAXLOSS, G8-BNDTGT  — exit all
-#define GATE_CLR_BUY    clrLime         // G0b-TOUCH buy, G6-BUY            — buy entry
-#define GATE_CLR_SELL   clrOrangeRed    // G0b-TOUCH sell, G6-SELL          — sell entry
-#define GATE_CLR_BLOCK  clrRed          // G4-BLOCK                         — hard conflict
-#define GATE_CLR_WAIT   clrYellow       // G0b-WAIT                         — cascade waiting
-#define GATE_CLR_PINK   clrMagenta      // G0b-PINK                         — pink zone
-#define GATE_CLR_LOAD   clrGold         // G6-LOAD, G6-ENTRY                — midline loading
-#define GATE_CLR_NOISE  clrDimGray      // G1-FAIL, G7-NEUTRAL, G0b-M15OPP, G0b-M30OPP — noise/skip
-#define GATE_CLR_INFO   clrSilver       // G1-OK                            — info only
-#define GATE_CLR_AQUA   clrAqua         // G5 flat→up                       — M5 bullish
-#define GATE_CLR_ORANGE clrOrange       // G5 flat→dn                       — M5 bearish
-#define GATE_CLR_H4     clrDarkOrange   // H4 oppose / H4 SQZ               — macro filter
-
 void DrawGateLabel(string tag, double price,
                    BB_MTF_Data_struct &BB_datas[],
                    color labelColor,
@@ -800,135 +915,24 @@ void Trade_Strategy(
    Trade_sl   = 0.0;
 
    static int      s_exitCooldown        = 0;
-   static bool     s_pendingBuy          = false;
-   static bool     s_pendingSell         = false;
-   static datetime s_pendingTime         = 0;
-   static datetime s_lastEntryTime       = 0;
-   static bool     s_lastEntryWasCascade = false;  // v22.45: track if last entry was cascade
-   static int      s_lastEntryTrigTF     = 0;      // v22.45: trigger TF of last entry (0=M5,1=M15,2=M30,3=H1)
+   static bool     s_lastEntryWasCascade = false;
+   static int      s_lastEntryTrigTF     = 0;
 
    int MAX_TF = 4;
    int MIN_TF = 0;
 
-   // ── FIX E: POST-EXIT COOLDOWN ─────────────────────────────────
-   if(s_exitCooldown > 0) {
-      s_exitCooldown--;
-      Trade_info = "Gate:[G0d-COOL] TradeAct:"+IntegerToString(Trade_act)+" cd:" + s_exitCooldown;
-      DrawGateLabel("[G0d-COOL]", close_prices[LA], BB_datas, GATE_CLR_NOISE, 0);
-      Print("[TRADEINFO] " + Trade_info + "|act:0 atrsl:" + ATRSL1BUF.dir); return;
-   }
-
-   // ── G0e-MAXLOSS: Emergency exit on deep floating loss (RC4/RC9, v22.36) ──
-   if((BUYS > 0 || SELLS > 0) && PositionSelect(_Symbol)) {
-      double floatProfit = PositionGetDouble(POSITION_PROFIT);
-      if(floatProfit < -MAX_FLOATING_LOSS_USD) {
-         s_exitCooldown = POST_EXIT_COOLDOWN;
-         Trade_act  = 7;
-         Trade_info = "Gate:[G0e-MAXLOSS] profit:" + DoubleToString(floatProfit, 2);
-         DrawGateLabel("[G0e-MAXLOSS]", close_prices[LA], BB_datas, GATE_CLR_EXIT, 0);
-         Print("[TRADEINFO] " + Trade_info + "|act:7 atrsl:" + ATRSL1BUF.dir); return;
-      }
-   }
-
-   // ── G8-BNDTGT: Cascading sideway band target exit (v22.39, fix v22.40) ─────
-   // True cascade: all TFs BELOW the fly TF must be compressed (SQZ/shrink),
-   // confirming the fly TF is genuinely the lowest still-flying TF.
-   // Also requires ≥1 TF ABOVE compressed to confirm cascade pattern is active.
-   if(BUYS > 0 || SELLS > 0) {
-      int bndtgt_tf  = -1;
-      int bndtgt_dir = 0;
-      for(int fi = 1; fi <= MAX_TF && bndtgt_tf < 0; fi++) {
-         int  fstg    = BB_datas[fi].BBW_stage[LA];
-         bool bullFly = (fstg==511 || fstg==512);
-         bool bearFly = (fstg==521 || fstg==522);
-         int  updn    = BB_datas[fi].BBUpDn_state[LA];
-         if((BUYS > 0 && bullFly && updn == 1) || (SELLS > 0 && bearFly && updn == 2)) {
-            bool lower_all_compressed = true;
-            for(int fl = 0; fl < fi; fl++) {
-               int sl = BB_datas[fl].BBW_stage[LA];
-               if(!((sl >= 400 && sl < 500) || sl == 513 || sl == 523)) {
-                  lower_all_compressed = false; break;
-               }
-            }
-            if(!lower_all_compressed) continue;
-            for(int fi2 = fi+1; fi2 <= MAX_TF; fi2++) {
-               int s2 = BB_datas[fi2].BBW_stage[LA];
-               if((s2 >= 400 && s2 < 500) || s2 == 513 || s2 == 523) {
-                  bndtgt_tf  = fi;
-                  bndtgt_dir = (BUYS > 0) ? 1 : 2;
-                  break;
-               }
-            }
-         }
-      }
-      if(bndtgt_tf >= 0) {
-         s_exitCooldown = POST_EXIT_COOLDOWN;
-         Trade_act  = 7;
-         Trade_lots = 0.0;
-         string b_touch = (bndtgt_dir == 1) ? "upper" : "lower";
-         Trade_info = "Gate:[G8-BNDTGT] TradeAct:7 TF:"+bndtgt_tf+" "+b_touch+"_touch";
-         DrawGateLabel("[G8-BNDTGT]", BB_datas[bndtgt_tf].BB_Mid[LA], BB_datas, GATE_CLR_EXIT, bndtgt_tf);
-         Print("[TRADEINFO] " + Trade_info + "|act:7 atrsl:" + ATRSL1BUF.dir); return;
-      }
-   }
-
-   // ── FIX A PHASE 2: pending reversal re-evaluation ─────────────
-   if(s_pendingBuy || s_pendingSell) {
-      int barsSincePending = (s_pendingTime == 0) ? 999 :
-         (int)((iTime(_Symbol,PERIOD_M5,0) - s_pendingTime) / PeriodSeconds(PERIOD_M5));
-      if(barsSincePending < MIN_HOLD_BARS) {
-         Trade_info = "Gate:[PHASE2-WAIT] TradeAct:"+IntegerToString(Trade_act)+" bars:" + barsSincePending + "/" + MIN_HOLD_BARS;
-         DrawGateLabel("[PHASE2-WAIT]", close_prices[LA], BB_datas, GATE_CLR_WAIT, 0);
-         Print("[TRADEINFO] " + Trade_info + "|act:0 atrsl:" + ATRSL1BUF.dir); return;
-      }
-      int M5c  = BB_datas[0].BB_diffMid_Trend[LA];
-      int M15c = BB_datas[1].BB_diffMid_Trend[LA];
-      int M30c = BB_datas[2].BB_diffMid_Trend[LA];
-      int H1c  = BB_datas[3].BB_diffMid_Trend[LA];
-      bool cancelG0  = (M30c >= 3 && M15c >= 3 && H1c >= 3);
-      bool H1sqzP    = (BB_datas[3].BBW_stage[LA] >= 400 && BB_datas[3].BBW_stage[LA] < 500);
-      bool M30cmpP   = (BB_datas[2].BBW_stage[LA] >= 400 && BB_datas[2].BBW_stage[LA] < 500)
-                    || (BB_datas[2].BBW_stage[LA] == 513 || BB_datas[2].BBW_stage[LA] == 523);
-      bool M15sqzP   = (BB_datas[1].BBW_stage[LA] >= 400 && BB_datas[1].BBW_stage[LA] < 500);
-      bool cancel    = cancelG0 || (H1sqzP && (M30cmpP || M15sqzP));
-      if(s_pendingBuy) {
-         bool still = (!cancel && (M5c == 1 || M5c == 5 || M15c == 1));
-         if(still) {
-            Trade_act = 1; Trade_lots = baseLot;
-            Trade_sl  = GetATRSLStop(ATRSL1BUF, 1);
-            s_lastEntryTime = iTime(_Symbol, PERIOD_M5, 0);
-            Trade_info = "Gate:[PHASE2-BUY] TradeAct:"+IntegerToString(Trade_act)+" bars:" + barsSincePending + " sl:" + DoubleToString(Trade_sl,_Digits);
-            DrawGateLabel("[PHASE2-BUY]", close_prices[LA], BB_datas, GATE_CLR_BUY, 0);
-         } else {
-            Trade_info = "Gate:[PHASE2-CANCEL] TradeAct:"+IntegerToString(Trade_act)+" reason:buy_gone";
-            DrawGateLabel("[PHASE2-CANCEL]", close_prices[LA], BB_datas, GATE_CLR_NOISE, 0);
-         }
-         s_pendingBuy = false;
-      } else {
-         bool still = (!cancel && (M5c == 2 || M5c == 4 || M15c == 2));
-         if(still) {
-            Trade_act = 2; Trade_lots = baseLot;
-            Trade_sl  = GetATRSLStop(ATRSL1BUF, 2);
-            s_lastEntryTime = iTime(_Symbol, PERIOD_M5, 0);
-            Trade_info = "Gate:[PHASE2-SELL] TradeAct:"+IntegerToString(Trade_act)+" bars:" + barsSincePending + " sl:" + DoubleToString(Trade_sl,_Digits);
-            DrawGateLabel("[PHASE2-SELL]", close_prices[LA], BB_datas, GATE_CLR_SELL, 0);
-         } else {
-            Trade_info = "Gate:[PHASE2-CANCEL] TradeAct:"+IntegerToString(Trade_act)+" reason:sell_gone";
-            DrawGateLabel("[PHASE2-CANCEL]", close_prices[LA], BB_datas, GATE_CLR_NOISE, 0);
-         }
-         s_pendingSell = false;
-      }
-      Print("[TRADEINFO] " + Trade_info + "|act:" + Trade_act + " atrsl:" + ATRSL1BUF.dir); return;
-   }
+   // ── Trend prediction label (drawn every bar for chart analysis) ──
+   PredictNextTrend(BB_datas);
 
    // ── GATE 0: M30+M15 dual sideway — CHECK H1 FIRST ─────────────
    // Fix: require H1 also sideways before exit.
    // H1 still trending → M30+M15 sideway = brief noise → hold trade.
    // All three sideways → genuine pause → exit all.
+   int H1_mid = BB_datas[3].BB_diffMid_Trend[LA];
    int M30_mid = BB_datas[2].BB_diffMid_Trend[LA];
    int M15_mid = BB_datas[1].BB_diffMid_Trend[LA];
-   int H1_mid  = BB_datas[3].BB_diffMid_Trend[LA];
 
+   // check if 
    if(M30_mid >= 3 && M15_mid >= 3) {
       if(H1_mid >= 3) {
          // All three sideways — genuine pause → exit all
@@ -950,250 +954,6 @@ void Trade_Strategy(
          Print("[TRADEINFO] " + Trade_info + "|act:0 atrsl:" + ATRSL1BUF.dir); return;
       }
    }
-
-   // ── GATE 0b: CASCADE BAND TOUCH ───────────────────────────────
-   {
-      int cas_sqzCount = 0, cas_shrinkTF = -1;
-      for(int ci = 0; ci <= MAX_TF; ci++) {
-         int cstg = BB_datas[ci].BBW_stage[LA];
-         if(cstg >= 400 && cstg < 500)        cas_sqzCount++;
-         else if(cstg==513 || cstg==523)      cas_shrinkTF = ci;
-      }
-
-      if(cas_shrinkTF >= 0 && cas_sqzCount >= 1) {
-         // Pink zone: M15+M30 both SQZ → exit all
-         bool cas_M15sqz=(BB_datas[1].BBW_stage[LA]>=400&&BB_datas[1].BBW_stage[LA]<500);
-         bool cas_M30sqz=(BB_datas[2].BBW_stage[LA]>=400&&BB_datas[2].BBW_stage[LA]<500);
-         if(cas_M15sqz && cas_M30sqz) {
-            Trade_act=7; Trade_lots=0.0;
-            s_exitCooldown=POST_EXIT_COOLDOWN;
-            Trade_info="Gate:[G0b-PINK] TradeAct:"+IntegerToString(Trade_act)+" M30+M15_SQZ";
-            DrawGateLabel("[G0b-PINK]", close_prices[LA], BB_datas, GATE_CLR_PINK, 1);
-            Print("[TRADEINFO] " + Trade_info + "|act:7 atrsl:" + ATRSL1BUF.dir); return;
-         }
-
-         // Band touch on highest shrink TF
-         int htf=cas_shrinkTF;
-         int htf_updn=BB_datas[htf].BBUpDn_state[LA];
-         double htf_dM =BB_datas[htf].BB_diffMid[LA];
-         double htf_dM1=BB_datas[htf].BB_diffMid[LA_1];
-         int    htf_mid=BB_datas[htf].BB_diffMid_Trend[LA];
-
-         int cas_dir=0; string cas_touch="";
-         if     (htf_updn==2){ cas_dir=1; cas_touch="lower_band"; }
-         else if(htf_updn==1){ cas_dir=2; cas_touch="upper_band"; }
-         if(cas_dir==0) {
-            if(htf_mid==2 && htf_dM1>0 && htf_dM<=0){ cas_dir=2; cas_touch="mid_cross_dn"; }
-            else if(htf_mid==1 && htf_dM1<0 && htf_dM>=0){ cas_dir=1; cas_touch="mid_cross_up"; }
-         }
-
-         if(cas_dir != 0) {
-            // ATRSL direction gate (v22.20: unconditional — was M5-fly-only guard).
-            // In cascade context M5 is usually SQZ/shrink so old guard rarely fired;
-            // BUY at lower band with ATRSL downtrend and SELL at upper with uptrend
-            // reliably lose → return immediately instead of falling through.
-            if(cas_dir==1 && ATRSL1BUF.dir==1) {
-               Trade_info = "Gate:[G0b-ATRSL] TradeAct:"+IntegerToString(Trade_act)+" reason:ATRSL_dn dir:BUY";
-               DrawGateLabel("[G0b-ATRSL]", close_prices[LA], BB_datas, GATE_CLR_NOISE, 1);
-               Print("[TRADEINFO] " + Trade_info + "|act:0 atrsl:" + ATRSL1BUF.dir); return;
-            }
-            if(cas_dir==2 && ATRSL1BUF.dir==0) {
-               Trade_info = "Gate:[G0b-ATRSL] TradeAct:"+IntegerToString(Trade_act)+" reason:ATRSL_up dir:SELL";
-               DrawGateLabel("[G0b-ATRSL]", close_prices[LA], BB_datas, GATE_CLR_NOISE, 1);
-               Print("[TRADEINFO] " + Trade_info + "|act:0 atrsl:" + ATRSL1BUF.dir); return;
-            }
-            // M15 opposing filter (v22.19 fly, v22.24 shrink, v22.25 SQZ+opposing mid).
-            // v22.25: added SQZ (400-499) with opposing midtrend — blocked Apr-13 BUY M15s=424 mid=2 (-117).
-            int  m15_stg_gb = BB_datas[1].BBW_stage[LA];
-            int  m15_mid_gb = BB_datas[1].BB_diffMid_Trend[LA];
-            bool m15_fly_dn_gb=(m15_stg_gb==521)||(m15_stg_gb==522&&m15_mid_gb!=5)
-                              ||(m15_stg_gb==523&&(m15_mid_gb==2||m15_mid_gb==4))
-                              ||((m15_stg_gb>=400&&m15_stg_gb<500)&&(m15_mid_gb==2||m15_mid_gb==4));
-            bool m15_fly_up_gb=(m15_stg_gb==511)||(m15_stg_gb==512&&m15_mid_gb!=4)
-                              ||(m15_stg_gb==513&&(m15_mid_gb==1||m15_mid_gb==5))
-                              ||((m15_stg_gb>=400&&m15_stg_gb<500)&&(m15_mid_gb==1||m15_mid_gb==5));
-            if((cas_dir==1&&m15_fly_dn_gb)||(cas_dir==2&&m15_fly_up_gb)) {
-               Trade_info = "Gate:[G0b-M15OPP] TradeAct:"+IntegerToString(Trade_act)+" M15stg:"+m15_stg_gb+" M15mid:"+m15_mid_gb;
-               DrawGateLabel("[G0b-M15OPP]", close_prices[LA], BB_datas, GATE_CLR_NOISE, 1);
-               Print("[TRADEINFO] " + Trade_info + "|act:0 atrsl:" + ATRSL1BUF.dir); return;
-            }
-            // H4 fly opposing filter (v22.21, extended v22.23 shrink, v22.32 flat-mid shrink).
-            // SELL at upper band when H4 bullish fly/shrink, BUY at lower band when H4 bearish.
-            // v22.23: extended to shrink stages (513/523 with committed mid).
-            // v22.32: 523&&mid==3 and 513&&mid==3 — shrink with flat mid carries bearish/bullish
-            // structural bias still (mirrors RC14/v22.29 M30 logic for G0b-H4OPP). RC18 confirmed.
-            // v22.33: also block when H4 in SQZ (400-499) with opposing mid (mid==2/4 for BUY block;
-            // mid==1/5 for SELL block). H4-SQZ with bearish mid still carries bearish macro bias.
-            // Confirmed: Apr-13 16:30 G0b-TOUCH BUY H4=423/mid=2 → -24.56. RC19.
-            {
-               int  H4_stg_gb = BB_datas[4].BBW_stage[LA];
-               int  H4_mid_gb = BB_datas[4].BB_diffMid_Trend[LA];
-               bool H4_fly_up_gb=(H4_stg_gb==511||H4_stg_gb==512)&&(H4_mid_gb==1||H4_mid_gb==5)
-                                ||(H4_stg_gb==513&&(H4_mid_gb==1||H4_mid_gb==3||H4_mid_gb==5))
-                                ||((H4_stg_gb>=400&&H4_stg_gb<500)&&(H4_mid_gb==1||H4_mid_gb==3||H4_mid_gb==5));
-               bool H4_fly_dn_gb=(H4_stg_gb==521||H4_stg_gb==522)&&(H4_mid_gb==2||H4_mid_gb==4)
-                                ||(H4_stg_gb==523&&(H4_mid_gb==2||H4_mid_gb==3||H4_mid_gb==4))
-                                ||((H4_stg_gb>=400&&H4_stg_gb<500)&&(H4_mid_gb==2||H4_mid_gb==3||H4_mid_gb==4));
-               if((cas_dir==1&&H4_fly_dn_gb)||(cas_dir==2&&H4_fly_up_gb)) {
-                  Trade_info = "Gate:[G0b-H4OPP] TradeAct:"+IntegerToString(Trade_act)+" H4stg:"+H4_stg_gb+" H4mid:"+H4_mid_gb;
-                  DrawGateLabel("[G0b-H4OPP]", close_prices[LA], BB_datas, GATE_CLR_H4, 1);
-                  Print("[TRADEINFO] " + Trade_info + "|act:0 atrsl:" + ATRSL1BUF.dir); return;
-               }
-            }
-            // M30 opposing filter (v22.25, extended v22.29): block cascade touch when M30 fly/shrink opposes direction.
-            // BUY: 521/522 with mid2/4 — active bearish fly; 523 with mid2/3/4 — bearish shrink not yet reversing.
-            // SELL: 511/512 with mid1/5 — active bullish fly; 513 with mid1/3/5 — bullish shrink not yet reversing.
-            // v22.29 extension: 523&&mid==3 and 513&&mid==3 — shrink with flat mid has no reversal signal yet.
-            // Confirmed RC14: Feb-26 07:30 M30=523/mid=3 BUY -4.02, Mar-03 03:00 M30=523/mid=3 BUY -45.36.
-            {
-               int  M30_stg_gb = BB_datas[2].BBW_stage[LA];
-               int  M30_mid_gb = BB_datas[2].BB_diffMid_Trend[LA];
-               bool M30_fly_dn_gb=(M30_stg_gb==521||M30_stg_gb==522)&&(M30_mid_gb==2||M30_mid_gb==4)
-                                 ||(M30_stg_gb==523&&(M30_mid_gb==2||M30_mid_gb==3||M30_mid_gb==4));
-               bool M30_fly_up_gb=(M30_stg_gb==511||M30_stg_gb==512)&&(M30_mid_gb==1||M30_mid_gb==5)
-                                 ||(M30_stg_gb==513&&(M30_mid_gb==1||M30_mid_gb==3||M30_mid_gb==5));
-               if((cas_dir==1&&M30_fly_dn_gb)||(cas_dir==2&&M30_fly_up_gb)) {
-                  Trade_info = "Gate:[G0b-M30OPP] TradeAct:"+IntegerToString(Trade_act)+" M30stg:"+M30_stg_gb+" M30mid:"+M30_mid_gb;
-                  DrawGateLabel("[G0b-M30OPP]", close_prices[LA], BB_datas, GATE_CLR_NOISE, 1);
-                  Print("[TRADEINFO] " + Trade_info + "|act:0 atrsl:" + ATRSL1BUF.dir); return;
-               }
-            }
-            // G0b-SQZLOCK: H1+M30 both in SQZ AND both strictly sideway (mid==3) — G0c-SQZLOCK
-            // condition applies but G0b returns before G0c evaluates. Only block when BOTH mids
-            // are 3 (pure sideway, zero directional conviction). If either has a directional mid
-            // (uptrend/downtrend/sideway-up/dn), the trade has macro conviction — allow through.
-            // v22.27 original was H1_SQZ&&M30_SQZ (any mid) → over-filtered Feb-06 13:30 +47.79
-            // and Mar-20 14:40 +93.06. Narrowed in v22.28 to both-mid==3 only.
-            // Confirmed blocks: Feb-06 08:00 BUY H1_mid=3+M30_mid=3 → -42.99, Apr-15 17:35 → -14.64.
-            {
-               bool h1_sqz_gb  = (BB_datas[3].BBW_stage[LA]>=400 && BB_datas[3].BBW_stage[LA]<500);
-               bool m30_sqz_gb = (BB_datas[2].BBW_stage[LA]>=400 && BB_datas[2].BBW_stage[LA]<500);
-               bool h1_mid_flat= (BB_datas[3].BB_diffMid_Trend[LA]==3);
-               bool m30_mid_flat=(BB_datas[2].BB_diffMid_Trend[LA]==3);
-               if(h1_sqz_gb && m30_sqz_gb && h1_mid_flat && m30_mid_flat) {
-                  Trade_info = "Gate:[G0b-SQZLOCK] TradeAct:"+IntegerToString(Trade_act)+" H1_SQZ+M30_SQZ+both_flat";
-                  DrawGateLabel("[G0b-SQZLOCK]", close_prices[LA], BB_datas, GATE_CLR_PINK, 1);
-                  Print("[TRADEINFO] " + Trade_info + "|act:0 atrsl:" + ATRSL1BUF.dir); return;
-               }
-            }
-            // G0b-H1OPP: H1 committed fly opposing cascade direction (RC36, v22.46).
-            // Cascade path parallel to G4b-H1OPP in shrink path. G0b-H1SQZDN covers H1-SQZ;
-            // this gate covers H1 in committed fly (511/512/521/522) opposing cas_dir.
-            // Includes mid=3 (flat) from the start — same structural reasoning as RC35.
-            // Feb-10 03:30 SELL casTF=4, H1=512/mid=3 (bullish fly, flat mid) → -16.90; 0 wins lost.
-            {
-               int  H1_stg_hop = BB_datas[3].BBW_stage[LA];
-               int  H1_mid_hop = BB_datas[3].BB_diffMid_Trend[LA];
-               bool H1_fly_up_hop = (H1_stg_hop==511||H1_stg_hop==512)&&(H1_mid_hop==1||H1_mid_hop==3||H1_mid_hop==5);
-               bool H1_fly_dn_hop = (H1_stg_hop==521||H1_stg_hop==522)&&(H1_mid_hop==2||H1_mid_hop==3||H1_mid_hop==4);
-               if((cas_dir==1&&H1_fly_dn_hop)||(cas_dir==2&&H1_fly_up_hop)) {
-                  Trade_info = "Gate:[G0b-H1OPP] TradeAct:"+IntegerToString(Trade_act)+" H1stg:"+H1_stg_hop+" H1mid:"+H1_mid_hop;
-                  DrawGateLabel("[G0b-H1OPP]", close_prices[LA], BB_datas, GATE_CLR_NOISE, 3);
-                  Print("[TRADEINFO] " + Trade_info + "|act:0 atrsl:" + ATRSL1BUF.dir); return;
-               }
-            }
-            // G0b-H1SQZDN: H1 SQZ with opposing mid in cascade path (RC25 v22.37, RC26 v22.38).
-            // RC25: blocked H1-SQZ/mid=4 (sideway-dn) opposing BUY.
-            // RC26: extended to mid=2 (full downtrend) — same structural gap, stronger bearish signal.
-            // SELL side: mid=5 only (mid=1 has confirmed wins; do NOT extend).
-            {
-               int  H1_stg_h1dn = BB_datas[3].BBW_stage[LA];
-               int  H1_mid_h1dn = BB_datas[3].BB_diffMid_Trend[LA];
-               bool H1_sqz_opp_buy  = (H1_stg_h1dn>=400&&H1_stg_h1dn<500)&&(H1_mid_h1dn==4||H1_mid_h1dn==2);
-               bool H1_sqz_opp_sell = (H1_stg_h1dn>=400&&H1_stg_h1dn<500)&&(H1_mid_h1dn==5);
-               if((cas_dir==1&&H1_sqz_opp_buy)||(cas_dir==2&&H1_sqz_opp_sell)) {
-                  Trade_info = "Gate:[G0b-H1SQZDN] TradeAct:"+IntegerToString(Trade_act)+" H1stg:"+H1_stg_h1dn+" H1mid:"+H1_mid_h1dn;
-                  DrawGateLabel("[G0b-H1SQZDN]", BB_datas[4].BB_Mid[LA], BB_datas, GATE_CLR_NOISE, 4);
-                  Print("[TRADEINFO] " + Trade_info + "|act:0 atrsl:" + ATRSL1BUF.dir); return;
-               }
-            }
-            // G0b-M5OPP: sole M5 shrink trigger with M5 mid opposing direction (RC15, v22.31).
-            // When M5 is the ONLY shrink TF (cas_shrinkTF==0) and M5 itself is in opposing
-            // shrink mid → the cascade trigger fights its own midtrend: BUY at M5 lower band
-            // when M5 is bearish shrink/mid (523+mid2/4), SELL at upper when bullish (513+mid1/5).
-            // Confirmed: Mar-03 05:00 BUY M5=523/mid=2 -63.53; Mar-04 15:15 BUY M5=523/mid=4 -41.43.
-            if(cas_shrinkTF == 0) {
-               int  m5_stg_gb  = BB_datas[0].BBW_stage[LA];
-               int  m5_mid_gb  = BB_datas[0].BB_diffMid_Trend[LA];
-               bool m5_opp_buy = (m5_stg_gb==523)&&(m5_mid_gb==2||m5_mid_gb==4);
-               bool m5_opp_sel = (m5_stg_gb==513)&&(m5_mid_gb==1||m5_mid_gb==5);
-               if((cas_dir==1&&m5_opp_buy)||(cas_dir==2&&m5_opp_sel)) {
-                  Trade_info = "Gate:[G0b-M5OPP] TradeAct:"+IntegerToString(Trade_act)+" M5stg:"+m5_stg_gb+" M5mid:"+m5_mid_gb;
-                  DrawGateLabel("[G0b-M5OPP]", close_prices[LA], BB_datas, GATE_CLR_NOISE, 1);
-                  Print("[TRADEINFO] " + Trade_info + "|act:0 atrsl:" + ATRSL1BUF.dir); return;
-               }
-            }
-            // G0b-M5FLY: M5 in committed opposing fly when higher TF is cascade trigger (RC28b, v22.41).
-            // When cas_shrinkTF > 0 (M5 is not the trigger) and M5 is in committed opposing fly
-            // (521/522 for BUY direction; 511/512 for SELL direction), the fastest TF directly
-            // contradicts the cascade direction. Confirmed: 5 losses -77.37, 1 win +2.41, net +74.96.
-            if(cas_shrinkTF > 0) {
-               int  m5_stg_mf     = BB_datas[0].BBW_stage[LA];
-               bool m5_opp_buy_mf = (m5_stg_mf==521 || m5_stg_mf==522);
-               bool m5_opp_sel_mf = (m5_stg_mf==511 || m5_stg_mf==512);
-               if((cas_dir==1 && m5_opp_buy_mf) || (cas_dir==2 && m5_opp_sel_mf)) {
-                  Trade_info = "Gate:[G0b-M5FLY] TradeAct:0 M5stg:"+IntegerToString(m5_stg_mf)+" cas_shrinkTF:"+IntegerToString(cas_shrinkTF);
-                  DrawGateLabel("[G0b-M5FLY]", close_prices[LA], BB_datas, GATE_CLR_NOISE, 0);
-                  Print("[TRADEINFO] " + Trade_info + "|act:0 atrsl:" + ATRSL1BUF.dir); return;
-               }
-            }
-            // G0b-M5SHRKopp: M5 in opposing bearish/bullish shrink when higher TF is cascade trigger (v22.44, RC34)
-            // Extends G0b-M5FLY (committed fly 521/522) to also cover M5=523 (bearish shrink) for BUY
-            // and M5=513 (bullish shrink) for SELL, when mid still opposes direction (mid∈{2,3,4} for BUY;
-            // mid∈{1,3,5} for SELL). If mid has reversed (mid=1 for BUY within 523), the reversal is genuine.
-            // RC34: Jan-29 16:10 BUY at H1 lower band (cas_shrinkTF=3), M5=523/mid=3 → -43.37.
-            if(cas_shrinkTF > 0) {
-               int  m5_stg_sr  = BB_datas[0].BBW_stage[LA];
-               int  m5_mid_sr  = BB_datas[0].BB_diffMid_Trend[LA];
-               bool m5_shrk_opp_buy = (m5_stg_sr==523)&&(m5_mid_sr==2||m5_mid_sr==3||m5_mid_sr==4);
-               bool m5_shrk_opp_sel = (m5_stg_sr==513)&&(m5_mid_sr==1||m5_mid_sr==3||m5_mid_sr==5);
-               if((cas_dir==1 && m5_shrk_opp_buy) || (cas_dir==2 && m5_shrk_opp_sel)) {
-                  Trade_info = "Gate:[G0b-M5SHRKopp] TradeAct:0 M5stg:"+IntegerToString(m5_stg_sr)+" M5mid:"+IntegerToString(m5_mid_sr)+" cas_shrinkTF:"+IntegerToString(cas_shrinkTF);
-                  DrawGateLabel("[G0b-M5SHRKopp]", close_prices[LA], BB_datas, GATE_CLR_NOISE, 0);
-                  Print("[TRADEINFO] " + Trade_info + "|act:0 atrsl:" + ATRSL1BUF.dir); return;
-               }
-            }
-
-            // Band-touch entry
-            Trade_act = (cas_dir==1) ? 1 : 2;
-            Trade_sl   = GetATRSLStop(ATRSL1BUF, cas_dir);
-            s_lastEntryWasCascade = true;   // v22.45: mark as cascade for G5-FADE logic
-            s_lastEntryTrigTF     = (cas_shrinkTF >= 0) ? cas_shrinkTF : 0;
-            s_lastEntryTime       = iTime(_Symbol, PERIOD_M5, 0);
-            Trade_info = "Gate:[G0b-TOUCH] TradeAct:"+IntegerToString(Trade_act)+" TF:"+htf+" touch:"+cas_touch+" sl:"+DoubleToString(Trade_sl,_Digits);
-            DrawGateLabel("[G0b-TOUCH]", close_prices[LA], BB_datas,
-                           (cas_dir==1 ? GATE_CLR_BUY : GATE_CLR_SELL), 1);
-            Print("[TRADEINFO] " + Trade_info + "|act:" + Trade_act + " atrsl:" + ATRSL1BUF.dir); return;
-         }
-         else {
-            Trade_info = "Gate:[G0b-WAIT] TradeAct:"+IntegerToString(Trade_act)+" TF:"+(string)cas_shrinkTF;
-            DrawGateLabel("[G0b-WAIT]", close_prices[LA], BB_datas, GATE_CLR_WAIT, 1);
-         }
-      }
-   }
-
-   // ── GATE 0c: H1 SQZ + (M30 compressed or M15 SQZ) → block ────
-   // Extended from original M30+H1 both SQZ: now also covers the gap
-   // where M30 exits SQZ→shrink while H1 is still fully compressed.
-   {
-      bool H1_sqz_c       = (BB_datas[3].BBW_stage[LA]>=400 && BB_datas[3].BBW_stage[LA]<500);
-      bool M30_compressed = (BB_datas[2].BBW_stage[LA]>=400 && BB_datas[2].BBW_stage[LA]<500)
-                         || (BB_datas[2].BBW_stage[LA]==513 || BB_datas[2].BBW_stage[LA]==523);
-      bool M15_sqz_c      = (BB_datas[1].BBW_stage[LA]>=400 && BB_datas[1].BBW_stage[LA]<500);
-      if(H1_sqz_c && (M30_compressed || M15_sqz_c)) {
-         Trade_act  = 0;
-         Trade_lots = 0.0;
-         string sqz_tag = M30_compressed ? "M30_cmp" : "M15_SQZ";
-         string g0c_seg = "Gate:[G0c-SQZLOCK] H1_SQZ:" + sqz_tag;
-         Trade_info = (StringLen(Trade_info)==0)
-            ? g0c_seg + " TradeAct:"+IntegerToString(Trade_act)
-            : Trade_info + "| " + g0c_seg;
-         DrawGateLabel("[G0c-SQZLOCK]", BB_datas[2].BB_Mid[LA], BB_datas, GATE_CLR_PINK, 2);
-         Stats_RecordBlock(Trade_info);
-         Print("[TRADEINFO] " + Trade_info + "|act:0 atrsl:" + ATRSL1BUF.dir); return;
-      }
-   }
-
    // ── H2L / L2H chain detection ─────────────────────────────────
    int H2L_flyUP_TF=-1, H2L_flyDN_TF=-1;
    int H2L_flyStrink_TF=-1, H2L_sideway_TF=-1;
@@ -1223,55 +983,14 @@ void Trade_Strategy(
       if(sq) { if(i==MIN_TF||L2H_sideway_TF==i-1) L2H_sideway_TF=i; }
    }
 
-   // ── M5 FADING → EXIT ALL (v22.45: delayed + cascade-aware) ──────
-   // #2: Delay G5-FADE — require 2 consecutive flat bars OR M15 also fading.
-   //     A single M5 flat bar during active M15 trend is noise — don't exit yet.
-   // #6: Cascade entries need M15 confirm even for 1-bar M5 flat (mean-reversion
-   //     targets a band touch, not a trend; M5 flat mid-trade is expected noise).
-   {
-      int M5_cur  = BB_datas[0].BB_diffMid_Trend[LA];
-      int M5_prev = BB_datas[0].BB_diffMid_Trend[LA_1];
-      int M5_pp   = BB_datas[0].BB_diffMid_Trend[LA_2];
-      int M15_cur = BB_datas[1].BB_diffMid_Trend[LA];
-      bool m15_fading = (M15_cur >= 3);
-      // Persistent flat: M5 stayed flat for 2 consecutive bars (strong confirmation)
-      bool m5_flat2 = (M5_cur == 3 && M5_prev == 3);
-      // Single-bar fade with M15 also fading (non-cascade standard path)
-      bool fade_buy_1bar  = (M5_prev==1 && M5_cur==3 && m15_fading);
-      bool fade_sell_1bar = (M5_prev==2 && M5_cur==3 && m15_fading);
-      // Two-bar fade from prior trend (cascade and non-cascade both exit)
-      bool fade_buy_2bar  = (M5_pp==1 && m5_flat2);
-      bool fade_sell_2bar = (M5_pp==2 && m5_flat2);
-
-      bool fire_fade_buy  = false;
-      bool fire_fade_sell = false;
-      if(s_lastEntryWasCascade) {
-         // Cascade entries: M5 flat alone insufficient; require M15 also fading OR 2-bar persistence
-         fire_fade_buy  = BUYS>0  && (fade_buy_2bar  || (M5_cur==3 && m15_fading));
-         fire_fade_sell = SELLS>0 && (fade_sell_2bar || (M5_cur==3 && m15_fading));
-      } else {
-         fire_fade_buy  = BUYS>0  && (fade_buy_1bar  || fade_buy_2bar);
-         fire_fade_sell = SELLS>0 && (fade_sell_1bar || fade_sell_2bar);
-      }
-      if(fire_fade_buy || fire_fade_sell) {
-         Trade_act=7; Trade_lots=0.0;
-         s_exitCooldown=POST_EXIT_COOLDOWN;
-         Trade_info="Gate:[G5-FADE] TradeAct:"+IntegerToString(Trade_act)
-                  +" M5:"+M5_prev+">"+M5_cur+" M15:"+M15_cur
-                  +(s_lastEntryWasCascade?" cas":"");
-         DrawGateLabel("[G5-FADE]", close_prices[LA], BB_datas, GATE_CLR_EXIT, 0);
-         Print("[TRADEINFO] " + Trade_info + "|act:7 atrsl:" + ATRSL1BUF.dir); return;
-      }
-   }
-
    // ── SHRINK PATH ───────────────────────────────────────────────
-   bool M5_shrink =(BB_datas[0].BBW_stage[LA]==513||BB_datas[0].BBW_stage[LA]==523);
-   bool H4_shrink =(BB_datas[4].BBW_stage[LA]==513||BB_datas[4].BBW_stage[LA]==523);
-   bool H1_shrink =(BB_datas[3].BBW_stage[LA]==513||BB_datas[3].BBW_stage[LA]==523);
-   bool M30_shrink=(BB_datas[2].BBW_stage[LA]==513||BB_datas[2].BBW_stage[LA]==523);
-   bool M15_shrink=(BB_datas[1].BBW_stage[LA]==513||BB_datas[1].BBW_stage[LA]==523);
+   // V30.02: use M15 mid (trigger TF) as the sideway reference, not M5
+   bool H4_shrink =(BB_datas[4].BBW_stage[LA]==513||BB_datas[4].BBW_stage[LA]==523) && BB_datas[1].BB_diffMid_Trend[LA]>=3;
+   bool H1_shrink =(BB_datas[3].BBW_stage[LA]==513||BB_datas[3].BBW_stage[LA]==523) && BB_datas[1].BB_diffMid_Trend[LA]>=3;
+   bool M30_shrink=(BB_datas[2].BBW_stage[LA]==513||BB_datas[2].BBW_stage[LA]==523) && BB_datas[1].BB_diffMid_Trend[LA]>=3;
+   bool M15_shrink=(BB_datas[1].BBW_stage[LA]==513||BB_datas[1].BBW_stage[LA]==523) && BB_datas[1].BB_diffMid_Trend[LA]>=3;
 
-   if(M5_shrink || H4_shrink || H1_shrink || M30_shrink || M15_shrink) {
+   if(H4_shrink || H1_shrink || M30_shrink || M15_shrink) {
       ShrinkDecision shrink = GetShrinkDecision(BB_datas, close_prices);
       string shrink_prefix = (StringLen(Trade_info)==0)
          ? "Gate:[G6-SHRINK] TradeAct:"+IntegerToString(Trade_act)+" "
@@ -1295,12 +1014,12 @@ void Trade_Strategy(
          DrawGateLabel("[G6-SELL]", BB_datas[2].BB_Mid[LA], BB_datas, GATE_CLR_SELL, 2);
       }
       else {
-         // M5 opposing during shrink → exit all
-         int M5_now = BB_datas[0].BB_diffMid_Trend[LA];
-         if((M5_now==2&&BUYS>0)||(M5_now==1&&SELLS>0)) {
+         // M15 opposing during shrink → exit all (V30.02: M15 is the trigger TF)
+         int M15_now_rev = BB_datas[1].BB_diffMid_Trend[LA];
+         if((M15_now_rev==2&&BUYS>0)||(M15_now_rev==1&&SELLS>0)) {
             Trade_act=7; Trade_lots=0.0;
             s_exitCooldown=POST_EXIT_COOLDOWN;
-            Trade_info += "| Gate:[G6-REV] M5:"+M5_now;
+            Trade_info += "| Gate:[G6-REV] M15:"+M15_now_rev;
             DrawGateLabel("[G6-REV]", close_prices[LA], BB_datas, GATE_CLR_EXIT, 2);
          }
       }
@@ -1311,7 +1030,6 @@ void Trade_Strategy(
       bool htfShrk=(H2L_flyStrink_TF!=-1), htfSide=(H2L_sideway_TF!=-1);
       bool ltfUP  =(L2H_flyUP_TF!=-1), ltfDN=(L2H_flyDN_TF!=-1);
       int  direction=0;
-      bool nochain=false;
       int  H1_mid_fly = BB_datas[3].BB_diffMid_Trend[LA];
 
       if     (ltfUP&&htfDN&&!htfUP)                                                direction=1;  // Case 1 — reversal, H1 opposing expected
@@ -1324,7 +1042,7 @@ void Trade_Strategy(
          DrawGateLabel("[G7-H1OPP]", BB_datas[3].BB_Mid[LA], BB_datas, GATE_CLR_NOISE, 3);
          Print("[TRADEINFO] " + Trade_info + "|act:0 atrsl:" + ATRSL1BUF.dir); return;
       }
-      else if((ltfUP||ltfDN)&&(htfShrk||htfSide))                                 nochain=true;
+      else if((ltfUP||ltfDN)&&(htfShrk||htfSide))                                 { /* no chain — direction stays 0 */ }
 
       if(direction != 0) {
          // ── H4 SOFT BIAS FILTER ──────────────────────────────────────
@@ -1356,15 +1074,14 @@ void Trade_Strategy(
          }
          else if(H4_in_sqz) {
             // H4 compressed — macro direction unclear.
-            // Allow only when M5 diffMidTrend explicitly confirms the direction;
-            // M5 consensus adds the conviction that H4-SQZ cannot provide.
-            int M5_mid_sqz = BB_datas[0].BB_diffMid_Trend[LA];
-            bool M5_confirms = (direction==1 && (M5_mid_sqz==1||M5_mid_sqz==5))
-                            || (direction==2 && (M5_mid_sqz==2||M5_mid_sqz==4));
+            // V30.02: require M15 diffMidTrend to confirm direction (M15 is the trigger TF).
+            int M15_mid_sqz = BB_datas[1].BB_diffMid_Trend[LA];
+            bool M15_confirms = (direction==1 && (M15_mid_sqz==1||M15_mid_sqz==5))
+                             || (direction==2 && (M15_mid_sqz==2||M15_mid_sqz==4));
             Trade_info = "Gate:[H4-SQZ] TradeAct:"+IntegerToString(Trade_act)
-                       + " M5mid:"+M5_mid_sqz;
+                       + " M15mid:"+M15_mid_sqz;
             DrawGateLabel("[H4-SQZ]", BB_datas[4].BB_Mid[LA], BB_datas, GATE_CLR_H4, 4);
-            if(!M5_confirms) { direction = 0; }
+            if(!M15_confirms) { direction = 0; }
             else {
                // G4g-H1H4SQZ: H4 SQZ + H1 also SQZ = both macro TFs compressed (RC17, v22.32).
                // When H1 and H4 are simultaneously in SQZ, the macro is doubly uncertain.
@@ -1465,95 +1182,28 @@ void Trade_Strategy(
          }
       }
 
+      // ── M15 ENTRY TRIGGER (V30.02) ───────────────────────────────
+      // M15 BBdiffMidTrend transition is the entry signal for the fly path.
+      // M5 removed as trigger due to noise; M30 is the confirmTF for quality boosts.
       if(direction != 0) {
-         Trade_act = (direction==1) ? 1 : 2;
-         Trade_sl  = GetATRSLStop(ATRSL1BUF, direction);
-         s_lastEntryWasCascade = false;          // v22.45
-         // L2H depth sizing: highest flying TF in chain drives lot size (v22.42)
-         // l2h=0 (M5 only) → 0.5×; l2h=1 (M15+) → 0.75×; l2h=2+ (M30+) → 1.0×
-         int    l2h      = MathMax(L2H_flyUP_TF, L2H_flyDN_TF);
-         s_lastEntryTrigTF = l2h;               // v22.45: L2H chain depth = effective trigger TF
-         double l2hMulti = (l2h>=2) ? 1.0 : (l2h>=1) ? 0.75 : 0.5;
-         int    H4_stg_l = BB_datas[4].BBW_stage[LA];
-         if((H4_stg_l==513||H4_stg_l==523) && l2hMulti > 0.75) l2hMulti = 0.75;
-         double vol_min  = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
-         double vol_step = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
-         Trade_lots = MathMax(vol_min, MathRound(baseLot*l2hMulti/vol_step)*vol_step);
-         Trade_info += "| Gate:[FLY] dir:"+direction
-                     + " sl:"+DoubleToString(Trade_sl,_Digits)
-                     + " H2L:"+H2L_flyUP_TF+"/"+H2L_flyDN_TF
-                     + " L2H:"+L2H_flyUP_TF+"/"+L2H_flyDN_TF
-                     + " l2hX:"+DoubleToString(l2hMulti,2)
-                     + " lots:"+DoubleToString(Trade_lots,2);
-      }
-      else {
-         string g7_tag = nochain ? "[G7-NOCHAIN]" : "[G7-NEUTRAL]";
-         Trade_info += "| Gate:" + g7_tag;
-         DrawGateLabel(g7_tag, BB_datas[0].BB_Mid[LA], BB_datas, GATE_CLR_NOISE, 0);
+         M5_TransitionResult trans = DetectM5Transition(BB_datas, close_prices, 1);
+         Trade_info += "| " + trans.info;
+         if(trans.direction == direction && trans.quality >= 60) {
+            Trade_act  = (ENUM_Trade_Act)trans.direction;
+            Trade_sl   = GetATRSLStop(ATRSL1BUF, trans.direction);
+            s_lastEntryTrigTF     = 1;
+            s_lastEntryWasCascade = false;
+            Trade_info += "| Gate:[FLY-" + (trans.direction==1 ? "BUY" : "SELL") + "] sl:" + DoubleToString(Trade_sl, _Digits);
+            DrawGateLabel(trans.direction==1 ? "[FLY-BUY]" : "[FLY-SELL]",
+                          BB_datas[1].BB_Mid[LA], BB_datas,
+                          trans.direction==1 ? GATE_CLR_BUY : GATE_CLR_SELL, 1);
+         } else if(trans.transition==M5_TRANS_UP_TO_FLAT || trans.transition==M5_TRANS_DN_TO_FLAT) {
+            Trade_act  = 7; Trade_lots = 0.0;
+            s_exitCooldown = POST_EXIT_COOLDOWN;
+            Trade_info += "| Gate:[G5-FADE]";
+            DrawGateLabel("[G5-FADE]", close_prices[LA], BB_datas, GATE_CLR_EXIT, 1);
+         }
       }
    }
-
-   // Final: if act=1/2 but no lot → clear
-   if(Trade_act==1||Trade_act==2) {
-      if(Trade_lots < SymbolInfoDouble(_Symbol,SYMBOL_VOLUME_MIN)) {
-         Trade_act=0; Trade_lots=0.0; Trade_info += "| Gate:[G7-SUPPRESSED]";
-      }
-   }
-
-   // ── G7-NOTM15BAR: only allow shrink/fly entries on the last M5 bar of an M15 period (v22.45, #1)
-   // Reduces M5 noise by gating entries to the bar that closes with the M15 bar — providing
-   // a natural M15-synchronized confirmation window. Cascade entries (G0b-TOUCH) are exempt
-   // because they return early and never reach this check.
-   if(Trade_act==1 || Trade_act==2) {
-      datetime m15_start = iTime(_Symbol, PERIOD_M15, 0);
-      datetime m5_start  = iTime(_Symbol, PERIOD_M5,  0);
-      bool is_last_m5 = (m5_start - m15_start >= (datetime)(PeriodSeconds(PERIOD_M15) - PeriodSeconds(PERIOD_M5)));
-      if(!is_last_m5) {
-         Trade_act = 0; Trade_lots = 0.0;
-         Trade_info += "| Gate:[G7-NOTM15BAR] m5off:"+(string)(int)(m5_start-m15_start);
-         DrawGateLabel("[G7-NOTM15BAR]", close_prices[LA], BB_datas, GATE_CLR_NOISE, 0);
-      }
-   }
-
-   // ── FIX A PHASE 1: two-phase reversal interception ───────────
-   // If a reversal signal fires against an open opposite position,
-   // close only now; Phase 2 re-confirms after MIN_HOLD_BARS bars.
-   if(Trade_act == 1 && SELLS > 0) {
-      s_pendingBuy  = true; s_pendingSell = false;
-      s_pendingTime = iTime(_Symbol, PERIOD_M5, 0);
-      Trade_act = 7; Trade_lots = 0.0;
-      Trade_info += "| Gate:[PHASE1-BUY]";
-      DrawGateLabel("[PHASE1-BUY]", close_prices[LA], BB_datas, GATE_CLR_WAIT, 0);
-      Print("[TRADEINFO] " + Trade_info + "|act:7 atrsl:" + ATRSL1BUF.dir); return;
-   }
-   else if(Trade_act == 2 && BUYS > 0) {
-      s_pendingSell = true; s_pendingBuy = false;
-      s_pendingTime = iTime(_Symbol, PERIOD_M5, 0);
-      Trade_act = 7; Trade_lots = 0.0;
-      Trade_info += "| Gate:[PHASE1-SELL]";
-      DrawGateLabel("[PHASE1-SELL]", close_prices[LA], BB_datas, GATE_CLR_WAIT, 0);
-      Print("[TRADEINFO] " + Trade_info + "|act:7 atrsl:" + ATRSL1BUF.dir); return;
-   }
-
-   // ── MIN HOLD BARS — dynamic by last entry trigger TF (v22.45, #3) ──
-   // M5-triggered: 3 bars; M15: 6; M30: 12; H1+: 18
-   if(Trade_act == 1 || Trade_act == 2) {
-      int barsSinceLast = (s_lastEntryTime == 0) ? 999 :
-         (int)((iTime(_Symbol,PERIOD_M5,0) - s_lastEntryTime) / PeriodSeconds(PERIOD_M5));
-      int dynMinHold = DynMinHold(s_lastEntryTrigTF);
-
-      if(barsSinceLast < dynMinHold) {
-         Trade_act  = 0;
-         Trade_lots = 0.0;
-         Trade_info += "| Gate:[G7-TOOSOON] bars:"+(string)barsSinceLast+"<"+(string)dynMinHold;
-         Stats_RecordBlock(Trade_info);
-         DrawGateLabel("[G7-TOOSOON]", close_prices[LA], BB_datas, GATE_CLR_NOISE, 0);
-      }
-      else {
-         // Record entry time when act is confirmed
-         s_lastEntryTime = iTime(_Symbol, PERIOD_M5, 0);
-      }
-   }
-
    Print("[TRADEINFO] "+Trade_info+"|act:"+Trade_act+" atrsl:"+ATRSL1BUF.dir);
 }

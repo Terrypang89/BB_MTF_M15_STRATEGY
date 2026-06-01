@@ -19,18 +19,19 @@ Work through: **Part 1** (read the chart) → **Part 2** (HTF context) → **Par
 ### Step 2: Identify your scenario
 | MTF state | Action |
 |-----------|--------|
-| M30+M15 both fly, same direction | Enter on M5 FLAT→UP or FLAT→DN transition |
-| M30 fly, M15/M5 shrinking | Shrink path entry — M5 transition still the trigger |
-| Only M5 shrinking | **Wait** — M5 alone is noise; M15 must also compress |
+| M30+M15 both fly, same direction | Enter on M15 FLAT→UP or FLAT→DN transition |
+| M30 fly, M15 shrinking | Shrink path entry — M15 transition is the trigger |
+| Only M5 shrinking | **Ignore** — M5 is noise; not used as trigger (V30.02+) |
 | H1/M30 SQZ, price at outer band | Cascade entry (G0b-TOUCH) if all filters pass |
 | M15+M30 both SQZ | **No entry** — G0b-PINK exits all open positions |
 | M30 mid≥3 AND M15 mid≥3 | **No new entries** — G0 or G0-HOLD depending on H1 |
 
-### Step 3: Entry trigger — always M5 transition
-The entry signal is **always a BBMidTrend change on M5**:
-- `FLAT(3) → UP(1)` or `FLAT(3) → DN(2)` → base quality 70
-- `UP(1) → DN(2)` or `DN(2) → UP(1)` (reversal) → base quality 75
-- M15 confirming fly stage → +10 to +15 quality boost
+### Step 3: Entry trigger — M15 transition (V30.02+)
+The entry signal is a **BBMidTrend change on M15** (EA runs on M5 chart, fires on M15 bar close):
+- `FLAT(3) → UP(1)` or `FLAT(3) → DN(2)` → base quality 80
+- `UP(1) → DN(2)` or `DN(2) → UP(1)` (reversal) → base quality 80
+- M30 confirming fly stage (511/512 for BUY, 521/522 for SELL) → +10 to +15 quality boost
+- Without M30 confirm on FLAT→UP/DN, quality capped at 59 (blocked by G5-WEAK)
 - Quality ≥ 90 → 1.0× size | ≥ 75 → 0.75× | ≥ 60 → 0.5× | ≥ 45 → 0.25× | < 45 → skip
 
 ### Step 4: Know your price target before entering
@@ -53,7 +54,7 @@ Block gates fire **before** the entry. If you see a DimGray or DarkOrange label,
 ### Step 6: Exit rules
 | Trigger | Gate | Act |
 |---------|------|-----|
-| M5 UP→FLAT or DN→FLAT | G5-FADE | 7 — exit all |
+| M15 UP→FLAT or DN→FLAT | G5-FADE | 7 — exit all |
 | M30+M15+H1 all mid≥3 | G0 | 7 — exit all |
 | M15+M30 both SQZ | G0b-PINK | 7 — exit all |
 | Price hits outer band (cascade context) | G8-BNDTGT | 7 — exit all |
@@ -112,8 +113,8 @@ Full backtest period for XAUUSD — 3 macro phases visible:
 
 | Timeframe | Color | BB_datas[] | Role |
 |-----------|-------|------------|------|
-| M5 | Aqua / Cyan | [0] | Entry trigger — fastest |
-| M15 | Goldenrod | [1] | Entry alignment |
+| M5 | Aqua / Cyan | [0] | Data only — no longer entry trigger (V30.02+) |
+| M15 | Goldenrod | [1] | Entry trigger (BBdiffMidTrend transition) V30.02+ |
 | M30 | GreenYellow | [2] | Primary trend driver |
 | H1 | Red | [3] | Chain anchor |
 | H4 | Yellow | [4] | Macro bias filter |
@@ -173,14 +174,6 @@ Format: `{value}` or `{value}-REVUP/REVDN`. Values 1 and 2 are **not shown** on 
 
 | Color | Gate labels | Meaning |
 |-------|-------------|---------|
-| Crimson | G0, G0b-PINK, G5-FADE, G6-REV, G0e-MAXLOSS, G8-BNDTGT | Exit all trades |
-| Lime/Green | G0b-TOUCH BUY, G6-BUY | Buy entry fired |
-| OrangeRed | G0b-TOUCH SELL, G6-SELL | Sell entry fired |
-| Yellow | G0b-WAIT, PHASE1-BUY/SELL, PHASE2-WAIT | Pending / waiting |
-| Magenta | G0b-PINK, G0c-SQZLOCK, G0b-SQZLOCK | Double-SQZ lock — no entry |
-| DarkOrange | H4-OPPOSE, H4-SQZ, G0b-H4OPP | H4 macro filter blocked |
-| Gold | G6-LOAD, G6-ENTRY | Midline SQZ loading / entry |
-| DimGray | G1-FAIL, G7-NEUTRAL, G7-TOOSOON, G0d-COOL, G0b-M5OPP, G0b-M5FLY, and all other block gates | Blocked — no trade this bar |
 
 ---
 
@@ -192,8 +185,9 @@ Format: `{value}` or `{value}-REVUP/REVDN`. Values 1 and 2 are **not shown** on 
 1. **Direction** — which way the wind blows for all lower TFs
 2. **Target** — where lower TF trades travel to before stopping
 3. **Why sideway** — lower TF goes sideway because HTF is compressing or ranging
+4. **MTF Predict** — if H4 is sideway and D1 is shrinking, in the same time M30 & H1 in fly in direction, able to predict the fly will end at H4 upper band or H1 will drive H4 to fly. 
 
-The cascade is top-down: **W1 sets D1's range → D1 sets H4's range → H4 sets M30's range → M30 sets M15's range**.
+The cascade is top-down: **W1 sets D1's range → D1 sets H4's range → H4 sets H1's range -> H1 sets M30's range → M30 sets M15's range**.
 
 ---
 
@@ -203,7 +197,7 @@ The cascade is top-down: **W1 sets D1's range → D1 sets H4's range → H4 sets
 
 **Part 1 — Full macro cycle (Jan–Feb 2026):**
 - **Left:** W1 (lightcyan/white) and D1 (magenta) bands stepping upward — both in fly. H4 (yellow) flies in the same direction. All TFs aligned: M30/M15/M5 all ride this macro momentum upward
-- **Yellow circles (left):** H4 outer band levels — each step up is where H4 upper band previously sat; these become support on the way up
+- **Yellow circles (left):** H4 shrink and squeezed then continue fly — each step up is where H4 upper band previously sat; these become support on the way up
 - **Peak (center, ~5400):** Price reached D1 upper band → D1 starts shrinking (top of D1 fly). H4 follows, entering shrink. M30/M15 lose macro tailwind and reverse
 - **White rectangles (right):** After D1/H4 enter shrink, M30/M15 are forced to range within the H4 band envelope — oscillating between H4 upper and H4 lower. This is the "M30 sideway caused by H4 shrink" pattern
 - **Blue circles:** Cascade band-touch entries (G0b-TOUCH) firing at H4 band boundaries during H4 shrink phase — price touches H4 outer band edge, G0b-TOUCH fires
@@ -223,13 +217,13 @@ The cascade is top-down: **W1 sets D1's range → D1 sets H4's range → H4 sets
 
 W1 is the slowest band (lightcyan, widest). It changes direction rarely but determines the multi-month trajectory.
 
-| W1 Stage | What it means | MTF implication |
-|----------|---------------|----------------|
-| 511/512 (BUY) | Multi-week uptrend — macro wind is bullish | All lower TF dips are buying opportunities; BUY trades last longer; SELL trades are counter-trend (smaller size, faster exit) |
-| 521/522 (SELL) | Multi-week downtrend — macro wind is bearish | All lower TF rallies are selling opportunities; SELL trades last longer; BUY trades are counter-trend |
-| 513 (BUY shrink) | Macro uptrend slowing — D1/H4 will start to compress | Expect H4 shrink soon → M30 ranges will get tighter; new BUY entries are shorter-duration |
-| 523 (SELL shrink) | Macro downtrend slowing | Expect H4 shrink soon → SELL entries shorter-duration |
-| 400–499 (SQZ) | Multi-week range — no macro conviction | No sustained directional moves at any TF; range-trade only; avoid large positions |
+| W1 Stage | diffmid Trend | What it means | MTF implication |
+|----------|---------------|----------------|----------------|
+| 511/512 (BUY) | | Multi-week uptrend — macro wind is bullish | All lower TF dips are buying opportunities; BUY trades last longer; SELL trades are counter-trend (smaller size, faster exit) |
+| 521/522 (SELL) | | Multi-week downtrend — macro wind is bearish | All lower TF rallies are selling opportunities; SELL trades last longer; BUY trades are counter-trend |
+| 513 (BUY shrink) | | Macro uptrend slowing — D1/H4 will start to compress | Expect H4 shrink soon → M30 ranges will get tighter; new BUY entries are shorter-duration |
+| 523 (SELL shrink) | | Macro downtrend slowing | Expect H4 shrink soon → SELL entries shorter-duration |
+| 400–499 (SQZ) | | Multi-week range — no macro conviction | No sustained directional moves at any TF; range-trade only; avoid large positions |
 
 **W1 price target:** When W1 is in fly, the D1 outer band is where price gravitates before W1 itself turns. When price is far below W1 upper band (BUY), the W1 band acts as a long-distance magnet.
 
@@ -239,13 +233,13 @@ W1 is the slowest band (lightcyan, widest). It changes direction rarely but dete
 
 D1 is the magenta band. It steps in large increments and updates slowly.
 
-| D1 Stage | What it means | H4/MTF implication |
-|----------|---------------|-------------------|
-| 511/512 (BUY) + W1 fly | Strong macro alignment — daily uptrend | H4 BUY entries are high-quality; hold through H4 brief SQZ; target = D1 outer band |
-| 521/522 (SELL) + W1 fly | D1 SELL vs W1 BUY — D1 is counter-trend pullback | H4 SELL entries are shorter-duration; expect D1 BUY to resume once pullback exhausts |
-| 521/522 (SELL) + W1 SELL | Full alignment bearish | H4 SELL entries ride toward D1 lower band; BUY is counter-trend |
-| 513/523 (shrink) | D1 losing directional conviction | H4 is about to lose macro backing; H4 trades become range-bound |
-| 400–499 (SQZ) | D1 flat — no daily directional bias | H4 fly entries get no macro tailwind; H4 trades chop within D1 band range |
+| D1 Stage | diffmid Trend | What it means | MTF implication |
+|----------|---------------|-------------------|-------------------|
+| 511/512 (BUY) + W1 fly | | Strong macro alignment — daily uptrend | H4 BUY entries are high-quality; hold through H4 brief SQZ; target = D1 outer band |
+| 521/522 (SELL) + W1 fly | | D1 SELL vs W1 BUY — D1 is counter-trend pullback | H4 SELL entries are shorter-duration; expect D1 BUY to resume once pullback exhausts |
+| 521/522 (SELL) + W1 SELL | | Full alignment bearish | H4 SELL entries ride toward D1 lower band; BUY is counter-trend |
+| 513/523 (shrink) | | D1 losing directional conviction | H4 is about to lose macro backing; H4 trades become range-bound |
+| 400–499 (SQZ) | | D1 flat — no daily directional bias | H4 fly entries get no macro tailwind; H4 trades chop within D1 band range |
 
 **D1 price target rule:** When D1 is in fly BUY, H4 trades travel toward the **D1 upper band** before D1 turns. The D1 upper band is the "ceiling" for H4 BUY trades on the macro timeframe.
 
@@ -255,16 +249,16 @@ D1 is the magenta band. It steps in large increments and updates slowly.
 
 H4 is the yellow band. It directly controls M30/M15/M5 entry quality and duration.
 
-| H4 Stage + Mid | What it means | M30/MTF behavior |
-|----------------|---------------|-----------------|
-| 511/512 + mid=1 | H4 BUY fly | M30 BUY trades fully backed — ride toward H4 upper band; hold through M5 brief squeezes |
-| 521/522 + mid=2 | H4 SELL fly | M30 SELL trades fully backed — ride toward H4 lower band |
-| 513 + mid=1/5 | H4 bullish shrink | H4 is contracting but still bullish — M30 BUY trades are shorter; exit when price reaches H4 outer band |
-| 523 + mid=2/4 | H4 bearish shrink | H4 contracting, still bearish — M30 SELL trades shorter |
-| 513/523 + mid=3 | H4 shrink with flat mid | H4 has no directional conviction — **G4e-H4OPP blocks this in shrink path** |
-| 400–499 + mid=1/5 | H4 SQZ, but midtrend bullish | Weak H4 — G0b-H4OPP passes (mid has some conviction); M5 must confirm direction |
-| 400–499 + mid=3 | H4 SQZ flat | No macro conviction at all — **G0b-H4OPP blocks cascade**; G4h-H4M30SQZ blocks main fly if M30 also SQZ |
-| 400–499 + mid=2/4 | H4 SQZ, bearish mid | H4 SQZ but leaning bearish — blocks BUY entries via G0b-H4OPP |
+| H4 Stage + Mid | diffmid Trend | What it means | MTF implication |
+|----------------|---------------|-----------------|-------------------|
+| 511/512 + mid=1 | | H4 BUY fly | M30 BUY trades fully backed — ride toward H4 upper band; hold through M5 brief squeezes |
+| 521/522 + mid=2 | | H4 SELL fly | M30 SELL trades fully backed — ride toward H4 lower band |
+| 513 + mid=1/5 | | H4 bullish shrink | H4 is contracting but still bullish — M30 BUY trades are shorter; exit when price reaches H4 outer band |
+| 523 + mid=2/4 | | H4 bearish shrink | H4 contracting, still bearish — H1 SELL trades shorter |
+| 513/523 + mid=3 | | H4 shrink with flat mid | H4 has no directional conviction — **G4e-H4OPP blocks this in shrink path** |
+| 400–499 + mid=1/5 | | H4 SQZ, but midtrend bullish | Weak H4 — G0b-H4OPP passes (mid has some conviction); M5 must confirm direction |
+| 400–499 + mid=3 | | H4 SQZ flat | No macro conviction at all |
+| 400–499 + mid=2/4 | | H4 SQZ, bearish mid | H4 SQZ but leaning bearish — blocks BUY entries via G0b-H4OPP |
 
 ---
 
@@ -272,18 +266,18 @@ H4 is the yellow band. It directly controls M30/M15/M5 entry quality and duratio
 
 **Always check H4**
 
-**Why does M30 go sideway?** Because H4 is shrinking or in SQZ.
+**Why does H1 go sideway?** Because H4 is shrinking or in SQZ.
 
-When H4 is in fly: M30 has a clear macro path → M30 trades travel toward H4 outer band.
-When H4 enters shrink: H4's band range narrows → M30 is confined within that shrinking range → M30 oscillates and appears "sideway."
-When H4 is in SQZ: M30 has no target beyond the SQZ boundaries → M30 chops flat.
+When H4 is in fly: H1 has a clear macro path → H1 trades travel toward H4 outer band.
+When H4 enters shrink: H4's band range narrows → H1 is confined within that shrinking range → H1 oscillates and appears "sideway."
+When H4 is in SQZ: H1 has no target beyond the SQZ boundaries → H1 chops flat.
 
 ```
-H4 stage       → M30 behavior              → MTF trade duration
+H4 stage       → H1 behavior              → MTF trade duration
 ─────────────────────────────────────────────────────────────────
-511/512 fly    → M30 trends with H4        → Long trades — hold until H4 outer band
-513/523 shrink → M30 ranges within H4 band → Short trades — exit at H4 band boundary
-400-499 SQZ    → M30 flat/ranging          → No new trades; wait for H4 breakout
+511/512 fly    → H1 trends with H4        → Long trades — hold until H4 outer band
+513/523 shrink → H1 ranges within H4 band → Short trades — exit at H4 band boundary
+400-499 SQZ    → H1 flat/ranging          → No new trades; wait for H4 breakout
 ```
 
 **Price target derivation (top-down):**
@@ -291,16 +285,16 @@ H4 stage       → M30 behavior              → MTF trade duration
 | Trade entry | Target 1 | Target 2 | Exit signal |
 |-------------|----------|----------|-------------|
 | W1 fly BUY + D1 fly BUY | H4 outer band | D1 outer band | D1 starts shrinking (513) |
-| D1 fly BUY + H4 fly BUY | M30 outer band → H1 outer band | H4 outer band | H4 starts shrinking |
-| H4 fly BUY + M30 fly BUY | M15 outer band | M30 outer band | M30 goes sideway; H4 outer band reached |
-| H4 shrink + M30 ranging | H4 upper band (BUY) or lower (SELL) | — | Price touches H4 outer band → G8-BNDTGT fires |
+| D1 fly BUY + H4 fly BUY | H1 outer band → H1 outer band | H4 outer band | H4 starts shrinking |
+| H4 fly BUY + H1 fly BUY | M15 outer band | H1 outer band | H1 goes sideway; H4 outer band reached |
+| H4 shrink + H1 ranging | H4 upper band (BUY) or lower (SELL) | — | Price touches H4 outer band → G8-BNDTGT fires |
 | All HTF SQZ | No target | — | Wait — no trade |
 
 ---
 
 ## HTF Analysis Step-by-Step
 
-Before looking at any M30/M15/M5 entry, answer these questions:
+Before looking at any H1/M30/M15/M5 entry, answer these questions:
 
 **1. What is W1 doing?**
 - Fly BUY / Fly SELL / Shrink / SQZ?
@@ -314,18 +308,23 @@ Before looking at any M30/M15/M5 entry, answer these questions:
 - SQZ → H4 has no D1 backing; only range trades
 
 **3. What is H4 doing?**
-- Fly BUY/SELL → M30 entries ride toward H4 outer band
-- Shrink (513/523) → M30 is ranging within H4 band; short trades, target = H4 outer band boundary
-- SQZ (400-499) → M30 entry requires G0b / H4-SQZ path with M5 confirmation
+- Fly BUY/SELL → H1 entries ride toward H4 outer band
+- Shrink (513/523) → H1 is ranging within H4 band; short trades, target = H4 outer band boundary
+- SQZ (400-499) → H1 entry requires G0b / H4-SQZ path with M5 confirmation
 
-**4. What is the price target for M30?**
-- H4 fly → H4 outer band is where M30 trades stop
-- H4 shrink → H4 outer band is where the range reverses (G8-BNDTGT)
+**4. What is the price target for H1?**
+- H4 fly → H4 outer band is where H1 trades stop
+- H4 shrink → H4 outer band is where the range reverses
 - H4 SQZ → no clear target; wait for breakout
 
-**5. Why is M30 sideway right now?**
-- Check H4: if H4 is shrinking or SQZ → that is why M30 is flat
-- Once H4 exits shrink back to fly → M30 will resume trending
+**4. What is the price target for H1?**
+- H4 fly → H4 outer band is where H1 trades stop
+- H4 shrink → H4 outer band is where the range reverses
+- H4 SQZ → no clear target; wait for breakout
+
+**5. Why is H1 sideway right now?**
+- Check H4: if H4 is shrinking or SQZ → that is why H1 is flat
+- Once H4 exits shrink back to fly → H1 will resume trending
 
 ---
 
