@@ -146,6 +146,58 @@ int TF_DirectionScore(int stage, int mid, int prev_stage, int prev_mid)
    return raw;
 }
 
+// Returns a short label for what state this TF is likely to enter next.
+string PredictTFNextStage(int stage, int mid, int prev_stage, int prev_mid)
+{
+   bool sqz = (stage>=400 && stage<500);
+   bool fly_up = (stage==511||stage==512);
+   bool fly_dn = (stage==521||stage==522);
+   bool shrink_bull = (stage==513);
+   bool shrink_bear = (stage==523);
+
+   if(sqz) {
+      if(mid==1 || mid==5 || (prev_mid==3&&mid==1) || (prev_mid==3&&mid==5)) return "fly_up";
+      if(mid==2 || mid==4 || (prev_mid==3&&mid==2) || (prev_mid==3&&mid==4)) return "fly_dn";
+      return "sqz_wait";
+   }
+   if(fly_up) {
+      if(mid==2)                           return "reversal_forming";
+      if(mid==3 && prev_mid==1)            return "shrink_watch";
+      return "fly_up_cont";
+   }
+   if(fly_dn) {
+      if(mid==1)                           return "reversal_forming";
+      if(mid==3 && prev_mid==2)            return "shrink_watch";
+      return "fly_dn_cont";
+   }
+   if(shrink_bull) {
+      if(mid==1||mid==5)                   return "fly_up_resume";
+      if(mid==2||mid==4)                   return "reversal_forming";
+      return "shrink_watch";
+   }
+   if(shrink_bear) {
+      if(mid==2||mid==4)                   return "fly_dn_resume";
+      if(mid==1||mid==5)                   return "reversal_forming";
+      return "shrink_watch";
+   }
+   return "sideway";
+}
+
+// Counts how many of the last `lookback` bars fell in each BB midtrend region for a TF.
+// Uses BB_diffMid_Trend[0..lookback-1]: 1=upper region, 2=lower region, 3/4/5=mid region.
+// Returns compact string "U{n}/M{n}/L{n}".
+string TF_BandTouchSummary(BB_MTF_Data_struct &BB_datas[], int tf_idx, int lookback)
+{
+   int cnt_u=0, cnt_l=0, cnt_m=0;
+   for(int j=0; j<lookback; j++) {
+      int v = BB_datas[tf_idx].BB_diffMid_Trend[j];
+      if     (v==1)      cnt_u++;   // price above mid → upper region
+      else if(v==2)      cnt_l++;   // price below mid → lower region
+      else               cnt_m++;   // mid region (3/4/5)
+   }
+   return "U"+IntegerToString(cnt_u)+"/M"+IntegerToString(cnt_m)+"/L"+IntegerToString(cnt_l);
+}
+
 TrendPrediction PredictNextTrend(BB_MTF_Data_struct &BB_datas[])
 {
    TrendPrediction pred;
@@ -198,9 +250,25 @@ TrendPrediction PredictNextTrend(BB_MTF_Data_struct &BB_datas[])
              + " tot:"+total
              + (pred.reversal ? " REV" : "");
 
+   // ── Next-stage labels (nxt:) ─────────────────────────────────────
+   string n1 = PredictTFNextStage(BB_datas[1].BBW_stage[LA], BB_datas[1].BB_diffMid_Trend[LA],
+                                   BB_datas[1].BBW_stage[LA_1], BB_datas[1].BB_diffMid_Trend[LA_1]);
+   string n2 = PredictTFNextStage(BB_datas[2].BBW_stage[LA], BB_datas[2].BB_diffMid_Trend[LA],
+                                   BB_datas[2].BBW_stage[LA_1], BB_datas[2].BB_diffMid_Trend[LA_1]);
+   string n3 = PredictTFNextStage(BB_datas[3].BBW_stage[LA], BB_datas[3].BB_diffMid_Trend[LA],
+                                   BB_datas[3].BBW_stage[LA_1], BB_datas[3].BB_diffMid_Trend[LA_1]);
+   string n4 = PredictTFNextStage(BB_datas[4].BBW_stage[LA], BB_datas[4].BB_diffMid_Trend[LA],
+                                   BB_datas[4].BBW_stage[LA_1], BB_datas[4].BB_diffMid_Trend[LA_1]);
+   pred.info += " nxt:M15="+n1+" M30="+n2+" H1="+n3+" H4="+n4;
+
+   // ── Band region touch counts (tch:) — last 5 bars ────────────────
+   // U=upper region (mid=1), M=mid region (mid=3/4/5), L=lower region (mid=2)
+   pred.info += " tch:M15="+TF_BandTouchSummary(BB_datas,1,5)
+              + " M30="+TF_BandTouchSummary(BB_datas,2,5)
+              + " H1="+TF_BandTouchSummary(BB_datas,3,5)
+              + " H4="+TF_BandTouchSummary(BB_datas,4,5);
+
    // ── Draw on chart ────────────────────────────────────────────────
-   // Color: lime=continuation BUY, aqua=reversal BUY,
-   //        orange-red=continuation SELL, orange=reversal SELL, gray=neutral
    color pred_color;
    if     (pred.direction==1 && !pred.reversal) pred_color = GATE_CLR_BUY;
    else if(pred.direction==1 &&  pred.reversal) pred_color = GATE_CLR_AQUA;
