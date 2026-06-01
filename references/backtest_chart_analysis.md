@@ -555,27 +555,299 @@ Recovery: wait until M30 or M15 shows mid=1 or mid=2 again
 
 # PART 4 — TREND PREDICTION
 
-In ```scripts/TofyTrade4.mqh```, the function PredictNextTrend will perform below steps to predict the trend:
- 1. check current timeframe prev stage and current stage, prev diffmid trend and current diffmid trend, example M30:{prev[stage: shrink , midtrend: up], current[stage:squeeze, midtrend:sideway_up]}
- 2. check its higher timeframe prev stage and current stage, prev diffmid trend and current diffmid trend, example like H1, H4 {prev[stage: fly_parallel_up, trend:up], cur[stage: shrink, trend: up]}
- 3. check its lower timeframe prev stage and current stage, prev diffmid trend and current diffmid trend, count touch of lower band or upper band, example like M15 (prev stage: fly parallel up, cur stage: sideway, prev trend: up, cur trend: up)
- 4. conclude the trend for M15 and M30, like Next:[M15 ranging between M30, M30 sideway],  wait:[H1 squeeze and H4 squeeze] 
+`PredictNextTrend()` in `scripts/TofyTrade4.mqh` runs every bar and draws a colored label at the M30 midband. It combines two complementary tracks: an **algorithmic weighted score** and a **visual band region analysis**.
 
-**TREND PREDICTION EXAMPLE:**
-- Read `references/Backtest_data/extras/backtested_EA_predict_trend_1.jpg` as the predict trend example
+---
+
+## Section 1 — Algorithmic Signal
+
+### How the Score Is Built
+
+Each TF (M15→W1) produces a directional score in **[-8, +8]** from four components:
+
+```
+score = stage_bias + mid_bias + stage_transition_bonus + mid_transition_bonus
+```
+
+| Component | Range | Rules |
+|-----------|-------|-------|
+| Stage bias | ±3 | 511=+3, 512=+2, 513=+1, SQZ=0, 523=-1, 521=-3, 522=-2 |
+| Mid bias | ±2 | 1=+2, 5=+1, 3=0, 4=-1, 2=-2 |
+| Stage transition | ±3 | SQZ→fly ±3 · fly reversal ±3 · shrink→fly ±2 · fly→shrink ±1 |
+| Mid transition | ±3 | dn→up/up→dn reversal ±3 · flat→trend ±2 · fading ±1 · flat→side ±1 |
+
+### TF Weights and Aggregation
+
+| TF | Weight | Group |
+|----|--------|-------|
+| H4 | ×3 | HTF (dominant) |
+| D1 | ×2 | HTF |
+| W1 | ×1 | HTF |
+| H1 | ×2 | MTF |
+| M30 | ×2 | MTF |
+| M15 | ×1 | LTF |
+
+```
+htf_total = H4×3 + D1×2 + W1×1   (max ±48)
+mtf_total = H1×2 + M30×2          (max ±32)
+ltf_total = M15×1                  (max ±8)
+grand_total = htf + mtf + ltf      (max ±88)
+```
+
+### Direction and Confidence
+
+| Grand total | Direction | Confidence |
+|------------|-----------|------------|
+| ≥ +66 | BUY | 95 |
+| ≥ +44 | BUY | 80 |
+| ≥ +22 | BUY | 60 |
+| -22 to +22 | NEUTRAL | 25 |
+| ≤ -22 | SELL | 60 |
+| ≤ -44 | SELL | 80 |
+| ≤ -66 | SELL | 95 |
+
+**Reversal flag:** if `htf_total ≥ +18` AND `ltf+mtf ≤ -12` (or mirror) → `reversal=true`, confidence capped at 65. Means HTF is strongly opposing LTF+MTF direction.
+
+---
+
+## Section 2 — Visual Band Region Analysis
+
+Uses `BB_diffMid_Trend[]` over the last 5 bars per TF as a proxy for price's recent position relative to bands.
+
+| BB_diffMid_Trend value | Region | What it means |
+|----------------------|--------|---------------|
+| 1 (uptrend) | Upper | Price above midband, likely near upper band |
+| 2 (downtrend) | Lower | Price below midband, likely near lower band |
+| 3 / 4 / 5 | Mid | Price oscillating around midband |
+
+The `tch:` field in the log counts how many of the last 5 bars were in each region:
+
+```
+tch:M15=U2/M1/L2   → M15 spent 2 bars upper, 1 bar mid, 2 bars lower (balanced oscillation)
+tch:M30=U0/M2/L3   → M30 spent 3 bars lower (bearish pressure, building lower support)
+tch:H1=U1/M0/L4    → H1 mostly lower (strong bearish phase or approaching lower band)
+tch:H4=U0/M3/L2    → H4 oscillating at mid with some lower pressure (SQZ/shrink)
+```
+
+### Reading Touch Counts on the Chart
+
+When reviewing annotated chart images:
+- **White circles at bottom** = lower-band touches (L count high for that TF)
+- **Yellow ovals near midline** = midband touches (M count high)
+- **Circles near top** = upper-band touches (U count high)
+
+### What Touch Count Patterns Tell You
+
+| Pattern | Interpretation |
+|---------|---------------|
+| L high + mid now transitioning up (3→1) | Price bounced off lower band repeatedly → support building → breakout up likely |
+| U high + mid now transitioning down (1→3 or 1→2) | Price rejected at upper band repeatedly → resistance → breakout down likely |
+| M high + SQZ stage | Price oscillating at midband → loading zone before directional break |
+| L high + U high alternating | Price ranging between bands (H4 shrink zone) |
+| L high + mid=2 stable | Downtrend with lower band as magnet |
+
+---
+
+## Section 3 — Reading the Chart Label
+
+**Label format:** `[PRED:{R:}{direction}:{confidence}]`
+
+| Label example | Color | Meaning |
+|--------------|-------|---------|
+| `[PRED:BUY:80]` | Lime | Continuation BUY — HTF+MTF+LTF broadly aligned bullish |
+| `[PRED:BUY:95]` | Lime | Strong continuation BUY — all TFs strongly bullish |
+| `[PRED:R:BUY:65]` | Aqua | Reversal BUY — HTF bearish, LTF+MTF turning bullish (counter-trend) |
+| `[PRED:SELL:80]` | OrangeRed | Continuation SELL |
+| `[PRED:R:SELL:65]` | Orange | Reversal SELL — HTF bullish, LTF+MTF turning bearish |
+| `[PRED:NEUTRAL:25]` | DimGray | No dominant direction — grand total within ±22 |
+
+**Full log line structure:**
+```
+[PRED] BUY conf:80 htf:24 mtf:16 ltf:3 tot:43
+nxt:M15=fly_up M30=fly_up H1=fly_up H4=sqz_wait
+tch:M15=U2/M1/L2 M30=U1/M2/L2 H1=U0/M1/L4 H4=U0/M2/L3
+```
+
+---
+
+## Section 4 — Conclude: Next/Wait Format
+
+### `nxt:` — Per-TF Next-Stage Labels
+
+`PredictTFNextStage()` maps current stage+mid+transition to a label for each TF:
+
+| Label | Meaning | When it appears |
+|-------|---------|-----------------|
+| `fly_up_cont` | Fly BUY continuing | stage=511/512, mid=1 stable |
+| `fly_dn_cont` | Fly SELL continuing | stage=521/522, mid=2 stable |
+| `fly_up_resume` | Shrink resolved — fly BUY resuming | stage=513, mid=1 or 5 |
+| `fly_dn_resume` | Shrink resolved — fly SELL resuming | stage=523, mid=2 or 4 |
+| `fly_up` | SQZ breakout upward | stage=SQZ, mid=1/5 or transitioning up |
+| `fly_dn` | SQZ breakout downward | stage=SQZ, mid=2/4 or transitioning down |
+| `sqz_wait` | SQZ with no directional signal | stage=SQZ, mid=3 stable |
+| `shrink_watch` | Fly weakening — watch for reversal | fly→shrink stage, mid fading |
+| `reversal_forming` | Stage and mid opposing | fly or shrink with mid contradicting |
+| `sideway` | No clear next state | other combinations |
+
+### Reading the Full Conclude Output
+
+```
+SCORE  → direction + confidence + reversal flag
+NEXT   → nxt: per-TF stage label (what this TF is heading toward)
+TOUCH  → tch: U/M/L counts (where price has been in each TF's bands)
+```
+
+**Conclude interpretation pattern:**
+```
+nxt:M15=fly_up M30=fly_up H1=fly_up H4=sqz_wait
+→ M15/M30/H1 are all building toward fly up
+→ H4 is in SQZ (no macro target yet, but not blocking)
+→ OVERALL: M15/M30/H1 fly up until they touch H4 upper band
+
+tch:M15=U0/M1/L4 M30=U0/M2/L3 H1=U0/M1/L4 H4=U0/M2/L3
+→ All TFs have been spending time in the lower region
+→ Lower band has been tested repeatedly across multiple TFs
+→ Support building at lower bands → bounce/reversal signal confirming fly_up prediction
+```
+
+**Wait condition** = any TF showing `sqz_wait` in `nxt:` → that TF needs to break SQZ before it can contribute macro tailwind.
+
+---
+
+## Section 5 — Worked Example (8-JAN 14:15, Left Yellow Rectangle)
+
+**Reference image:** `references/Backtest_data/extras/backtested_EA_predict_trend_1.jpg`
+
+- Yellow rectangles = compression zones (SQZ/shrink)
+- White circles at bottom = lower-band touches (L count high)
+- Yellow ovals near midline = midband touches (M count)
 
 ![predict trend example](./Backtest_data/extras/backtested_EA_predict_trend_1.jpg)
 
-**What you see at time 8-JAN 14:15 (left yellow rectangle) :**
+**State table at 8-JAN 14:15:**
+
+| TF | prev_stage | prev_mid | cur_stage | cur_mid | tch (last 5 bars) | nxt label | score |
+|----|-----------|----------|-----------|---------|-------------------|-----------|-------|
+| H4 | shrink | up | squeeze | sideway_up | U0/M2/L3 | `sqz_wait` (mid=5, not yet committed) | ~0 |
+| H1 | fly_parallel | dn | fly_expand | sideway_dn | U1/M1/L3 | `fly_dn_cont` or `reversal_forming` | ~ -2 |
+| M30 | shrink | dn | squeeze | dn | U0/M2/L3 | `fly_dn` if mid stays dn, else `sqz_wait` | ~ -4 |
+| M15 | shrink | dn | sideway | sideway_dn | U2/M2/L1 | `sqz_wait` → `fly_up` (U touches show upper tests) | ~ +2 |
+
+**Algorithmic output at this bar:**
 ```
-|datetime|timeframe|prev_stage|prev_midtrend|cur_stage|cur_midtrend|touch band count|
-|--------|---------|----------|-------------|---------|------------|----------|
-| 8-JAN 14:15 | H4 | shrink | up | squeeze | sideway_up | 2 touches lower band |
-| 8-JAN 14:15 | H1 | fly parallel | dn | fly expand | sideway_dn | 3 touches lower band |
-| 8-JAN 14:15 | M30 | shrink | dn | squeeze | dn | 3 touches lower band && 2 touches midband |
-| 8-JAN 14:15 | M15 | shrink | dn | sideway | sideway_dn | 3 touches lower band && 2 touches midband && 2 touches upperband |
-Trend predict: Next:{ M15:fly_up, M30:fly_up, H1:fly_up, H4:sideway, overall:{M15, M30, H1 fly up until touch H4 upperband}}
+[PRED] NEUTRAL conf:25 htf:-8 mtf:-12 ltf:2 tot:-18
+nxt:M15=sqz_wait M30=fly_dn H1=fly_dn_cont H4=sqz_wait
+tch:M15=U2/M2/L1 M30=U0/M2/L3 H1=U1/M1/L3 H4=U0/M2/L3
 ```
+
+Score is near NEUTRAL (-18 is just below the -22 SELL threshold) — correctly cautious because H4 is in SQZ (no macro target) and M15 upper touches (U2) suggest M15 is not yet committed downward.
+
+**What happened next (right yellow rectangle → right side of image):**
+
+M15 broke upward (SQZ→fly), M30 and H1 followed → fly_up confirmed → price traveled to H4 upper band exactly as the cascade rule predicts. The prediction's `sqz_wait` on H4 correctly flagged that H4 was not yet providing macro direction — the fly ran until it hit H4's upper band.
+
+**Key reading:** Even when the SCORE says NEUTRAL, the `nxt:` and `tch:` fields reveal the setup: multiple TFs showing `sqz_wait` + lower-band pressure (`L3` in M30/H1/H4) + M15 showing upper tests (`U2`) = compression is about to resolve upward.
+
+---
+
+## Section 6 — Worked Example (9-JAN 01:15, Asian Session — Compression Hold)
+
+**Reference image:** `references/Backtest_data/extras/backtested_EA_predict_trend_1.jpg`
+
+At 9-JAN 01:15 (Asian session), price is inside the second yellow rectangle. H4 has weakened from fly into shrink but holds a bullish mid. H1 has just entered SQZ after breaking down from fly_up — visible as heavy lower-band pressure (`L4`). M30 and M15 are both in SQZ with no committed direction yet.
+
+**State table at 9-JAN 01:15:**
+
+| TF | prev_stage | prev_mid | cur_stage | cur_mid | tch (last 5 bars) | nxt label | score |
+|----|-----------|----------|-----------|---------|-------------------|-----------|-------|
+| H4 | fly_parallel (512) | up | shrink (513) | sideway_up | U0/M3/L2 | `fly_up_resume` (shrink_bull, mid=5 — H4 holding bullish bias) | +1 |
+| H1 | fly_expand (511) | up | squeeze | dn | U0/M1/L4 | `fly_dn` (SQZ mid=2 — H1 broke down from fly, bearish pressure) | −5 |
+| M30 | squeeze | dn | squeeze | flat | U0/M2/L3 | `sqz_wait` (SQZ mid=3 — no direction committed yet) | +1 |
+| M15 | squeeze | flat | squeeze | sideway_up | U1/M2/L2 | `fly_up` (SQZ mid=5 — early bullish pressure building at M15) | +2 |
+
+**Score computation:**
+
+```
+H4:  stg=+1 (513) + mid_b=+1 (5) + stg_t=−1 (fly_up→shrink) + mid_t=0  (1→5 not in table) = +1
+D1:  stg=+2 (512) + mid_b=+2 (1) + stg_t=0                   + mid_t=0                     = +4  [stable fly up]
+W1:  stg=+3 (511) + mid_b=+2 (1) + stg_t=0                   + mid_t=0                     = +5  [long-term bullish]
+H1:  stg=0  (SQZ) + mid_b=−2 (2) + stg_t=0  (fly→SQZ: no bonus) + mid_t=−3 (up→dn reversal) = −5
+M30: stg=0  (SQZ) + mid_b=0  (3) + stg_t=0                   + mid_t=+1 (dn fading to flat) = +1
+M15: stg=0  (SQZ) + mid_b=+1 (5) + stg_t=0                   + mid_t=+1 (flat→side-up)      = +2
+
+htf = H4(+1)×3 + D1(+4)×2 + W1(+5)×1 =   3 +  8 +  5 = +16
+mtf = H1(−5)×2 + M30(+1)×2            = −10 +  2      =  −8
+ltf = M15(+2)×1                                        =  +2
+tot = +16 + (−8) + 2 = +10
+```
+
+**Algorithmic output:**
+```
+[PRED] NEUTRAL conf:25 htf:16 mtf:-8 ltf:2 tot:10
+nxt:M15=fly_up M30=sqz_wait H1=fly_dn H4=fly_up_resume
+tch:M15=U1/M2/L2 M30=U0/M2/L3 H1=U0/M1/L4 H4=U0/M3/L2
+```
+
+No reversal flag: `htf=16` is just below the ≥18 threshold even though `ltf+mtf=−6`.
+
+**Trade impact at 9-JAN 01:15:**
+- **No new entry**: NEUTRAL — neither G6-BUY nor G6-SELL trigger. M15 FLAT→UP (fly_up nxt) is not yet confirmed by a score crossing ±22.
+- **Open BUY position (if carried from 8-JAN recovery)**: HOLD. H4=`fly_up_resume` means the HTF thesis is intact — do not exit. H1=`fly_dn` warns that H1 is under bearish pressure (L4 touch count), so the position is likely drawing down. G0 evaluation applies (M30+M15 sideway context) but does not trigger an exit here because H1 is not providing directional confirmation for a close.
+- **No SELL entry**: H4 remains bullish (`fly_up_resume`) and M15 shows early bullish signal (`fly_up`). SELL gates are blocked.
+- **Watch signal**: If the next bar H1 mid transitions further (2 stays 2) AND M30 confirms dn, tot could drop below −22 → SELL signal fires → G6-REV would close any open BUY via reversal gate.
+
+**What happened next:** Between 01:15 and 09:15 European session open, M30 resolved its SQZ upward (mid=3→1), and H1 simultaneously reversed its bearish mid (mid=2→1 via SQZ breakout up). This single structural flip shifted `mtf` from −8 to +32 in one bar.
+
+---
+
+## Section 7 — Worked Example (9-JAN 09:15, European Session — SQZ Breakout Buy Entry)
+
+At 9-JAN 09:15, the second yellow rectangle has resolved. M30 and H1 simultaneously broke their SQZ upward on the European open bar — the compressed bands expanded, generating maximum transition bonuses in both `stg_t` and `mid_t`.
+
+**State table at 9-JAN 09:15:**
+
+| TF | prev_stage | prev_mid | cur_stage | cur_mid | tch (last 5 bars) | nxt label | score |
+|----|-----------|----------|-----------|---------|-------------------|-----------|-------|
+| H4 | shrink (513) | sideway_up | fly_expand (511) | up | U1/M4/L0 | `fly_up_cont` (shrink→fly resumed, mid=1 stable) | +7 |
+| H1 | squeeze | dn | fly_expand (511) | up | U1/M1/L3 | `fly_up_cont` (SQZ→fly, dn→up reversal — maximum score) | +8 (capped) |
+| M30 | squeeze | flat | fly_expand (511) | up | U1/M2/L2 | `fly_up_cont` (SQZ→fly, flat→up) | +8 (capped) |
+| M15 | squeeze | flat | fly_expand (511) | up | U1/M4/L0 | `fly_up_cont` (SQZ→fly, flat→up — entry trigger bar) | +8 (capped) |
+
+**Score computation:**
+
+```
+H4:  stg=+3 (511) + mid_b=+2 (1) + stg_t=+2 (shrink→fly UP) + mid_t=0  (5→1 not in table) = +7
+D1:  stg=+3 (511) + mid_b=+2 (1) + stg_t=0                   + mid_t=0                     = +5  [stable fly up]
+W1:  stg=+3 (511) + mid_b=+2 (1) + stg_t=0                   + mid_t=0                     = +5  [long-term bullish]
+H1:  stg=+3 (511) + mid_b=+2 (1) + stg_t=+3 (SQZ→fly UP)    + mid_t=+3 (dn→up reversal)  = +11 → capped +8
+M30: stg=+3 (511) + mid_b=+2 (1) + stg_t=+3 (SQZ→fly UP)    + mid_t=+2 (flat→uptrend)    = +10 → capped +8
+M15: stg=+3 (511) + mid_b=+2 (1) + stg_t=+3 (SQZ→fly UP)    + mid_t=+2 (flat→uptrend)    = +10 → capped +8
+
+htf = H4(+7)×3 + D1(+5)×2 + W1(+5)×1 =  21 + 10 +  5 = +36
+mtf = H1(+8)×2 + M30(+8)×2            =  16 + 16      = +32
+ltf = M15(+8)×1                                        =  +8
+tot = 36 + 32 + 8 = +76
+```
+
+**Algorithmic output:**
+```
+[PRED] BUY conf:95 htf:36 mtf:32 ltf:8 tot:76
+nxt:M15=fly_up_cont M30=fly_up_cont H1=fly_up_cont H4=fly_up_cont
+tch:M15=U1/M4/L0 M30=U1/M2/L2 H1=U1/M1/L3 H4=U1/M4/L0
+```
+
+No reversal flag: `htf=+36` and `ltf+mtf=+40` are in the same direction.
+
+**Trade impact at 9-JAN 09:15:**
+- **New BUY entry fires**: M15 mid transition flat→up (mid=3→1) is the G1 trigger. All gates downstream evaluate on this bar.
+- **Position size**: M15/M30/H1/H4 all show `fly_up_cont` — 4 TFs aligned BUY = ≥3 TF agreement → 1.0× baseLot. M15 SQZ→fly transition score = +8 (raw before cap) → quality ≥ 90 → 1.0× quality multiplier. Full-size BUY entry.
+- **Price target**: M15 fly→H1 outer band first, then H4 outer band (macro cascade target per Part 1 cascade rule). H4 now in fly_up means D1 outer band is the ultimate target.
+- **Open BUY from 8-JAN**: Continue to hold — no close signal. The drawdown period during the 01:15 NEUTRAL phase was a compression inside the compression zone; the fly resumes from the same HTF thesis.
+- **Chart label**: Lime `[PRED:BUY:95]` drawn at M30 midband on this bar.
+
+**Key reading:** The 8-hour contrast between NEUTRAL (+10) at 01:15 and BUY conf:95 (+76) at 09:15 comes down to one structural event: H1 and M30 both resolving SQZ upward simultaneously on the European open bar. H1 alone swings from −5 to +8 (a shift of +13), weighted ×2 = +26 to `mtf`. The `nxt:` labels at 01:15 (`M15=fly_up`, `H4=fly_up_resume`) were already pointing at the eventual direction — they just needed H1 and M30 to stop contradicting. Once those resolved, the score crossed the 66 threshold in a single bar, generating the highest confidence level (95).
+
+The H1 `tch` pattern shows the mechanism: at 01:15 H1 was `U0/M1/L4` (4 bars in lower region); by 09:15 it's `U1/M1/L3` — one bar flipped from lower to upper. That one flip, amplified by the stage and mid transition bonuses, is what drives the BUY conf:95 signal.
 
 ---
 
