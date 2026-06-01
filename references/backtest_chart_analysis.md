@@ -69,6 +69,7 @@ Block gates fire **before** the entry. If you see a DimGray or DarkOrange label,
 
 **When user asks to analyze a specific backtest version chart:**
 - Read `references/Backtest_data/extras/backtested_chart.jpg` as the baseline visual reference
+- Read `references/Backtest_data/extras/backtested_EA_atrsl1buf.jpg` as the ATRSL1buf indicator visual reference
 - Read `references/Backtest_data/extras/HTF/backtest_EA_HTF_Fly_2_Shrink_part1.jpg` and `part2.jpg` as HTF reference
 - Then read any user-specified image path (e.g. `references/Backtest_data/V22.XX/chart.jpg`)
 
@@ -192,6 +193,10 @@ The cascade is top-down: **W1 sets D1's range → D1 sets H4's range → H4 sets
 ---
 
 ## HTF Reference Charts
+
+**When going through PART 2 — HIGHER TIMEFRAME ANALYSIS (W1 → D1 → H4):**
+- Read `references/Backtest_data/extras/backtest_EA_HTF_Fly_2_Shrink_part1.jpg` as the visual reference for Part 1
+- Read `references/Backtest_data/extras/backtest_EA_HTF_Fly_2_Shrink_part2.jpg` as the visual reference for Part 2
 
 ![HTF Fly to Sideway part 1](./Backtest_data/extras/HTF/backtest_EA_HTF_Fly_2_Shrink_part1.jpg)
 
@@ -545,12 +550,36 @@ M30 mid≥3 AND M15 mid≥3 AND H1 mid≥3  →  [G0]      act=7  exit all immed
 M30 mid≥3 AND M15 mid≥3, H1 mid<3     →  [G0-HOLD] act=0  hold existing, no new entry
 Recovery: wait until M30 or M15 shows mid=1 or mid=2 again
 ```
+---
+
+
+# PART 4 — TREND PREDICTION
+
+In ```scripts/TofyTrade4.mqh```, the function PredictNextTrend will perform below steps to predict the trend:
+ 1. check current timeframe prev stage and current stage, prev diffmid trend and current diffmid trend, example M30:{prev[stage: shrink , midtrend: up], current[stage:squeeze, midtrend:sideway_up]}
+ 2. check its higher timeframe prev stage and current stage, prev diffmid trend and current diffmid trend, example like H1, H4 {prev[stage: fly_parallel_up, trend:up], cur[stage: shrink, trend: up]}
+ 3. check its lower timeframe prev stage and current stage, prev diffmid trend and current diffmid trend, count touch of lower band or upper band, example like M15 (prev stage: fly parallel up, cur stage: sideway, prev trend: up, cur trend: up)
+ 4. conclude the trend for M15 and M30, like Next:[M15 ranging between M30, M30 sideway],  wait:[H1 squeeze and H4 squeeze] 
+
+**TREND PREDICTION EXAMPLE:**
+- Read `references/Backtest_data/extras/backtested_EA_predict_trend_1.jpg` as the predict trend example
+
+![predict trend example](./Backtest_data/extras/backtested_EA_predict_trend_1.jpg)
+
+**What you see at time 8-JAN 14:15 (left yellow rectangle) :**
+```
+|datetime|timeframe|prev_stage|prev_midtrend|cur_stage|cur_midtrend|touch band count|
+|--------|---------|----------|-------------|---------|------------|----------|
+| 8-JAN 14:15 | H4 | shrink | up | squeeze | sideway_up | 2 touches lower band |
+| 8-JAN 14:15 | H1 | fly parallel | dn | fly expand | sideway_dn | 3 touches lower band |
+| 8-JAN 14:15 | M30 | shrink | dn | squeeze | dn | 3 touches lower band && 2 touches midband |
+| 8-JAN 14:15 | M15 | shrink | dn | sideway | sideway_dn | 3 touches lower band && 2 touches midband && 2 touches upperband |
+Trend predict: Next:{ M15:fly_up, M30:fly_up, H1:fly_up, H4:sideway, overall:{M15, M30, H1 fly up until touch H4 upperband}}
+```
 
 ---
 
----
-
-# PART 4 — TRADE DECISION QUICK REFERENCE
+# PART 5 — TRADE DECISION QUICK REFERENCE
 
 First establish HTF context (Part 2), then apply this table:
 
@@ -605,9 +634,7 @@ When TFs compress bottom-up, price gravitates to the outer band of the **lowest 
 
 ---
 
----
-
-# PART 5 — ANALYSIS WORKFLOW
+# PART 6 — ANALYSIS WORKFLOW
 
 Apply these steps in order for any attached chart image.
 
@@ -651,7 +678,7 @@ Use Part 4 tables. State: current regime, price target, which gate fires next, o
 
 ---
 
-# PART 6 — COMMON MISREADS
+# PART 7 — COMMON MISREADS
 
 | Misread | Correct interpretation |
 |---------|----------------------|
