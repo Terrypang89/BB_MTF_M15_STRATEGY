@@ -668,6 +668,41 @@ Apply after HTF context is established. Each scenario: **What you see → What i
 
 ![Normal fly scenario](./Backtest_data/extras/backtested_EA_fly_scenario.jpg)
 
+### Scenario A Identification Flowchart
+
+```
+See bands on chart → Are all bands fanning outward same direction?
+                    ↓
+                     Yes → Are mid-band labels absent (mid=1/2 suppressed)?
+                           ↓
+                            Yes → Is H4 (yellow) stepping same direction?
+                                  ↓
+                                   Yes → Check stage labels:
+                                          511/512 (BUY) or 521/522 (SELL)?
+                                         ↓
+                                          Yes → SCENARIO A CONFIRMED
+                                                 ↓
+                                                Are [G6-BUY/SELL] labels visible?
+                                                 ├──→ Yes → Full fly, enter on M15 transition
+                                                 └──→ No → Wait for entry signal
+                    ↓
+                     No → NOT Scenario A → Check other scenarios
+```
+
+**Visual confirmation checklist:**
+
+| Visual Cue | Present? |
+|-----------|----------|
+| All bands expanding outward same direction | [ ] |
+| No mid-band labels (mid=1/2) | [ ] |
+| H4 stepping in same direction | [ ] |
+| Stage labels 511/512/521/522 | [ ] |
+| [G6-BUY] or [G6-SELL] gate labels | [ ] |
+
+**5/5 present = Confirmed Scenario A**
+
+---
+
 **HTF context:** W1 fly + D1 fly + H4 fly — all in same direction. Full macro tailwind.
 
 **What you see:**
@@ -719,6 +754,43 @@ SIZE: 1.0× (full — highest quality when W1+D1+H4 all aligned)
 ![Fly to shrink](./Backtest_data/extras/backtested_EA_fly_2_fly_shrink.jpg)
 ![Fly to shrink zoom](./Backtest_data/extras/backtested_EA_fly_2_fly_shrink_zoomin.jpg)
 
+### Scenario B Identification Flowchart
+
+```
+See bands on chart → Is H4 (yellow) still in fly (bands stepping)?
+                    ↓
+                     No → NOT Scenario B
+                    ↓
+                     Yes → Are M30/M15 bands converging?
+                           ↓
+                            Yes → Stage labels show 513/523 (shrink)?
+                                  ↓
+                                   Yes → Are midtrend labels appearing (3,4,5)?
+                                         ↓
+                                          Yes → SCENARIO B CONFIRMED
+                                                 ↓
+                                                How many TFs shrinking?
+                                                 ├──→ Only M5 → M5 noise, wait
+                                                 ├──→ M15 only → Shrink path entry possible
+                                                 ├──→ M30 also → Higher risk, smaller size
+                                                 └──→ H1 also → Very high risk, consider exit
+                           ↓
+                            No → Bands still expanding → NOT Scenario B
+```
+
+**Visual confirmation checklist:**
+
+| Visual Cue | Present? |
+|-----------|----------|
+| H4 still in fly (511/512/521/522) | [ ] |
+| M30/M15 bands converging (513/523) | [ ] |
+| M5 midtrend labels (3,4,5) appearing | [ ] |
+| Upper band curling back toward mid | [ ] |
+
+**3/4 present = Confirmed Scenario B**
+
+---
+
 **HTF context:** H4 is still in fly, but M30 or M15 starting to shrink. H4 provides the direction and target; M30/M15 are resting before continuing.
 
 **What you see:**
@@ -766,6 +838,46 @@ SIZE: 0.75× (M15 or M30 shrink alone) → 0.50× (M30+H1 both) → 0.25× (all 
 ---
 
 ## Scenario C — Cascade Band Touch (G0b context)
+
+### Scenario C Identification Flowchart
+
+```
+See bands on chart → Is H4 in SQZ or shrink (400-499 or 513/523)?
+                    ↓
+                     No → NOT Scenario C
+                    ↓
+                     Yes → Is M30 in SQZ (400-499)?
+                           ↓
+                            No → NOT Scenario C
+                    ↓
+                            Yes → Are M15/M5 in shrink (513/523)?
+                                  ↓
+                                   No → NOT Scenario C
+                    ↓
+                                   Yes → Is price at H4/M30/H1 outer band edge?
+                                         ↓
+                                          No → [G0b-WAIT] — waiting for touch
+                    ↓
+                                          Yes → Check cascade filters (6 filters)
+                                                 ↓
+                                                All filters pass?
+                                                 ├──→ Yes → [G0b-TOUCH] → ENTRY FIRES
+                                                 └──→ No → [G0b-block] → Entry blocked
+```
+
+**Visual confirmation checklist:**
+
+| Visual Cue | Present? |
+|-----------|----------|
+| H4 in SQZ or shrink | [ ] |
+| M30 in SQZ (flat bands) | [ ] |
+| M15/M5 in shrink | [ ] |
+| Price at outer band edge | [ ] |
+| [G0b-WAIT] or [G0b-TOUCH] gate label | [ ] |
+
+**5/5 present = Confirmed Scenario C**
+
+---
 
 **HTF context:** H4 is in SQZ or shrink. M30 is also SQZ. M15/M5 in shrink. Price approaching the outer band of the highest active shrink TF. This is the "HTF compressing → range bounce" pattern.
 
@@ -820,6 +932,54 @@ SIZE: quality score from M5 transition
 ![Fly to Shrink to Fly](./Backtest_data/extras/backtested_EA_fly_2_shrink_2_fly.jpg)
 ![Fly to Shrink to Fly zoom](./Backtest_data/extras/backtested_EA_fly_2_shrink_2_fly_zoomin.jpg)
 
+### Scenario D Identification Flowchart
+
+```
+See bands on chart → Were all TFs in fly recently?
+                    ↓
+                     No → NOT Scenario D
+                    ↓
+                     Yes → Did M30/M15/M5 briefly compress?
+                           ↓
+                            No → NOT Scenario D
+                    ↓
+                           Yes → Is H1 (red) maintaining original step direction?
+                                ↓
+                                 No → REVERSAL (not rest pattern)
+                    ↓
+                                 Yes → Is H4 (yellow) still flying same direction?
+                                       ↓
+                                        No → HTF weakening, be cautious
+                    ↓
+                                       Yes → Is compression brief (hours not days)?
+                                             ↓
+                                              No → Extended compression, risk reversal
+                    ↓
+                                              Yes → [G6-LOAD] only (not [G0c-SQZLOCK])?
+                                                     ↓
+                                                      No → Deep compression, may be reversal
+                    ↓
+                                                      Yes → SCENARIO D CONFIRMED
+                                                             ↓
+                                                            Bands re-expand same direction?
+                                                             ├──→ Yes → Fly resumed, full entry
+                                                             └──→ No → Still compressing, wait
+```
+
+**Visual confirmation checklist:**
+
+| Visual Cue | Present? |
+|-----------|----------|
+| H1 step direction maintained | [ ] |
+| H4 step direction maintained | [ ] |
+| Compression was brief (hours) | [ ] |
+| Only [G6-LOAD] labels (no [G0c-SQZLOCK]) | [ ] |
+| Bands re-expand same direction | [ ] |
+
+**5/5 present = Confirmed Scenario D (Rest Pattern)**
+
+---
+
 **HTF context:** W1/D1 remain in fly throughout. H4 also stays in fly. Only M30/M15/M5 briefly compress. The macro tailwind (H4 fly) guarantees fly resumes.
 
 **What you see:**
@@ -860,6 +1020,51 @@ EXIT: ATRSL stop | M5 UP→FLAT (G5-FADE) | M30+M15 go sideway
 
 ![Shrink to sideway](./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway.jpg)
 ![Shrink to sideway zoom](./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway_zoomin.jpg)
+
+### Scenario E Identification Flowchart
+
+```
+See bands on chart → Is H4 in shrink or SQZ (513/523 or 400-499)?
+                    ↓
+                     No → NOT Scenario E
+                    ↓
+                     Yes → Is D1 also slowing (shrink or SQZ)?
+                           ↓
+                            No → Check if only H4 issue
+                    ↓
+                           Yes → Are M5/M15/M30 bands near-flat?
+                                 ↓
+                                  No → NOT full compression yet
+                    ↓
+                                 Yes → Are mid-band labels (3,4,5) on multiple TFs?
+                                       ↓
+                                        No → Check for single TF only
+                    ↓
+                                       Yes → Is [G0c-SQZLOCK] or [G6-LOAD] visible?
+                                             ↓
+                                              No → Compression without lock
+                    ↓
+                                              Yes → SCENARIO E CONFIRMED
+                                                     ↓
+                                                    Compression depth:
+                                                     ├──→ Shallow → Range trade H1 boundaries
+                                                     ├──→ Moderate → Wait for direction
+                                                     └──→ Deep → Reversal more likely
+```
+
+**Visual confirmation checklist:**
+
+| Visual Cue | Present? |
+|-----------|----------|
+| H4 in shrink or SQZ | [ ] |
+| D1 also slowing | [ ] |
+| M5/M15/M30 bands near-flat | [ ] |
+| Mid-band labels on multiple TFs | [ ] |
+| [G0c-SQZLOCK] or [G6-LOAD] labels | [ ] |
+
+**5/5 present = Confirmed Scenario E**
+
+---
 
 **HTF context:** H4 is shrinking or in SQZ. D1 is also slowing. The macro is losing conviction — this is WHY all lower TFs are going flat. Price is ranging because H4 cannot provide a clear outer band target.
 
@@ -906,6 +1111,56 @@ EXIT ALL: M30+M15+H1 all mid≥3 → G0 → act=7
 
 ![Sideway to fly](./Backtest_data/extras/backtested_EA_sideway_2_fly.jpg)
 ![Sideway to fly zoom](./Backtest_data/extras/backtested_EA_sideway_2_fly_zoomin.jpg)
+
+### Scenario F Identification Flowchart
+
+```
+See bands on chart → Are all TF bands collapsed to tight bundle?
+                    ↓
+                     No → NOT Scenario F
+                    ↓
+                     Yes → Stage labels showing 400-499 (SQZ)?
+                           ↓
+                            No → NOT full compression
+                    ↓
+                           Yes → Is [G6-LOAD] or [G0c-SQZLOCK] visible?
+                                 ↓
+                                  No → SQZ without loading label
+                    ↓
+                                 Yes → Is pressure building?
+                                       (L or U touch counts high)
+                                      ↓
+                                       No → Early compression
+                    ↓
+                                       Yes → Is M5 band spreading first?
+                                             ↓
+                                              No → Still loading
+                    ↓
+                                              Yes → REVUP/REVDN label appears?
+                                                     ↓
+                                                      No → No breakout yet
+                    ↓
+                                                      Yes → SCENARIO F CONFIRMED
+                                                             ↓
+                                                            Direction from D1 (magenta):
+                                                             ├──→ D1 fly BUY → BUY breakout
+                                                             └──→ D1 fly SELL → SELL breakout
+```
+
+**Visual confirmation checklist:**
+
+| Visual Cue | Present? |
+|-----------|----------|
+| All TF bands collapsed (tight bundle) | [ ] |
+| Stage labels 400-499 | [ ] |
+| [G6-LOAD] or [G0c-SQZLOCK] labels | [ ] |
+| High L or U touch counts (pressure) | [ ] |
+| M5 bands spreading first | [ ] |
+| REVUP/REVDN label | [ ] |
+
+**6/6 present = Confirmed Scenario F**
+
+---
 
 **HTF context:** D1 and H4 are about to exit SQZ — the HTF breakout pulls M30/M15/M5 along. Watch the D1 direction (magenta) for the breakout direction.
 
@@ -956,6 +1211,50 @@ TARGET: H4 outer band (if H4 also breaking) → D1 outer band
 ---
 
 ## Scenario G — All TFs Sideway (G0 Exit)
+
+### Scenario G Identification Flowchart
+
+```
+See bands on chart → Are mid-band labels (3,4,5) visible on M30 AND M15?
+                    ↓
+                     No → NOT Scenario G
+                    ↓
+                     Yes → Are ALL bands flat (no directional expansion)?
+                           ↓
+                            No → NOT all TFs sideway
+                    ↓
+                           Yes → Is H4 in SQZ or flat?
+                                 ↓
+                                  No → H4 still has direction
+                    ↓
+                                 Yes → Is D1 also flat?
+                                       ↓
+                                        No → D1 may provide direction
+                    ↓
+                                       Yes → Is [G0] (crimson) visible?
+                                             ↓
+                                              No → Not yet triggered
+                    ↓
+                                              Yes → SCENARIO G CONFIRMED
+                                                     ↓
+                                                    [G0] label type:
+                                                     ├──→ [G0] → All TFs mid≥3 → EXIT ALL
+                                                     └──→ [G0-HOLD] → H1 not sideway → HOLD, no new entry
+```
+
+**Visual confirmation checklist:**
+
+| Visual Cue | Present? |
+|-----------|----------|
+| Mid-band labels on M30 AND M15 | [ ] |
+| All bands flat (no expansion) | [ ] |
+| H4 in SQZ or flat | [ ] |
+| D1 also flat | [ ] |
+| [G0] or [G0-HOLD] label | [ ] |
+
+**5/5 present = Confirmed Scenario G**
+
+---
 
 **HTF context:** H4 SQZ or flat, D1 flat — no macro direction. Any open position must close immediately.
 
