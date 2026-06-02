@@ -15,7 +15,8 @@ Work through: **Part 1** (read the chart) → **Part 2** (HTF context) → **Par
 | Gate label colors | Part 1 Section 6 |
 | Entry triggers | Part 1 Section 7 |
 | Compression zones | Part 1 Section 8 |
-| Block gates | Part 1 Section 9 |
+| Compression → reversal or continuation | Part 1 Section 9 |
+| Block gates | Part 1 Section 10 |
 | Position sizing | Part 1 Section 10 |
 | HTF cascade rules | Part 2 — HTF Compression Cascade |
 | Scenario matching | Part 2 — Scenario Identification Flowchart |
@@ -257,6 +258,91 @@ Format: `{value}` or `{value}-REVUP/REVDN`. Values 1 and 2 are **not shown** on 
 - M15 follows M5 with 2-5 bar lag
 - Gate labels shift to [G6-BUY] or [G6-SELL]
 
+---
+
+## 9. Compression Resolution — Reversal vs Continuation
+
+After compression/squeeze, price can either **reverse direction** or **continue flying in the same trend**. This is the critical distinction.
+
+```
+                    BEFORE: Fly BUY → Compression → AFTER:
+                                                    ├──→ Continuation: Fly BUY resumes (rest pattern)
+                                                    └──→ Reversal: Fly SELL begins (direction flip)
+```
+
+### Two Possible Outcomes
+
+| Outcome | Description | Reference Scenario |
+|---------|-------------|-------------------|
+| **Continuation** | Price resumes original direction after compression | Scenario D — Fly → Shrink → Fly (rest pattern) |
+| **Reversal** | Price breaks out in opposite direction | Scenario E → F — compression then reversal |
+
+### Key Discrimination Criteria
+
+| Indicator | Continuation (Rest Pattern) | Reversal |
+|-----------|----------------------------|----------|
+| **H1 step direction** | Maintained throughout | Breaks/reverses |
+| **H4 step direction** | Maintained throughout | May reverse |
+| **Compression duration** | Brief (hours) | Extended (days) |
+| **Band expansion after** | Same direction | Opposite direction |
+| **HTF fly throughout** | Yes — W1/D1/H4 all still flying | No — HTFs also compress or slow |
+| **Gate labels during rest** | [G6-LOAD] only | [G0c-SQZLOCK], [G0b-PINK] |
+| **L/U touch pattern** | Minimal | High L or U counts (repeated tests) |
+| **PredictNextTrend** | Continuation (BUY/SELL) | Reversal flag (R:BUY/R:SELL) |
+
+### HTF Compression Level Determines Likelihood
+
+| HTF State During Compression | Outcome Likelihood |
+|------------------------------|-------------------|
+| H4 still flying, only M30/M15 compress | **Continuation likely** (rest pattern) |
+| H4 also shrinking | **Either possible** — watch H1 step |
+| H4 also in SQZ | **Reversal more likely** |
+| D1 also slowing | **Reversal most likely** |
+
+### Decision Tree for Post-Compression Analysis
+
+```
+Compression ends → M5 breaks SQZ →
+
+Is H1 still maintaining original step direction?
+├── YES → Is H4 still flying original direction?
+│           ├── YES → CONTINUATION → Scenario D (rest pattern)
+│           └── NO → Reversal forming → watch REVUP/REVDN
+└── NO → Reversal likely → wait for REVUP/REVDN confirmation
+         Is M15 also confirming new direction?
+         ├── YES → Reversal confirmed → enter new direction
+         └── NO → Wait for M15 confirmation
+```
+
+### Compression Depth vs Outcome
+
+| Compression Depth | Typical Outcome |
+|-------------------|-----------------|
+| **Shallow** (M5/M15 only, hours) | Continuation — rest pattern |
+| **Moderate** (M30+ included, 4-8 hours) | Either — depends on H1/H4 |
+| **Deep** (H1+, days, full SQZ) | Reversal more likely |
+
+### Visual Signals of Continuation (Rest Pattern)
+
+| Signal | Chart Cue |
+|--------|-----------|
+| H1 bands still stepping in original direction | Red band continues same trajectory |
+| H4 bands still stepping | Yellow band continues same trajectory |
+| White rectangles (rest zones) then bands re-expand same way | See fly→shrink→fly chart |
+| [G6-LOAD] → [G6-BUY/SELL] same as before compression | Gate labels consistent |
+
+### Visual Signals of Reversal
+
+| Signal | Chart Cue |
+|--------|-----------|
+| H1 step direction breaks | Red band stops or reverses |
+| REVUP/REVDN label appears | Midband transition label |
+| Bands expand in opposite direction | Upper/lower bands fan opposite way |
+| [G0b-PINK] appears | Magenta label — exit all |
+| Predict label shows R:BUY/R:SELL | Aqua/orange reversal labels |
+
+---
+
 **Compression depth measurement:**
 ```
 Band width ratio = (Upper band - Lower band) / Midband
@@ -268,7 +354,7 @@ Band width ratio = (Upper band - Lower band) / Midband
 
 ---
 
-## 9. Block Gate Reference Table
+## 10. Block Gate Reference Table
 
 | Gate | Block Condition | Color | Resolution |
 |------|----------------|-------|------------|
@@ -286,7 +372,7 @@ Band width ratio = (Upper band - Lower band) / Midband
 
 ---
 
-## 10. Position Sizing Matrix
+## 11. Position Sizing Matrix
 
 | TF Alignment | M15/M30/H1 H4 Fly | Shrink | SQZ |
 |--------------|-------------------|--------|-----|
@@ -304,7 +390,7 @@ Band width ratio = (Upper band - Lower band) / Midband
 
 ---
 
-## 11. Risk Management Guidelines
+## 12. Risk Management Guidelines
 
 **ATRSL stop behavior:**
 - dir=0 (uptrend): orange stop below price, trailing upward
@@ -529,6 +615,12 @@ Start Analysis → Is H4 in fly?
                   No (H4 in SQZ) → Are all TFs in SQZ?
                                     ↓
                                      Yes → SCENARIO F: SQZ → Fly (Breakout)
+                                          ↓
+                                        After SQZ breaks:
+                                          ↓
+                                         Is H1 maintaining original step?
+                                          ├──→ YES → CONTINUATION (rest pattern)
+                                          └──→ NO → REVERSAL (direction flip)
                                     ↓
                                      No → Are M30+M15 both mid≥3?
                                            ↓
@@ -1374,7 +1466,7 @@ Use Part 4 tables. State: current regime, price target, which gate fires next, o
 
 ---
 
-## 12. Document Update Summary
+## 13. Document Update Summary
 
 **Enhancements completed through comprehensive image analysis:**
 
@@ -1384,9 +1476,10 @@ Use Part 4 tables. State: current regime, price target, which gate fires next, o
 |---------|---------|
 | 7 | Visual Entry Trigger Identification |
 | 8 | Compression Zone Identification |
-| 9 | Block Gate Reference Table |
-| 10 | Position Sizing Matrix |
-| 11 | Risk Management Guidelines |
+| 9 | Compression Resolution — Reversal vs Continuation |
+| 10 | Block Gate Reference Table |
+| 11 | Position Sizing Matrix |
+| 12 | Risk Management Guidelines |
 | 6 | Gate Label Color Reference (completed - was empty) |
 
 ### Part 2 — HTF Analysis (Enhancements)
