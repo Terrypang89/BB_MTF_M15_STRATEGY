@@ -1032,24 +1032,55 @@ See bands on chart → Is H4 in shrink or SQZ (513/523 or 400-499)?
                            ↓
                             No → Check if only H4 issue
                     ↓
-                           Yes → Are M5/M15/M30 bands near-flat?
+                           Yes → Is H1 (MTF) showing trend reversal?
+                                 (H1 bands no longer stepping same direction)
                                  ↓
-                                  No → NOT full compression yet
+                                  No → NOT Scenario E
                     ↓
-                                 Yes → Are mid-band labels (3,4,5) on multiple TFs?
+                                 Yes → Is M5 shrinking (513/523) or in SQZ (400-499)?
                                        ↓
-                                        No → Check for single TF only
+                                        No → Early stage, not full compression yet
                     ↓
-                                       Yes → Is [G0c-SQZLOCK] or [G6-LOAD] visible?
+                                       Yes → Is M15 shrinking (513/523) or in SQZ (400-499)?
                                              ↓
-                                              No → Compression without lock
+                                              No → Partial compression
                     ↓
-                                              Yes → SCENARIO E CONFIRMED
-                                                     ↓
-                                                    Compression depth:
-                                                     ├──→ Shallow → Range trade H1 boundaries
-                                                     ├──→ Moderate → Wait for direction
-                                                     └──→ Deep → Reversal more likely
+                                              Yes → Is M30 shrinking (513/523) or in SQZ (400-499)?
+                                                    ↓
+                                                     No → Incomplete cascade
+                    ↓
+                                                     Yes → Are mid-band labels (3,4,5) on multiple TFs?
+                                                           ↓
+                                                            No → Check for midband labels
+                    ↓
+                                                           Yes → Is [G0c-SQZLOCK] or [G6-LOAD] visible?
+                                                                 ↓
+                                                                  No → Compression without lock
+                    ↓
+                                                                  Yes → SCENARIO E CONFIRMED
+                                                                         ↓
+                                                                        Compression depth:
+                                                                         ├──→ Shallow → Range trade H1 boundaries
+                                                                         ├──→ Moderate → Wait for direction
+                                                                         └──→ Deep → Reversal more likely
+```
+
+**Cascade compression sequence:**
+
+```
+                    H4 shrink/SQZ (starting point)
+                          ↓
+                    D1 slowing (optional but likely)
+                          ↓
+                    H1 trend reversal (MTF breaks)
+                          ↓
+                    M5 shrink → SQZ
+                          ↓
+                    M15 shrink → SQZ
+                          ↓
+                    M30 shrink → SQZ (full compression)
+                          ↓
+                    [G0c-SQZLOCK] / [G6-LOAD] (locked state)
 ```
 
 **Visual confirmation checklist:**
@@ -1058,11 +1089,14 @@ See bands on chart → Is H4 in shrink or SQZ (513/523 or 400-499)?
 |-----------|----------|
 | H4 in shrink or SQZ | [ ] |
 | D1 also slowing | [ ] |
-| M5/M15/M30 bands near-flat | [ ] |
+| H1 (MTF) trend reversal | [ ] |
+| M5 shrinking or SQZ | [ ] |
+| M15 shrinking or SQZ | [ ] |
+| M30 shrinking or SQZ | [ ] |
 | Mid-band labels on multiple TFs | [ ] |
 | [G0c-SQZLOCK] or [G6-LOAD] labels | [ ] |
 
-**5/5 present = Confirmed Scenario E**
+**5/8 present = Confirmed Scenario E (minimum H4, H1, M5, M15, midband labels)**
 
 ---
 
@@ -1081,6 +1115,45 @@ See bands on chart → Is H4 in shrink or SQZ (513/523 or 400-499)?
 - **H1 fly down → H4 shrink** (Jan 14 20:50–Jan 15 05:50): H4 starts shrinking → H1 range confined within H4 band
 - **H4 sideway** (Jan 15 11:10): H4 SQZ → range trade between H1 upper and H1 lower
 - **Pink zone** (Jan 15 19:10): M15+M5 both sideway → exit all
+
+**Cascade compression visual evidence (from images):**
+
+| Image Element | What it shows |
+|---------------|--------------|
+| Yellow circles at top | H4 shrink starting point - compression initiates here |
+| Red circles | MTF trend reversal - H1 breaks direction |
+| Multiple mid-band labels | M5/M15/M30 all entering SQZ |
+| Pink rectangles | Full compression - all TFs sideway |
+| Purple circles | Band-touch points during compression |
+| White circles (bottom) | Lower band touches - support building |
+| [G0c-SQZLOCK] labels | Compression lock - no new entries allowed |
+| [G6-LOAD] labels | Loading phase - waiting for breakout |
+
+**Compression stages visual progression:**
+
+```
+Stage 1: H4 shrink (513/523)
+        ↓
+       Red bands (H1) stop stepping
+        ↓
+Stage 2: M5 shrink (513/523) → M5 SQZ (400-499)
+        ↓
+       Aqua bands collapse flat
+        ↓
+Stage 3: M15 shrink (513/523) → M15 SQZ (400-499)
+        ↓
+       Goldenrod bands collapse
+        ↓
+Stage 4: M30 shrink (513/523) → M30 SQZ (400-499)
+        ↓
+       Green-yellow bands collapse
+        ↓
+Stage 5: Full compression - all bands flat
+        ↓
+       [G0c-SQZLOCK] / [G6-LOAD] visible
+        ↓
+       Pink zone (M15+M30 both SQZ) → Exit all
+```
 
 **Range trade rules:**
 
