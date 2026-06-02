@@ -8,6 +8,25 @@ Work through: **Part 1** (read the chart) → **Part 2** (HTF context) → **Par
 
 ---
 
+## Quick Navigation
+
+| Looking for... | Go to... |
+|----------------|----------|
+| Gate label colors | Part 1 Section 6 |
+| Entry triggers | Part 1 Section 7 |
+| Compression zones | Part 1 Section 8 |
+| Block gates | Part 1 Section 9 |
+| Position sizing | Part 1 Section 10 |
+| HTF cascade rules | Part 2 — HTF Compression Cascade |
+| Scenario matching | Part 2 — Scenario Identification Flowchart |
+| Scenario details | Part 3 — Scenarios A through G |
+| Trend prediction | Part 4 |
+| Confidence levels | Part 4 — Confidence Level Guidelines |
+| Trade decision table | Part 5 — Scenario → Action Table |
+| Compression analysis | Part 7 — HTF Compression Zone Analysis |
+
+---
+
 ## How to Trade — Summary
 
 ### Step 1: Read HTF (W1 → D1 → H4) first
@@ -175,12 +194,134 @@ Format: `{value}` or `{value}-REVUP/REVDN`. Values 1 and 2 are **not shown** on 
 
 | Color | Gate labels | Meaning |
 |-------|-------------|---------|
+| Lime / Green | G6-BUY | Buy entry fired |
+| OrangeRed | G6-SELL | Sell entry fired |
+| Crimson / Red | G0 | Sideway exit (all TFs mid≥3) |
+| DarkRed | G0-HOLD | Sideway hold (M30+M15 mid≥3 but H1 trending) |
+| Magenta | G0c-SQZLOCK | Squeeze lock - no entry |
+| Magenta | G0b-PINK | Pink zone exit (M15+M30 both SQZ) |
+| Yellow / Gold | G0b-WAIT | Cascade wait (no touch yet) |
+| Yellow / Gold | G6-LOAD | SQZ loading - wait state |
+| Yellow / Gold | G0b-TOUCH | Cascade entry at band touch |
+| Lime / Orange | G0b-TOUCH | Cascade entry confirmed |
+| DimGray | G0-HOLD | Hold existing, no new entry |
+| DarkOrange | H4-OPPOSE | H4 filter blocked |
+| DarkOrange | H4-SQZ | H4 squeeze blocked |
+| DarkOrange | G0b-H4OPP | H4 opposing blocked |
+| Orange | G4e-H4OPP | H4 opposing blocked (shrink path) |
+| Orange | G4c-M15OPP | M15 opposing blocked |
+| Orange | G4f-M30OPP | M30 opposing blocked |
+| DarkMagenta | G0b-M30OPP | M30 opposing blocked |
+| Cyan / Aqua | R:BUY | Reversal BUY prediction |
+| Orange | R:SELL | Reversal SELL prediction |
+| Red | G5-FADE | Fade exit (UP→FLAT or DN→FLAT) |
+| Brown | G8-BNDTGT | Band target exit |
+| Green | PRED:BUY | Continuation BUY |
+| OrangeRed | PRED:SELL | Continuation SELL |
+| DimGray | PRED:NEUTRAL | No direction |
 
 ---
 
+## 7. Visual Entry Trigger Identification
+
+**M15 Entry Signal Checklist** (V30.02+):
+
+| Indicator | Visual Cue on Chart |
+|-----------|-------------------|
+| Stage transition | M15 upper band: "SQZ" → "Fly++" or "Fly+-" |
+| Midband transition | Mid-band label disappears (mid=3 → mid=1 or 2) |
+| Directional reversal | REVUP or REVDN label appears |
+| Gate confirmation | [G6-LOAD] → [G6-BUY] or [G6-SELL] |
+| M30 confirmation | M30 fly stage (511/512 BUY, 521/522 SELL) |
+| Quality threshold | Score ≥ 60 (visible from position sizing) |
+
+**Entry timing rules:**
+- Enter on M15 bar close (not M5 bar close)
+- Wait for M30 confirmation (prevents false signals)
+- Quality score determines position size
+
 ---
 
-# PART 2 — HIGHER TIMEFRAME ANALYSIS (W1 → D1 → H4)
+## 8. Compression Zone Identification
+
+**Building Phase** (momentum accumulating):
+- All bands converging (width decreasing)
+- Multiple TFs showing 400-499 stage labels
+- Mid-band labels (3,4,5) appearing across TFs
+- [G6-LOAD] or [G0c-SQZLOCK] gate labels visible
+- L (lower) or U (upper) touch counts increasing
+
+**Resolving Phase** (momentum releasing):
+- M5 bands begin spreading first
+- REVUP/REVDN label appears
+- M15 follows M5 with 2-5 bar lag
+- Gate labels shift to [G6-BUY] or [G6-SELL]
+
+**Compression depth measurement:**
+```
+Band width ratio = (Upper band - Lower band) / Midband
+  ≥ 0.005 = Wide (fly expanding)
+  0.003-0.005 = Normal (parallel fly)
+  0.001-0.003 = Narrow (shrinking)
+  ≤ 0.001 = Very narrow (squeeze)
+```
+
+---
+
+## 9. Block Gate Reference Table
+
+| Gate | Block Condition | Color | Resolution |
+|------|----------------|-------|------------|
+| H4-OPPOSE | H4 fly opposing entry direction | DarkOrange | Wait for H4 to align |
+| H4-SQZ | H4 in SQZ with no conviction | DarkOrange | Wait for H4 breakout |
+| G0b-H4OPP | H4 fly/shrink opposing entry | DarkOrange | H4 mid must align with entry |
+| G0b-M30OPP | M30 fly/shrink/SQZ with opposing mid | DarkMagenta | M30 mid must align |
+| G4e-H4OPP | H4 in shrink with flat mid (sideway) | Orange | Wait for H4 to exit shrink |
+| G4c-M15OPP | M15 fly/shrink/SQZ with opposing mid | Orange | M15 mid must align |
+| G4f-M30OPP | M30 fly/shrink/SQZ with opposing mid | Orange | M30 mid must align |
+| G0b-SQZLOCK | H1+M30 both SQZ, both mid==3 | Magenta | At least one TF must break SQZ |
+| G0b-H1SQZDN | H1-SQZ with mid=2/4 vs BUY, or mid=5 vs SELL | Magenta | H1 mid must align with entry |
+| G0b-M5OPP | M5 sole trigger + M5 shrink with opposing mid | Magenta | M5 mid must align |
+| G0b-M5FLY | M5 in committed opposing fly | Magenta | Wait for M5 to align |
+
+---
+
+## 10. Position Sizing Matrix
+
+| TF Alignment | M15/M30/H1 H4 Fly | Shrink | SQZ |
+|--------------|-------------------|--------|-----|
+| 4+ TFs agree | 1.0× | 0.75× | 0.50× |
+| 3 TFs agree | 1.0× | 0.50× | 0.25× |
+| 2 TFs agree | 0.75× | 0.25× | Skip |
+| 1 TF | 0.50× | Skip | Skip |
+
+**Quality score multiplier:**
+- ≥90: 1.0× (full size)
+- ≥75: 0.75×
+- ≥60: 0.50×
+- ≥45: 0.25×
+- <45: Skip
+
+---
+
+## 11. Risk Management Guidelines
+
+**ATRSL stop behavior:**
+- dir=0 (uptrend): orange stop below price, trailing upward
+- dir=1 (downtrend): orange stop above price, trailing downward
+- Yellow buffer: visual cushion (1 ATR offset)
+- Stop lags during brief M5/M15 squeezes — do not use as primary signal during fly expand
+
+**Stop tightening during compression:**
+- When H4 enters shrink: consider tightening stop toward H4 band boundary
+- When M30/M15 both compressing: move stop closer to entry price
+- During full SQZ: exit all positions (G0b-PINK)
+
+**Emergency exit conditions:**
+- Float loss < −$50 → G0e-MAXLOSS (exit immediately)
+- M30+M15+H1 all mid≥3 → G0 (exit all)
+- M15+M30 both SQZ → G0b-PINK (exit all)
+- ATRSL trailing stop hit → Broker closes
 
 **IMPORTANT:** Always read HTF before analyzing MTF/LTF. HTF determines:
 1. **Direction** — which way the wind blows for all lower TFs
@@ -189,6 +330,36 @@ Format: `{value}` or `{value}-REVUP/REVDN`. Values 1 and 2 are **not shown** on 
 4. **MTF Predict** — if H4 is sideway and D1 is shrinking, in the same time M30 & H1 in fly in direction, able to predict the fly will end at H4 upper band or H1 will drive H4 to fly. 
 
 The cascade is top-down: **W1 sets D1's range → D1 sets H4's range → H4 sets H1's range -> H1 sets M30's range → M30 sets M15's range**.
+
+---
+
+## HTF Compression Cascade Dynamics
+
+**Top-Down Cascade Principle:**
+
+```
+W1 sets D1's range → D1 sets H4's range → H4 sets H1's range → H1 sets M30's range → M30 sets M15's range
+```
+
+**Compression confinement mechanics:**
+
+| HTF State | MTF Behavior | Range Boundaries |
+|-----------|-------------|------------------|
+| H4 fly | M30 trends with H4 direction | H4 outer band → D1 outer band |
+| H4 shrink | M30 ranges within H4 band | H4 upper and lower band |
+| H4 SQZ | M30 chops flat, no direction | Within H4 band envelope |
+
+**H4 shrink confinement (pink rectangle pattern):**
+- When H4 enters shrink (513/523), M30/M15 become confined to range
+- Range boundaries = H4 upper and lower band
+- M30/M15 oscillate between these boundaries until H4 exits shrink
+- D1 direction determines eventual H4 breakout direction
+- Band-touch entries at pink rectangle edges = cascade trade opportunities
+
+**D1 band boundary rule:**
+- D1 upper band acts as "ceiling" for all H4 BUY trades
+- H4 trades travel toward D1 upper band before D1 turns
+- When D1 starts shrinking (513), exit all H4 BUY positions
 
 ---
 
@@ -322,16 +493,76 @@ Before looking at any H1/M30/M15/M5 entry, answer these questions:
 - H4 shrink → H4 outer band is where the range reverses
 - H4 SQZ → no clear target; wait for breakout
 
-**4. What is the price target for H1?**
-- H4 fly → H4 outer band is where H1 trades stop
-- H4 shrink → H4 outer band is where the range reverses
-- H4 SQZ → no clear target; wait for breakout
-
 **5. Why is H1 sideway right now?**
 - Check H4: if H4 is shrinking or SQZ → that is why H1 is flat
 - Once H4 exits shrink back to fly → H1 will resume trending
 
 ---
+
+## Scenario Identification Flowchart
+
+```
+Start Analysis → Is H4 in fly?
+                 ↓
+                  Yes → Are M30+M15 also in fly?
+                        ↓
+                         Yes → SCENARIO A: Normal Fly
+                         ↓
+                         No → Are M30/M15 shrinking?
+                              ↓
+                               Yes → SCENARIO B: Fly → Shrink
+                               ↓
+                               No → Are M30/M15 in SQZ?
+                                    ↓
+                                     Yes → Check band touch → SCENARIO C: Cascade
+                                              ↓
+                                               No → SCENARIO D: Rest Pattern
+                 ↓
+                  No → Is H4 in shrink?
+                        ↓
+                         Yes → Are M30/M15 compressing?
+                               ↓
+                                 Yes → SCENARIO E: Shrink → SQZ
+                               ↓
+                                 No → Check if H4 about to exit → SCENARIO D: Rest Pattern
+                 ↓
+                  No (H4 in SQZ) → Are all TFs in SQZ?
+                                    ↓
+                                     Yes → SCENARIO F: SQZ → Fly (Breakout)
+                                    ↓
+                                     No → Are M30+M15 both mid≥3?
+                                           ↓
+                                             Yes → SCENARIO G: All TFs Sideway
+```
+
+---
+
+## HTF Compression Zone Analysis
+
+**Identifying compression zones (yellow rectangles on charts):**
+
+| Phase | Visual Cues | Action |
+|-------|-------------|--------|
+| Building | All bands converging, width decreasing | Wait, track compression depth |
+| Peak compression | Bands extremely flat, mid-labels across TFs | No trade, watch for breakout signals |
+| Release | M5 bands spread first, REVUP/REVDN appears | Prepare for entry |
+| Confirmation | M15 follows M5, then M30, then H1 | Enter if quality score ≥ 60 |
+
+**Compression duration guidelines:**
+
+| Timeframe | Typical Duration |
+|-----------|-----------------|
+| M5 compression | 5-15 minutes |
+| M15 compression | 30 minutes - 2 hours |
+| M30 compression | 1-4 hours |
+| H1 compression | 2-8 hours |
+| H4 compression | 4-24 hours |
+
+**Compression resolution indicators:**
+- HTF direction determines breakout direction
+- L (lower) touch counts high → bounce upward likely
+- U (upper) touch counts high → rejection downward likely
+- M (mid) touch counts high → oscillation, wait for direction
 
 ---
 
@@ -360,12 +591,32 @@ Apply after HTF context is established. Each scenario: **What you see → What i
 - H4 fly is why brief squeezes resolve back to fly instead of deeper compression
 - Price target: H4 outer band → then D1 outer band if D1 is also fly
 
+**Visual identification checklist:**
+```
+[✓] All bands fanning outward in same direction
+[✓] No mid-band labels (mid=1 or 2 suppressed)
+[✓] H4 stepping in same direction
+[✓] Stage labels: 511/512 (BUY) or 521/522 (SELL)
+[✓] [G6-BUY] or [G6-SELL] gate labels visible (lime/orange)
+```
+
+**Holding vs exiting decision:**
+
+| Condition | Action |
+|-----------|--------|
+| Brief M5 squeeze (< 3 bars) | HOLD — noise |
+| M15 squeeze (< 5 bars) | HOLD — still within fly |
+| M30 squeeze (< 10 bars) | HOLD — H4 still flying |
+| M15 UP→FLAT transition | EXIT (G5-FADE) |
+| M30+M15 both mid≥3 | EXIT (G0) |
+| ATRSL stop hit | EXIT (broker closes) |
+
 **Trade action:**
 ```
-BUY:  H1+M30 511/512 + mid=1  →  enter on M5 FLAT→UP transition
-SELL: H1+M30 521/522 + mid=2  →  enter on M5 FLAT→DN transition
+BUY:  H1+M30 511/512 + mid=1  →  enter on M15 FLAT→UP transition
+SELL: H1+M30 521/522 + mid=2  →  enter on M15 FLAT→DN transition
 HOLD: through all brief M5/M15 noise squeezes (< 3 bars)
-EXIT: M5 UP→FLAT (G5-FADE) | M30+M15 both sideway (G0) | ATRSL stop hit | H4 outer band reached (G8-BNDTGT)
+EXIT: M15 UP→FLAT (G5-FADE) | M30+M15 both sideway (G0) | ATRSL stop hit | H4 outer band reached (G8-BNDTGT)
 SIZE: 1.0× (full — highest quality when W1+D1+H4 all aligned)
 ```
 
@@ -395,13 +646,28 @@ SIZE: 1.0× (full — highest quality when W1+D1+H4 all aligned)
 - **M30 shrink** + H1/H4 fly → M30 confined within H1 band; price touches M30 outer band
 - **H1 shrink** + H4 fly → H1 confined within H4 band; price touches H1 outer band
 
+**Shrink depth measurement:**
+```
+Band width ratio = (Upper band - Lower band) / Midband
+  ≥ 0.005 = Wide (fly expanding)
+  0.003-0.005 = Normal (parallel fly)
+  0.001-0.003 = Narrow (shrinking)
+  ≤ 0.001 = Very narrow (squeeze)
+```
+
+**Optimal entry timing during shrink:**
+- Enter when M15 shrinks but M30/H4 still flying (best quality)
+- Avoid when H4 also shrinking (higher risk)
+- Enter at M15 midtrend transition (FLAT→UP/DN)
+- Wait for quality score ≥ 75
+
 **Trade action:**
 ```
-ENTRY: M5 FLAT→UP (BUY) or FLAT→DN (SELL) transition
+ENTRY: M15 FLAT→UP (BUY) or FLAT→DN (SELL) transition
 WAIT if: only M5 shrinking, M15 still fly — M5 alone is noise
 BLOCK: H4 opposing (G4e-H4OPP) | M15 opposing (G4c-M15OPP) | M30 opposing (G4f-M30OPP)
 TARGET: outer band of lowest TF still in fly (= where price stops this leg)
-EXIT: M5 UP→FLAT (G5-FADE) | cascade into SQZ | outer band touched (G8-BNDTGT)
+EXIT: M15 UP→FLAT (G5-FADE) | cascade into SQZ | outer band touched (G8-BNDTGT)
 SIZE: 0.75× (M15 or M30 shrink alone) → 0.50× (M30+H1 both) → 0.25× (all 3 shrink)
 ```
 
@@ -431,6 +697,21 @@ SIZE: 0.75× (M15 or M30 shrink alone) → 0.50× (M30+H1 both) → 0.25× (all 
 | G0b-M5OPP | M5 sole trigger + M5 shrink with opposing mid |
 | G0b-M5FLY | M5 in committed opposing fly when higher TF triggers |
 
+**Band touch point identification:**
+- Touch H4 upper band during H4 shrink → SELL opportunity (purple circles on chart)
+- Touch H4 lower band during H4 shrink → BUY opportunity
+- Touch H1 upper band → SELL opportunity
+- Touch H1 lower band → BUY opportunity
+- Touch M30 outer band → exit signal (G8-BNDTGT)
+
+**Filter evaluation sequence:**
+1. Check H4-OPP (H4 opposing direction?)
+2. Check M30-OPP (M30 opposing mid?)
+3. Check SQZLOCK (H1+M30 both mid=3?)
+4. Check H1SQZDN (H1 mid contradicts entry?)
+5. Check M5OPP (M5 mid opposing?)
+6. Check M5FLY (M5 committed fly opposing?)
+
 **Trade action:**
 ```
 WAIT: no touch yet → [G0b-WAIT]
@@ -455,6 +736,17 @@ SIZE: quality score from M5 transition
 - After each rectangle: full fly resumes, all bands fan back out
 
 **Key test — rest vs reversal:** H1 (red) maintains its step direction throughout. If H1 never breaks, this is a rest pattern. If H1 reverses direction, it is a true reversal.
+
+**Rest vs reversal identification checklist:**
+
+| Indicator | Rest Pattern | Reversal Pattern |
+|-----------|-------------|------------------|
+| H1 step direction | Maintained | Reversed |
+| H4 step direction | Maintained | May reverse |
+| Compression duration | Brief (hours) | Extended (days) |
+| Band expansion after compression | Same direction | Opposite direction |
+| HTF fly throughout | Yes | No — HTF also compresses |
+| Gate labels during rest | [G6-LOAD] only | [G0c-SQZLOCK], [G0b-PINK] |
 
 **Zones in the zoom:**
 - Yellow (left): initial fly — all bands expanding
@@ -493,6 +785,20 @@ EXIT: ATRSL stop | M5 UP→FLAT (G5-FADE) | M30+M15 go sideway
 - **H4 sideway** (Jan 15 11:10): H4 SQZ → range trade between H1 upper and H1 lower
 - **Pink zone** (Jan 15 19:10): M15+M5 both sideway → exit all
 
+**Range trade rules:**
+
+| Situation | Entry Point | Exit Point | Gate |
+|-----------|-------------|------------|------|
+| H4 sideway + M30 at upper band | Sell at touch | Midband or lower touch | G0b-TOUCH |
+| H4 sideway + M30 at lower band | Buy at touch | Midband or upper touch | G0b-TOUCH |
+| H1 sideway + M15 at upper band | Sell at touch | Midband or lower touch | G0b-TOUCH |
+| H1 sideway + M15 at lower band | Buy at touch | Midband or upper touch | G0b-TOUCH |
+
+**Compression threshold:**
+- Band width ratio ≤ 0.001 = squeeze confirmed
+- Multiple TFs in 400-499 stage = full compression
+- Mid-band labels across 3+ TFs = range bound, no directional trades
+
 **Trade action:**
 ```
 WAIT:     M30+M15 both SQZ → G0c-SQZLOCK → no entry
@@ -523,13 +829,35 @@ EXIT ALL: M30+M15+H1 all mid≥3 → G0 → act=7
 - L2H chain building: M5 fly → M15 fly → M30 fly
 - D1 fly direction = which way the breakout will sustain
 
+**SQZ breakout momentum sequence:**
+
+| Stage | Visual Cues | Action |
+|-------|-------------|--------|
+| Loading | Bands collapsed, [G6-LOAD] | Wait, no entry |
+| Pressure building | L or U touch counts increasing | Prepare for breakout |
+| M5 break | M5 spreads, REVUP/REVDN | Watch quality score |
+| M15 follows | M15 spreads within 2-5 bars | Enter if quality ≥ 60 |
+| M30 confirms | M30 spreads | Full entry if quality ≥ 90 |
+| H1 confirms | H1 spreads | Hold with confidence |
+
+**Entry quality scoring for breakouts:**
+
+| Factor | Score |
+|--------|-------|
+| M5 SQZ break (400-499 → fly) | 75 base |
+| REVUP/REVDN label | +15 |
+| M30 still SQZ | -20 (pioneer) |
+| M30 confirms | +25 |
+| H1 confirms | +10 |
+| D1 aligns with direction | +15 |
+
 **Trade action:**
 ```
 DURING SQZ: no entry — [G6-LOAD] confirms wait state
-ENTRY: M5 SQZ break (400-499 → 511/512 or 521/522) + REVUP/REVDN → quality=75
+ENTRY: M15 SQZ break (400-499 → 511/512 or 521/522) + REVUP/REVDN → quality=75
 M15 pioneer: M30 still SQZ, M15 breaks → pioneer entry 0.75×
 FULL ENTRY: M30+M15 both confirm fly → 1.0×
-EXIT: ATRSL trailing stop | M5 UP→FLAT (G5-FADE)
+EXIT: ATRSL trailing stop | M15 UP→FLAT (G5-FADE)
 TARGET: H4 outer band (if H4 also breaking) → D1 outer band
 ```
 
@@ -544,12 +872,49 @@ TARGET: H4 outer band (if H4 also breaking) → D1 outer band
 - All bands flat — no directional expansion
 - Gate label `[G0]` (crimson) or `[G0-HOLD]` (dimgray)
 
+**G0 exit trigger conditions:**
+
+| Condition | Gate Label | Action |
+|-----------|-----------|--------|
+| M30 mid≥3 AND M15 mid≥3 AND H1 mid≥3 | [G0] (crimson) | Exit all immediately |
+| M30 mid≥3 AND M15 mid≥3, H1 mid<3 | [G0-HOLD] (dimgray) | Hold, no new entry |
+| M15+M30 both in 400-499 stage | [G0b-PINK] (magenta) | Exit all, no entry |
+
+**Holding vs exiting decision:**
+
+| TF State | Action |
+|----------|--------|
+| All 3 TFs (M30, M15, H1) mid≥3 | EXIT (G0) |
+| M30+M15 mid≥3 but H1 mid<3 | HOLD (G0-HOLD) |
+| Only M15 mid≥3 | HOLD — single TF not enough |
+| Only M30 mid≥3 | HOLD — need M15 confirmation |
+
+**Recovery criteria:**
+- Wait for M30 or M15 midband to return to 1 (up) or 2 (dn)
+- Confirm stage returns to fly (511/512/521/522)
+- Check H4 not in SQZ — if H4 in SQZ, recovery may be delayed
+
 **Trade action:**
 ```
 M30 mid≥3 AND M15 mid≥3 AND H1 mid≥3  →  [G0]      act=7  exit all immediately
 M30 mid≥3 AND M15 mid≥3, H1 mid<3     →  [G0-HOLD] act=0  hold existing, no new entry
 Recovery: wait until M30 or M15 shows mid=1 or mid=2 again
 ```
+
+---
+
+## Scenario Summary
+
+| Scenario | Key Identifier | Primary Action |
+|----------|---------------|----------------|
+| A: Normal Fly | All TFs flying same direction | Enter on M15 transition, full size |
+| B: Fly → Shrink | HTF flying, LTF shrinking | Enter on LTF transition, reduce size |
+| C: Cascade | HTF SQZ, band touch | Enter at band touch with filter pass |
+| D: Rest Pattern | Temporary compression, then resume | Enter at SQZ break, hold through rest |
+| E: Shrink → SQZ | All TFs compressing flat | Range trade, no directional trades |
+| F: SQZ → Fly | Breakout from compression | Enter on SQZ break, scale up |
+| G: All Sideway | M30+M15 mid≥3 | Exit all positions |
+
 ---
 
 
@@ -607,6 +972,30 @@ grand_total = htf + mtf + ltf      (max ±88)
 | ≤ -66 | SELL | 95 |
 
 **Reversal flag:** if `htf_total ≥ +18` AND `ltf+mtf ≤ -12` (or mirror) → `reversal=true`, confidence capped at 65. Means HTF is strongly opposing LTF+MTF direction.
+
+### Confidence Level Trading Guidelines
+
+| Confidence | Action | Position Size |
+|------------|--------|---------------|
+| 95 | Full conviction entry | 1.0× |
+| 80 | Strong entry | 0.75-1.0× |
+| 60 | Moderate entry | 0.5-0.75× |
+| 25 | No new entry, hold existing | N/A |
+| <25 | Consider exiting | Reduce/exit |
+
+### Reversal Flag Interpretation
+
+**When reversal flag is true (R:):**
+- HTF strongly opposes LTF+MTF direction
+- Counter-trend opportunity — smaller size (0.5×)
+- Higher risk — wait for additional confirmation
+- Confidence capped at 65%
+
+**Example scenarios:**
+```
+R:BUY:65 → HTF bearish, LTF+MTF turning bullish → counter-trend buy
+R:SELL:65 → HTF bullish, LTF+MTF turning bearish → counter-trend sell
+```
 
 ---
 
@@ -868,22 +1257,38 @@ First establish HTF context (Part 2), then apply this table:
 
 ## Scenario → Action Table
 
-| What you see | Scenario | Action | Gate |
-|---|---|---|---|
-| H1+M30+M15 all 511/512, mid=1 | Normal fly BUY | Enter on M5 FLAT→UP | G6-BUY |
-| H1+M30+M15 all 521/522, mid=2 | Normal fly SELL | Enter on M5 FLAT→DN | G6-SELL |
-| H1/M30 in fly, M15/M5 shrinking | Fly→Shrink BUY/SELL | Enter on M5 FLAT→UP/DN | G6-BUY/SELL |
-| Only M5 shrinking, M15 still fly | M5 noise | **Wait** — not yet | — |
-| H1+M30 SQZ, M15/M5 shrink, band touch | Cascade | Enter at outer band touch | G0b-TOUCH |
-| M15+M30 both SQZ | Pink zone | **Exit all** | G0b-PINK |
-| M5 fading (UP→FLAT or DN→FLAT) | Fade | Exit open position | G5-FADE |
-| All TFs SQZ | Full lock | **Wait** for breakout | G0c/G6-LOAD |
-| M5 breaks SQZ → REVUP/REVDN | Breakout | Enter quality=75 | G6-ENTRY |
-| M30 mid≥3 AND M15 mid≥3, H1 trending | Near-G0 | Hold, no new entry | G0-HOLD |
-| M30 mid≥3 AND M15 mid≥3, H1 sideway | G0 | **Exit all** | G0 |
-| H4 fly opposing direction | H4 filter | Block | H4-OPPOSE |
-| Float loss < −$50 | Emergency | Exit immediately | G0e-MAXLOSS |
-| Price touches outer band of lowest fly TF (all below compressed) | Cascade target hit | Exit (auto) | G8-BNDTGT |
+| What you see | Scenario | Action | Gate | Size |
+|---|---|---|---|---|
+| H1+M30+M15 all 511/512, mid=1 | Normal fly BUY | Enter on M15 FLAT→UP | G6-BUY | 1.0× |
+| H1+M30+M15 all 521/522, mid=2 | Normal fly SELL | Enter on M15 FLAT→DN | G6-SELL | 1.0× |
+| H1/M30 in fly, M15/M5 shrinking | Fly→Shrink BUY/SELL | Enter on M15 FLAT→UP/DN | G6-BUY/SELL | 0.75× |
+| Only M5 shrinking, M15 still fly | M5 noise | **Wait** — not yet | — | — |
+| H1+M30 SQZ, M15/M5 shrink, band touch | Cascade | Enter at outer band touch | G0b-TOUCH | Quality |
+| M15+M30 both SQZ | Pink zone | **Exit all** | G0b-PINK | — |
+| M15 fading (UP→FLAT or DN→FLAT) | Fade | Exit open position | G5-FADE | — |
+| All TFs SQZ | Full lock | **Wait** for breakout | G0c/G6-LOAD | — |
+| M15 breaks SQZ → REVUP/REVDN | Breakout | Enter quality=75 | G6-ENTRY | 0.5-1.0× |
+| M30 mid≥3 AND M15 mid≥3, H1 trending | Near-G0 | Hold, no new entry | G0-HOLD | — |
+| M30 mid≥3 AND M15 mid≥3, H1 sideway | G0 | **Exit all** | G0 | — |
+| H4 fly opposing direction | H4 filter | Block | H4-OPPOSE | — |
+| Float loss < −$50 | Emergency | Exit immediately | G0e-MAXLOSS | — |
+| Price touches outer band of lowest fly TF (all below compressed) | Cascade target hit | Exit (auto) | G8-BNDTGT | — |
+
+## Comprehensive Entry Block Gate Reference
+
+| Gate | Block Condition | Color | Resolution |
+|------|----------------|-------|------------|
+| H4-OPPOSE | H4 fly opposing entry direction | DarkOrange | Wait for H4 to align |
+| H4-SQZ | H4 in SQZ with no conviction | DarkOrange | Wait for H4 breakout |
+| G0b-H4OPP | H4 fly/shrink opposing entry | DarkOrange | H4 mid must align with entry |
+| G0b-M30OPP | M30 fly/shrink/SQZ with opposing mid | DarkMagenta | M30 mid must align |
+| G4e-H4OPP | H4 in shrink with flat mid (sideway) | Orange | Wait for H4 to exit shrink |
+| G4c-M15OPP | M15 fly/shrink/SQZ with opposing mid | Orange | M15 mid must align |
+| G4f-M30OPP | M30 fly/shrink/SQZ with opposing mid | Orange | M30 mid must align |
+| G0b-SQZLOCK | H1+M30 both SQZ, both mid==3 | Magenta | At least one TF must break SQZ |
+| G0b-H1SQZDN | H1-SQZ with mid=2/4 vs BUY, or mid=5 vs SELL | Magenta | H1 mid must align with entry |
+| G0b-M5OPP | M5 sole trigger + M5 shrink with opposing mid | Magenta | M5 mid must align |
+| G0b-M5FLY | M5 in committed opposing fly | Magenta | Wait for M5 to align |
 
 ## Cascading Price Targets
 
@@ -966,3 +1371,58 @@ Use Part 4 tables. State: current regime, price target, which gate fires next, o
 | M5 sideway during HTF fly | M5 noise — wait for M15 to also shrink before entering |
 | Cascade BUY with M5 in 521/522 | G0b-M5FLY blocks this — M5 committed opposing fly contradicts cascade direction |
 | "Why did BUY stop here?" | Price hit H4 outer band during H4 shrink — G8-BNDTGT fired as expected cascade target |
+
+---
+
+## 12. Document Update Summary
+
+**Enhancements completed through comprehensive image analysis:**
+
+### Part 1 — Chart Basics (New Sections Added)
+
+| Section | Content |
+|---------|---------|
+| 7 | Visual Entry Trigger Identification |
+| 8 | Compression Zone Identification |
+| 9 | Block Gate Reference Table |
+| 10 | Position Sizing Matrix |
+| 11 | Risk Management Guidelines |
+| 6 | Gate Label Color Reference (completed - was empty) |
+
+### Part 2 — HTF Analysis (Enhancements)
+
+| Addition | Description |
+|----------|-------------|
+| HTF Compression Cascade Dynamics | Top-down cascade principle, compression confinement mechanics |
+| H4 shrink confinement pattern | Pink rectangle pattern explanation |
+| D1 band boundary rule | Ceiling concept for H4 BUY trades |
+| Scenario Identification Flowchart | Visual decision tree for scenario matching |
+| HTF Compression Zone Analysis | Building phase, peak compression, release, confirmation |
+| Compression duration guidelines | Typical compression times per timeframe |
+
+### Part 3 — MTF/LTF Scenarios (Enhancements)
+
+| Scenario | Enhancements |
+|----------|-------------|
+| A: Normal Fly | Visual identification checklist, holding vs exiting decision table |
+| B: Fly → Shrink | Shrink depth measurement, optimal entry timing |
+| C: Cascade | Band touch point identification, filter evaluation sequence |
+| D: Rest Pattern | Rest vs reversal identification checklist |
+| E: Shrink → SQZ | Range trade rules, compression threshold |
+| F: SQZ → Fly | SQZ breakout momentum sequence, entry quality scoring |
+| G: All TFs Sideway | G0 exit trigger conditions, holding vs exiting decision, recovery criteria |
+| All | Scenario Summary table |
+
+### Part 4 — Trend Prediction (Enhancements)
+
+| Addition | Description |
+|----------|-------------|
+| Confidence Level Guidelines | Trading guidelines per confidence threshold |
+| Reversal Flag Interpretation | Counter-trend opportunity guidance |
+
+### Part 5 — Trade Decision (Enhancements)
+
+| Addition | Description |
+|----------|-------------|
+| Size column | Position size guidance added to action table |
+| Comprehensive Block Gate Table | All blocking conditions with colors and resolution |
