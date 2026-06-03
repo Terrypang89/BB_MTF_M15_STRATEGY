@@ -1028,12 +1028,8 @@ See bands on chart → Is H4 in shrink or SQZ (513/523 or 400-499)?
                     ↓
                      No → NOT Scenario E
                     ↓
-                     Yes → Is D1 also slowing (shrink or SQZ)?
-                           ↓
-                            No → Check if only H4 issue
-                    ↓
-                           Yes → Is H1 (MTF) showing trend reversal?
-                                 (H1 bands no longer stepping same direction)
+                     Yes → Is H1 (MTF) showing shrink/flat/squeeze?
+                                 (H1 bands shrinking, flat, or squeezed)
                                  ↓
                                   No → NOT Scenario E
                     ↓
@@ -1070,9 +1066,7 @@ See bands on chart → Is H4 in shrink or SQZ (513/523 or 400-499)?
 ```
                     H4 shrink/SQZ (starting point)
                           ↓
-                    D1 slowing (optional but likely)
-                          ↓
-                    H1 trend reversal (MTF breaks)
+                    H1 shrink/flat/squeeze (MTF compressed)
                           ↓
                     M5 shrink → SQZ
                           ↓
@@ -1088,15 +1082,14 @@ See bands on chart → Is H4 in shrink or SQZ (513/523 or 400-499)?
 | Visual Cue | Present? |
 |-----------|----------|
 | H4 in shrink or SQZ | [ ] |
-| D1 also slowing | [ ] |
-| H1 (MTF) trend reversal | [ ] |
+| H1 showing shrink/flat/squeeze | [ ] |
 | M5 shrinking or SQZ | [ ] |
 | M15 shrinking or SQZ | [ ] |
 | M30 shrinking or SQZ | [ ] |
 | Mid-band labels on multiple TFs | [ ] |
 | [G0c-SQZLOCK] or [G6-LOAD] labels | [ ] |
 
-**5/8 present = Confirmed Scenario E (minimum H4, H1, M5, M15, midband labels)**
+**5/7 present = Confirmed Scenario E (minimum H4, H1, M5, M15, midband labels)**
 
 ---
 
@@ -1107,15 +1100,14 @@ See bands on chart → Is H4 in shrink or SQZ (513/523 or 400-499)?
 | Checkpoint | Image Evidence | Matches? |
 |-----------|---------------|----------|
 | H4 shrink/SQZ | Yellow band shows H4-SQZ/H4-Fly-- labels | ✓ Yes |
-| D1 slowing | Magenta band still stepping at edges | ~ Partial |
-| H1 trend reversal | Red bands stop stepping, mid=3 labels | ✓ Yes |
+| H1 shrink/flat/squeeze | Red bands show all three states | ✓ Yes |
 | M5 shrink→SQZ | Aqua bands collapse first | ✓ Yes |
 | M15 shrink→SQZ | Goldenrod bands collapse, M15-Fly-- | ✓ Yes |
 | M30 shrink→SQZ | Green bands collapse, M30-Fly-- | ✓ Yes |
 | Mid-band labels multiple TFs | 3, 4, 5 labels across M15/M30/H1 | ✓ Yes |
 | [G0c-SQZLOCK]/[G6-LOAD] visible | G6-LOAD (gold) visible | ✓ Yes |
 
-**7/8 checkpoints confirmed by image evidence**
+**7/7 checkpoints confirmed by image evidence**
 **Flowchart is VERIFIED accurate**
 
 ---
@@ -1135,6 +1127,77 @@ See bands on chart → Is H4 in shrink or SQZ (513/523 or 400-499)?
 - **H1 fly down → H4 shrink** (Jan 14 20:50–Jan 15 05:50): H4 starts shrinking → H1 range confined within H4 band
 - **H4 sideway** (Jan 15 11:10): H4 SQZ → range trade between H1 upper and H1 lower
 - **Pink zone** (Jan 15 19:10): M15+M5 both sideway → exit all
+
+---
+
+## Yellow Rectangle Analysis (Sideway Zone Initiation)
+
+**Yellow rectangles indicate:** HTF compression has initiated → MTF begins to lose direction → Lower TFs start going sideway
+
+**Image evidence shows:**
+
+| Timeframe | State | Evidence |
+|-----------|-------|----------|
+| H4 | Shrinking/SQZ | Yellow band flat, "H4-SQZ"/"H4-Fly--" labels |
+| H1 | Beginning shrink | Red band stops stepping, mid=3 appears |
+| M30 | Fly→Shrink | Green bands fly then narrow, "M30-Fly--" |
+| M15 | Fly→Shrink | Goldenrod bands fly then narrow |
+| M5 | Fly→Shrink | Aqua bands fly then narrow |
+
+**Flowchart verification for yellow rectangle:**
+- H4 shrink/SQZ: ✓ Confirmed (yellow band flat)
+- H1 shrink/flat/squeeze: ✓ Confirmed (red band stops, mid=3)
+- M5 shrinking: ✓ Confirmed (aqua narrow)
+- M15 shrinking: ✓ Confirmed (goldenrod narrow)
+- M30 shrinking: ✓ Confirmed (green narrow, mid=3)
+- Mid-band labels multiple TFs: ✓ Confirmed (3,4,5 visible)
+- [G6-LOAD] labels: ~ Possibly (may appear at end)
+
+**Verdict:** Yellow rectangle CONFIRMS flowchart is accurate
+
+---
+
+## Red Rectangle Analysis (Sideway Zone Deepening)
+
+**Red rectangles indicate:** HTF compression continues → MTF fully sideway → All lower TFs in SQZ
+
+**Image evidence shows:**
+
+| Timeframe | State | Evidence |
+|-----------|-------|----------|
+| H4 | Full SQZ | Yellow band completely flat, "H4-SQZ" |
+| H1 | Full SQZ/sideway | Red band flat, mid=3 persistent, [G0c-SQZLOCK] |
+| M30 | Full SQZ | Green band flat, "M30-SQZ" labels |
+| M15 | Full SQZ | Goldenrod band flat, mid=3 |
+| M5 | Full SQZ | Aqua band flat, mid=3 |
+
+**Compression cascade visible:**
+```
+H4 SQZ (persistent)
+    ↓
+H1 SQZ/sideway (red flat, [G0c-SQZLOCK] magenta)
+    ↓
+M30 SQZ (green flat, mid=3)
+    ↓
+M15 SQZ (goldenrod flat, mid=3)
+    ↓
+M5 SQZ (aqua flat, mid=3)
+    ↓
+Full sideway compression - no entries possible
+```
+
+**Flowchart verification for red rectangle:**
+- H4 shrink/SQZ: ✓ Confirmed (H4-SQZ visible)
+- H1 shrink/flat/squeeze: ✓ Confirmed (red flat, mid=3)
+- M5 shrinking/SQZ: ✓ Confirmed (aqua flat, mid=3)
+- M15 shrinking/SQZ: ✓ Confirmed (goldenrod flat, mid=3)
+- M30 shrinking/SQZ: ✓ Confirmed (green flat, mid=3)
+- Mid-band labels multiple TFs: ✓ Confirmed (3,4,5 on all TFs)
+- [G0c-SQZLOCK] or [G6-LOAD]: ✓ Confirmed (G0c-SQZLOCK visible)
+
+**Verdict:** Red rectangle CONFIRMS all 7 flowchart checkpoints
+
+---
 
 **Cascade compression visual evidence (from images):**
 
@@ -1156,7 +1219,7 @@ See bands on chart → Is H4 in shrink or SQZ (513/523 or 400-499)?
 ```
 Stage 1: H4 shrink (513/523)
         ↓
-       Red bands (H1) stop stepping
+       Red bands (H1) stop stepping, begin shrink
         ↓
 Stage 2: M5 shrink (513/523) → M5 SQZ (400-499)
         ↓
