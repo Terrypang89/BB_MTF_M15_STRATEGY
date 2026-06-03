@@ -1112,6 +1112,226 @@ See bands on chart → Is H4 in shrink or SQZ (513/523 or 400-499)?
 
 ---
 
+### Per-Timeframe Midband (BB_diffMid_Trend) Behavior
+
+**H4 (Yellow Band):**
+- Before compression: mid=1 (up) or mid=2 (dn) — directional fly
+- Yellow rectangle (shrink begins): mid transitions to 3 (flat) or 4/5 (sideway with bias)
+- Red rectangle (full SQZ): mid=3 persistent — no directional conviction
+- Image evidence: "H4-SQZ" labels appear; midband labels (3, 4, 5) visible
+- **Trade impact:** G4e-H4OPP blocks shrink path entries; G0b-H4OPP blocks cascade entries
+
+**H1 (Red Band):**
+- Before compression: mid=1 (up) or mid=2 (dn) — directional fly
+- Yellow rectangle (shrink begins): mid transitions to 3 or 4/5 — H1 stops stepping
+- Red rectangle (full SQZ): mid=3 persistent; [G0c-SQZLOCK] appears
+- Image evidence: Red bands flatten, mid=3 labels appear, [G0c-SQZLOCK] (magenta)
+- **Trade impact:** G0b-SQZLOCK fires when H1+M30 both mid=3
+
+**M30 (Green-Yellow Band):**
+- Before compression: mid=1 (up) or mid=2 (dn) — directional fly
+- Yellow rectangle (shrink begins): mid transitions to 3 or 4/5 — green bands narrow
+- Red rectangle (full SQZ): mid=3 persistent — "M30-SQZ" labels
+- Image evidence: Green bands collapse flat, mid=3 labels
+- **Trade impact:** G4f-M30OPP blocks; G0 fires with M15 mid≥3
+
+**M15 (Goldenrod Band):**
+- Before compression: mid=1 (up) or mid=2 (dn) — directional fly
+- Yellow rectangle (shrink begins): mid transitions to 3 or 4/5 — goldenrod narrows
+- Red rectangle (full SQZ): mid=3 persistent — "M15-SQZ" labels
+- Image evidence: Goldenrod bands collapse flat, mid=3 labels
+- **Trade impact:** G4c-M15OPP blocks; G0b-PINK fires with M30 SQZ
+
+**M5 (Aqua Band):**
+- Before compression: mid=1 (up) or mid=2 (dn) — directional fly
+- Yellow rectangle (shrink begins): mid transitions to 3 or 4/5 — first to collapse
+- Red rectangle (full SQZ): mid=3 persistent
+- Image evidence: Aqua bands collapse flat first
+- **Trade impact:** G0b-M5OPP blocks; G0b-M5FLY blocks; G0b-PINK fires with M15 SQZ
+
+---
+
+### Per-Timeframe Outer Band Touch Behavior
+
+**Touch Count Patterns During Compression (from image evidence):**
+
+| Timeframe | Upper Touch (U) | Mid Touch (M) | Lower Touch (L) |
+|-----------|-----------------|---------------|-----------------|
+| H4 | 0-1 per 5 bars | 2-3 bars | 2-3 bars |
+| H1 | 0-1 per 5 bars | 1-2 bars | 3-4 bars |
+| M30 | 0-1 per 5 bars | 2 bars | 2-3 bars |
+| M15 | 1-2 per 5 bars | 1-2 bars | 1-2 bars |
+| M5 | 1-2 per 5 bars | 1-2 bars | 1-2 bars |
+
+**H4 Touch Behavior:**
+- Predominantly mid/lower touches (M2-3, L2-3 per 5 bars)
+- Few upper touches — indicates bearish pressure during compression
+- Price oscillates around H4 midband, no clear direction
+
+**H1 Touch Behavior:**
+- Higher L counts (L3-4 per 5 bars) — price testing lower band repeatedly
+- Builds support at H1 lower band
+- U0-1 per 5 bars — minimal upper band testing
+
+**M30 Touch Behavior:**
+- Balanced M/L touches (M2, L2-3) — oscillating around mid/lower
+- Builds pressure at lower band before potential breakout
+- Few upper touches during compression
+
+**M15 Touch Behavior:**
+- More balanced U/M/L (U1-2, M1-2, L1-2) — price oscillating through all regions
+- L touches increase near compression peak
+- U touches increase as breakout approaches
+
+**M5 Touch Behavior:**
+- Balanced U/M/L — rapid oscillation between bands
+- L touches build support at compression peak
+- First to show upper touches as breakout initiates
+
+---
+
+### Compression Stage Progression (Image-Specific Analysis)
+
+**Stage 1 — H4 Shrink Initiation (Early Yellow Rectangle)**
+```
+H4: Stage 511/512 → 513 (shrink)
+   mid: 1 → 3 or 5 (sideway_up)
+   tch: U0/M2/L3 → L touches building
+   → H4 begins losing directional conviction
+
+H1: Stage 511/512 (still fly)
+   mid: 1 or 2 (still directional)
+   tch: U1/M1/L3 → L touches at lower band
+   → H1 still maintains step direction, will hold temporarily
+
+M30/M15/M5: Still fly with directional mid
+   mid: 1 or 2
+   → No midband labels yet — still in directional phase
+```
+**Trade status:** Entries still possible; H4 not yet blocking
+
+---
+
+**Stage 2 — H1 Compression Begins (Mid Yellow Rectangle)**
+```
+H4: Stage 513 → 400-499 (squeeze)
+   mid: 3 or 5 → 3 (flat)
+   tch: U0/M3/L2 → mid touches increasing
+   → "H4-SQZ" labels appear
+
+H1: Stage 511/512 → 513/523 (shrink)
+   mid: 1 or 2 → 3 or 4/5
+   tch: U0/M1/L4 → heavy L touches, lower band pressure
+   → Red band stops stepping, mid=3/4/5 labels appear
+   → [G0c-SQZLOCK] may begin appearing
+
+M30/M15/M5: Stage 513/523 (shrink)
+   mid: 1 or 2 → 3 or 4/5
+   tch: Various — oscillating
+   → Midband labels begin appearing on M30/M15
+```
+**Trade status:** G0c-SQZLOCK begins firing; entries becoming restricted
+
+---
+
+**Stage 3 — Full Compression (Red Rectangle)**
+```
+H4: Stage 400-499 (SQZ)
+   mid: 3 persistent
+   tch: U0/M2/L3 → consistent L touches
+   → "H4-SQZ" persistent
+
+H1: Stage 400-499 (SQZ)
+   mid: 3 persistent
+   tch: U0/M1/L4 → heavy lower band pressure
+   → [G0c-SQZLOCK] (magenta) active
+
+M30: Stage 400-499 (SQZ)
+   mid: 3 persistent
+   tch: U0/M2/L3 → L touches building support
+   → "M30-SQZ" visible
+
+M15: Stage 400-499 (SQZ)
+   mid: 3 persistent
+   tch: U1/M2/L2 → balanced oscillation
+   → "M15-SQZ" visible
+
+M5: Stage 400-499 (SQZ)
+   mid: 3 persistent
+   tch: U1/M2/L2 → balanced oscillation
+```
+**Trade status:** G0c-SQZLOCK blocking all entries; G0b-PINK active — exit all
+
+---
+
+**Stage 4 — Pre-Breakout Pressure Building**
+```
+H4: Stage 400-499 (SQZ) — still compressed
+   mid: 3
+   tch: U0/M2/L3
+
+H1: Stage 400-499 (SQZ)
+   mid: 3
+   tch: U1/M1/L3 → occasional U touch appears
+
+M30: Stage 400-499 (SQZ)
+   mid: 3
+   tch: U1/M2/L2 → L touches decreasing, oscillation at mid
+
+M15: Stage 400-499 (SQZ)
+   mid: 3 → 5 (sideway_up)
+   tch: U2/M2/L1 → U touches increasing (upper band testing)
+   → Early signs of directional pressure building
+
+M5: Stage 400-499 → beginning to spread
+   mid: 3 → 5 or 1
+   tch: U2/M2/L1 → U touches increasing
+```
+**Trade status:** [G6-LOAD] visible; pressure building for breakout
+
+---
+
+**Stage 5 — Breakout Initiation**
+```
+M5: SQZ breaks → fly (511/512 or 521/522)
+   mid: 5 → 1 (uptrend) or 3 → 2 (downtrend)
+   tch: U touches dominate (if UP breakout) or L (if DN breakout)
+   → REVUP or REVDN label appears
+   → [G6-BUY] or [G6-SELL] fires
+
+M15: Follows M5 with 2-5 bar lag
+   mid: 5 → 1 or 3 → 2
+   → [G6-BUY] or [G6-SELL] fires
+
+M30: Follows M15
+   mid: 3 → 1 or 3 → 2
+   → [G6-BUY] or [G6-SELL] fires
+
+H1: Follows M30
+   mid: 3 → 1 or 3 → 2
+   → [G6-BUY] or [G6-SELL] fires
+
+H4: Follows H1 (or may remain in SQZ)
+```
+**Trade status:** Entries firing on M15 transition if quality score ≥ 60
+
+---
+
+### Gate Firing Mechanics During Compression
+
+| Compression Stage | Gate Status | Action |
+|-------------------|-------------|--------|
+| H4 shrink, H1 fly | G4e-H4OPP may block | Wait for H4 to exit shrink |
+| H4 shrink, H1 shrink | G4c-M15OPP/G4f-M30OPP may block | Entry restricted |
+| H4 SQZ, H1 SQZ, M30 SQZ | G0c-SQZLOCK (magenta) | No new entries |
+| H4 SQZ, H1 SQZ, M15 SQZ | G0b-SQZLOCK | No new entries |
+| M30 SQZ + M15 SQZ | G0b-PINK (magenta) | Exit all positions |
+| All mid≥3 (M30+M15+H1) | G0 (crimson) | Exit all |
+| Float loss < -$50 | G0e-MAXLOSS | Emergency exit |
+| M5 breaks SQZ | G6-LOAD → G6-BUY/SELL | Entry on REVUP/REVDN |
+
+---
+
 **HTF context:** H4 is shrinking or in SQZ. D1 is also slowing. The macro is losing conviction — this is WHY all lower TFs are going flat. Price is ranging because H4 cannot provide a clear outer band target.
 
 **What you see:**
@@ -1134,15 +1354,64 @@ See bands on chart → Is H4 in shrink or SQZ (513/523 or 400-499)?
 
 **Yellow rectangles indicate:** HTF compression has initiated → MTF begins to lose direction → Lower TFs start going sideway
 
-**Image evidence shows:**
+**Image evidence — detailed timeframe behavior:**
 
-| Timeframe | State | Evidence |
-|-----------|-------|----------|
-| H4 | Shrinking/SQZ | Yellow band flat, "H4-SQZ"/"H4-Fly--" labels |
-| H1 | Beginning shrink | Red band stops stepping, mid=3 appears |
-| M30 | Fly→Shrink | Green bands fly then narrow, "M30-Fly--" |
-| M15 | Fly→Shrink | Goldenrod bands fly then narrow |
-| M5 | Fly→Shrink | Aqua bands fly then narrow |
+### H4 (Yellow Band) in Yellow Rectangle
+
+| Attribute | Behavior |
+|-----------|----------|
+| Stage | 511/512 (fly) → 513 (shrink) → 400-499 (SQZ) |
+| Midband | mid=1/2 → mid=3/5 (sideway_up) → mid=3 (flat) |
+| Band state | Stepping → stops stepping → flat |
+| Touch pattern | L touches increasing (L2-3 per 5 bars) |
+| Gate firing | G4e-H4OPP (orange) begins to block |
+| Chart labels | "H4-Fly--" appears, then "H4-SQZ" |
+
+### H1 (Red Band) in Yellow Rectangle
+
+| Attribute | Behavior |
+|-----------|----------|
+| Stage | 511/512 (fly) → 513/523 (shrink) |
+| Midband | mid=1/2 → mid=3/4/5 (sideway with bias) |
+| Band state | Stepping → stops stepping, begins shrink |
+| Touch pattern | L touches dominate (L3-4 per 5 bars) |
+| Gate firing | [G0c-SQZLOCK] (magenta) begins appearing |
+| Chart labels | Midband labels (3, 4, 5) appear |
+
+### M30 (Green Band) in Yellow Rectangle
+
+| Attribute | Behavior |
+|-----------|----------|
+| Stage | 511/512 (fly) → 513/523 (shrink) → 400-499 (SQZ) |
+| Midband | mid=1/2 → mid=3/4/5 (sideway with bias) |
+| Band state | Expanding → narrowing → flat |
+| Touch pattern | L touches building (L2-3 per 5 bars) |
+| Gate firing | G4f-M30OPP (orange) blocks |
+| Chart labels | "M30-Fly--" appears, then "M30-SQZ" |
+
+### M15 (Goldenrod Band) in Yellow Rectangle
+
+| Attribute | Behavior |
+|-----------|----------|
+| Stage | 511/512 (fly) → 513/523 (shrink) → 400-499 (SQZ) |
+| Midband | mid=1/2 → mid=3/4/5 (sideway with bias) |
+| Band state | Expanding → narrowing → flat |
+| Touch pattern | L touches building, then oscillation (L1-2, M1-2) |
+| Gate firing | G4c-M15OPP (orange) blocks |
+| Chart labels | "M15-Fly--" appears, then "M15-SQZ" |
+
+### M5 (Aqua Band) in Yellow Rectangle
+
+| Attribute | Behavior |
+|-----------|----------|
+| Stage | 511/512 (fly) → 513/523 (shrink) → 400-499 (SQZ) |
+| Midband | mid=1/2 → mid=3/4/5 (sideway with bias) |
+| Band state | Expanding → narrows → flat (first to collapse) |
+| Touch pattern | Rapid oscillation (L1-2, M1-2, U1-2) |
+| Gate firing | G0b-M5OPP (magenta), G0b-M5FLY (magenta) |
+| Chart labels | Aqua midband labels (3, 4, 5) appear first |
+
+---
 
 **Flowchart verification for yellow rectangle:**
 - H4 shrink/SQZ: ✓ Confirmed (yellow band flat)
@@ -1161,15 +1430,64 @@ See bands on chart → Is H4 in shrink or SQZ (513/523 or 400-499)?
 
 **Red rectangles indicate:** HTF compression continues → MTF fully sideway → All lower TFs in SQZ
 
-**Image evidence shows:**
+**Image evidence — detailed timeframe behavior:**
 
-| Timeframe | State | Evidence |
-|-----------|-------|----------|
-| H4 | Full SQZ | Yellow band completely flat, "H4-SQZ" |
-| H1 | Full SQZ/sideway | Red band flat, mid=3 persistent, [G0c-SQZLOCK] |
-| M30 | Full SQZ | Green band flat, "M30-SQZ" labels |
-| M15 | Full SQZ | Goldenrod band flat, mid=3 |
-| M5 | Full SQZ | Aqua band flat, mid=3 |
+### H4 (Yellow Band) in Red Rectangle
+
+| Attribute | Behavior |
+|-----------|----------|
+| Stage | 400-499 (full SQZ) — persistent |
+| Midband | mid=3 persistent (flat) — no directional conviction |
+| Band state | Completely flat — no stepping |
+| Touch pattern | L touches persistent (L2-3 per 5 bars) |
+| Gate firing | G0b-H4OPP (darkorange) blocks cascade entries |
+| Chart labels | "H4-SQZ" persistent |
+
+### H1 (Red Band) in Red Rectangle
+
+| Attribute | Behavior |
+|-----------|----------|
+| Stage | 400-499 (full SQZ) — persistent |
+| Midband | mid=3 persistent (flat) |
+| Band state | Completely flat — no stepping |
+| Touch pattern | Heavy L touches (L3-4 per 5 bars) — lower band pressure |
+| Gate firing | [G0c-SQZLOCK] (magenta) active |
+| Chart labels | Mid=3 persistent, [G0c-SQZLOCK] visible |
+
+### M30 (Green Band) in Red Rectangle
+
+| Attribute | Behavior |
+|-----------|----------|
+| Stage | 400-499 (full SQZ) — persistent |
+| Midband | mid=3 persistent (flat) |
+| Band state | Completely flat — no direction |
+| Touch pattern | L touches persistent (L2-3 per 5 bars) |
+| Gate firing | G0b-SQZLOCK (magenta) with H1 mid=3 |
+| Chart labels | "M30-SQZ" visible |
+
+### M15 (Goldenrod Band) in Red Rectangle
+
+| Attribute | Behavior |
+|-----------|----------|
+| Stage | 400-499 (full SQZ) — persistent |
+| Midband | mid=3 persistent (flat) |
+| Band state | Completely flat |
+| Touch pattern | Balanced oscillation (L1-2, M1-2, U1-2) |
+| Gate firing | G0b-PINK (magenta) with M30 SQZ |
+| Chart labels | "M15-SQZ" visible |
+
+### M5 (Aqua Band) in Red Rectangle
+
+| Attribute | Behavior |
+|-----------|----------|
+| Stage | 400-499 (full SQZ) — persistent |
+| Midband | mid=3 persistent (flat) |
+| Band state | Completely flat |
+| Touch pattern | Balanced oscillation (L1-2, M1-2, U1-2) |
+| Gate firing | G0b-PINK (magenta) with M15 SQZ |
+| Chart labels | Mid=3 visible |
+
+---
 
 **Compression cascade visible:**
 ```
