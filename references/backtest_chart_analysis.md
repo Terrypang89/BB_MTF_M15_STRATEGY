@@ -666,6 +666,9 @@ Apply after HTF context is established. Each scenario: **What you see → What i
 
 ## Scenario A — Normal Fly (All TFs Aligned)
 
+**When user asks to analyze a part 3 Scenario A:**
+- Read `./Backtest_data/extras/backtested_EA_fly_scenario.jpg` as Normal fly scenario visual reference
+
 ![Normal fly scenario](./Backtest_data/extras/backtested_EA_fly_scenario.jpg)
 
 ### Scenario A Identification Flowchart
@@ -750,6 +753,10 @@ SIZE: 1.0× (full — highest quality when W1+D1+H4 all aligned)
 ---
 
 ## Scenario B — Fly → Shrink (Inner TFs Contracting)
+
+**When user asks to analyze a part 3 Scenario B:**
+- Read `./Backtest_data/extras/backtested_EA_fly_2_fly_shrink.jpg` as the Fly to Shrink visual reference.
+- Read `./Backtest_data/extras/backtested_EA_fly_2_fly_shrink_zoomin.jpg` as the Fly to Shrink zoomin visual reference
 
 ![Fly to shrink](./Backtest_data/extras/backtested_EA_fly_2_fly_shrink.jpg)
 ![Fly to shrink zoom](./Backtest_data/extras/backtested_EA_fly_2_fly_shrink_zoomin.jpg)
@@ -929,6 +936,10 @@ SIZE: quality score from M5 transition
 
 ## Scenario D — Fly → Shrink → Fly (Rest Pattern)
 
+**When user asks to analyze part 3 Scenario D:**
+- Read `./Backtest_data/extras/backtested_EA_fly_2_shrink_2_fly.jpg` as the Fly to Shrink to Fly scenario visual reference.
+- Read `./Backtest_data/extras/backtested_EA_fly_2_shrink_2_fly_zoomin.jpg` as the Fly to Shrink to Fly zoomin scenario visual reference.
+
 ![Fly to Shrink to Fly](./Backtest_data/extras/backtested_EA_fly_2_shrink_2_fly.jpg)
 ![Fly to Shrink to Fly zoom](./Backtest_data/extras/backtested_EA_fly_2_shrink_2_fly_zoomin.jpg)
 
@@ -1018,8 +1029,14 @@ EXIT: ATRSL stop | M5 UP→FLAT (G5-FADE) | M30+M15 go sideway
 
 ## Scenario E — Shrink → SQZ (All TFs Compressing)
 
-![Shrink to sideway](./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway.jpg)
+**When user asks to analyze part 3 Scenario E:**
+- Read `./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway.jpg` as the Shrink to sideway scenario visual reference.
+- Read `./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway_zoomin.jpg` as the Shrink to sideway zoomin scenario visual reference.
+- Read `./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway2.jpg` as the Shrink to sideway 2 scenario visual reference.
+
+![./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway.jpg](./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway.jpg)
 ![Shrink to sideway zoom](./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway_zoomin.jpg)
+![Shrink to sideway 2](./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway2.jpg)
 
 ### Scenario E Identification Flowchart
 
@@ -1591,8 +1608,13 @@ EXIT ALL: M30+M15+H1 all mid≥3 → G0 → act=7
 
 ## Scenario F — SQZ → Fly (Breakout)
 
+
+**When user asks to analyze part 3 Scenario F:**
+- Read `./Backtest_data/extras/backtested_EA_sideway_2_fly.jpg` as the Sideway to fly scenario visual reference.
+- ead `./Backtest_data/extras/backtested_EA_sideway_2_fly_zoomin.jpg` as the Sideway to fly zoomin scenario visual reference.
+
 ![Sideway to fly](./Backtest_data/extras/backtested_EA_sideway_2_fly.jpg)
-![Sideway to fly zoom](./Backtest_data/extras/backtested_EA_sideway_2_fly_zoomin.jpg)
+![Sideway to fly zoomin](./Backtest_data/extras/backtested_EA_sideway_2_fly_zoomin.jpg)
 
 ### Scenario F Identification Flowchart
 
