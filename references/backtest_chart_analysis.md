@@ -4,7 +4,7 @@ Visual interpretation guide for Tofu EA backtest chart screenshots.
 **Always analyze top-down: W1 → D1 → H4 → M30 -> M15.**
 Higher TFs determine where lower TF trades travel to, and why lower TFs go sideway.
 
-Work through: **Part 1** (read the chart) → **Part 2** (HTF context) → **Part 3** (MTF/LTF scenario) → **Part 4** (trade decision).
+Work through: **Part 1** (read the chart) → **Part 2** (HTF context) → **Part 3** (MTF/LTF scenario) → **Part 4** (next-stage direction).
 
 ---
 
@@ -21,8 +21,7 @@ Work through: **Part 1** (read the chart) → **Part 2** (HTF context) → **Par
 | HTF cascade rules | Part 2 — HTF Compression Cascade |
 | Scenario matching | Part 2 — Scenario Identification Flowchart |
 | Scenario details | Part 3 — Scenarios A through G |
-| Trend prediction | Part 4 |
-| Confidence levels | Part 4 — Confidence Level Guidelines |
+| Next-stage direction | Part 4 — Per-TF nxt: labels |
 | Trade decision table | Part 5 — Scenario → Action Table |
 | Compression analysis | Part 7 — HTF Compression Zone Analysis |
 
@@ -449,7 +448,7 @@ W1 sets D1's range → D1 sets H4's range → H4 sets H1's range → H1 sets M30
 
 ---
 
-## HTF Reference Charts
+# PART 2 — HTF Reference Charts
 
 **When going through PART 2 — HIGHER TIMEFRAME ANALYSIS (W1 → D1 → H4):**
 - Read `references/Backtest_data/extras/backtest_EA_HTF_Fly_2_Shrink_part1.jpg` as the visual reference for Part 1
@@ -671,6 +670,21 @@ Apply after HTF context is established. Each scenario: **What you see → What i
 
 ![Normal fly scenario](./Backtest_data/extras/backtested_EA_fly_scenario.jpg)
 
+**HTF context:** W1 fly + D1 fly + H4 fly — all in same direction. Full macro tailwind.
+
+**What you see:**
+- H1 (red) and M30 (greenyellow) bands stepping in fly (511/512 or 521/522)
+- All bands fanning outward in the same direction
+- M5 (aqua) may show 2–3 brief tight bundles mid-fly — noise squeezes
+- No mid-band labels visible (mid=1 or 2 — suppressed)
+- H4 (yellow) stepping in same direction — macro confirmed
+
+**What it means:**
+- Full alignment — strongest possible trend
+- Brief M5/M15 compressions are noise — M30 midtrend is the reference
+- H4 fly is why brief squeezes resolve back to fly instead of deeper compression
+- Price target: H4 outer band → then D1 outer band if D1 is also fly
+
 ### Scenario A Identification Flowchart
 
 ```
@@ -705,21 +719,6 @@ See bands on chart → Are all bands fanning outward same direction?
 **5/5 present = Confirmed Scenario A**
 
 ---
-
-**HTF context:** W1 fly + D1 fly + H4 fly — all in same direction. Full macro tailwind.
-
-**What you see:**
-- H1 (red) and M30 (greenyellow) bands stepping in fly (511/512 or 521/522)
-- All bands fanning outward in the same direction
-- M5 (aqua) may show 2–3 brief tight bundles mid-fly — noise squeezes
-- No mid-band labels visible (mid=1 or 2 — suppressed)
-- H4 (yellow) stepping in same direction — macro confirmed
-
-**What it means:**
-- Full alignment — strongest possible trend
-- Brief M5/M15 compressions are noise — M30 midtrend is the reference
-- H4 fly is why brief squeezes resolve back to fly instead of deeper compression
-- Price target: H4 outer band → then D1 outer band if D1 is also fly
 
 **Visual identification checklist:**
 ```
@@ -761,6 +760,25 @@ SIZE: 1.0× (full — highest quality when W1+D1+H4 all aligned)
 ![Fly to shrink](./Backtest_data/extras/backtested_EA_fly_2_fly_shrink.jpg)
 ![Fly to shrink zoom](./Backtest_data/extras/backtested_EA_fly_2_fly_shrink_zoomin.jpg)
 
+**HTF context:** H4 is still in fly, but M30 or M15 starting to shrink. H4 provides the direction and target; M30/M15 are resting before continuing.
+
+**What you see:**
+- H1 (red) and H4 (yellow) still in fly (bands stepping)
+- M30 or M15 bands beginning to converge (513/523)
+- M5 (aqua) tightening; midtrend labels (3, 4, 5) appear at midband
+- Bands that were fanning out are now closing in from one side
+
+**What it means:**
+- M30/M15 losing momentum temporarily; H4 macro structure intact
+- Price is "resting" inside H4's band before continuing toward H4 outer band
+- M5 midtrend transitions are the only valid entry triggers now
+
+**Cascade shrink sequence (why each TF goes sideway):**
+- **Only M5 shrink:** M5 resting, M15/M30 still fly → wait — M5 noise within M30 fly
+- **M15 shrink** + M30/H1/H4 fly → M15 confined within M30 band; price touches M15 outer band
+- **M30 shrink** + H1/H4 fly → M30 confined within H1 band; price touches M30 outer band
+- **H1 shrink** + H4 fly → H1 confined within H4 band; price touches H1 outer band
+
 ### Scenario B Identification Flowchart
 
 ```
@@ -797,25 +815,6 @@ See bands on chart → Is H4 (yellow) still in fly (bands stepping)?
 **3/4 present = Confirmed Scenario B**
 
 ---
-
-**HTF context:** H4 is still in fly, but M30 or M15 starting to shrink. H4 provides the direction and target; M30/M15 are resting before continuing.
-
-**What you see:**
-- H1 (red) and H4 (yellow) still in fly (bands stepping)
-- M30 or M15 bands beginning to converge (513/523)
-- M5 (aqua) tightening; midtrend labels (3, 4, 5) appear at midband
-- Bands that were fanning out are now closing in from one side
-
-**What it means:**
-- M30/M15 losing momentum temporarily; H4 macro structure intact
-- Price is "resting" inside H4's band before continuing toward H4 outer band
-- M5 midtrend transitions are the only valid entry triggers now
-
-**Cascade shrink sequence (why each TF goes sideway):**
-- **Only M5 shrink:** M5 resting, M15/M30 still fly → wait — M5 noise within M30 fly
-- **M15 shrink** + M30/H1/H4 fly → M15 confined within M30 band; price touches M15 outer band
-- **M30 shrink** + H1/H4 fly → M30 confined within H1 band; price touches M30 outer band
-- **H1 shrink** + H4 fly → H1 confined within H4 band; price touches H1 outer band
 
 **Shrink depth measurement:**
 ```
@@ -943,6 +942,15 @@ SIZE: quality score from M5 transition
 ![Fly to Shrink to Fly](./Backtest_data/extras/backtested_EA_fly_2_shrink_2_fly.jpg)
 ![Fly to Shrink to Fly zoom](./Backtest_data/extras/backtested_EA_fly_2_shrink_2_fly_zoomin.jpg)
 
+**HTF context:** W1/D1 remain in fly throughout. H4 also stays in fly. Only M30/M15/M5 briefly compress. The macro tailwind (H4 fly) guarantees fly resumes.
+
+**What you see:**
+- H1 (red) and H4 (yellow) never reverse their stepping structure
+- White rectangles: M30/M15/M5 briefly compress then re-expand in the same direction
+- After each rectangle: full fly resumes, all bands fan back out
+
+**Key test — rest vs reversal:** H1 (red) maintains its step direction throughout. If H1 never breaks, this is a rest pattern. If H1 reverses direction, it is a true reversal.
+
 ### Scenario D Identification Flowchart
 
 ```
@@ -991,15 +999,6 @@ See bands on chart → Were all TFs in fly recently?
 
 ---
 
-**HTF context:** W1/D1 remain in fly throughout. H4 also stays in fly. Only M30/M15/M5 briefly compress. The macro tailwind (H4 fly) guarantees fly resumes.
-
-**What you see:**
-- H1 (red) and H4 (yellow) never reverse their stepping structure
-- White rectangles: M30/M15/M5 briefly compress then re-expand in the same direction
-- After each rectangle: full fly resumes, all bands fan back out
-
-**Key test — rest vs reversal:** H1 (red) maintains its step direction throughout. If H1 never breaks, this is a rest pattern. If H1 reverses direction, it is a true reversal.
-
 **Rest vs reversal identification checklist:**
 
 | Indicator | Rest Pattern | Reversal Pattern |
@@ -1034,9 +1033,170 @@ EXIT: ATRSL stop | M5 UP→FLAT (G5-FADE) | M30+M15 go sideway
 - Read `./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway_zoomin.jpg` as the Shrink to sideway zoomin scenario visual reference.
 - Read `./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway2.jpg` as the Shrink to sideway 2 scenario visual reference.
 
+
+### Image 1 Analysis (backtested_EA_fly_shrink_2_sideway.jpg)
+
 ![./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway.jpg](./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway.jpg)
+
+**Compression zones identified:**
+- Multiple yellow rectangles: H4 fly expand zones with lower TF confined compression
+- Red rectangles: Full SQZ zones where lower TF compression completed
+- Compression originates from HTF fly → cascades downward to lower TFs
+
+**H4 behavior in Image 1:**
+- Yellow band steps upward in fly expand — maintains directional context
+- "H4-Fly++" / "H4-Fly+-" labels visible — H4 fly expand
+- Midband labels (3, 4, 5) appear on lower TFs only
+- Directional touches (U1-2 per 5 bars) — H4 provides context
+- Band remains fanning — not flat
+
+**H1 behavior in Image 1:**
+- Red band follows H4 upward in fly expand
+- Red band maintains stepping — follows H4
+- Mid=3 labels appear on lower TF midbands only
+- [G0c-SQZLOCK] magenta labels appear for lower TFs only
+- Balanced touches — H1 follows H4 direction
+
+**M30/M15/M5 behavior in Image 1:**
+- Sequential compression: M5 first, M15 second, M30 third
+- All show mid=3 labels in red zones
+- [G6-LOAD] gold labels appear during loading phase
+- Touch patterns shift from directional to balanced
+
 ![Shrink to sideway zoom](./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway_zoomin.jpg)
+
+### Image 2 Analysis (backtested_EA_fly_shrink_2_sideway_zoomin.jpg)
+
+**Detailed compression mechanics:**
+- H4/H1 fly expand provides directional context
+- M5 aqua bands collapsing first — begins confined compression
+- Goldenrod (M15) follows within 2-3 bars
+- Green (M30) compression last
+- Clear progression: H4/H1 fly expand + lower TF confined compression
+
+**Midband transitions visible:**
+```
+H4: mid=1/2 MAINTAINED — provides directional context
+H1: mid=1/2 MAINTAINED — follows H4
+M30: mid=1/2 → mid=3/4/5 → mid=3 persistent
+M15: mid=1/2 → mid=3/4/5 → mid=3 persistent
+M5: mid=1/2 → mid=3/4/5 → mid=3 persistent (first)
+```
+
+**Touch count evolution:**
+- Before compression: L touches building (L2-3)
+- During compression: Balanced oscillation (L1-2, M1-2, U1-2)
+- Red zone peak: L touches persistent again (L2-3)
+- Pre-breakout: U touches increase (U2-3)
+
+**Gate firing sequence:**
+1. M5 begins shrink → G0b-M5OPP may block
+2. M15 begins shrink → G4c-M15OPP may block
+3. M30 SQZ → G0c-SQZLOCK (magenta) appears for lower TFs
+4. M15+M30 both SQZ → G0b-PINK (magenta)
+5. All lower TF mid≥3 → G0b-SQZLOCK (crimson)
+6. M5 breaks SQZ → G6-LOAD → G6-BUY/SELL
+
+
+### Image 3 Analysis (backtested_EA_fly_shrink_2_sideway2.jpg — Core H4/H1 Fly Expand Evidence)
+
 ![Shrink to sideway 2](./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway2.jpg)
+
+**H4/H1 Fly Expand + Lower TF Compression Confirmed:**
+
+| Zone | H4 State | H1 State | M30 State | M15 State | M5 State |
+|------|----------|----------|-----------|-----------|----------|
+| Zone 1 (left) | Fly expand (511/512/521/522) | Fly expand | Fly | Fly | Fly |
+| Zone 2 | Fly expand (MAINTAINED) | Fly expand (MAINTAINED) | Shrink (513/523) | Shrink (513/523) | Shrink (513/523) |
+| Zone 3 (red) | Fly expand (MAINTAINED) | Fly expand (MAINTAINED) | SQZ (400-499) | SQZ (400-499) | SQZ (400-499) |
+| Zone 4 | Fly expand (MAINTAINED) | Fly expand (MAINTAINED) | SQZ (400-499) | SQZ (400-499) | SQZ (400-499) |
+| Zone 5 (red) | Fly expand (MAINTAINED) | Fly expand (MAINTAINED) | SQZ (400-499) | SQZ (400-499) | SQZ (400-499) |
+| Zone 6 | Fly expand (MAINTAINED) | Fly expand (MAINTAINED) | Shrink (513/523) | Shrink (513/523) | Shrink (513/523) |
+
+**Zone 1-2 (Yellow Rectangle): H4 Fly Expand + M5 Begins Shrink**
+
+| TF | Stage Transition | Mid Transition | Touch Pattern | Gates Active |
+|----|-----------------|----------------|---------------|--------------|
+| H4 | 511/512/521/522 MAINTAINED | 1/2 MAINTAINED | Directional touches | None — H4 provides confirmation |
+| H1 | 511/512/521/522 MAINTAINED | 1/2 MAINTAINED | Directional touches | None — H1 provides confirmation |
+| M30 | 511/512 → 513 | 1/2 → 3/5 | L2-3 per 5 bars | G4f-M30OPP may block |
+| M15 | 511/512 → 513 | 1/2 → 3/5 | L1-2, M1-2 per 5 bars | G4c-M15OPP may block |
+| M5 | 511/512 → 513 | 1/2 → 3/5 | L1-2, M1-2, U1-2 | G0b-M5OPP may block |
+
+**Zone 3 (Red Rectangle): Full Compression (Lower TFs Only)**
+
+| TF | Stage | Midband | Touch Pattern | Gates Active |
+|----|-------|---------|---------------|--------------|
+| H4 | 511/512/521/522 (fly MAINTAINED) | 1/2 (directional) | Directional touches | None — H4 provides confirmation |
+| H1 | 511/512/521/522 (fly MAINTAINED) | 1/2 (directional) | Directional touches | None — H1 provides confirmation |
+| M30 | 400-499 SQZ | 3 persistent | L2-3 per 5 bars | G0b-SQZLOCK active |
+| M15 | 400-499 SQZ | 3 persistent | L1-2, M1-2, U1-2 | G0b-PINK active |
+| M5 | 400-499 SQZ | 3 persistent | L1-2, M1-2, U1-2 | G0b-PINK active |
+
+**Zone 5 (Second Red Rectangle): Deep Compression (Lower TFs Only)**
+
+| TF | Stage | Midband | Touch Pattern | Gates Active |
+|----|-------|---------|---------------|--------------|
+| H4 | 511/512/521/522 (fly MAINTAINED) | 1/2 (directional) | Directional touches | None — H4 provides confirmation |
+| H1 | 511/512/521/522 (fly MAINTAINED) | 1/2 (directional) | Directional touches | None — H1 provides confirmation |
+| M30 | 400-499 SQZ | 3 persistent | L3-4 per 5 bars | G0b-SQZLOCK persistent |
+| M15 | 400-499 SQZ | 3 persistent | L2-3 per 5 bars | G0b-PINK persistent |
+| M5 | 400-499 SQZ | 3 persistent | L2-3 per 5 bars | G0b-PINK persistent |
+
+**Zone 6 (Recovery Zone): Lower TF Compression Release**
+
+| TF | Stage | Midband | Touch Pattern | Gates Active |
+|----|-------|---------|---------------|--------------|
+| H4 | 511/512/521/522 (fly MAINTAINED) | 1/2 | U1-2 per 5 bars | None — H4 provides confirmation |
+| H1 | 511/512/521/522 (fly MAINTAINED) | 1/2 | U1-2 per 5 bars | None — H1 provides confirmation |
+| M30 | 513/523 shrink | 3/4/5 | U2-3 per 5 bars | G4f-M30OPP blocks |
+| M15 | 513/523 shrink | 3/5 | U2-3 per 5 bars | G4c-M15OPP blocks |
+| M5 | 513/523 shrink | 3/5 | U3-4 per 5 bars | G6-LOAD appears |
+
+**Key findings from Image 3 — H4/H1 Fly Expand Core Evidence:**
+
+1. **H4/H1 fly expand confirmed:**
+   - H4 (yellow) in fly expand (511/512/521/522) throughout compression zones
+   - H1 (red) follows H4 in fly expand
+   - **CORE CORRECTION:** H4/H1 do NOT shrink — they provide directional context
+
+2. **Confined compression within HTF trend envelope:**
+   - Compression is LOCALIZED to lower TFs (M30/M15/M5)
+   - H4 provides direction and target — lower TFs oscillate within H4's band envelope
+   - Creates range trade opportunities at H4 band boundaries
+
+3. **Compression depth progression:**
+   - Zone 3 (red) shows moderate confined compression
+   - Zone 5 (red) shows deeper confined compression
+   - H4/H1 fly expand MAINTAINED throughout all zones
+
+4. **Release mechanism (SQZ break):**
+   - M5 breaks SQZ first (REVUP/REVDN)
+   - M15 follows M5
+   - M30 follows M15
+   - H1 follows M30
+   - H4 remains in fly expand — provides directional force
+
+5. **Touch count patterns during confined compression:**
+   - Entry phase: L touches increasing (L2-3)
+   - Compression peak: L touches persistent (L3-4)
+   - Loading phase: Balanced U/M/L oscillation
+   - Pre-breakout: U touches increasing (U2-3)
+   - Breakout: U touches dominate (U4-5)
+
+6. **Gate firing timeline verified:**
+   - [G0c-SQZLOCK] (magenta) → appears as lower TFs compress
+   - G0b-SQZLOCK (magenta) → fires at full lower TF compression
+   - G0b-PINK (magenta) → fires when M15+M30 both SQZ
+   - G0 (crimson) → fires when lower TF mid≥3
+   - [G6-LOAD] (gold) → appears before breakout
+   - [G6-BUY/SELL] → fires at SQZ break
+
+7. **Range trade context confirmed:**
+   - Price oscillates between H4 upper and lower bands
+   - Sell at H4 upper band touch (G0b-TOUCH)
+   - Buy at H4 lower band touch (G0b-TOUCH)
+   - Exit at midband/lower touch
 
 ### Scenario E Identification Flowchart
 
@@ -1420,162 +1580,6 @@ M5/M15/M30: Stage 400-499 (SQZ persistent)
 
 **Image evidence — detailed timeframe behavior from all 3 images:**
 
-### Image 1 Analysis (backtested_EA_fly_shrink_2_sideway.jpg)
-
-**Compression zones identified:**
-- Multiple yellow rectangles: H4 fly expand zones with lower TF confined compression
-- Red rectangles: Full SQZ zones where lower TF compression completed
-- Compression originates from HTF fly → cascades downward to lower TFs
-
-**H4 behavior in Image 1:**
-- Yellow band steps upward in fly expand — maintains directional context
-- "H4-Fly++" / "H4-Fly+-" labels visible — H4 fly expand
-- Midband labels (3, 4, 5) appear on lower TFs only
-- Directional touches (U1-2 per 5 bars) — H4 provides context
-- Band remains fanning — not flat
-
-**H1 behavior in Image 1:**
-- Red band follows H4 upward in fly expand
-- Red band maintains stepping — follows H4
-- Mid=3 labels appear on lower TF midbands only
-- [G0c-SQZLOCK] magenta labels appear for lower TFs only
-- Balanced touches — H1 follows H4 direction
-
-**M30/M15/M5 behavior in Image 1:**
-- Sequential compression: M5 first, M15 second, M30 third
-- All show mid=3 labels in red zones
-- [G6-LOAD] gold labels appear during loading phase
-- Touch patterns shift from directional to balanced
-
-### Image 2 Analysis (backtested_EA_fly_shrink_2_sideway_zoomin.jpg)
-
-**Detailed compression mechanics:**
-- H4/H1 fly expand provides directional context
-- M5 aqua bands collapsing first — begins confined compression
-- Goldenrod (M15) follows within 2-3 bars
-- Green (M30) compression last
-- Clear progression: H4/H1 fly expand + lower TF confined compression
-
-**Midband transitions visible:**
-```
-H4: mid=1/2 MAINTAINED — provides directional context
-H1: mid=1/2 MAINTAINED — follows H4
-M30: mid=1/2 → mid=3/4/5 → mid=3 persistent
-M15: mid=1/2 → mid=3/4/5 → mid=3 persistent
-M5: mid=1/2 → mid=3/4/5 → mid=3 persistent (first)
-```
-
-**Touch count evolution:**
-- Before compression: L touches building (L2-3)
-- During compression: Balanced oscillation (L1-2, M1-2, U1-2)
-- Red zone peak: L touches persistent again (L2-3)
-- Pre-breakout: U touches increase (U2-3)
-
-**Gate firing sequence:**
-1. M5 begins shrink → G0b-M5OPP may block
-2. M15 begins shrink → G4c-M15OPP may block
-3. M30 SQZ → G0c-SQZLOCK (magenta) appears for lower TFs
-4. M15+M30 both SQZ → G0b-PINK (magenta)
-5. All lower TF mid≥3 → G0b-SQZLOCK (crimson)
-6. M5 breaks SQZ → G6-LOAD → G6-BUY/SELL
-
-### Image 3 Analysis (backtested_EA_fly_shrink_2_sideway2.jpg — Core H4/H1 Fly Expand Evidence)
-
-**H4/H1 Fly Expand + Lower TF Compression Confirmed:**
-
-| Zone | H4 State | H1 State | M30 State | M15 State | M5 State |
-|------|----------|----------|-----------|-----------|----------|
-| Zone 1 (left) | Fly expand (511/512/521/522) | Fly expand | Fly | Fly | Fly |
-| Zone 2 | Fly expand (MAINTAINED) | Fly expand (MAINTAINED) | Shrink (513/523) | Shrink (513/523) | Shrink (513/523) |
-| Zone 3 (red) | Fly expand (MAINTAINED) | Fly expand (MAINTAINED) | SQZ (400-499) | SQZ (400-499) | SQZ (400-499) |
-| Zone 4 | Fly expand (MAINTAINED) | Fly expand (MAINTAINED) | SQZ (400-499) | SQZ (400-499) | SQZ (400-499) |
-| Zone 5 (red) | Fly expand (MAINTAINED) | Fly expand (MAINTAINED) | SQZ (400-499) | SQZ (400-499) | SQZ (400-499) |
-| Zone 6 | Fly expand (MAINTAINED) | Fly expand (MAINTAINED) | Shrink (513/523) | Shrink (513/523) | Shrink (513/523) |
-
-**Zone 1-2 (Yellow Rectangle): H4 Fly Expand + M5 Begins Shrink**
-
-| TF | Stage Transition | Mid Transition | Touch Pattern | Gates Active |
-|----|-----------------|----------------|---------------|--------------|
-| H4 | 511/512/521/522 MAINTAINED | 1/2 MAINTAINED | Directional touches | None — H4 provides confirmation |
-| H1 | 511/512/521/522 MAINTAINED | 1/2 MAINTAINED | Directional touches | None — H1 provides confirmation |
-| M30 | 511/512 → 513 | 1/2 → 3/5 | L2-3 per 5 bars | G4f-M30OPP may block |
-| M15 | 511/512 → 513 | 1/2 → 3/5 | L1-2, M1-2 per 5 bars | G4c-M15OPP may block |
-| M5 | 511/512 → 513 | 1/2 → 3/5 | L1-2, M1-2, U1-2 | G0b-M5OPP may block |
-
-**Zone 3 (Red Rectangle): Full Compression (Lower TFs Only)**
-
-| TF | Stage | Midband | Touch Pattern | Gates Active |
-|----|-------|---------|---------------|--------------|
-| H4 | 511/512/521/522 (fly MAINTAINED) | 1/2 (directional) | Directional touches | None — H4 provides confirmation |
-| H1 | 511/512/521/522 (fly MAINTAINED) | 1/2 (directional) | Directional touches | None — H1 provides confirmation |
-| M30 | 400-499 SQZ | 3 persistent | L2-3 per 5 bars | G0b-SQZLOCK active |
-| M15 | 400-499 SQZ | 3 persistent | L1-2, M1-2, U1-2 | G0b-PINK active |
-| M5 | 400-499 SQZ | 3 persistent | L1-2, M1-2, U1-2 | G0b-PINK active |
-
-**Zone 5 (Second Red Rectangle): Deep Compression (Lower TFs Only)**
-
-| TF | Stage | Midband | Touch Pattern | Gates Active |
-|----|-------|---------|---------------|--------------|
-| H4 | 511/512/521/522 (fly MAINTAINED) | 1/2 (directional) | Directional touches | None — H4 provides confirmation |
-| H1 | 511/512/521/522 (fly MAINTAINED) | 1/2 (directional) | Directional touches | None — H1 provides confirmation |
-| M30 | 400-499 SQZ | 3 persistent | L3-4 per 5 bars | G0b-SQZLOCK persistent |
-| M15 | 400-499 SQZ | 3 persistent | L2-3 per 5 bars | G0b-PINK persistent |
-| M5 | 400-499 SQZ | 3 persistent | L2-3 per 5 bars | G0b-PINK persistent |
-
-**Zone 6 (Recovery Zone): Lower TF Compression Release**
-
-| TF | Stage | Midband | Touch Pattern | Gates Active |
-|----|-------|---------|---------------|--------------|
-| H4 | 511/512/521/522 (fly MAINTAINED) | 1/2 | U1-2 per 5 bars | None — H4 provides confirmation |
-| H1 | 511/512/521/522 (fly MAINTAINED) | 1/2 | U1-2 per 5 bars | None — H1 provides confirmation |
-| M30 | 513/523 shrink | 3/4/5 | U2-3 per 5 bars | G4f-M30OPP blocks |
-| M15 | 513/523 shrink | 3/5 | U2-3 per 5 bars | G4c-M15OPP blocks |
-| M5 | 513/523 shrink | 3/5 | U3-4 per 5 bars | G6-LOAD appears |
-
-**Key findings from Image 3 — H4/H1 Fly Expand Core Evidence:**
-
-1. **H4/H1 fly expand confirmed:**
-   - H4 (yellow) in fly expand (511/512/521/522) throughout compression zones
-   - H1 (red) follows H4 in fly expand
-   - **CORE CORRECTION:** H4/H1 do NOT shrink — they provide directional context
-
-2. **Confined compression within HTF trend envelope:**
-   - Compression is LOCALIZED to lower TFs (M30/M15/M5)
-   - H4 provides direction and target — lower TFs oscillate within H4's band envelope
-   - Creates range trade opportunities at H4 band boundaries
-
-3. **Compression depth progression:**
-   - Zone 3 (red) shows moderate confined compression
-   - Zone 5 (red) shows deeper confined compression
-   - H4/H1 fly expand MAINTAINED throughout all zones
-
-4. **Release mechanism (SQZ break):**
-   - M5 breaks SQZ first (REVUP/REVDN)
-   - M15 follows M5
-   - M30 follows M15
-   - H1 follows M30
-   - H4 remains in fly expand — provides directional force
-
-5. **Touch count patterns during confined compression:**
-   - Entry phase: L touches increasing (L2-3)
-   - Compression peak: L touches persistent (L3-4)
-   - Loading phase: Balanced U/M/L oscillation
-   - Pre-breakout: U touches increasing (U2-3)
-   - Breakout: U touches dominate (U4-5)
-
-6. **Gate firing timeline verified:**
-   - [G0c-SQZLOCK] (magenta) → appears as lower TFs compress
-   - G0b-SQZLOCK (magenta) → fires at full lower TF compression
-   - G0b-PINK (magenta) → fires when M15+M30 both SQZ
-   - G0 (crimson) → fires when lower TF mid≥3
-   - [G6-LOAD] (gold) → appears before breakout
-   - [G6-BUY/SELL] → fires at SQZ break
-
-7. **Range trade context confirmed:**
-   - Price oscillates between H4 upper and lower bands
-   - Sell at H4 upper band touch (G0b-TOUCH)
-   - Buy at H4 lower band touch (G0b-TOUCH)
-   - Exit at midband/lower touch
 
 ---
 
@@ -2073,88 +2077,13 @@ Recovery: wait until M30 or M15 shows mid=1 or mid=2 again
 ---
 
 
-# PART 4 — TREND PREDICTION
+# PART 4 — NEXT-STAGE DIRECTION
 
-`PredictNextTrend()` in `scripts/TofyTrade4.mqh` runs every bar and draws a colored label at the M30 midband. It combines two complementary tracks: an **algorithmic weighted score** and a **visual band region analysis**.
-
----
-
-## Section 1 — Algorithmic Signal
-
-### How the Score Is Built
-
-Each TF (M15→W1) produces a directional score in **[-8, +8]** from four components:
-
-```
-score = stage_bias + mid_bias + stage_transition_bonus + mid_transition_bonus
-```
-
-| Component | Range | Rules |
-|-----------|-------|-------|
-| Stage bias | ±3 | 511=+3, 512=+2, 513=+1, SQZ=0, 523=-1, 521=-3, 522=-2 |
-| Mid bias | ±2 | 1=+2, 5=+1, 3=0, 4=-1, 2=-2 |
-| Stage transition | ±3 | SQZ→fly ±3 · fly reversal ±3 · shrink→fly ±2 · fly→shrink ±1 |
-| Mid transition | ±3 | dn→up/up→dn reversal ±3 · flat→trend ±2 · fading ±1 · flat→side ±1 |
-
-### TF Weights and Aggregation
-
-| TF | Weight | Group |
-|----|--------|-------|
-| H4 | ×3 | HTF (dominant) |
-| D1 | ×2 | HTF |
-| W1 | ×1 | HTF |
-| H1 | ×2 | MTF |
-| M30 | ×2 | MTF |
-| M15 | ×1 | LTF |
-
-```
-htf_total = H4×3 + D1×2 + W1×1   (max ±48)
-mtf_total = H1×2 + M30×2          (max ±32)
-ltf_total = M15×1                  (max ±8)
-grand_total = htf + mtf + ltf      (max ±88)
-```
-
-### Direction and Confidence
-
-| Grand total | Direction | Confidence |
-|------------|-----------|------------|
-| ≥ +66 | BUY | 95 |
-| ≥ +44 | BUY | 80 |
-| ≥ +22 | BUY | 60 |
-| -22 to +22 | NEUTRAL | 25 |
-| ≤ -22 | SELL | 60 |
-| ≤ -44 | SELL | 80 |
-| ≤ -66 | SELL | 95 |
-
-**Reversal flag:** if `htf_total ≥ +18` AND `ltf+mtf ≤ -12` (or mirror) → `reversal=true`, confidence capped at 65. Means HTF is strongly opposing LTF+MTF direction.
-
-### Confidence Level Trading Guidelines
-
-| Confidence | Action | Position Size |
-|------------|--------|---------------|
-| 95 | Full conviction entry | 1.0× |
-| 80 | Strong entry | 0.75-1.0× |
-| 60 | Moderate entry | 0.5-0.75× |
-| 25 | No new entry, hold existing | N/A |
-| <25 | Consider exiting | Reduce/exit |
-
-### Reversal Flag Interpretation
-
-**When reversal flag is true (R:):**
-- HTF strongly opposes LTF+MTF direction
-- Counter-trend opportunity — smaller size (0.5×)
-- Higher risk — wait for additional confirmation
-- Confidence capped at 65%
-
-**Example scenarios:**
-```
-R:BUY:65 → HTF bearish, LTF+MTF turning bullish → counter-trend buy
-R:SELL:65 → HTF bullish, LTF+MTF turning bearish → counter-trend sell
-```
+For each TF, read what stage it is heading toward using the `nxt:` labels, and where price has been using the `tch:` touch counts.
 
 ---
 
-## Section 2 — Visual Band Region Analysis
+## Visual Band Region Analysis
 
 Uses `BB_diffMid_Trend[]` over the last 5 bars per TF as a proxy for price's recent position relative to bands.
 
@@ -2192,31 +2121,7 @@ When reviewing annotated chart images:
 
 ---
 
-## Section 3 — Reading the Chart Label
-
-**Label format:** `[PRED:{R:}{direction}:{confidence}]`
-
-| Label example | Color | Meaning |
-|--------------|-------|---------|
-| `[PRED:BUY:80]` | Lime | Continuation BUY — HTF+MTF+LTF broadly aligned bullish |
-| `[PRED:BUY:95]` | Lime | Strong continuation BUY — all TFs strongly bullish |
-| `[PRED:R:BUY:65]` | Aqua | Reversal BUY — HTF bearish, LTF+MTF turning bullish (counter-trend) |
-| `[PRED:SELL:80]` | OrangeRed | Continuation SELL |
-| `[PRED:R:SELL:65]` | Orange | Reversal SELL — HTF bullish, LTF+MTF turning bearish |
-| `[PRED:NEUTRAL:25]` | DimGray | No dominant direction — grand total within ±22 |
-
-**Full log line structure:**
-```
-[PRED] BUY conf:80 htf:24 mtf:16 ltf:3 tot:43
-nxt:M15=fly_up M30=fly_up H1=fly_up H4=sqz_wait
-tch:M15=U2/M1/L2 M30=U1/M2/L2 H1=U0/M1/L4 H4=U0/M2/L3
-```
-
----
-
-## Section 4 — Conclude: Next/Wait Format
-
-### `nxt:` — Per-TF Next-Stage Labels
+## `nxt:` — Per-TF Next-Stage Labels
 
 `PredictTFNextStage()` maps current stage+mid+transition to a label for each TF:
 
@@ -2233,10 +2138,9 @@ tch:M15=U2/M1/L2 M30=U1/M2/L2 H1=U0/M1/L4 H4=U0/M2/L3
 | `reversal_forming` | Stage and mid opposing | fly or shrink with mid contradicting |
 | `sideway` | No clear next state | other combinations |
 
-### Reading the Full Conclude Output
+### Reading the Full Output
 
 ```
-SCORE  → direction + confidence + reversal flag
 NEXT   → nxt: per-TF stage label (what this TF is heading toward)
 TOUCH  → tch: U/M/L counts (where price has been in each TF's bands)
 ```
@@ -2255,143 +2159,6 @@ tch:M15=U0/M1/L4 M30=U0/M2/L3 H1=U0/M1/L4 H4=U0/M2/L3
 ```
 
 **Wait condition** = any TF showing `sqz_wait` in `nxt:` → that TF needs to break SQZ before it can contribute macro tailwind.
-
----
-
-## Section 5 — Worked Example (8-JAN 14:15, Left Yellow Rectangle)
-
-**Reference image:** `references/Backtest_data/extras/backtested_EA_predict_trend_1.jpg`
-
-- Yellow rectangles = compression zones (SQZ/shrink)
-- White circles at bottom = lower-band touches (L count high)
-- Yellow ovals near midline = midband touches (M count)
-
-![predict trend example](./Backtest_data/extras/backtested_EA_predict_trend_1.jpg)
-
-**State table at 8-JAN 14:15:**
-
-| TF | prev_stage | prev_mid | cur_stage | cur_mid | tch (last 5 bars) | nxt label | score |
-|----|-----------|----------|-----------|---------|-------------------|-----------|-------|
-| H4 | shrink | up | squeeze | sideway_up | U0/M2/L3 | `sqz_wait` (mid=5, not yet committed) | ~0 |
-| H1 | fly_parallel | dn | fly_expand | sideway_dn | U1/M1/L3 | `fly_dn_cont` or `reversal_forming` | ~ -2 |
-| M30 | shrink | dn | squeeze | dn | U0/M2/L3 | `fly_dn` if mid stays dn, else `sqz_wait` | ~ -4 |
-| M15 | shrink | dn | sideway | sideway_dn | U2/M2/L1 | `sqz_wait` → `fly_up` (U touches show upper tests) | ~ +2 |
-
-**Algorithmic output at this bar:**
-```
-[PRED] NEUTRAL conf:25 htf:-8 mtf:-12 ltf:2 tot:-18
-nxt:M15=sqz_wait M30=fly_dn H1=fly_dn_cont H4=sqz_wait
-tch:M15=U2/M2/L1 M30=U0/M2/L3 H1=U1/M1/L3 H4=U0/M2/L3
-```
-
-Score is near NEUTRAL (-18 is just below the -22 SELL threshold) — correctly cautious because H4 is in SQZ (no macro target) and M15 upper touches (U2) suggest M15 is not yet committed downward.
-
-**What happened next (right yellow rectangle → right side of image):**
-
-M15 broke upward (SQZ→fly), M30 and H1 followed → fly_up confirmed → price traveled to H4 upper band exactly as the cascade rule predicts. The prediction's `sqz_wait` on H4 correctly flagged that H4 was not yet providing macro direction — the fly ran until it hit H4's upper band.
-
-**Key reading:** Even when the SCORE says NEUTRAL, the `nxt:` and `tch:` fields reveal the setup: multiple TFs showing `sqz_wait` + lower-band pressure (`L3` in M30/H1/H4) + M15 showing upper tests (`U2`) = compression is about to resolve upward.
-
----
-
-## Section 6 — Worked Example (9-JAN 01:15, Asian Session — Compression Hold)
-
-**Reference image:** `references/Backtest_data/extras/backtested_EA_predict_trend_1.jpg`
-
-At 9-JAN 01:15 (Asian session), price is inside the second yellow rectangle. H4 has weakened from fly into shrink but holds a bullish mid. H1 has just entered SQZ after breaking down from fly_up — visible as heavy lower-band pressure (`L4`). M30 and M15 are both in SQZ with no committed direction yet.
-
-**State table at 9-JAN 01:15:**
-
-| TF | prev_stage | prev_mid | cur_stage | cur_mid | tch (last 5 bars) | nxt label | score |
-|----|-----------|----------|-----------|---------|-------------------|-----------|-------|
-| H4 | fly_parallel (512) | up | shrink (513) | sideway_up | U0/M3/L2 | `fly_up_resume` (shrink_bull, mid=5 — H4 holding bullish bias) | +1 |
-| H1 | fly_expand (511) | up | squeeze | dn | U0/M1/L4 | `fly_dn` (SQZ mid=2 — H1 broke down from fly, bearish pressure) | −5 |
-| M30 | squeeze | dn | squeeze | flat | U0/M2/L3 | `sqz_wait` (SQZ mid=3 — no direction committed yet) | +1 |
-| M15 | squeeze | flat | squeeze | sideway_up | U1/M2/L2 | `fly_up` (SQZ mid=5 — early bullish pressure building at M15) | +2 |
-
-**Score computation:**
-
-```
-H4:  stg=+1 (513) + mid_b=+1 (5) + stg_t=−1 (fly_up→shrink) + mid_t=0  (1→5 not in table) = +1
-D1:  stg=+2 (512) + mid_b=+2 (1) + stg_t=0                   + mid_t=0                     = +4  [stable fly up]
-W1:  stg=+3 (511) + mid_b=+2 (1) + stg_t=0                   + mid_t=0                     = +5  [long-term bullish]
-H1:  stg=0  (SQZ) + mid_b=−2 (2) + stg_t=0  (fly→SQZ: no bonus) + mid_t=−3 (up→dn reversal) = −5
-M30: stg=0  (SQZ) + mid_b=0  (3) + stg_t=0                   + mid_t=+1 (dn fading to flat) = +1
-M15: stg=0  (SQZ) + mid_b=+1 (5) + stg_t=0                   + mid_t=+1 (flat→side-up)      = +2
-
-htf = H4(+1)×3 + D1(+4)×2 + W1(+5)×1 =   3 +  8 +  5 = +16
-mtf = H1(−5)×2 + M30(+1)×2            = −10 +  2      =  −8
-ltf = M15(+2)×1                                        =  +2
-tot = +16 + (−8) + 2 = +10
-```
-
-**Algorithmic output:**
-```
-[PRED] NEUTRAL conf:25 htf:16 mtf:-8 ltf:2 tot:10
-nxt:M15=fly_up M30=sqz_wait H1=fly_dn H4=fly_up_resume
-tch:M15=U1/M2/L2 M30=U0/M2/L3 H1=U0/M1/L4 H4=U0/M3/L2
-```
-
-No reversal flag: `htf=16` is just below the ≥18 threshold even though `ltf+mtf=−6`.
-
-**Trade impact at 9-JAN 01:15:**
-- **No new entry**: NEUTRAL — neither G6-BUY nor G6-SELL trigger. M15 FLAT→UP (fly_up nxt) is not yet confirmed by a score crossing ±22.
-- **Open BUY position (if carried from 8-JAN recovery)**: HOLD. H4=`fly_up_resume` means the HTF thesis is intact — do not exit. H1=`fly_dn` warns that H1 is under bearish pressure (L4 touch count), so the position is likely drawing down. G0 evaluation applies (M30+M15 sideway context) but does not trigger an exit here because H1 is not providing directional confirmation for a close.
-- **No SELL entry**: H4 remains bullish (`fly_up_resume`) and M15 shows early bullish signal (`fly_up`). SELL gates are blocked.
-- **Watch signal**: If the next bar H1 mid transitions further (2 stays 2) AND M30 confirms dn, tot could drop below −22 → SELL signal fires → G6-REV would close any open BUY via reversal gate.
-
-**What happened next:** Between 01:15 and 09:15 European session open, M30 resolved its SQZ upward (mid=3→1), and H1 simultaneously reversed its bearish mid (mid=2→1 via SQZ breakout up). This single structural flip shifted `mtf` from −8 to +32 in one bar.
-
----
-
-## Section 7 — Worked Example (9-JAN 09:15, European Session — SQZ Breakout Buy Entry)
-
-At 9-JAN 09:15, the second yellow rectangle has resolved. M30 and H1 simultaneously broke their SQZ upward on the European open bar — the compressed bands expanded, generating maximum transition bonuses in both `stg_t` and `mid_t`.
-
-**State table at 9-JAN 09:15:**
-
-| TF | prev_stage | prev_mid | cur_stage | cur_mid | tch (last 5 bars) | nxt label | score |
-|----|-----------|----------|-----------|---------|-------------------|-----------|-------|
-| H4 | shrink (513) | sideway_up | fly_expand (511) | up | U1/M4/L0 | `fly_up_cont` (shrink→fly resumed, mid=1 stable) | +7 |
-| H1 | squeeze | dn | fly_expand (511) | up | U1/M1/L3 | `fly_up_cont` (SQZ→fly, dn→up reversal — maximum score) | +8 (capped) |
-| M30 | squeeze | flat | fly_expand (511) | up | U1/M2/L2 | `fly_up_cont` (SQZ→fly, flat→up) | +8 (capped) |
-| M15 | squeeze | flat | fly_expand (511) | up | U1/M4/L0 | `fly_up_cont` (SQZ→fly, flat→up — entry trigger bar) | +8 (capped) |
-
-**Score computation:**
-
-```
-H4:  stg=+3 (511) + mid_b=+2 (1) + stg_t=+2 (shrink→fly UP) + mid_t=0  (5→1 not in table) = +7
-D1:  stg=+3 (511) + mid_b=+2 (1) + stg_t=0                   + mid_t=0                     = +5  [stable fly up]
-W1:  stg=+3 (511) + mid_b=+2 (1) + stg_t=0                   + mid_t=0                     = +5  [long-term bullish]
-H1:  stg=+3 (511) + mid_b=+2 (1) + stg_t=+3 (SQZ→fly UP)    + mid_t=+3 (dn→up reversal)  = +11 → capped +8
-M30: stg=+3 (511) + mid_b=+2 (1) + stg_t=+3 (SQZ→fly UP)    + mid_t=+2 (flat→uptrend)    = +10 → capped +8
-M15: stg=+3 (511) + mid_b=+2 (1) + stg_t=+3 (SQZ→fly UP)    + mid_t=+2 (flat→uptrend)    = +10 → capped +8
-
-htf = H4(+7)×3 + D1(+5)×2 + W1(+5)×1 =  21 + 10 +  5 = +36
-mtf = H1(+8)×2 + M30(+8)×2            =  16 + 16      = +32
-ltf = M15(+8)×1                                        =  +8
-tot = 36 + 32 + 8 = +76
-```
-
-**Algorithmic output:**
-```
-[PRED] BUY conf:95 htf:36 mtf:32 ltf:8 tot:76
-nxt:M15=fly_up_cont M30=fly_up_cont H1=fly_up_cont H4=fly_up_cont
-tch:M15=U1/M4/L0 M30=U1/M2/L2 H1=U1/M1/L3 H4=U1/M4/L0
-```
-
-No reversal flag: `htf=+36` and `ltf+mtf=+40` are in the same direction.
-
-**Trade impact at 9-JAN 09:15:**
-- **New BUY entry fires**: M15 mid transition flat→up (mid=3→1) is the G1 trigger. All gates downstream evaluate on this bar.
-- **Position size**: M15/M30/H1/H4 all show `fly_up_cont` — 4 TFs aligned BUY = ≥3 TF agreement → 1.0× baseLot. M15 SQZ→fly transition score = +8 (raw before cap) → quality ≥ 90 → 1.0× quality multiplier. Full-size BUY entry.
-- **Price target**: M15 fly→H1 outer band first, then H4 outer band (macro cascade target per Part 1 cascade rule). H4 now in fly_up means D1 outer band is the ultimate target.
-- **Open BUY from 8-JAN**: Continue to hold — no close signal. The drawdown period during the 01:15 NEUTRAL phase was a compression inside the compression zone; the fly resumes from the same HTF thesis.
-- **Chart label**: Lime `[PRED:BUY:95]` drawn at M30 midband on this bar.
-
-**Key reading:** The 8-hour contrast between NEUTRAL (+10) at 01:15 and BUY conf:95 (+76) at 09:15 comes down to one structural event: H1 and M30 both resolving SQZ upward simultaneously on the European open bar. H1 alone swings from −5 to +8 (a shift of +13), weighted ×2 = +26 to `mtf`. The `nxt:` labels at 01:15 (`M15=fly_up`, `H4=fly_up_resume`) were already pointing at the eventual direction — they just needed H1 and M30 to stop contradicting. Once those resolved, the score crossed the 66 threshold in a single bar, generating the highest confidence level (95).
-
-The H1 `tch` pattern shows the mechanism: at 01:15 H1 was `U0/M1/L4` (4 bars in lower region); by 09:15 it's `U1/M1/L3` — one bar flipped from lower to upper. That one flip, amplified by the stage and mid transition bonuses, is what drives the BUY conf:95 signal.
 
 ---
 
@@ -2504,7 +2271,7 @@ Using regime table from Step 3:
 - M30+M15 mid both ≥ 3 → Scenario G
 
 **Step 8 — Apply trade decision**
-Use Part 4 tables. State: current regime, price target, which gate fires next, open position status.
+Read Part 4 nxt:/tch: labels. State: current regime, price target, which gate fires next, open position status.
 
 ---
 
@@ -2569,12 +2336,12 @@ Use Part 4 tables. State: current regime, price target, which gate fires next, o
 | G: All TFs Sideway | G0 exit trigger conditions, holding vs exiting decision, recovery criteria |
 | All | Scenario Summary table |
 
-### Part 4 — Trend Prediction (Enhancements)
+### Part 4 — Next-Stage Direction (Enhancements)
 
 | Addition | Description |
 |----------|-------------|
-| Confidence Level Guidelines | Trading guidelines per confidence threshold |
-| Reversal Flag Interpretation | Counter-trend opportunity guidance |
+| Visual Band Region Analysis | Touch count patterns and interpretation |
+| Per-TF nxt: labels | Next-stage direction for each TF |
 
 ### Part 5 — Trade Decision (Enhancements)
 
