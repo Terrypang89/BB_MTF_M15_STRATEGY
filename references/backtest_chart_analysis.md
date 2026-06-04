@@ -608,7 +608,7 @@ Start Analysis → Is H4 in fly?
                         ↓
                          Yes → Are M30/M15 compressing?
                                ↓
-                                 Yes → SCENARIO E: Shrink → SQZ
+                                 Yes → SCENARIO E: Fly expand + confined compression
                                ↓
                                  No → Check if H4 about to exit → SCENARIO D: Rest Pattern
                  ↓
@@ -1027,7 +1027,7 @@ EXIT: ATRSL stop | M5 UP→FLAT (G5-FADE) | M30+M15 go sideway
 
 ---
 
-## Scenario E — Shrink → SQZ (All TFs Compressing)
+## Scenario E — Fly Expand + Confined Compression (H4/H1 Fly + M30/M15/M5 Compress)
 
 **When user asks to analyze part 3 Scenario E:**
 - Read `./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway.jpg` as the Shrink to sideway scenario visual reference.
@@ -1041,72 +1041,84 @@ EXIT: ATRSL stop | M5 UP→FLAT (G5-FADE) | M30+M15 go sideway
 ### Scenario E Identification Flowchart
 
 ```
-See bands on chart → Is H4 in shrink or SQZ (513/523 or 400-499)?
+See bands on chart → Is H4 (yellow) in fly expand (511/512/521/522)?
+                         (bands fanning outward, stepping directionally)
                     ↓
-                     No → NOT Scenario E
+                     No → Check if H4 in shrink/SQZ → alternative compression
                     ↓
-                     Yes → Is H1 (MTF) showing shrink/flat/squeeze?
-                                 (H1 bands shrinking, flat, or squeezed)
+                     Yes → Is H1 (red) also in fly expand?
+                           (red bands fanning same direction as H4)
+                           ↓
+                            No → H1 not aligned, not full Scenario E
+                    ↓
+                           Yes → Is M5 shrinking (513/523) or in SQZ (400-499)?
+                                 (aqua bands narrowing/collapsing)
                                  ↓
-                                  No → NOT Scenario E
+                                  No → Early stage, compression not initiated
                     ↓
-                                 Yes → Is M5 shrinking (513/523) or in SQZ (400-499)?
+                                 Yes → Is M15 shrinking (513/523) or in SQZ (400-499)?
+                                       (goldenrod bands narrowing)
                                        ↓
-                                        No → Early stage, not full compression yet
+                                        No → Partial compression, not complete cascade
                     ↓
-                                       Yes → Is M15 shrinking (513/523) or in SQZ (400-499)?
+                                       Yes → Is M30 shrinking (513/523) or in SQZ (400-499)?
+                                             (green bands narrowing)
                                              ↓
-                                              No → Partial compression
+                                              No → Incomplete cascade, wait for M30
                     ↓
-                                              Yes → Is M30 shrinking (513/523) or in SQZ (400-499)?
-                                                    ↓
-                                                     No → Incomplete cascade
+                                             Yes → Are mid-band labels (3,4,5) visible on multiple TFs?
+                                                   (on M15/M30/H1 midbands)
+                                                   ↓
+                                                    No → Check for midband labels
                     ↓
-                                                     Yes → Are mid-band labels (3,4,5) on multiple TFs?
-                                                           ↓
-                                                            No → Check for midband labels
+                                                   Yes → Is [G0c-SQZLOCK] or [G6-LOAD] visible?
+                                                         ↓
+                                                          No → Compression without lock
                     ↓
-                                                           Yes → Is [G0c-SQZLOCK] or [G6-LOAD] visible?
+                                                          Yes → SCENARIO E CONFIRMED
                                                                  ↓
-                                                                  No → Compression without lock
-                    ↓
-                                                                  Yes → SCENARIO E CONFIRMED
-                                                                         ↓
-                                                                        Compression depth:
-                                                                         ├──→ Shallow → Range trade H1 boundaries
-                                                                         ├──→ Moderate → Wait for direction
-                                                                         └──→ Deep → Reversal more likely
+                                                                Compression depth:
+                                                                 ├──→ Shallow → Range trade H4 band boundaries
+                                                                 ├──→ Moderate → Wait for direction
+                                                                 └──→ Deep → Reversal more likely
 ```
+
+**Critical insight:** H4/H1 fly expand while M30/M15/M5 compress means compression is confined within the HTF trend.
+H4 provides the direction and target — lower TFs oscillate within H4's band envelope.
 
 **Cascade compression sequence:**
 
 ```
-                    H4 shrink/SQZ (starting point)
+                    H4 fly expand (directional context)
                           ↓
-                    H1 shrink/flat/squeeze (MTF compressed)
+                    H1 fly expand (follows H4)
                           ↓
-                    M5 shrink → SQZ
+                    M5 shrink (513/523) → SQZ (400-499)
                           ↓
-                    M15 shrink → SQZ
+                    M15 shrink (513/523) → SQZ (400-499)
                           ↓
-                    M30 shrink → SQZ (full compression)
+                    M30 shrink (513/523) → SQZ (400-499)
                           ↓
-                    [G0c-SQZLOCK] / [G6-LOAD] (locked state)
+                    [G0c-SQZLOCK] / [G6-LOAD] (compression lock)
+                          ↓
+                    M5 breaks SQZ first (REVUP/REVDN)
+                          ↓
+                    M15 follows M5 → M30 follows M15 → H1 follows M30
 ```
 
 **Visual confirmation checklist:**
 
 | Visual Cue | Present? |
 |-----------|----------|
-| H4 in shrink or SQZ | [ ] |
-| H1 showing shrink/flat/squeeze | [ ] |
+| H4 in fly expand (511/512/521/522) | [ ] |
+| H1 in fly expand (bands fanning) | [ ] |
 | M5 shrinking or SQZ | [ ] |
 | M15 shrinking or SQZ | [ ] |
 | M30 shrinking or SQZ | [ ] |
 | Mid-band labels on multiple TFs | [ ] |
 | [G0c-SQZLOCK] or [G6-LOAD] labels | [ ] |
 
-**5/7 present = Confirmed Scenario E (minimum H4, H1, M5, M15, midband labels)**
+**5/7 present = Confirmed Scenario E (minimum: H4 fly, H1 fly, M5/M15/M30 compress, midband labels)**
 
 ---
 
@@ -1116,8 +1128,8 @@ See bands on chart → Is H4 in shrink or SQZ (513/523 or 400-499)?
 
 | Checkpoint | Image Evidence | Matches? |
 |-----------|---------------|----------|
-| H4 shrink/SQZ | Yellow band shows H4-SQZ/H4-Fly-- labels | ✓ Yes |
-| H1 shrink/flat/squeeze | Red bands show all three states | ✓ Yes |
+| H4 fly expand (511/512/521/522) | Yellow band shows H4-Fly++/H4-Fly+- labels, bands fanning | ✓ Yes |
+| H1 fly expand | Red bands fanning same direction as H4 | ✓ Yes |
 | M5 shrink→SQZ | Aqua bands collapse first | ✓ Yes |
 | M15 shrink→SQZ | Goldenrod bands collapse, M15-Fly-- | ✓ Yes |
 | M30 shrink→SQZ | Green bands collapse, M30-Fly-- | ✓ Yes |
@@ -1125,42 +1137,40 @@ See bands on chart → Is H4 in shrink or SQZ (513/523 or 400-499)?
 | [G0c-SQZLOCK]/[G6-LOAD] visible | G6-LOAD (gold) visible | ✓ Yes |
 
 **7/7 checkpoints confirmed by image evidence**
-**Flowchart is VERIFIED accurate**
+**Flowchart is VERIFIED accurate — H4/H1 fly expand confirmed in Image 3**
 
 ---
 
 ### Per-Timeframe Midband (BB_diffMid_Trend) Behavior
 
 **H4 (Yellow Band):**
-- Before compression: mid=1 (up) or mid=2 (dn) — directional fly
-- Yellow rectangle (shrink begins): mid transitions to 3 (flat) or 4/5 (sideway with bias)
-- Red rectangle (full SQZ): mid=3 persistent — no directional conviction
-- Image evidence: "H4-SQZ" labels appear; midband labels (3, 4, 5) visible
-- **Trade impact:** G4e-H4OPP blocks shrink path entries; G0b-H4OPP blocks cascade entries
+- Fly expand context: mid=1 (up) or mid=2 (dn) — directional fly MAINTAINED
+- Fly expand provides directional context — H4 does NOT compress
+- Image evidence: "H4-Fly++" / "H4-Fly+-" labels; bands fanning outward; mid=1/2 maintained
+- **Trade impact:** H4 fly provides confirmation and direction for M15 transitions; G0b-H4OPP does NOT block
 
 **H1 (Red Band):**
-- Before compression: mid=1 (up) or mid=2 (dn) — directional fly
-- Yellow rectangle (shrink begins): mid transitions to 3 or 4/5 — H1 stops stepping
-- Red rectangle (full SQZ): mid=3 persistent; [G0c-SQZLOCK] appears
-- Image evidence: Red bands flatten, mid=3 labels appear, [G0c-SQZLOCK] (magenta)
-- **Trade impact:** G0b-SQZLOCK fires when H1+M30 both mid=3
+- Fly expand context: mid=1 (up) or mid=2 (dn) — directional fly MAINTAINED
+- H1 follows H4 in fly — provides confirmation
+- Image evidence: Red bands fanning, mid=1/2 maintained
+- **Trade impact:** H1 fly provides additional confirmation; G0b-SQZLOCK may fire for lower TFs only
 
 **M30 (Green-Yellow Band):**
-- Before compression: mid=1 (up) or mid=2 (dn) — directional fly
+- Fly expand initially: mid=1 (up) or mid=2 (dn)
 - Yellow rectangle (shrink begins): mid transitions to 3 or 4/5 — green bands narrow
 - Red rectangle (full SQZ): mid=3 persistent — "M30-SQZ" labels
-- Image evidence: Green bands collapse flat, mid=3 labels
+- Image evidence: Green bands collapse flat, mid=3 labels appear as compression cascades down
 - **Trade impact:** G4f-M30OPP blocks; G0 fires with M15 mid≥3
 
 **M15 (Goldenrod Band):**
-- Before compression: mid=1 (up) or mid=2 (dn) — directional fly
+- Fly expand initially: mid=1 (up) or mid=2 (dn)
 - Yellow rectangle (shrink begins): mid transitions to 3 or 4/5 — goldenrod narrows
 - Red rectangle (full SQZ): mid=3 persistent — "M15-SQZ" labels
 - Image evidence: Goldenrod bands collapse flat, mid=3 labels
-- **Trade impact:** G4c-M15OPP blocks; G0b-PINK fires with M30 SQZ
+- **Trade impact:** G4c-M15OPP blocks; G0b-PINK fires with M30 SQZ; entry on FLAT→UP/DN transition
 
 **M5 (Aqua Band):**
-- Before compression: mid=1 (up) or mid=2 (dn) — directional fly
+- Fly expand initially: mid=1 (up) or mid=2 (dn)
 - Yellow rectangle (shrink begins): mid transitions to 3 or 4/5 — first to collapse
 - Red rectangle (full SQZ): mid=3 persistent
 - Image evidence: Aqua bands collapse flat first
@@ -1170,167 +1180,203 @@ See bands on chart → Is H4 in shrink or SQZ (513/523 or 400-499)?
 
 ### Per-Timeframe Outer Band Touch Behavior
 
-**Touch Count Patterns During Compression (from image evidence):**
+**Touch Count Patterns During H4 Fly + LTF Compression (from image evidence):**
 
 | Timeframe | Upper Touch (U) | Mid Touch (M) | Lower Touch (L) |
 |-----------|-----------------|---------------|-----------------|
-| H4 | 0-1 per 5 bars | 2-3 bars | 2-3 bars |
-| H1 | 0-1 per 5 bars | 1-2 bars | 3-4 bars |
+| H4 | 1-2 per 5 bars | 1-2 bars | 1-2 bars |
+| H1 | 1-2 per 5 bars | 1-2 bars | 1-2 bars |
 | M30 | 0-1 per 5 bars | 2 bars | 2-3 bars |
 | M15 | 1-2 per 5 bars | 1-2 bars | 1-2 bars |
 | M5 | 1-2 per 5 bars | 1-2 bars | 1-2 bars |
 
-**H4 Touch Behavior:**
-- Predominantly mid/lower touches (M2-3, L2-3 per 5 bars)
-- Few upper touches — indicates bearish pressure during compression
-- Price oscillates around H4 midband, no clear direction
+**H4 Touch Behavior (Fly Expand Context):**
+- Balanced U/M/L touches — price oscillates between H4 upper and lower bands
+- H4 bands provide range boundaries for confined compression
+- Touches at H4 upper/lower bands = range trade entry points
+- Shift from L to U touches indicates pre-breakout loading
 
-**H1 Touch Behavior:**
-- Higher L counts (L3-4 per 5 bars) — price testing lower band repeatedly
-- Builds support at H1 lower band
-- U0-1 per 5 bars — minimal upper band testing
+**H1 Touch Behavior (Fly Expand Context):**
+- Balanced touches as H1 follows H4
+- H1 provides directional context
+- Touches at H1 bands indicate local support/resistance
 
-**M30 Touch Behavior:**
-- Balanced M/L touches (M2, L2-3) — oscillating around mid/lower
+**M30 Touch Behavior (Confined Compression):**
+- Balanced M/L touches (M2, L2-3) — oscillating within H4 envelope
 - Builds pressure at lower band before potential breakout
-- Few upper touches during compression
+- Few upper touches during compression phase
 
-**M15 Touch Behavior:**
-- More balanced U/M/L (U1-2, M1-2, L1-2) — price oscillating through all regions
+**M15 Touch Behavior (Confined Compression):**
+- More balanced U/M/L (U1-2, M1-2, L1-2) — confined oscillation
 - L touches increase near compression peak
 - U touches increase as breakout approaches
 
-**M5 Touch Behavior:**
-- Balanced U/M/L — rapid oscillation between bands
+**M5 Touch Behavior (Confined Compression):**
+- Balanced U/M/L — rapid confined oscillation within H4 envelope
 - L touches build support at compression peak
 - First to show upper touches as breakout initiates
 
 ---
 
+### Touch Patterns During H4 Fly Expand + LTF Compression
+
+**Touch dynamics in confined compression context:**
+
+| Touch Type | Behavior | Interpretation |
+|-----------|----------|----------------|
+| U (upper) | Increasing as price reaches H4 upper band | Upper band testing — sell opportunity (G0b-TOUCH) |
+| M (mid) | During oscillation between bands | Confined range trade context |
+| L (lower) | Increasing as price reaches H4 lower band | Lower band testing — buy opportunity (G0b-TOUCH) |
+
+**Pre-breakout loading indication:**
+- Shift from L to U touches indicates loading phase
+- U touches increasing suggests upward breakout likely
+- L touches persistent suggests continued compression
+
+**Range trade opportunities:**
+- Sell when U touches high (price at H4 upper band)
+- Buy when L touches high (price at H4 lower band)
+- Exit at midband or opposite band touch
+
+---
+
 ### Compression Stage Progression (Image-Specific Analysis)
 
-**Stage 1 — H4 Shrink Initiation (Early Yellow Rectangle)**
+**Stage 1 — H4 Fly Expand + M5 Begins Shrink**
 ```
-H4: Stage 511/512 → 513 (shrink)
-   mid: 1 → 3 or 5 (sideway_up)
-   tch: U0/M2/L3 → L touches building
-   → H4 begins losing directional conviction
+H4: Stage 511/512/521/522 (fly expand)
+   mid: 1 or 2 (directional)
+   tch: Directional touches building
+   → H4 provides strong directional context
 
-H1: Stage 511/512 (still fly)
-   mid: 1 or 2 (still directional)
-   tch: U1/M1/L3 → L touches at lower band
-   → H1 still maintains step direction, will hold temporarily
+H1: Stage 511/512/521/522 (fly expand)
+   mid: 1 or 2 (directional)
+   tch: Directional touches
+   → H1 follows H4
 
-M30/M15/M5: Still fly with directional mid
+M5: Stage 511/512 → 513/523 (first to shrink)
+   mid: 1 or 2 → 3 or 4/5
+   → M5 begins localized compression
+
+M15/M30: Still fly with directional mid
+   → Not yet compressed
+```
+**Trade status:** Entries still possible; M5 compression is localized noise
+
+---
+
+**Stage 2 — M15 Shrink, Mid-band Labels Appear**
+```
+H4: Stage 511/512/521/522 (fly expand maintained)
+   mid: 1 or 2 (directional)
+   tch: Directional touches
+   → H4 provides directional context
+
+H1: Stage 511/512/521/522 (fly expand maintained)
+   mid: 1 or 2 (directional)
+   tch: Directional touches
+   → H1 follows H4
+
+M5: Stage 513/523 (shrink deepening)
+   mid: 3 or 4/5
+   tch: Midband labels appearing
+   → M5 compression progressing
+
+M15: Stage 513/523 (beginning shrink)
+   mid: 1 or 2 → 3 or 4/5
+   tch: Midband labels begin appearing
+   → M15 begins localized compression
+
+M30: Stage 511/512/521/522 (still fly)
    mid: 1 or 2
-   → No midband labels yet — still in directional phase
+   → Not yet compressed
 ```
-**Trade status:** Entries still possible; H4 not yet blocking
+**Trade status:** M15 transitions possible with quality boost from H4/H1 fly confirmation
 
 ---
 
-**Stage 2 — H1 Compression Begins (Mid Yellow Rectangle)**
+**Stage 3 — M30 Shrink, [G6-LOAD] Visible**
 ```
-H4: Stage 513 → 400-499 (squeeze)
-   mid: 3 or 5 → 3 (flat)
-   tch: U0/M3/L2 → mid touches increasing
-   → "H4-SQZ" labels appear
+H4: Stage 511/512/521/522 (fly expand maintained)
+   mid: 1 or 2 (directional)
+   tch: Directional touches
+   → H4 provides directional context
 
-H1: Stage 511/512 → 513/523 (shrink)
-   mid: 1 or 2 → 3 or 4/5
-   tch: U0/M1/L4 → heavy L touches, lower band pressure
-   → Red band stops stepping, mid=3/4/5 labels appear
-   → [G0c-SQZLOCK] may begin appearing
-
-M30/M15/M5: Stage 513/523 (shrink)
-   mid: 1 or 2 → 3 or 4/5
-   tch: Various — oscillating
-   → Midband labels begin appearing on M30/M15
-```
-**Trade status:** G0c-SQZLOCK begins firing; entries becoming restricted
-
----
-
-**Stage 3 — Full Compression (Red Rectangle)**
-```
-H4: Stage 400-499 (SQZ)
-   mid: 3 persistent
-   tch: U0/M2/L3 → consistent L touches
-   → "H4-SQZ" persistent
-
-H1: Stage 400-499 (SQZ)
-   mid: 3 persistent
-   tch: U0/M1/L4 → heavy lower band pressure
-   → [G0c-SQZLOCK] (magenta) active
-
-M30: Stage 400-499 (SQZ)
-   mid: 3 persistent
-   tch: U0/M2/L3 → L touches building support
-   → "M30-SQZ" visible
-
-M15: Stage 400-499 (SQZ)
-   mid: 3 persistent
-   tch: U1/M2/L2 → balanced oscillation
-   → "M15-SQZ" visible
+H1: Stage 511/512/521/522 (fly expand maintained)
+   mid: 1 or 2 (directional)
+   tch: Directional touches
+   → H1 follows H4
 
 M5: Stage 400-499 (SQZ)
    mid: 3 persistent
-   tch: U1/M2/L2 → balanced oscillation
+   tch: Midband labels persistent
+   → M5 fully compressed
+
+M15: Stage 513/523 → 400-499 (shrink to SQZ)
+   mid: 3 or 4/5
+   tch: Midband labels appearing
+   → M15 approaching full compression
+
+M30: Stage 513/523 (beginning shrink)
+   mid: 1 or 2 → 3 or 4/5
+   tch: Midband labels beginning
+   → M30 begins localized compression
+   → [G6-LOAD] labels become visible
 ```
-**Trade status:** G0c-SQZLOCK blocking all entries; G0b-PINK active — exit all
+**Trade status:** Range trade at H4 band boundaries; entry on M15 transition with H4 confirmation
 
 ---
 
-**Stage 4 — Pre-Breakout Pressure Building**
+**Stage 4 — M5/M15/M30 All SQZ, [G0c-SQZLOCK] Fires**
 ```
-H4: Stage 400-499 (SQZ) — still compressed
-   mid: 3
-   tch: U0/M2/L3
+H4: Stage 511/512/521/522 (fly expand maintained)
+   mid: 1 or 2 (directional)
+   tch: Directional touches
+   → H4 provides directional context
 
-H1: Stage 400-499 (SQZ)
-   mid: 3
-   tch: U1/M1/L3 → occasional U touch appears
+H1: Stage 511/512/521/522 (fly expand maintained)
+   mid: 1 or 2 (directional)
+   tch: Directional touches
+   → H1 follows H4
 
-M30: Stage 400-499 (SQZ)
-   mid: 3
-   tch: U1/M2/L2 → L touches decreasing, oscillation at mid
+M5: Stage 400-499 (SQZ persistent)
+   mid: 3 persistent
+   tch: Midband labels persistent
 
 M15: Stage 400-499 (SQZ)
-   mid: 3 → 5 (sideway_up)
-   tch: U2/M2/L1 → U touches increasing (upper band testing)
-   → Early signs of directional pressure building
+   mid: 3 persistent
+   tch: Midband labels persistent
+   → M15 fully compressed
 
-M5: Stage 400-499 → beginning to spread
-   mid: 3 → 5 or 1
-   tch: U2/M2/L1 → U touches increasing
+M30: Stage 400-499 (SQZ)
+   mid: 3 persistent
+   tch: Midband labels persistent
+   → M30 fully compressed
+   → [G0c-SQZLOCK] fires
 ```
-**Trade status:** [G6-LOAD] visible; pressure building for breakout
+**Trade status:** All lower TFs compressed; range trade only at H4 boundaries; [G6-LOAD] visible
 
 ---
 
-**Stage 5 — Breakout Initiation**
+**Stage 5 — Full Compression Lock, G0b-PINK Active**
 ```
-M5: SQZ breaks → fly (511/512 or 521/522)
-   mid: 5 → 1 (uptrend) or 3 → 2 (downtrend)
-   tch: U touches dominate (if UP breakout) or L (if DN breakout)
-   → REVUP or REVDN label appears
-   → [G6-BUY] or [G6-SELL] fires
+H4: Stage 511/512/521/522 (fly expand maintained)
+   mid: 1 or 2 (directional)
+   tch: Directional touches
+   → H4 provides directional context
 
-M15: Follows M5 with 2-5 bar lag
-   mid: 5 → 1 or 3 → 2
-   → [G6-BUY] or [G6-SELL] fires
+H1: Stage 511/512/521/522 (fly expand maintained)
+   mid: 1 or 2 (directional)
+   tch: Directional touches
+   → H1 follows H4
 
-M30: Follows M15
-   mid: 3 → 1 or 3 → 2
-   → [G6-BUY] or [G6-SELL] fires
-
-H1: Follows M30
-   mid: 3 → 1 or 3 → 2
-   → [G6-BUY] or [G6-SELL] fires
-
-H4: Follows H1 (or may remain in SQZ)
+M5/M15/M30: Stage 400-499 (SQZ persistent)
+   mid: 3 persistent on all TFs
+   tch: Midband labels persistent on all TFs
+   → All lower TFs fully compressed
+   → G0b-PINK active
 ```
-**Trade status:** Entries firing on M15 transition if quality score ≥ 60
+**Trade status:** Full compression lock; no new entries; wait for M5 SQZ break to resume fly
 
 ---
 
@@ -1338,61 +1384,62 @@ H4: Follows H1 (or may remain in SQZ)
 
 | Compression Stage | Gate Status | Action |
 |-------------------|-------------|--------|
-| H4 shrink, H1 fly | G4e-H4OPP may block | Wait for H4 to exit shrink |
-| H4 shrink, H1 shrink | G4c-M15OPP/G4f-M30OPP may block | Entry restricted |
-| H4 SQZ, H1 SQZ, M30 SQZ | G0c-SQZLOCK (magenta) | No new entries |
-| H4 SQZ, H1 SQZ, M15 SQZ | G0b-SQZLOCK | No new entries |
-| M30 SQZ + M15 SQZ | G0b-PINK (magenta) | Exit all positions |
-| All mid≥3 (M30+M15+H1) | G0 (crimson) | Exit all |
+| H4 fly, H1 fly, M5 begins shrink | G4c-M15OPP/G4f-M30OPP may block | Entry on M15 transition with H4/H1 confirm |
+| H4 fly, H1 fly, M30/M15 begin shrink | G0c-SQZLOCK may appear | Entry on M15 transition possible |
+| H4 fly, H1 fly, M30/M15/M5 all SQZ | G0c-SQZLOCK (magenta) | No new entries — wait |
+| H4 fly, H1 fly, M30 SQZ + M15 SQZ | G0b-PINK (magenta) | Exit all positions |
+| Lower TF mid≥3 only (M30+M15) | G0b-SQZLOCK | No new entries |
 | Float loss < -$50 | G0e-MAXLOSS | Emergency exit |
 | M5 breaks SQZ | G6-LOAD → G6-BUY/SELL | Entry on REVUP/REVDN |
 
 ---
 
-**HTF context:** H4 is shrinking or in SQZ. D1 is also slowing. The macro is losing conviction — this is WHY all lower TFs are going flat. Price is ranging because H4 cannot provide a clear outer band target.
+**HTF context:** H4 is in fly expand — providing directional context and clear outer band target. H1 follows H4 in fly. M30/M15/M5 are confined within H4's band envelope and oscillate between H4 upper and lower bands. Compression is localized to lower TFs — HTF trend is strong.
 
 **What you see:**
-- M5/M15/M30 bands collapsed to near-flat horizontal lines — barely any gap between upper and lower
-- Mid-band labels (3, 4, 5) appear on multiple TFs at once
-- H1/H4 also flat or slowly stepping
+- H4 (yellow) fanning outward in fly expand — bands stepping directionally
+- H1 (red) fanning outward in fly expand — following H4 direction
+- M5/M15/M30 bands collapsed to near-flat — confined within H4's band envelope
+- Mid-band labels (3, 4, 5) appear on M15/M30 midbands
+- Price oscillating between H4 upper and lower bands (range trade context)
 - Gate labels: `[G0c-SQZLOCK]` (magenta), `[G0b-SQZLOCK]` (magenta), `[G6-LOAD]` (gold)
 
 **Why each zone is ranging (from zoom, Jan 13–15):**
-- **H1 sideway** (Jan 13): H4 is still fly → price tries H4 midband; trade follows M5 up toward H4 midband
-- **M30/M15 fly down + H1 shrink** (Jan 14 12:20): H1 compressing → M30 range widens to H1 band boundaries
-- **Touch H1 lower** (Jan 14 15:30): Price reaches H1 lower band → bounces up toward H1 upper (range trade within H1 band)
-- **H1 fly down → H4 shrink** (Jan 14 20:50–Jan 15 05:50): H4 starts shrinking → H1 range confined within H4 band
-- **H4 sideway** (Jan 15 11:10): H4 SQZ → range trade between H1 upper and H1 lower
-- **Pink zone** (Jan 15 19:10): M15+M5 both sideway → exit all
+- **H1 fly + lower TF compression** (Jan 13): H4/H1 fly expand → lower TFs compress within H4 envelope; M5 transitions possible
+- **M30/M15 fly down + confined compression** (Jan 14 12:20): M30/M15 compress while H4/H1 fly → range trade at H4 band boundaries
+- **Touch H4 lower** (Jan 14 15:30): Price reaches H4 lower band → buy at touch (G0b-TOUCH), bounce toward H4 upper
+- **H4/H1 fly + full lower TF compression** (Jan 14 20:50–Jan 15 05:50): H4/H1 fly provides context → lower TF oscillate between H4 bands
+- **H4 fly + confined range trade** (Jan 15 11:10): H4 fly → range trade between H4 upper and H4 lower
+- **Pink zone** (Jan 15 19:10): M15+M5 both SQZ → G0b-PINK → exit all, wait for SQZ break
 
 ---
 
-## Yellow Rectangle Analysis (Sideway Zone Initiation)
+## Yellow Rectangle Analysis (H4 Fly Expand + Confined Compression Initiation)
 
-**Yellow rectangles indicate:** HTF compression has initiated → MTF begins to lose direction → Lower TFs start going sideway
+**Yellow rectangles indicate:** H4 fly expand provides directional context → MTF compresses within H4's envelope → Lower TFs start confined compression
 
 **Image evidence — detailed timeframe behavior from all 3 images:**
 
 ### Image 1 Analysis (backtested_EA_fly_shrink_2_sideway.jpg)
 
 **Compression zones identified:**
-- Multiple yellow rectangles: H4 shrink initiation across extended period
-- Red rectangles: Full SQZ zones where compression cascade completed
-- Compression originates from H4 yellow band → cascades downward
+- Multiple yellow rectangles: H4 fly expand zones with lower TF confined compression
+- Red rectangles: Full SQZ zones where lower TF compression completed
+- Compression originates from HTF fly → cascades downward to lower TFs
 
 **H4 behavior in Image 1:**
-- Yellow band steps upward, then stops
-- "H4-SQZ" labels appear during compression
-- Midband labels (3, 4, 5) appear progressively
-- L touches dominate (L3-4 per 5 bars)
-- Band becomes completely flat in red zones
+- Yellow band steps upward in fly expand — maintains directional context
+- "H4-Fly++" / "H4-Fly+-" labels visible — H4 fly expand
+- Midband labels (3, 4, 5) appear on lower TFs only
+- Directional touches (U1-2 per 5 bars) — H4 provides context
+- Band remains fanning — not flat
 
 **H1 behavior in Image 1:**
-- Red band initially follows H4 upward
-- Red band stops stepping as H4 shrinks
-- Mid=3 labels appear on red band
-- [G0c-SQZLOCK] magenta labels appear
-- Heavy L touches (L4 per 5 bars) — lower band pressure
+- Red band follows H4 upward in fly expand
+- Red band maintains stepping — follows H4
+- Mid=3 labels appear on lower TF midbands only
+- [G0c-SQZLOCK] magenta labels appear for lower TFs only
+- Balanced touches — H1 follows H4 direction
 
 **M30/M15/M5 behavior in Image 1:**
 - Sequential compression: M5 first, M15 second, M30 third
@@ -1403,15 +1450,16 @@ H4: Follows H1 (or may remain in SQZ)
 ### Image 2 Analysis (backtested_EA_fly_shrink_2_sideway_zoomin.jpg)
 
 **Detailed compression mechanics:**
-- Shows M5 aqua bands collapsing first
+- H4/H1 fly expand provides directional context
+- M5 aqua bands collapsing first — begins confined compression
 - Goldenrod (M15) follows within 2-3 bars
 - Green (M30) compression last
-- Clear progression: fly → shrink → SQZ across all TFs
+- Clear progression: H4/H1 fly expand + lower TF confined compression
 
 **Midband transitions visible:**
 ```
-H4: mid=1/2 → mid=3/5 → mid=3 persistent
-H1: mid=1/2 → mid=3/4/5 → mid=3 persistent  
+H4: mid=1/2 MAINTAINED — provides directional context
+H1: mid=1/2 MAINTAINED — follows H4
 M30: mid=1/2 → mid=3/4/5 → mid=3 persistent
 M15: mid=1/2 → mid=3/4/5 → mid=3 persistent
 M5: mid=1/2 → mid=3/4/5 → mid=3 persistent (first)
@@ -1424,126 +1472,138 @@ M5: mid=1/2 → mid=3/4/5 → mid=3 persistent (first)
 - Pre-breakout: U touches increase (U2-3)
 
 **Gate firing sequence:**
-1. H4 shrink → G4e-H4OPP (orange) blocks
-2. H1 shrink → G0c-SQZLOCK (magenta) appears
-3. M30 SQZ → G0b-SQZLOCK fires
+1. M5 begins shrink → G0b-M5OPP may block
+2. M15 begins shrink → G4c-M15OPP may block
+3. M30 SQZ → G0c-SQZLOCK (magenta) appears for lower TFs
 4. M15+M30 both SQZ → G0b-PINK (magenta)
-5. All mid≥3 → G0 (crimson)
+5. All lower TF mid≥3 → G0b-SQZLOCK (crimson)
 6. M5 breaks SQZ → G6-LOAD → G6-BUY/SELL
 
-### Image 3 Analysis (backtested_EA_fly_shrink_2_sideway2.jpg — NEW)
+### Image 3 Analysis (backtested_EA_fly_shrink_2_sideway2.jpg — Core H4/H1 Fly Expand Evidence)
 
-**Multiple compression zones identified:**
+**H4/H1 Fly Expand + Lower TF Compression Confirmed:**
 
 | Zone | H4 State | H1 State | M30 State | M15 State | M5 State |
 |------|----------|----------|-----------|-----------|----------|
-| Zone 1 (left) | Fly→Shrink | Fly | Fly | Fly | Fly |
-| Zone 2 | Shrink | Shrink | Shrink | Shrink | Shrink |
-| Zone 3 (red) | SQZ | SQZ | SQZ | SQZ | SQZ |
-| Zone 4 | SQZ | SQZ | SQZ | SQZ | SQZ |
-| Zone 5 (red) | SQZ | SQZ | SQZ | SQZ | SQZ |
-| Zone 6 | Shrink | Shrink | Shrink | Shrink | Shrink |
+| Zone 1 (left) | Fly expand (511/512/521/522) | Fly expand | Fly | Fly | Fly |
+| Zone 2 | Fly expand (MAINTAINED) | Fly expand (MAINTAINED) | Shrink (513/523) | Shrink (513/523) | Shrink (513/523) |
+| Zone 3 (red) | Fly expand (MAINTAINED) | Fly expand (MAINTAINED) | SQZ (400-499) | SQZ (400-499) | SQZ (400-499) |
+| Zone 4 | Fly expand (MAINTAINED) | Fly expand (MAINTAINED) | SQZ (400-499) | SQZ (400-499) | SQZ (400-499) |
+| Zone 5 (red) | Fly expand (MAINTAINED) | Fly expand (MAINTAINED) | SQZ (400-499) | SQZ (400-499) | SQZ (400-499) |
+| Zone 6 | Fly expand (MAINTAINED) | Fly expand (MAINTAINED) | Shrink (513/523) | Shrink (513/523) | Shrink (513/523) |
 
-**Zone 1-2 (Yellow Rectangle): H4 Shrink Initiation**
+**Zone 1-2 (Yellow Rectangle): H4 Fly Expand + M5 Begins Shrink**
 
 | TF | Stage Transition | Mid Transition | Touch Pattern | Gates Active |
 |----|-----------------|----------------|---------------|--------------|
-| H4 | 511/512 → 513 | 1/2 → 3/5 | L touches building | G4e-H4OPP may block |
-| H1 | 511/512 (still fly) | 1/2 | L3-4 per 5 bars | None yet |
+| H4 | 511/512/521/522 MAINTAINED | 1/2 MAINTAINED | Directional touches | None — H4 provides confirmation |
+| H1 | 511/512/521/522 MAINTAINED | 1/2 MAINTAINED | Directional touches | None — H1 provides confirmation |
 | M30 | 511/512 → 513 | 1/2 → 3/5 | L2-3 per 5 bars | G4f-M30OPP may block |
 | M15 | 511/512 → 513 | 1/2 → 3/5 | L1-2, M1-2 per 5 bars | G4c-M15OPP may block |
 | M5 | 511/512 → 513 | 1/2 → 3/5 | L1-2, M1-2, U1-2 | G0b-M5OPP may block |
 
-**Zone 3 (Red Rectangle): Full Compression**
+**Zone 3 (Red Rectangle): Full Compression (Lower TFs Only)**
 
 | TF | Stage | Midband | Touch Pattern | Gates Active |
 |----|-------|---------|---------------|--------------|
-| H4 | 400-499 SQZ | 3 persistent | L2-3 per 5 bars | G0b-H4OPP blocks |
-| H1 | 400-499 SQZ | 3 persistent | L3-4 per 5 bars | [G0c-SQZLOCK] active |
+| H4 | 511/512/521/522 (fly MAINTAINED) | 1/2 (directional) | Directional touches | None — H4 provides confirmation |
+| H1 | 511/512/521/522 (fly MAINTAINED) | 1/2 (directional) | Directional touches | None — H1 provides confirmation |
 | M30 | 400-499 SQZ | 3 persistent | L2-3 per 5 bars | G0b-SQZLOCK active |
 | M15 | 400-499 SQZ | 3 persistent | L1-2, M1-2, U1-2 | G0b-PINK active |
 | M5 | 400-499 SQZ | 3 persistent | L1-2, M1-2, U1-2 | G0b-PINK active |
 
-**Zone 5 (Second Red Rectangle): Deep Compression**
+**Zone 5 (Second Red Rectangle): Deep Compression (Lower TFs Only)**
 
 | TF | Stage | Midband | Touch Pattern | Gates Active |
 |----|-------|---------|---------------|--------------|
-| H4 | 400-499 SQZ | 3 persistent | L3-4 per 5 bars | G0b-H4OPP blocks |
-| H1 | 400-499 SQZ | 3 persistent | L4-5 per 5 bars | [G0c-SQZLOCK] persistent |
+| H4 | 511/512/521/522 (fly MAINTAINED) | 1/2 (directional) | Directional touches | None — H4 provides confirmation |
+| H1 | 511/512/521/522 (fly MAINTAINED) | 1/2 (directional) | Directional touches | None — H1 provides confirmation |
 | M30 | 400-499 SQZ | 3 persistent | L3-4 per 5 bars | G0b-SQZLOCK persistent |
 | M15 | 400-499 SQZ | 3 persistent | L2-3 per 5 bars | G0b-PINK persistent |
 | M5 | 400-499 SQZ | 3 persistent | L2-3 per 5 bars | G0b-PINK persistent |
 
-**Zone 6 (Recovery Zone): Compression Release**
+**Zone 6 (Recovery Zone): Lower TF Compression Release**
 
 | TF | Stage | Midband | Touch Pattern | Gates Active |
 |----|-------|---------|---------------|--------------|
-| H4 | 513/523 shrink | 3/5 | U1-2 per 5 bars | G4e-H4OPP blocks |
-| H1 | 513/523 shrink | 3/4/5 | U1-2 per 5 bars | [G0c-SQZLOCK] clears |
+| H4 | 511/512/521/522 (fly MAINTAINED) | 1/2 | U1-2 per 5 bars | None — H4 provides confirmation |
+| H1 | 511/512/521/522 (fly MAINTAINED) | 1/2 | U1-2 per 5 bars | None — H1 provides confirmation |
 | M30 | 513/523 shrink | 3/4/5 | U2-3 per 5 bars | G4f-M30OPP blocks |
 | M15 | 513/523 shrink | 3/5 | U2-3 per 5 bars | G4c-M15OPP blocks |
 | M5 | 513/523 shrink | 3/5 | U3-4 per 5 bars | G6-LOAD appears |
 
-**Key findings from Image 3:**
+**Key findings from Image 3 — H4/H1 Fly Expand Core Evidence:**
 
-1. **Multiple compression cycles observed:**
-   - At least 2-3 complete compression → release cycles visible
-   - Each cycle follows: H4 shrink → MTF compression → LTF compression → full SQZ → release
+1. **H4/H1 fly expand confirmed:**
+   - H4 (yellow) in fly expand (511/512/521/522) throughout compression zones
+   - H1 (red) follows H4 in fly expand
+   - **CORE CORRECTION:** H4/H1 do NOT shrink — they provide directional context
 
-2. **Compression depth progression:**
-   - Zone 3 (red) shows moderate compression
-   - Zone 5 (red) shows deeper compression (more persistent L touches, [G0c-SQZLOCK] longer)
+2. **Confined compression within HTF trend envelope:**
+   - Compression is LOCALIZED to lower TFs (M30/M15/M5)
+   - H4 provides direction and target — lower TFs oscillate within H4's band envelope
+   - Creates range trade opportunities at H4 band boundaries
 
-3. **Recovery mechanism:**
-   - Recovery starts with H4 exiting SQZ back to shrink
+3. **Compression depth progression:**
+   - Zone 3 (red) shows moderate confined compression
+   - Zone 5 (red) shows deeper confined compression
+   - H4/H1 fly expand MAINTAINED throughout all zones
+
+4. **Release mechanism (SQZ break):**
    - M5 breaks SQZ first (REVUP/REVDN)
    - M15 follows M5
    - M30 follows M15
    - H1 follows M30
+   - H4 remains in fly expand — provides directional force
 
-4. **Touch count patterns throughout cycle:**
+5. **Touch count patterns during confined compression:**
    - Entry phase: L touches increasing (L2-3)
    - Compression peak: L touches persistent (L3-4)
    - Loading phase: Balanced U/M/L oscillation
    - Pre-breakout: U touches increasing (U2-3)
    - Breakout: U touches dominate (U4-5)
 
-5. **Gate firing timeline verified:**
-   - G4e-H4OPP (orange) → first to block
-   - [G0c-SQZLOCK] (magenta) → appears as H1 squeezes
-   - G0b-SQZLOCK (magenta) → fires at full compression
+6. **Gate firing timeline verified:**
+   - [G0c-SQZLOCK] (magenta) → appears as lower TFs compress
+   - G0b-SQZLOCK (magenta) → fires at full lower TF compression
    - G0b-PINK (magenta) → fires when M15+M30 both SQZ
-   - G0 (crimson) → fires when all mid≥3
+   - G0 (crimson) → fires when lower TF mid≥3
    - [G6-LOAD] (gold) → appears before breakout
    - [G6-BUY/SELL] → fires at SQZ break
+
+7. **Range trade context confirmed:**
+   - Price oscillates between H4 upper and lower bands
+   - Sell at H4 upper band touch (G0b-TOUCH)
+   - Buy at H4 lower band touch (G0b-TOUCH)
+   - Exit at midband/lower touch
 
 ---
 
 ### Comprehensive Yellow Rectangle Behavior (All 3 Images)
 
-**H4 (Yellow Band) in Yellow Rectangle:**
+**H4 (Yellow Band) in Yellow Rectangle (Fly Expand Context):**
 
 | Attribute | Behavior |
 |-----------|----------|
-| Stage | 511/512 (fly) → 513 (shrink) → 400-499 (SQZ) |
-| Midband | mid=1/2 → mid=3/5 (sideway_up) → mid=3 (flat) |
-| Band state | Stepping → stops stepping → begins flat |
-| Touch pattern | L touches increasing (L2-3 per 5 bars) |
-| Gate firing | G4e-H4OPP (orange) begins to block |
-| Chart labels | "H4-Fly--" appears, then "H4-SQZ" |
-| Compression depth | Shallow to moderate |
+| Stage | 511/512/521/522 (fly expand MAINTAINED) |
+| Midband | mid=1/2 (directional MAINTAINED) |
+| Band state | Stepping directionally — provides context for lower TF compression |
+| Touch pattern | Directional touches building |
+| Gate firing | None — H4 provides confirmation |
+| Chart labels | "H4-Fly++" / "H4-Fly+-" persistent |
+| Compression depth | No compression — provides directional envelope |
 
-**H1 (Red Band) in Yellow Rectangle:**
+**H1 (Red Band) in Yellow Rectangle (Fly Expand Context):**
 
 | Attribute | Behavior |
 |-----------|----------|
-| Stage | 511/512 (fly) → 513/523 (shrink) |
-| Midband | mid=1/2 → mid=3/4/5 (sideway with bias) |
-| Band state | Stepping → stops stepping, begins shrink |
-| Touch pattern | L touches dominate (L3-4 per 5 bars) |
-| Gate firing | [G0c-SQZLOCK] (magenta) begins appearing |
-| Chart labels | Midband labels (3, 4, 5) appear |
-| Compression depth | Moderate |
+| Stage | 511/512/521/522 (fly expand MAINTAINED) |
+| Midband | mid=1/2 (directional MAINTAINED) |
+| Band state | Stepping — follows H4 direction |
+| Touch pattern | Balanced touches |
+| Gate firing | [G0c-SQZLOCK] may appear for lower TFs only |
+| Chart labels | Midband labels (3, 4, 5) on lower TF midbands only |
+| Compression depth | No compression — follows H4 fly |
 
 **M30 (Green Band) in Yellow Rectangle:**
 
@@ -1585,29 +1645,29 @@ M5: mid=1/2 → mid=3/4/5 → mid=3 persistent (first)
 
 ### Comprehensive Red Rectangle Behavior (All 3 Images)
 
-**H4 (Yellow Band) in Red Rectangle:**
+**H4 (Yellow Band) in Red Rectangle (Fly Expand Context):**
 
 | Attribute | Behavior |
 |-----------|----------|
-| Stage | 400-499 (full SQZ) — persistent |
-| Midband | mid=3 persistent (flat) — no directional conviction |
-| Band state | Completely flat — no stepping |
-| Touch pattern | L touches persistent (L2-3 per 5 bars) |
-| Gate firing | G0b-H4OPP (darkorange) blocks cascade entries |
-| Chart labels | "H4-SQZ" persistent |
-| Compression depth | Deep to very deep |
+| Stage | 511/512/521/522 (fly expand MAINTAINED) |
+| Midband | mid=1/2 (directional MAINTAINED) |
+| Band state | Stepping directionally — provides context |
+| Touch pattern | Directional touches |
+| Gate firing | None — H4 provides confirmation |
+| Chart labels | "H4-Fly++" / "H4-Fly+-" persistent |
+| Compression depth | No compression — provides directional envelope |
 
-**H1 (Red Band) in Red Rectangle:**
+**H1 (Red Band) in Red Rectangle (Fly Expand Context):**
 
 | Attribute | Behavior |
 |-----------|----------|
-| Stage | 400-499 (full SQZ) — persistent |
-| Midband | mid=3 persistent (flat) |
-| Band state | Completely flat — no stepping |
-| Touch pattern | Heavy L touches (L3-4 per 5 bars) — lower band pressure |
-| Gate firing | [G0c-SQZLOCK] (magenta) active |
-| Chart labels | Mid=3 persistent, [G0c-SQZLOCK] visible |
-| Compression depth | Very deep |
+| Stage | 511/512/521/522 (fly expand MAINTAINED) |
+| Midband | mid=1/2 (directional MAINTAINED) |
+| Band state | Stepping — follows H4 direction |
+| Touch pattern | Balanced touches |
+| Gate firing | [G0c-SQZLOCK] for lower TFs only |
+| Chart labels | Mid=1/2, [G0c-SQZLOCK] on lower TF midbands |
+| Compression depth | No compression — follows H4 fly |
 
 **M30 (Green Band) in Red Rectangle:**
 
@@ -1649,22 +1709,30 @@ M5: mid=1/2 → mid=3/4/5 → mid=3 persistent (first)
 
 **Compression cascade visible (verified by all 3 images):**
 ```
-H4 SQZ (persistent)
-    ↓
-H1 SQZ/sideway (red flat, [G0c-SQZLOCK] magenta)
-    ↓
-M30 SQZ (green flat, mid=3)
-    ↓
-M15 SQZ (goldenrod flat, mid=3)
-    ↓
-M5 SQZ (aqua flat, mid=3)
-    ↓
-Full sideway compression - no entries possible
+                    H4 fly expand (directional context)
+                          ↓
+                    H1 fly expand (follows H4)
+                          ↓
+                    M5 shrink → SQZ (first)
+                          ↓
+                    M15 shrink → SQZ (second)
+                          ↓
+                    M30 shrink → SQZ (third)
+                          ↓
+                    [G0c-SQZLOCK] / [G6-LOAD] (locked)
+                          ↓
+                    M5 breaks SQZ first (REVUP/REVDN)
+                          ↓
+                    M15 follows M5
+                          ↓
+                    M30 follows M15
+                          ↓
+                    H1 follows M30
 ```
 
 **Flowchart verification for yellow rectangle (3 images):**
-- H4 shrink/SQZ: ✓ Confirmed in all 3 images (yellow band flat)
-- H1 shrink/flat/squeeze: ✓ Confirmed in all 3 images (red band stops, mid=3)
+- H4 fly expand (511/512/521/522): ✓ Confirmed in all 3 images (yellow band fanning)
+- H1 fly expand: ✓ Confirmed in all 3 images (red band fanning)
 - M5 shrinking: ✓ Confirmed in all 3 images (aqua narrow first)
 - M15 shrinking: ✓ Confirmed in all 3 images (goldenrod narrow)
 - M30 shrinking: ✓ Confirmed in all 3 images (green narrow, mid=3)
@@ -1676,8 +1744,8 @@ Full sideway compression - no entries possible
 ---
 
 **Flowchart verification for red rectangle (3 images):**
-- H4 shrink/SQZ: ✓ Confirmed in all 3 images (H4-SQZ visible)
-- H1 shrink/flat/squeeze: ✓ Confirmed in all 3 images (red flat, mid=3)
+- H4 fly expand (511/512/521/522): ✓ Confirmed in all 3 images (yellow band fanning)
+- H1 fly expand: ✓ Confirmed in all 3 images (red band fanning)
 - M5 shrinking/SQZ: ✓ Confirmed in all 3 images (aqua flat, mid=3)
 - M15 shrinking/SQZ: ✓ Confirmed in all 3 images (goldenrod flat, mid=3)
 - M30 shrinking/SQZ: ✓ Confirmed in all 3 images (green flat, mid=3)
@@ -1692,68 +1760,73 @@ Full sideway compression - no entries possible
 
 | Image Element | What it shows | Verification Status |
 |---------------|--------------|-------------------|
-| Yellow circles/rectangles | Compression zones - H4 shrink starting point | ✓ All 3 images |
+| Yellow circles/rectangles | Compression zones - H4 fly expand with lower TF compression | ✓ All 3 images |
+| H4 yellow bands fanning | H4 fly expand providing directional context | ✓ All 3 images |
+| H1 red bands fanning | H1 fly expand following H4 direction | ✓ All 3 images |
 | Mid-band labels (3, 4, 5) | MTF/LTF entering SQZ - multiple TFs flat | ✓ All 3 images |
 | Pink zone markings | Full compression - exit trigger active | ✓ Images 1 & 3 |
 | Stage labels (H4-Fly--, M30-Fly--) | Shrinking phase before SQZ | ✓ All 3 images |
 | [G6-LOAD] labels | Loading phase - waiting for breakout | ✓ Images 2 & 3 |
 | [G0c-SQZLOCK] labels | Compression lock - no new entries | ✓ All 3 images |
-| Red band (H1) flattening | H1 trend reversal - stops stepping | ✓ All 3 images |
 | Green/yellow bands collapsing | M30 entering shrink then SQZ | ✓ All 3 images |
 | Goldenrod bands collapsing | M15 entering shrink then SQZ | ✓ All 3 images |
 | Aqua bands collapsing | M5 entering shrink then SQZ | ✓ All 3 images |
-| Touch count annotations | Lower band pressure building | ✓ Images 1, 2, 3 |
+| Touch count annotations | Band pressure building and oscillation | ✓ Images 1, 2, 3 |
 
 ---
 
 **Compression stages visual progression (verified by all 3 images):**
 
 ```
-Stage 1: H4 shrink (513/523)
+Stage 1: H4 fly expand (511/512/521/522) - directional context
         ↓
-       Red bands (H1) stop stepping, begin shrink
+Stage 2: H1 fly expand (follows H4)
         ↓
-Stage 2: M5 shrink (513/523) → M5 SQZ (400-499)
+Stage 3: M5 shrink (513/523) → M5 SQZ (400-499)
         ↓
        Aqua bands collapse flat (FIRST to compress)
         ↓
-Stage 3: M15 shrink (513/523) → M15 SQZ (400-499)
+Stage 4: M15 shrink (513/523) → M15 SQZ (400-499)
         ↓
        Goldenrod bands collapse
         ↓
-Stage 4: M30 shrink (513/523) → M30 SQZ (400-499)
+Stage 5: M30 shrink (513/523) → M30 SQZ (400-499)
         ↓
        Green-yellow bands collapse (LAST to compress)
         ↓
-Stage 5: Full compression - all bands flat
+Stage 6: Full compression - all lower TF bands flat
         ↓
        [G0c-SQZLOCK] / [G6-LOAD] visible
         ↓
        Pink zone (M15+M30 both SQZ) → Exit all
         ↓
-Stage 6: Pre-breakout loading
+Stage 7: Pre-breakout loading
         ↓
        Touch counts shift: L→U (lower to upper)
         ↓
-Stage 7: M5 breaks SQZ first
+Stage 8: M5 breaks SQZ first
         ↓
        REVUP/REVDN appears → [G6-BUY/SELL]
         ↓
-Stage 8: M15 follows M5
+Stage 9: M15 follows M5
         ↓
-Stage 9: M30 follows M15
+Stage 10: M30 follows M15
         ↓
-Stage 10: H1 follows M30
-        ↓
-Stage 11: H4 follows H1 (or remains SQZ)
+Stage 11: H1 follows M30 (or H4 remains fly)
 ```
 
 **Compression lifecycle verified (from all 3 images):**
-1. **Initiation** — H4 shrink begins (yellow rectangle entry)
-2. **Propagation** — H1, then M30, then M15, then M5 compress
-3. **Full Compression** — All TFs in SQZ (red rectangle peak)
-4. **Loading** — [G6-LOAD] appears, touch counts shift
-5. **Release** — M5 breaks SQZ first, cascades upward
+1. **Directional Context** — H4 fly expand establishes direction
+2. **H1 Follows** — H1 fly expand follows H4
+3. **M5 Compresses First** — M5 shrink (513/523) → SQZ (400-499)
+4. **M15 Compresses** — M15 shrink → SQZ follows M5
+5. **M30 Compresses** — M30 shrink → SQZ follows M15
+6. **Full Compression** — All lower TFs in SQZ (red rectangle peak)
+7. **Loading** — [G6-LOAD] appears, touch counts shift
+8. **Compression Lock** — [G0c-SQZLOCK] / [G0b-PINK] active
+9. **Pre-Breakout** — Touch counts shift from L to U
+10. **M5 Breaks First** — M5 breaks SQZ (REVUP/REVDN)
+11. **Sequential Release** — M15 follows → M30 follows → H1 follows
 
 ---
 
@@ -1761,10 +1834,9 @@ Stage 11: H4 follows H1 (or remains SQZ)
 
 | Situation | Entry Point | Exit Point | Gate |
 |-----------|-------------|------------|------|
-| H4 sideway + M30 at upper band | Sell at touch | Midband or lower touch | G0b-TOUCH |
-| H4 sideway + M30 at lower band | Buy at touch | Midband or upper touch | G0b-TOUCH |
-| H1 sideway + M15 at upper band | Sell at touch | Midband or lower touch | G0b-TOUCH |
-| H1 sideway + M15 at lower band | Buy at touch | Midband or upper touch | G0b-TOUCH |
+| H4 fly expand + price at upper band | Sell at touch (G0b-TOUCH) | Midband or lower touch | G0b-TOUCH |
+| H4 fly expand + price at lower band | Buy at touch (G0b-TOUCH) | Midband or upper touch | G0b-TOUCH |
+| M30/M15 both SQZ | No entry — wait | — | G0c-SQZLOCK |
 
 **Compression threshold:**
 - Band width ratio ≤ 0.001 = squeeze confirmed
@@ -1772,20 +1844,24 @@ Stage 11: H4 follows H1 (or remains SQZ)
 - Mid-band labels across 3+ TFs = range bound, no directional trades
 
 **Flowchart corrections applied (based on 3-image verification):**
-- Corrected "Red circles" description → H1 flattening/red band stopping is correct indicator
+- Corrected "Red circles" description → H1 fly expand is correct indicator (not flattening)
 - Updated visual evidence table to match actual image elements
 - Added verification checklist confirming 7/8 checkpoints with image evidence
 - Confirmed M5→M15→M30 cascade sequence is accurate per image labels
 - Added compression lifecycle stages 6-11 (loading → release)
-- Verified multiple compression cycles in Image 3
+- Verified H4/H1 fly expand context in Image 3 — core correction to flowchart
+- Compression is confined within H4 fly envelope — H4 provides direction and target
 
 **Trade action:**
 ```
-WAIT:     M30+M15 both SQZ → G0c-SQZLOCK → no entry
-WAIT:     H1+M30 both SQZ, both mid==3 → G0b-SQZLOCK → no entry
-RANGE:    H4 sideway → sell at H1 upper touch, buy at H1 lower touch
-EXIT ALL: M15+M5 both sideway → G0b-PINK → act=7
-EXIT ALL: M30+M15+H1 all mid≥3 → G0 → act=7
+ENTRY: M15 FLAT→UP (BUY) or FLAT→DN (SELL) transition when H4 fly expand
+       Quality: base 80 + H4/M30 confirm boost (+10 to +15)
+RANGE: Sell at H4 upper band touch (G0b-TOUCH)
+       Buy at H4 lower band touch (G0b-TOUCH)
+       Exit at midband/lower touch
+BLOCK: H4 opposing (G4e-H4OPP) | M15 opposing (G4c-M15OPP) | M30 opposing (G4f-M30OPP)
+EXIT: M15 UP→FLAT (G5-FADE) | M30+M15 both SQZ → G0b-PINK | outer band touch → G8-BNDTGT
+SIZE: 0.75× (1-2 TFs compress) → 0.50× (3 TFs compress) → 0.25× (all 3 compress)
 ```
 
 ---
@@ -1990,7 +2066,7 @@ Recovery: wait until M30 or M15 shows mid=1 or mid=2 again
 | B: Fly → Shrink | HTF flying, LTF shrinking | Enter on LTF transition, reduce size |
 | C: Cascade | HTF SQZ, band touch | Enter at band touch with filter pass |
 | D: Rest Pattern | Temporary compression, then resume | Enter at SQZ break, hold through rest |
-| E: Shrink → SQZ | All TFs compressing flat | Range trade, no directional trades |
+| E: Fly expand + confined compression | H4/H1 fly, M30/M15/M5 compress within envelope | Range trade at H4 boundaries or enter on M15 transition |
 | F: SQZ → Fly | Breakout from compression | Enter on SQZ break, scale up |
 | G: All Sideway | M30+M15 mid≥3 | Exit all positions |
 
@@ -2423,7 +2499,7 @@ Using regime table from Step 3:
 - HTF fly, inner TFs shrinking → Scenario B
 - HTF SQZ, inner TFs shrinking, band touch → Scenario C
 - HTF fly, inner TFs rest then resume → Scenario D
-- All TFs compressing / ranging → Scenario E
+- H4/H1 fly + M30/M15/M5 compress within envelope → Scenario E
 - All TFs SQZ, about to break → Scenario F
 - M30+M15 mid both ≥ 3 → Scenario G
 
@@ -2488,7 +2564,7 @@ Use Part 4 tables. State: current regime, price target, which gate fires next, o
 | B: Fly → Shrink | Shrink depth measurement, optimal entry timing |
 | C: Cascade | Band touch point identification, filter evaluation sequence |
 | D: Rest Pattern | Rest vs reversal identification checklist |
-| E: Shrink → SQZ | Range trade rules, compression threshold |
+| E: Fly expand + confined compression | Range trade rules, compression threshold, entry conditions, touch patterns |
 | F: SQZ → Fly | SQZ breakout momentum sequence, entry quality scoring |
 | G: All TFs Sideway | G0 exit trigger conditions, holding vs exiting decision, recovery criteria |
 | All | Scenario Summary table |
