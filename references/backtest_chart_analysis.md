@@ -263,10 +263,14 @@ Format: `{value}` or `{value}-REVUP/REVDN`. Values 1 and 2 are **not shown** on 
 
 After compression/squeeze, price can either **reverse direction** or **continue flying in the same trend**. This is the critical distinction.
 
-```
-                    BEFORE: Fly BUY → Compression → AFTER:
-                                                    ├──→ Continuation: Fly BUY resumes (rest pattern)
-                                                    └──→ Reversal: Fly SELL begins (direction flip)
+```plantuml
+@startuml compression_fork
+skinparam backgroundColor #FFFFFF
+skinparam linetype ortho
+compression --> "Compression ends"
+"Compression ends" --> "Fly BUY resumes\n(rest pattern)" : Continuation
+"Compression ends" --> "Fly SELL begins\n(direction flip)" : Reversal
+@enduml
 ```
 
 ### Two Possible Outcomes
@@ -300,17 +304,29 @@ After compression/squeeze, price can either **reverse direction** or **continue 
 
 ### Decision Tree for Post-Compression Analysis
 
-```
-Compression ends → M5 breaks SQZ →
-
-Is H1 still maintaining original step direction?
-├── YES → Is H4 still flying original direction?
-│           ├── YES → CONTINUATION → Scenario D (rest pattern)
-│           └── NO → Reversal forming → watch REVUP/REVDN
-└── NO → Reversal likely → wait for REVUP/REVDN confirmation
-         Is M15 also confirming new direction?
-         ├── YES → Reversal confirmed → enter new direction
-         └── NO → Wait for M15 confirmation
+```plantuml
+@startuml post_compression_analysis
+skinparam backgroundColor #FFFFFF
+skinparam linetype ortho
+start
+:Compression ends;
+:M5 breaks SQZ;
+if (H1 still maintaining\noriginal step?) then (YES)
+  if (H4 still flying\noriginal direction?) then (YES)
+    :CONTINUATION\nScenario D (rest pattern)
+  else (NO)
+    :Reversal forming\nwatch REVUP/REVDN
+  endif
+else (NO)
+  :Reversal likely\nwait for REVUP/REVDN;
+  if (M15 confirming\nnew direction?) then (YES)
+    :Reversal confirmed\nenter new direction
+  else (NO)
+    :Wait for M15 confirmation
+  endif
+endif
+stop
+@enduml
 ```
 
 ### Compression Depth vs Outcome
@@ -586,44 +602,50 @@ Before looking at any H1/M30/M15/M5 entry, answer these questions:
 
 ## Scenario Identification Flowchart
 
-```
-Start Analysis → Is H4 in fly?
-                 ↓
-                  Yes → Are M30+M15 also in fly?
-                        ↓
-                         Yes → SCENARIO A: Normal Fly
-                         ↓
-                         No → Are M30/M15 shrinking?
-                              ↓
-                               Yes → SCENARIO B: Fly → Shrink
-                               ↓
-                               No → Are M30/M15 in SQZ?
-                                    ↓
-                                     Yes → Check band touch → SCENARIO C: Cascade
-                                              ↓
-                                               No → SCENARIO D: Rest Pattern
-                 ↓
-                  No → Is H4 in shrink?
-                        ↓
-                         Yes → Are M30/M15 compressing?
-                               ↓
-                                 Yes → SCENARIO E: Fly expand + confined compression
-                               ↓
-                                 No → Check if H4 about to exit → SCENARIO D: Rest Pattern
-                 ↓
-                  No (H4 in SQZ) → Are all TFs in SQZ?
-                                    ↓
-                                     Yes → SCENARIO F: SQZ → Fly (Breakout)
-                                          ↓
-                                        After SQZ breaks:
-                                          ↓
-                                         Is H1 maintaining original step?
-                                          ├──→ YES → CONTINUATION (rest pattern)
-                                          └──→ NO → REVERSAL (direction flip)
-                                    ↓
-                                     No → Are M30+M15 both mid≥3?
-                                           ↓
-                                             Yes → SCENARIO G: All TFs Sideway
+```plantuml
+@startuml master_scenario_identification
+skinparam backgroundColor #FFFFFF
+skinparam linetype ortho
+start
+:Is H4 in fly?;
+if (Yes) then
+  if (M30+M15 in fly?) then
+    :SCENARIO A\nNormal Fly
+  else
+    if (M30/M15 shrinking?) then
+      :SCENARIO B\nFly → Shrink
+    else
+      if (M30/M15 in SQZ?) then
+        :SCENARIO C\nCascade
+      else
+        :SCENARIO D\nRest Pattern
+      endif
+    endif
+  endif
+else (No — H4 in shrink?)
+  if (Yes) then
+    if (M30/M15 compressing?) then
+      :SCENARIO E\nFly expand + confined compression
+    else
+      :SCENARIO D\nRest Pattern
+    endif
+  else (No — H4 in SQZ)
+    if (All TFs in SQZ?) then
+      :SCENARIO F\nSQZ → Fly (Breakout);
+      if (H1 maintaining\noriginal step?) then
+        :CONTINUATION\n(rest pattern)
+      else
+        :REVERSAL\n(direction flip)
+      endif
+    else
+      if (M30+M15 both mid≥3?) then
+        :SCENARIO G\nAll TFs Sideway
+      endif
+    endif
+  endif
+endif
+stop
+@enduml
 ```
 
 ---
@@ -687,23 +709,30 @@ Apply after HTF context is established. Each scenario: **What you see → What i
 
 ### Scenario A Identification Flowchart
 
-```
-See bands on chart → Are all bands fanning outward same direction?
-                    ↓
-                     Yes → Are mid-band labels absent (mid=1/2 suppressed)?
-                           ↓
-                            Yes → Is H4 (yellow) stepping same direction?
-                                  ↓
-                                   Yes → Check stage labels:
-                                          511/512 (BUY) or 521/522 (SELL)?
-                                         ↓
-                                          Yes → SCENARIO A CONFIRMED
-                                                 ↓
-                                                Are [G6-BUY/SELL] labels visible?
-                                                 ├──→ Yes → Full fly, enter on M15 transition
-                                                 └──→ No → Wait for entry signal
-                    ↓
-                     No → NOT Scenario A → Check other scenarios
+```plantuml
+@startuml scenario_a_identification
+skinparam backgroundColor #FFFFFF
+skinparam linetype ortho
+start
+:See bands on chart;
+if (All bands fanning outward\nsame direction?) then (Yes)
+  if (Mid-band labels absent\n(mid=1/2 suppressed)?) then (Yes)
+    if (H4 stepping\nsame direction?) then (Yes)
+      if (Stage labels\n511/512 or 521/522?) then (Yes)
+        :SCENARIO A CONFIRMED;
+        if ([G6-BUY/SELL]\nlabels visible?) then (Yes)
+          :Full fly\nenter on M15 transition
+        else (No)
+          :Wait for entry signal
+        endif
+      endif
+    endif
+  endif
+else (No)
+  :NOT Scenario A\nCheck other scenarios
+endif
+stop
+@enduml
 ```
 
 **Visual confirmation checklist:**
@@ -781,26 +810,36 @@ SIZE: 1.0× (full — highest quality when W1+D1+H4 all aligned)
 
 ### Scenario B Identification Flowchart
 
-```
-See bands on chart → Is H4 (yellow) still in fly (bands stepping)?
-                    ↓
-                     No → NOT Scenario B
-                    ↓
-                     Yes → Are M30/M15 bands converging?
-                           ↓
-                            Yes → Stage labels show 513/523 (shrink)?
-                                  ↓
-                                   Yes → Are midtrend labels appearing (3,4,5)?
-                                         ↓
-                                          Yes → SCENARIO B CONFIRMED
-                                                 ↓
-                                                How many TFs shrinking?
-                                                 ├──→ Only M5 → M5 noise, wait
-                                                 ├──→ M15 only → Shrink path entry possible
-                                                 ├──→ M30 also → Higher risk, smaller size
-                                                 └──→ H1 also → Very high risk, consider exit
-                           ↓
-                            No → Bands still expanding → NOT Scenario B
+```plantuml
+@startuml scenario_b_identification
+skinparam backgroundColor #FFFFFF
+skinparam linetype ortho
+start
+:See bands on chart;
+if (H4 still in fly\n(bands stepping)?) then (Yes)
+  if (M30/M15 bands\nconverging?) then (Yes)
+    if (Stage labels\n513/523 (shrink)?) then (Yes)
+      if (Midtrend labels\nappearing (3,4,5)?) then (Yes)
+        :SCENARIO B CONFIRMED;
+        if (How many\nTFs shrinking?) then (Only M5)
+          :M5 noise, wait
+        else (M15 only)
+          :Shrink path\nentry possible
+        else (M30 also)
+          :Higher risk\nsmaller size
+        else (H1 also)
+          :Very high risk\nconsider exit
+        endif
+      endif
+    endif
+  else (No)
+    :NOT Scenario B\n(bands still expanding)
+  endif
+else (No)
+  :NOT Scenario B
+endif
+stop
+@enduml
 ```
 
 **Visual confirmation checklist:**
@@ -847,28 +886,36 @@ SIZE: 0.75× (M15 or M30 shrink alone) → 0.50× (M30+H1 both) → 0.25× (all 
 
 ### Scenario C Identification Flowchart
 
-```
-See bands on chart → Is H4 in SQZ or shrink (400-499 or 513/523)?
-                    ↓
-                     No → NOT Scenario C
-                    ↓
-                     Yes → Is M30 in SQZ (400-499)?
-                           ↓
-                            No → NOT Scenario C
-                    ↓
-                            Yes → Are M15/M5 in shrink (513/523)?
-                                  ↓
-                                   No → NOT Scenario C
-                    ↓
-                                   Yes → Is price at H4/M30/H1 outer band edge?
-                                         ↓
-                                          No → [G0b-WAIT] — waiting for touch
-                    ↓
-                                          Yes → Check cascade filters (6 filters)
-                                                 ↓
-                                                All filters pass?
-                                                 ├──→ Yes → [G0b-TOUCH] → ENTRY FIRES
-                                                 └──→ No → [G0b-block] → Entry blocked
+```plantuml
+@startuml scenario_c_identification
+skinparam backgroundColor #FFFFFF
+skinparam linetype ortho
+start
+:See bands on chart;
+if (H4 in SQZ or shrink\n(400-499 or 513/523)?) then (Yes)
+  if (M30 in SQZ\n(400-499)?) then (Yes)
+    if (M15/M5 in shrink\n(513/523)?) then (Yes)
+      if (Price at H4/M30/H1\nouter band edge?) then (Yes)
+        :Check cascade filters\n(6 filters);
+        if (All filters pass?) then (Yes)
+          :[G0b-TOUCH]\nENTRY FIRES
+        else (No)
+          :[G0b-block]\nEntry blocked
+        endif
+      else (No)
+        :[G0b-WAIT]\nwaiting for touch
+      endif
+    else (No)
+      :NOT Scenario C
+    endif
+  else (No)
+    :NOT Scenario C
+  endif
+else (No)
+  :NOT Scenario C
+endif
+stop
+@enduml
 ```
 
 **Visual confirmation checklist:**
@@ -953,36 +1000,44 @@ SIZE: quality score from M5 transition
 
 ### Scenario D Identification Flowchart
 
-```
-See bands on chart → Were all TFs in fly recently?
-                    ↓
-                     No → NOT Scenario D
-                    ↓
-                     Yes → Did M30/M15/M5 briefly compress?
-                           ↓
-                            No → NOT Scenario D
-                    ↓
-                           Yes → Is H1 (red) maintaining original step direction?
-                                ↓
-                                 No → REVERSAL (not rest pattern)
-                    ↓
-                                 Yes → Is H4 (yellow) still flying same direction?
-                                       ↓
-                                        No → HTF weakening, be cautious
-                    ↓
-                                       Yes → Is compression brief (hours not days)?
-                                             ↓
-                                              No → Extended compression, risk reversal
-                    ↓
-                                              Yes → [G6-LOAD] only (not [G0c-SQZLOCK])?
-                                                     ↓
-                                                      No → Deep compression, may be reversal
-                    ↓
-                                                      Yes → SCENARIO D CONFIRMED
-                                                             ↓
-                                                            Bands re-expand same direction?
-                                                             ├──→ Yes → Fly resumed, full entry
-                                                             └──→ No → Still compressing, wait
+```plantuml
+@startuml scenario_d_identification
+skinparam backgroundColor #FFFFFF
+skinparam linetype ortho
+start
+:See bands on chart;
+if (All TFs in fly\nrecently?) then (Yes)
+  if (M30/M15/M5\nbriefly compress?) then (Yes)
+    if (H1 maintaining\noriginal step?) then (Yes)
+      if (H4 still flying\nsame direction?) then (Yes)
+        if (Compression brief\n(hours not days)?) then (Yes)
+          if ([G6-LOAD] only\n(not [G0c-SQZLOCK])?) then (Yes)
+            :SCENARIO D CONFIRMED;
+            if (Bands re-expand\nsame direction?) then (Yes)
+              :Fly resumed\nfull entry
+            else (No)
+              :Still compressing\nwait
+            endif
+          else (No)
+            :Deep compression\nmay be reversal
+          endif
+        else (No)
+          :Extended compression\nrisk reversal
+        endif
+      else (No)
+        :HTF weakening\nbe cautious
+      endif
+    else (No)
+      :REVERSAL\n(not rest pattern)
+    endif
+  else (No)
+    :NOT Scenario D
+  endif
+else (No)
+  :NOT Scenario D
+endif
+stop
+@enduml
 ```
 
 **Visual confirmation checklist:**
@@ -1200,47 +1255,50 @@ M5: mid=1/2 → mid=3/4/5 → mid=3 persistent (first)
 
 ### Scenario E Identification Flowchart
 
-```
-See bands on chart → Is H4 (yellow) in fly expand (511/512/521/522)?
-                         (bands fanning outward, stepping directionally)
-                    ↓
-                     No → Check if H4 in shrink/SQZ → alternative compression
-                    ↓
-                     Yes → Is H1 (red) also in fly expand?
-                           (red bands fanning same direction as H4)
-                           ↓
-                            No → H1 not aligned, not full Scenario E
-                    ↓
-                           Yes → Is M5 shrinking (513/523) or in SQZ (400-499)?
-                                 (aqua bands narrowing/collapsing)
-                                 ↓
-                                  No → Early stage, compression not initiated
-                    ↓
-                                 Yes → Is M15 shrinking (513/523) or in SQZ (400-499)?
-                                       (goldenrod bands narrowing)
-                                       ↓
-                                        No → Partial compression, not complete cascade
-                    ↓
-                                       Yes → Is M30 shrinking (513/523) or in SQZ (400-499)?
-                                             (green bands narrowing)
-                                             ↓
-                                              No → Incomplete cascade, wait for M30
-                    ↓
-                                             Yes → Are mid-band labels (3,4,5) visible on multiple TFs?
-                                                   (on M15/M30/H1 midbands)
-                                                   ↓
-                                                    No → Check for midband labels
-                    ↓
-                                                   Yes → Is [G0c-SQZLOCK] or [G6-LOAD] visible?
-                                                         ↓
-                                                          No → Compression without lock
-                    ↓
-                                                          Yes → SCENARIO E CONFIRMED
-                                                                 ↓
-                                                                Compression depth:
-                                                                 ├──→ Shallow → Range trade H4 band boundaries
-                                                                 ├──→ Moderate → Wait for direction
-                                                                 └──→ Deep → Reversal more likely
+```plantuml
+@startuml scenario_e_identification
+skinparam backgroundColor #FFFFFF
+skinparam linetype ortho
+start
+:See bands on chart;
+if (H4 in fly expand\n(511/512/521/522)?) then (Yes)
+  if (H1 in fly expand\n(same direction)?) then (Yes)
+    if (M5 shrinking or SQZ\n(513/523 or 400-499)?) then (Yes)
+      if (M15 shrinking or SQZ\n(513/523 or 400-499)?) then (Yes)
+        if (M30 shrinking or SQZ\n(513/523 or 400-499)?) then (Yes)
+          if (Mid-band labels (3,4,5)\non multiple TFs?) then (Yes)
+            if ([G0c-SQZLOCK] or\n[G6-LOAD] visible?) then (Yes)
+              :SCENARIO E CONFIRMED;
+              if (Compression depth?) then (Shallow)
+                :Range trade\nH4 band boundaries
+              else (Moderate)
+                :Wait for\ndirection
+              else (Deep)
+                :Reversal\nmore likely
+              endif
+            else (No)
+              :Compression\nwithout lock
+            endif
+          else (No)
+            :Check for\nmidband labels
+          endif
+        else (No)
+          :Incomplete cascade\nwait for M30
+        endif
+      else (No)
+        :Partial compression\nnot complete cascade
+      endif
+    else (No)
+      :Early stage\ncompression not initiated
+    endif
+  else (No)
+    :H1 not aligned\nnot full Scenario E
+  endif
+else (No)
+  :Alternative compression\n(H4 shrink/SQZ)
+endif
+stop
+@enduml
 ```
 
 **Critical insight:** H4/H1 fly expand while M30/M15/M5 compress means compression is confined within the HTF trend.
@@ -1248,22 +1306,21 @@ H4 provides the direction and target — lower TFs oscillate within H4's band en
 
 **Cascade compression sequence:**
 
-```
-                    H4 fly expand (directional context)
-                          ↓
-                    H1 fly expand (follows H4)
-                          ↓
-                    M5 shrink (513/523) → SQZ (400-499)
-                          ↓
-                    M15 shrink (513/523) → SQZ (400-499)
-                          ↓
-                    M30 shrink (513/523) → SQZ (400-499)
-                          ↓
-                    [G0c-SQZLOCK] / [G6-LOAD] (compression lock)
-                          ↓
-                    M5 breaks SQZ first (REVUP/REVDN)
-                          ↓
-                    M15 follows M5 → M30 follows M15 → H1 follows M30
+```plantuml
+@startuml cascade_compression_sequence
+skinparam backgroundColor #FFFFFF
+skinparam linetype ortho
+start
+:H4 fly expand\n(directional context);
+:H1 fly expand\n(follows H4);
+:M5 shrink (513/523)\n→ SQZ (400-499);
+:M15 shrink (513/523)\n→ SQZ (400-499);
+:M30 shrink (513/523)\n→ SQZ (400-499);
+:[G0c-SQZLOCK] / [G6-LOAD]\n(compression lock);
+:M5 breaks SQZ first\n(REVUP/REVDN);
+:M15 follows M5\n→ M30 follows M15\n→ H1 follows M30;
+stop
+@enduml
 ```
 
 **Visual confirmation checklist:**
@@ -1712,26 +1769,23 @@ M5/M15/M30: Stage 400-499 (SQZ persistent)
 ---
 
 **Compression cascade visible (verified by all 3 images):**
-```
-                    H4 fly expand (directional context)
-                          ↓
-                    H1 fly expand (follows H4)
-                          ↓
-                    M5 shrink → SQZ (first)
-                          ↓
-                    M15 shrink → SQZ (second)
-                          ↓
-                    M30 shrink → SQZ (third)
-                          ↓
-                    [G0c-SQZLOCK] / [G6-LOAD] (locked)
-                          ↓
-                    M5 breaks SQZ first (REVUP/REVDN)
-                          ↓
-                    M15 follows M5
-                          ↓
-                    M30 follows M15
-                          ↓
-                    H1 follows M30
+```plantuml
+@startuml compression_cascade_visible
+skinparam backgroundColor #FFFFFF
+skinparam linetype ortho
+start
+:H4 fly expand\n(directional context);
+:H1 fly expand\n(follows H4);
+:M5 shrink → SQZ\n(first);
+:M15 shrink → SQZ\n(second);
+:M30 shrink → SQZ\n(third);
+:[G0c-SQZLOCK] / [G6-LOAD]\n(locked);
+:M5 breaks SQZ first\n(REVUP/REVDN);
+:M15 follows M5;
+:M30 follows M15;
+:H1 follows M30;
+stop
+@enduml
 ```
 
 **Flowchart verification for yellow rectangle (3 images):**
@@ -1781,42 +1835,24 @@ M5/M15/M30: Stage 400-499 (SQZ persistent)
 
 **Compression stages visual progression (verified by all 3 images):**
 
-```
-Stage 1: H4 fly expand (511/512/521/522) - directional context
-        ↓
-Stage 2: H1 fly expand (follows H4)
-        ↓
-Stage 3: M5 shrink (513/523) → M5 SQZ (400-499)
-        ↓
-       Aqua bands collapse flat (FIRST to compress)
-        ↓
-Stage 4: M15 shrink (513/523) → M15 SQZ (400-499)
-        ↓
-       Goldenrod bands collapse
-        ↓
-Stage 5: M30 shrink (513/523) → M30 SQZ (400-499)
-        ↓
-       Green-yellow bands collapse (LAST to compress)
-        ↓
-Stage 6: Full compression - all lower TF bands flat
-        ↓
-       [G0c-SQZLOCK] / [G6-LOAD] visible
-        ↓
-       Pink zone (M15+M30 both SQZ) → Exit all
-        ↓
-Stage 7: Pre-breakout loading
-        ↓
-       Touch counts shift: L→U (lower to upper)
-        ↓
-Stage 8: M5 breaks SQZ first
-        ↓
-       REVUP/REVDN appears → [G6-BUY/SELL]
-        ↓
-Stage 9: M15 follows M5
-        ↓
-Stage 10: M30 follows M15
-        ↓
-Stage 11: H1 follows M30 (or H4 remains fly)
+```plantuml
+@startuml compression_stages_progression
+skinparam backgroundColor #FFFFFF
+skinparam linetype ortho
+start
+:Stage 1: H4 fly expand\n(511/512/521/522) - directional context;
+:Stage 2: H1 fly expand\n(follows H4);
+:Stage 3: M5 shrink (513/523)\n→ M5 SQZ (400-499);\nAqua bands collapse flat (FIRST);
+:Stage 4: M15 shrink (513/523)\n→ M15 SQZ (400-499);\nGoldenrod bands collapse;
+:Stage 5: M30 shrink (513/523)\n→ M30 SQZ (400-499);\nGreen-yellow bands collapse (LAST);
+:Stage 6: Full compression\nall lower TF bands flat;\n[G0c-SQZLOCK] / [G6-LOAD] visible;\nPink zone → Exit all;
+:Stage 7: Pre-breakout loading\nTouch counts shift: L→U;
+:Stage 8: M5 breaks SQZ first\nREVUP/REVDN → [G6-BUY/SELL];
+:Stage 9: M15 follows M5;
+:Stage 10: M30 follows M15;
+:Stage 11: H1 follows M30\n(or H4 remains fly);
+stop
+@enduml
 ```
 
 **Compression lifecycle verified (from all 3 images):**
@@ -1882,37 +1918,44 @@ SIZE: 0.75× (1-2 TFs compress) → 0.50× (3 TFs compress) → 0.25× (all 3 co
 
 ### Scenario F Identification Flowchart
 
-```
-See bands on chart → Are all TF bands collapsed to tight bundle?
-                    ↓
-                     No → NOT Scenario F
-                    ↓
-                     Yes → Stage labels showing 400-499 (SQZ)?
-                           ↓
-                            No → NOT full compression
-                    ↓
-                           Yes → Is [G6-LOAD] or [G0c-SQZLOCK] visible?
-                                 ↓
-                                  No → SQZ without loading label
-                    ↓
-                                 Yes → Is pressure building?
-                                       (L or U touch counts high)
-                                      ↓
-                                       No → Early compression
-                    ↓
-                                       Yes → Is M5 band spreading first?
-                                             ↓
-                                              No → Still loading
-                    ↓
-                                              Yes → REVUP/REVDN label appears?
-                                                     ↓
-                                                      No → No breakout yet
-                    ↓
-                                                      Yes → SCENARIO F CONFIRMED
-                                                             ↓
-                                                            Direction from D1 (magenta):
-                                                             ├──→ D1 fly BUY → BUY breakout
-                                                             └──→ D1 fly SELL → SELL breakout
+```plantuml
+@startuml scenario_f_identification
+skinparam backgroundColor #FFFFFF
+skinparam linetype ortho
+start
+:See bands on chart;
+if (All TF bands collapsed\nto tight bundle?) then (Yes)
+  if (Stage labels\n400-499 (SQZ)?) then (Yes)
+    if ([G6-LOAD] or\n[G0c-SQZLOCK] visible?) then (Yes)
+      if (Pressure building?\n(L or U touch high)?) then (Yes)
+        if (M5 band spreading\nfirst?) then (Yes)
+          if (REVUP/REVDN\nlabel appears?) then (Yes)
+            :SCENARIO F CONFIRMED;
+            if (D1 direction?) then (D1 fly BUY)
+              :BUY breakout
+            else (D1 fly SELL)
+              :SELL breakout
+            endif
+          else (No)
+            :No breakout yet
+          endif
+        else (No)
+          :Still loading
+        endif
+      else (No)
+        :Early compression
+      endif
+    else (No)
+      :SQZ without\nloading label
+    endif
+  else (No)
+    :NOT full compression
+  endif
+else (No)
+  :NOT Scenario F
+endif
+stop
+@enduml
 ```
 
 **Visual confirmation checklist:**
@@ -1982,32 +2025,40 @@ TARGET: H4 outer band (if H4 also breaking) → D1 outer band
 
 ### Scenario G Identification Flowchart
 
-```
-See bands on chart → Are mid-band labels (3,4,5) visible on M30 AND M15?
-                    ↓
-                     No → NOT Scenario G
-                    ↓
-                     Yes → Are ALL bands flat (no directional expansion)?
-                           ↓
-                            No → NOT all TFs sideway
-                    ↓
-                           Yes → Is H4 in SQZ or flat?
-                                 ↓
-                                  No → H4 still has direction
-                    ↓
-                                 Yes → Is D1 also flat?
-                                       ↓
-                                        No → D1 may provide direction
-                    ↓
-                                       Yes → Is [G0] (crimson) visible?
-                                             ↓
-                                              No → Not yet triggered
-                    ↓
-                                              Yes → SCENARIO G CONFIRMED
-                                                     ↓
-                                                    [G0] label type:
-                                                     ├──→ [G0] → All TFs mid≥3 → EXIT ALL
-                                                     └──→ [G0-HOLD] → H1 not sideway → HOLD, no new entry
+```plantuml
+@startuml scenario_g_identification
+skinparam backgroundColor #FFFFFF
+skinparam linetype ortho
+start
+:See bands on chart;
+if (Mid-band labels (3,4,5)\nvisible on M30 AND M15?) then (Yes)
+  if (ALL bands flat\n(no expansion)?) then (Yes)
+    if (H4 in SQZ\nor flat?) then (Yes)
+      if (D1 also flat?) then (Yes)
+        if ([G0] visible?) then (Yes)
+          :SCENARIO G CONFIRMED;
+          if ([G0] label type?) then ([G0])
+            :All TFs mid≥3\nEXIT ALL
+          else ([G0-HOLD])
+            :H1 not sideway\nHOLD, no new entry
+          endif
+        else (No)
+          :Not yet triggered
+        endif
+      else (No)
+        :D1 may provide\ndirection
+      endif
+    else (No)
+      :H4 still has\ndirection
+    endif
+  else (No)
+    :NOT all TFs sideway
+  endif
+else (No)
+  :NOT Scenario G
+endif
+stop
+@enduml
 ```
 
 **Visual confirmation checklist:**
