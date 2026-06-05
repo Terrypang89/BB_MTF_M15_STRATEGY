@@ -263,14 +263,10 @@ Format: `{value}` or `{value}-REVUP/REVDN`. Values 1 and 2 are **not shown** on 
 
 After compression/squeeze, price can either **reverse direction** or **continue flying in the same trend**. This is the critical distinction.
 
-```plantuml
-@startuml compression_fork
-skinparam backgroundColor #FFFFFF
-skinparam linetype ortho
-compression --> "Compression ends"
-"Compression ends" --> "Fly BUY resumes\n(rest pattern)" : Continuation
-"Compression ends" --> "Fly SELL begins\n(direction flip)" : Reversal
-@enduml
+```mermaid
+flowchart TD
+    A["Compression ends"] -->|"Continuation"| B["Fly BUY resumes (rest pattern)"]
+    A -->|"Reversal"| C["Fly SELL begins (direction flip)"]
 ```
 
 ### Two Possible Outcomes
@@ -304,29 +300,17 @@ compression --> "Compression ends"
 
 ### Decision Tree for Post-Compression Analysis
 
-```plantuml
-@startuml post_compression_analysis
-skinparam backgroundColor #FFFFFF
-skinparam linetype ortho
-start
-:Compression ends;
-:M5 breaks SQZ;
-if (H1 still maintaining\noriginal step?) then (YES)
-  if (H4 still flying\noriginal direction?) then (YES)
-    :CONTINUATION\nScenario D (rest pattern)
-  else (NO)
-    :Reversal forming\nwatch REVUP/REVDN
-  endif
-else (NO)
-  :Reversal likely\nwait for REVUP/REVDN;
-  if (M15 confirming\nnew direction?) then (YES)
-    :Reversal confirmed\nenter new direction
-  else (NO)
-    :Wait for M15 confirmation
-  endif
-endif
-stop
-@enduml
+```mermaid
+flowchart TD
+    A["Compression ends"] --> B["M5 breaks SQZ"]
+    B --> C{"H1 still maintaining original step?"}
+    C -->|YES| D{"H4 still flying original direction?"}
+    D -->|YES| E["CONTINUATION — Scenario D (rest pattern)"]
+    D -->|NO| F["Reversal forming — watch REVUP/REVDN"]
+    C -->|NO| G["Reversal likely — wait for REVUP/REVDN"]
+    G --> H{"M15 confirming new direction?"}
+    H -->|YES| I["Reversal confirmed — enter new direction"]
+    H -->|NO| J["Wait for M15 confirmation"]
 ```
 
 ### Compression Depth vs Outcome
@@ -602,50 +586,26 @@ Before looking at any H1/M30/M15/M5 entry, answer these questions:
 
 ## Scenario Identification Flowchart
 
-```plantuml
-@startuml master_scenario_identification
-skinparam backgroundColor #FFFFFF
-skinparam linetype ortho
-start
-:Is H4 in fly?;
-if (Yes) then
-  if (M30+M15 in fly?) then
-    :SCENARIO A\nNormal Fly
-  else
-    if (M30/M15 shrinking?) then
-      :SCENARIO B\nFly → Shrink
-    else
-      if (M30/M15 in SQZ?) then
-        :SCENARIO C\nCascade
-      else
-        :SCENARIO D\nRest Pattern
-      endif
-    endif
-  endif
-else (No — H4 in shrink?)
-  if (Yes) then
-    if (M30/M15 compressing?) then
-      :SCENARIO E\nFly expand + confined compression
-    else
-      :SCENARIO D\nRest Pattern
-    endif
-  else (No — H4 in SQZ)
-    if (All TFs in SQZ?) then
-      :SCENARIO F\nSQZ → Fly (Breakout);
-      if (H1 maintaining\noriginal step?) then
-        :CONTINUATION\n(rest pattern)
-      else
-        :REVERSAL\n(direction flip)
-      endif
-    else
-      if (M30+M15 both mid≥3?) then
-        :SCENARIO G\nAll TFs Sideway
-      endif
-    endif
-  endif
-endif
-stop
-@enduml
+```mermaid
+flowchart TD
+    A["Is H4 in fly?"] -->|Yes| B["M30+M15 in fly?"]
+    B -->|Yes| C["SCENARIO A\nNormal Fly"]
+    B -->|No| D["M30/M15 shrinking?"]
+    D -->|Yes| E["SCENARIO B\nFly → Shrink"]
+    D -->|No| F["M30/M15 in SQZ?"]
+    F -->|Yes| G["SCENARIO C\nCascade"]
+    F -->|No| H["SCENARIO D\nRest Pattern"]
+    A -->|No| I["H4 in shrink?"]
+    I -->|Yes| J["M30/M15 compressing?"]
+    J -->|Yes| K["SCENARIO E\nFly expand + confined compression"]
+    J -->|No| L["SCENARIO D\nRest Pattern"]
+    I -->|No — H4 in SQZ| M["All TFs in SQZ?"]
+    M -->|Yes| N["SCENARIO F\nSQZ → Fly (Breakout)"]
+    N --> O["H1 maintaining original step?"]
+    O -->|Yes| P["CONTINUATION\n(rest pattern)"]
+    O -->|No| Q["REVERSAL\n(direction flip)"]
+    M -->|No| R["M30+M15 both mid≥3?"]
+    R -->|Yes| S["SCENARIO G\nAll TFs Sideway"]
 ```
 
 ---
@@ -709,30 +669,17 @@ Apply after HTF context is established. Each scenario: **What you see → What i
 
 ### Scenario A Identification Flowchart
 
-```plantuml
-@startuml scenario_a_identification
-skinparam backgroundColor #FFFFFF
-skinparam linetype ortho
-start
-:See bands on chart;
-if (All bands fanning outward\nsame direction?) then (Yes)
-  if (Mid-band labels absent\n(mid=1/2 suppressed)?) then (Yes)
-    if (H4 stepping\nsame direction?) then (Yes)
-      if (Stage labels\n511/512 or 521/522?) then (Yes)
-        :SCENARIO A CONFIRMED;
-        if ([G6-BUY/SELL]\nlabels visible?) then (Yes)
-          :Full fly\nenter on M15 transition
-        else (No)
-          :Wait for entry signal
-        endif
-      endif
-    endif
-  endif
-else (No)
-  :NOT Scenario A\nCheck other scenarios
-endif
-stop
-@enduml
+```mermaid
+flowchart TD
+    A["See bands on chart"] --> B{"All bands fanning outward same direction?"}
+    B -->|Yes| C{"Mid-band labels absent (mid=1/2 suppressed)?"}
+    C -->|Yes| D{"H4 stepping same direction?"}
+    D -->|Yes| E{"Stage labels 511/512 or 521/522?"}
+    E -->|Yes| F["SCENARIO A CONFIRMED"]
+    F --> G{"[G6-BUY/SELL] labels visible?"}
+    G -->|Yes| H["Full fly\nenter on M15 transition"]
+    G -->|No| I["Wait for entry signal"]
+    B -->|No| J["NOT Scenario A\nCheck other scenarios"]
 ```
 
 **Visual confirmation checklist:**
@@ -810,36 +757,20 @@ SIZE: 1.0× (full — highest quality when W1+D1+H4 all aligned)
 
 ### Scenario B Identification Flowchart
 
-```plantuml
-@startuml scenario_b_identification
-skinparam backgroundColor #FFFFFF
-skinparam linetype ortho
-start
-:See bands on chart;
-if (H4 still in fly\n(bands stepping)?) then (Yes)
-  if (M30/M15 bands\nconverging?) then (Yes)
-    if (Stage labels\n513/523 (shrink)?) then (Yes)
-      if (Midtrend labels\nappearing (3,4,5)?) then (Yes)
-        :SCENARIO B CONFIRMED;
-        if (How many\nTFs shrinking?) then (Only M5)
-          :M5 noise, wait
-        else (M15 only)
-          :Shrink path\nentry possible
-        else (M30 also)
-          :Higher risk\nsmaller size
-        else (H1 also)
-          :Very high risk\nconsider exit
-        endif
-      endif
-    endif
-  else (No)
-    :NOT Scenario B\n(bands still expanding)
-  endif
-else (No)
-  :NOT Scenario B
-endif
-stop
-@enduml
+```mermaid
+flowchart TD
+    A["See bands on chart"] --> B{"H4 still in fly (bands stepping)?"}
+    B -->|Yes| C{"M30/M15 bands converging?"}
+    C -->|Yes| D{"Stage labels 513/523 (shrink)?"}
+    D -->|Yes| E{"Midtrend labels appearing (3,4,5)?"}
+    E -->|Yes| F["SCENARIO B CONFIRMED"]
+    F --> G{"How many TFs shrinking?"}
+    G -->|Only M5| H["M5 noise, wait"]
+    G -->|M15 only| I["Shrink path\nentry possible"]
+    G -->|M30 also| J["Higher risk\nsmaller size"]
+    G -->|H1 also| K["Very high risk\nconsider exit"]
+    C -->|No| L["NOT Scenario B\n(bands still expanding)"]
+    B -->|No| M["NOT Scenario B"]
 ```
 
 **Visual confirmation checklist:**
@@ -886,36 +817,20 @@ SIZE: 0.75× (M15 or M30 shrink alone) → 0.50× (M30+H1 both) → 0.25× (all 
 
 ### Scenario C Identification Flowchart
 
-```plantuml
-@startuml scenario_c_identification
-skinparam backgroundColor #FFFFFF
-skinparam linetype ortho
-start
-:See bands on chart;
-if (H4 in SQZ or shrink\n(400-499 or 513/523)?) then (Yes)
-  if (M30 in SQZ\n(400-499)?) then (Yes)
-    if (M15/M5 in shrink\n(513/523)?) then (Yes)
-      if (Price at H4/M30/H1\nouter band edge?) then (Yes)
-        :Check cascade filters\n(6 filters);
-        if (All filters pass?) then (Yes)
-          :[G0b-TOUCH]\nENTRY FIRES
-        else (No)
-          :[G0b-block]\nEntry blocked
-        endif
-      else (No)
-        :[G0b-WAIT]\nwaiting for touch
-      endif
-    else (No)
-      :NOT Scenario C
-    endif
-  else (No)
-    :NOT Scenario C
-  endif
-else (No)
-  :NOT Scenario C
-endif
-stop
-@enduml
+```mermaid
+flowchart TD
+    A["See bands on chart"] --> B{"H4 in SQZ or shrink (400-499 or 513/523)?"}
+    B -->|Yes| C{"M30 in SQZ (400-499)?"}
+    C -->|Yes| D{"M15/M5 in shrink (513/523)?"}
+    D -->|Yes| E{"Price at H4/M30/H1 outer band edge?"}
+    E -->|Yes| F["Check cascade filters (6 filters)"]
+    F --> G{"All filters pass?"}
+    G -->|Yes| H["[G0b-TOUCH]\nENTRY FIRES"]
+    G -->|No| I["[G0b-block]\nEntry blocked"]
+    E -->|No| J["[G0b-WAIT]\nwaiting for touch"]
+    D -->|No| K["NOT Scenario C"]
+    C -->|No| L["NOT Scenario C"]
+    B -->|No| M["NOT Scenario C"]
 ```
 
 **Visual confirmation checklist:**
@@ -1000,44 +915,24 @@ SIZE: quality score from M5 transition
 
 ### Scenario D Identification Flowchart
 
-```plantuml
-@startuml scenario_d_identification
-skinparam backgroundColor #FFFFFF
-skinparam linetype ortho
-start
-:See bands on chart;
-if (All TFs in fly\nrecently?) then (Yes)
-  if (M30/M15/M5\nbriefly compress?) then (Yes)
-    if (H1 maintaining\noriginal step?) then (Yes)
-      if (H4 still flying\nsame direction?) then (Yes)
-        if (Compression brief\n(hours not days)?) then (Yes)
-          if ([G6-LOAD] only\n(not [G0c-SQZLOCK])?) then (Yes)
-            :SCENARIO D CONFIRMED;
-            if (Bands re-expand\nsame direction?) then (Yes)
-              :Fly resumed\nfull entry
-            else (No)
-              :Still compressing\nwait
-            endif
-          else (No)
-            :Deep compression\nmay be reversal
-          endif
-        else (No)
-          :Extended compression\nrisk reversal
-        endif
-      else (No)
-        :HTF weakening\nbe cautious
-      endif
-    else (No)
-      :REVERSAL\n(not rest pattern)
-    endif
-  else (No)
-    :NOT Scenario D
-  endif
-else (No)
-  :NOT Scenario D
-endif
-stop
-@enduml
+```mermaid
+flowchart TD
+    A["See bands on chart"] --> B{"All TFs in fly recently?"}
+    B -->|Yes| C{"M30/M15/M5 briefly compress?"}
+    C -->|Yes| D{"H1 maintaining original step?"}
+    D -->|Yes| E{"H4 still flying same direction?"}
+    E -->|Yes| F{"Compression brief (hours not days)?"}
+    F -->|Yes| G{"[G6-LOAD] only (not [G0c-SQZLOCK])?"}
+    G -->|Yes| H["SCENARIO D CONFIRMED"]
+    H --> I{"Bands re-expand same direction?"}
+    I -->|Yes| J["Fly resumed\nfull entry"]
+    I -->|No| K["Still compressing\nwait"]
+    G -->|No| L["Deep compression\nmay be reversal"]
+    F -->|No| M["Extended compression\nrisk reversal"]
+    E -->|No| N["HTF weakening\nbe cautious"]
+    D -->|No| O["REVERSAL\n(not rest pattern)"]
+    C -->|No| P["NOT Scenario D"]
+    B -->|No| Q["NOT Scenario D"]
 ```
 
 **Visual confirmation checklist:**
@@ -1255,50 +1150,27 @@ M5: mid=1/2 → mid=3/4/5 → mid=3 persistent (first)
 
 ### Scenario E Identification Flowchart
 
-```plantuml
-@startuml scenario_e_identification
-skinparam backgroundColor #FFFFFF
-skinparam linetype ortho
-start
-:See bands on chart;
-if (H4 in fly expand\n(511/512/521/522)?) then (Yes)
-  if (H1 in fly expand\n(same direction)?) then (Yes)
-    if (M5 shrinking or SQZ\n(513/523 or 400-499)?) then (Yes)
-      if (M15 shrinking or SQZ\n(513/523 or 400-499)?) then (Yes)
-        if (M30 shrinking or SQZ\n(513/523 or 400-499)?) then (Yes)
-          if (Mid-band labels (3,4,5)\non multiple TFs?) then (Yes)
-            if ([G0c-SQZLOCK] or\n[G6-LOAD] visible?) then (Yes)
-              :SCENARIO E CONFIRMED;
-              if (Compression depth?) then (Shallow)
-                :Range trade\nH4 band boundaries
-              else (Moderate)
-                :Wait for\ndirection
-              else (Deep)
-                :Reversal\nmore likely
-              endif
-            else (No)
-              :Compression\nwithout lock
-            endif
-          else (No)
-            :Check for\nmidband labels
-          endif
-        else (No)
-          :Incomplete cascade\nwait for M30
-        endif
-      else (No)
-        :Partial compression\nnot complete cascade
-      endif
-    else (No)
-      :Early stage\ncompression not initiated
-    endif
-  else (No)
-    :H1 not aligned\nnot full Scenario E
-  endif
-else (No)
-  :Alternative compression\n(H4 shrink/SQZ)
-endif
-stop
-@enduml
+```mermaid
+flowchart TD
+    A["See bands on chart"] --> B{"H4 in fly expand (511/512/521/522)?"}
+    B -->|Yes| C{"H1 in fly expand (same direction)?"}
+    C -->|Yes| D{"M5 shrinking or SQZ (513/523 or 400-499)?"}
+    D -->|Yes| E{"M15 shrinking or SQZ (513/523 or 400-499)?"}
+    E -->|Yes| F{"M30 shrinking or SQZ (513/523 or 400-499)?"}
+    F -->|Yes| G{"Mid-band labels (3,4,5) on multiple TFs?"}
+    G -->|Yes| H{"[G0c-SQZLOCK] or [G6-LOAD] visible?"}
+    H -->|Yes| I["SCENARIO E CONFIRMED"]
+    I --> J{"Compression depth?"}
+    J -->|Shallow| K["Range trade\nH4 band boundaries"]
+    J -->|Moderate| L["Wait for\ndirection"]
+    J -->|Deep| M["Reversal\nmore likely"]
+    H -->|No| N["Compression\nwithout lock"]
+    G -->|No| O["Check for\nmidband labels"]
+    F -->|No| P["Incomplete cascade\nwait for M30"]
+    E -->|No| Q["Partial compression\nnot complete cascade"]
+    D -->|No| R["Early stage\ncompression not initiated"]
+    C -->|No| S["H1 not aligned\nnot full Scenario E"]
+    B -->|No| T["Alternative compression\n(H4 shrink/SQZ)"]
 ```
 
 **Critical insight:** H4/H1 fly expand while M30/M15/M5 compress means compression is confined within the HTF trend.
@@ -1306,21 +1178,15 @@ H4 provides the direction and target — lower TFs oscillate within H4's band en
 
 **Cascade compression sequence:**
 
-```plantuml
-@startuml cascade_compression_sequence
-skinparam backgroundColor #FFFFFF
-skinparam linetype ortho
-start
-:H4 fly expand\n(directional context);
-:H1 fly expand\n(follows H4);
-:M5 shrink (513/523)\n→ SQZ (400-499);
-:M15 shrink (513/523)\n→ SQZ (400-499);
-:M30 shrink (513/523)\n→ SQZ (400-499);
-:[G0c-SQZLOCK] / [G6-LOAD]\n(compression lock);
-:M5 breaks SQZ first\n(REVUP/REVDN);
-:M15 follows M5\n→ M30 follows M15\n→ H1 follows M30;
-stop
-@enduml
+```mermaid
+flowchart TD
+    A["H4 fly expand (directional context)"] --> B["H1 fly expand (follows H4)"]
+    B --> C["M5 shrink (513/523) → SQZ (400-499)"]
+    C --> D["M15 shrink (513/523) → SQZ (400-499)"]
+    D --> E["M30 shrink (513/523) → SQZ (400-499)"]
+    E --> F["[G0c-SQZLOCK] / [G6-LOAD] (compression lock)"]
+    F --> G["M5 breaks SQZ first (REVUP/REVDN)"]
+    G --> H["M15 follows M5 → M30 follows M15 → H1 follows M30"]
 ```
 
 **Visual confirmation checklist:**
@@ -1769,23 +1635,17 @@ M5/M15/M30: Stage 400-499 (SQZ persistent)
 ---
 
 **Compression cascade visible (verified by all 3 images):**
-```plantuml
-@startuml compression_cascade_visible
-skinparam backgroundColor #FFFFFF
-skinparam linetype ortho
-start
-:H4 fly expand\n(directional context);
-:H1 fly expand\n(follows H4);
-:M5 shrink → SQZ\n(first);
-:M15 shrink → SQZ\n(second);
-:M30 shrink → SQZ\n(third);
-:[G0c-SQZLOCK] / [G6-LOAD]\n(locked);
-:M5 breaks SQZ first\n(REVUP/REVDN);
-:M15 follows M5;
-:M30 follows M15;
-:H1 follows M30;
-stop
-@enduml
+```mermaid
+flowchart TD
+    A["H4 fly expand (directional context)"] --> B["H1 fly expand (follows H4)"]
+    B --> C["M5 shrink → SQZ (first)"]
+    C --> D["M15 shrink → SQZ (second)"]
+    D --> E["M30 shrink → SQZ (third)"]
+    E --> F["[G0c-SQZLOCK] / [G6-LOAD] (locked)"]
+    F --> G["M5 breaks SQZ first (REVUP/REVDN)"]
+    G --> H["M15 follows M5"]
+    H --> I["M30 follows M15"]
+    I --> J["H1 follows M30"]
 ```
 
 **Flowchart verification for yellow rectangle (3 images):**
@@ -1835,24 +1695,18 @@ stop
 
 **Compression stages visual progression (verified by all 3 images):**
 
-```plantuml
-@startuml compression_stages_progression
-skinparam backgroundColor #FFFFFF
-skinparam linetype ortho
-start
-:Stage 1: H4 fly expand\n(511/512/521/522) - directional context;
-:Stage 2: H1 fly expand\n(follows H4);
-:Stage 3: M5 shrink (513/523)\n→ M5 SQZ (400-499);\nAqua bands collapse flat (FIRST);
-:Stage 4: M15 shrink (513/523)\n→ M15 SQZ (400-499);\nGoldenrod bands collapse;
-:Stage 5: M30 shrink (513/523)\n→ M30 SQZ (400-499);\nGreen-yellow bands collapse (LAST);
-:Stage 6: Full compression\nall lower TF bands flat;\n[G0c-SQZLOCK] / [G6-LOAD] visible;\nPink zone → Exit all;
-:Stage 7: Pre-breakout loading\nTouch counts shift: L→U;
-:Stage 8: M5 breaks SQZ first\nREVUP/REVDN → [G6-BUY/SELL];
-:Stage 9: M15 follows M5;
-:Stage 10: M30 follows M15;
-:Stage 11: H1 follows M30\n(or H4 remains fly);
-stop
-@enduml
+```mermaid
+flowchart TD
+    A["Stage 1: H4 fly expand (511/512/521/522) - directional context"] --> B["Stage 2: H1 fly expand (follows H4)"]
+    B --> C["Stage 3: M5 shrink (513/523) → M5 SQZ (400-499)\nAqua bands collapse flat (FIRST)"]
+    C --> D["Stage 4: M15 shrink (513/523) → M15 SQZ (400-499)\nGoldenrod bands collapse"]
+    D --> E["Stage 5: M30 shrink (513/523) → M30 SQZ (400-499)\nGreen-yellow bands collapse (LAST)"]
+    E --> F["Stage 6: Full compression\nall lower TF bands flat\n[G0c-SQZLOCK] / [G6-LOAD] visible\nPink zone → Exit all"]
+    F --> G["Stage 7: Pre-breakout loading\nTouch counts shift: L→U"]
+    G --> H["Stage 8: M5 breaks SQZ first\nREVUP/REVDN → [G6-BUY/SELL]"]
+    H --> I["Stage 9: M15 follows M5"]
+    I --> J["Stage 10: M30 follows M15"]
+    J --> K["Stage 11: H1 follows M30 (or H4 remains fly)"]
 ```
 
 **Compression lifecycle verified (from all 3 images):**
@@ -1918,44 +1772,24 @@ SIZE: 0.75× (1-2 TFs compress) → 0.50× (3 TFs compress) → 0.25× (all 3 co
 
 ### Scenario F Identification Flowchart
 
-```plantuml
-@startuml scenario_f_identification
-skinparam backgroundColor #FFFFFF
-skinparam linetype ortho
-start
-:See bands on chart;
-if (All TF bands collapsed\nto tight bundle?) then (Yes)
-  if (Stage labels\n400-499 (SQZ)?) then (Yes)
-    if ([G6-LOAD] or\n[G0c-SQZLOCK] visible?) then (Yes)
-      if (Pressure building?\n(L or U touch high)?) then (Yes)
-        if (M5 band spreading\nfirst?) then (Yes)
-          if (REVUP/REVDN\nlabel appears?) then (Yes)
-            :SCENARIO F CONFIRMED;
-            if (D1 direction?) then (D1 fly BUY)
-              :BUY breakout
-            else (D1 fly SELL)
-              :SELL breakout
-            endif
-          else (No)
-            :No breakout yet
-          endif
-        else (No)
-          :Still loading
-        endif
-      else (No)
-        :Early compression
-      endif
-    else (No)
-      :SQZ without\nloading label
-    endif
-  else (No)
-    :NOT full compression
-  endif
-else (No)
-  :NOT Scenario F
-endif
-stop
-@enduml
+```mermaid
+flowchart TD
+    A["See bands on chart"] --> B{"All TF bands collapsed to tight bundle?"}
+    B -->|Yes| C{"Stage labels 400-499 (SQZ)?"}
+    C -->|Yes| D{"[G6-LOAD] or [G0c-SQZLOCK] visible?"}
+    D -->|Yes| E{"Pressure building? (L or U touch high)?"}
+    E -->|Yes| F{"M5 band spreading first?"}
+    F -->|Yes| G{"REVUP/REVDN label appears?"}
+    G -->|Yes| H["SCENARIO F CONFIRMED"]
+    H --> I{"D1 direction?"}
+    I -->|D1 fly BUY| J["BUY breakout"]
+    I -->|D1 fly SELL| K["SELL breakout"]
+    G -->|No| L["No breakout yet"]
+    F -->|No| M["Still loading"]
+    E -->|No| N["Early compression"]
+    D -->|No| O["SQZ without loading label"]
+    C -->|No| P["NOT full compression"]
+    B -->|No| Q["NOT Scenario F"]
 ```
 
 **Visual confirmation checklist:**
@@ -2025,40 +1859,22 @@ TARGET: H4 outer band (if H4 also breaking) → D1 outer band
 
 ### Scenario G Identification Flowchart
 
-```plantuml
-@startuml scenario_g_identification
-skinparam backgroundColor #FFFFFF
-skinparam linetype ortho
-start
-:See bands on chart;
-if (Mid-band labels (3,4,5)\nvisible on M30 AND M15?) then (Yes)
-  if (ALL bands flat\n(no expansion)?) then (Yes)
-    if (H4 in SQZ\nor flat?) then (Yes)
-      if (D1 also flat?) then (Yes)
-        if ([G0] visible?) then (Yes)
-          :SCENARIO G CONFIRMED;
-          if ([G0] label type?) then ([G0])
-            :All TFs mid≥3\nEXIT ALL
-          else ([G0-HOLD])
-            :H1 not sideway\nHOLD, no new entry
-          endif
-        else (No)
-          :Not yet triggered
-        endif
-      else (No)
-        :D1 may provide\ndirection
-      endif
-    else (No)
-      :H4 still has\ndirection
-    endif
-  else (No)
-    :NOT all TFs sideway
-  endif
-else (No)
-  :NOT Scenario G
-endif
-stop
-@enduml
+```mermaid
+flowchart TD
+    A["See bands on chart"] --> B{"Mid-band labels (3,4,5) visible on M30 AND M15?"}
+    B -->|Yes| C{"ALL bands flat (no expansion)?"}
+    C -->|Yes| D{"H4 in SQZ or flat?"}
+    D -->|Yes| E{"D1 also flat?"}
+    E -->|Yes| F{"[G0] visible?"}
+    F -->|Yes| G["SCENARIO G CONFIRMED"]
+    G --> H{"[G0] label type?"}
+    H -->|[G0]| I["All TFs mid≥3\nEXIT ALL"]
+    H -->|[G0-HOLD]| J["H1 not sideway\nHOLD, no new entry"]
+    F -->|No| K["Not yet triggered"]
+    E -->|No| L["D1 may provide direction"]
+    D -->|No| M["H4 still has direction"]
+    C -->|No| N["NOT all TFs sideway"]
+    B -->|No| O["NOT Scenario G"]
 ```
 
 **Visual confirmation checklist:**
