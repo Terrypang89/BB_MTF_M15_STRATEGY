@@ -2799,6 +2799,15 @@ Recovery: wait until M30 or M15 shows mid=1 or mid=2 again
 
 ---
 
+## Scenario H — Trend Reversal
+
+**When user asks to analyze part 3 Scenario H:**
+- Read `./Backtest_data/extras/backtested_EA_trend_reversal.jpg` as the trend reversal scenario visual reference.
+
+![trend reversal](./Backtest_data/extras/backtested_EA_trend_reversal.jpg)
+
+---
+
 ## Scenario Summary
 
 | Scenario | Key Identifier | Primary Action |
