@@ -469,13 +469,19 @@ Three touch types must be distinguished:
 
 | Type | BBW_stage | diffMid_Trend | BBUpDn_state | Meaning | Action |
 |------|-----------|---------------|--------------|---------|--------|
-| Type 1 | Shrinking 513/523 | 3/4/5 — flat or weak | 0→1 or 0→2 (band caught wick) | Band moved to price — compression geometry noise | IGNORE — not a signal |
-| Type 2 | Highest still-flying TF at outer band | 4 or 5 — directional lean | 1 or 2 at HTF level | Price reached confinement boundary — real signal | Check G0b filters — valid entry |
-| Type 3 | Multiple TFs SQZ 400-499 | 3 all TFs | Alternating 1 and 2 same bar/adjacent bars | SQZ peak — band width < candle range, geometric overlap | G0b-PINK zone — EXIT all, wait |
+| Type 1 | Shrinking 513/523 | 3/4/5 — flat or weak | 2 (shrinking — band moving toward price) | Band moved to price — compression geometry noise | IGNORE — not a signal |
+| Type 2 | Highest still-flying TF at outer band | 4 or 5 — directional lean | 1 (expanding) at HTF level — PriceLoc=at_upper or at_lower | Price reached confinement boundary — real signal | Check G0b filters — valid entry |
+| Type 3 | Multiple TFs SQZ 400-499 | 3 all TFs | 0 (no_state) alternating with 2 same bar/adjacent bars | SQZ peak — band width < candle range, geometric overlap | G0b-PINK zone — EXIT all, wait |
 
-**Key rule:** The signal always comes from the HIGHEST TF that is currently at its outer band.
-Lower TF outer band touches during HTF shrink = Type 1 noise.
-Only the HTF confinement boundary touch = Type 2 valid signal.
+**Key rule:** The signal always comes from the HIGHEST TF that is currently at its outer band (PriceLoc=at_upper or at_lower).
+Lower TF outer band touches during HTF shrink = Type 1 noise (BBUpDn_state=2 shrinking, band moved to price).
+HTF confinement boundary touch WITH PriceLoc=at_upper/lower AND diffMid=4/5 = Type 2 valid signal.
+**BBUpDn_state measures band movement direction — NOT price location:**
+- 0 = no_state (SQZ or transitional)
+- 1 = expanding (upper rising AND lower falling — confirmed 2 bars)
+- 2 = shrinking (upper falling AND lower rising — confirmed 2 bars)
+- 3 = up (both bands moving upward together)
+- 4 = dn (both bands moving downward together)
 
 ---
 
@@ -1021,7 +1027,8 @@ flowchart TD
 
 **Touch discrimination during B:** LTF/MTF outer band touches during B are mostly Type 1
 (compression geometry — band moved to price, mid=3). Valid signal ONLY when:
-BBUpDn_state=1/2 at the HIGHEST still-flying TF AND that TF mid=4 or 5 (directional lean).
+PriceLoc=at_upper or at_lower at the HIGHEST still-flying TF AND that TF diffMid=4 or 5 (directional lean).
+(BBUpDn_state measures band movement direction: 1=expanding, 2=shrinking, 3=up, 4=dn, 0=no_state — not price location)
 
 **Discriminator B1→B2:** Watch M30 BBW_stage — when M30 enters 513/523, depth increases to B2
 **Discriminator B2→B3:** Watch H1 BBW_stage — when H1 enters 513/523, depth increases to B3
@@ -1390,7 +1397,7 @@ flowchart TD
 | D2 | M15 confirm | G6-BUY/SELL fires | 511/512 | 511/512 | 511/512 or 513 | FLAT→UP/DN transition | 511/512 | ENTER — M15 mid flip is the trigger | 0.75× |
 | D3 | MTF re-align | — | 511/512 | 511/512 | 511/512 | 511/512 | 511/512 | Hold existing / add if quality ≥ 90 | → 1.0× |
 
-**D1 sub-state BBUpDn sequence:** M5 BBUpDn_state 2→1 (for BUY REVUP) = D2 signal initiated
+**D1 sub-state BBUpDn sequence:** M5 BBUpDn_state 2→1 (shrinking→expanding) = band actively expanding = D2 signal initiated. PriceLoc simultaneously transitions from at_lower → above_upper as expansion drives price upward.
 **D2 trigger:** M15 mid=3 → mid=1 (REVUP) or mid=3 → mid=2 (REVDN) = G6-BUY/SELL fires
 **D3 confirmation:** M30 BBW_stage reaches 511/512 = D2 fully confirmed → back toward A
 
@@ -2083,10 +2090,10 @@ M5/M15/M30: Stage 400-499 (SQZ persistent)
 | E2 | LTF full SQZ | 511/512 | 511/512 or 513 | 400-499 | 400-499 | 400-499 | Type 3 — all bands alternating BBUpDn 1/2 | G0b-PINK fires | EXIT all — pink zone |
 | E3 | Loading | 511/512 | 511/512 | 513/523 or breaking | 513/523 or breaking | Breaking SQZ — REVUP/REVDN | Type 2 at M5 (BBUpDn 2→1) | G6-LOAD fires | ARM for entry — wait M15 confirm |
 
-**E2 BBUpDn sequence:** M5 BBUpDn alternates 1 and 2 on consecutive bars = SQZ peak = G0b-PINK
-**E3 BBUpDn sequence:** M5 BBUpDn_state 2→1 (REVUP) = D2 initiated = G6-LOAD
+**E2 BBUpDn sequence:** M5 BBUpDn_state alternates 0 (no_state) and 2 (shrinking) on consecutive bars = SQZ peak, band so narrow it catches every candle = G0b-PINK
+**E3 BBUpDn sequence:** M5 BBUpDn_state 2→1 (shrinking→expanding) = band actively expanding upward = D2 initiated = G6-LOAD fires. PriceLoc transitions from at_lower → above_upper confirming breakout direction.
 **Touch rule in E:** During E1/E2 all LTF touches are Type 1 or Type 3 (noise/geometry).
-Only M5 BBUpDn 2→1 transition (Type 2 at M5 level) is the valid signal.
+Only M5 BBUpDn_state 2→1 transition (shrinking→expanding = band actively expanding) combined with PriceLoc=above_upper is the valid Type 2 signal.
 
 **HTF context:** H4 is in fly expand — providing directional context and clear outer band target. H1 follows H4 in fly. M30/M15/M5 are confined within H4's band envelope and oscillate between H4 upper and lower bands. Compression is localized to lower TFs — HTF trend is strong.
 
