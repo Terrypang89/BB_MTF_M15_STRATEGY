@@ -1,436 +1,498 @@
 # Log Examples Reference
+
 ## Annotated EA Log Samples — How to Decode Each Line
 
 ---
 
 ## Log Line Format Reference
 
+Each EA log line in the Journal tab:
+
 ```
-[ORDERINFO]   → open position summary (profit, lots, ticket numbers)
-[ATRSL1buf]   → ATR stop loss state (dir, levels, mid, ATR value)
-[M15]         → M15 Bollinger Band state
-[M30]         → M30 Bollinger Band state
-[H1]          → H1 Bollinger Band state (first_stage flag if uninitialized)
-[TRADEINFO]   → H2L/L2H chain detection results + Trade_act decision
-[AllTF]       → Cross-TF relationship flags
+YYYY.MM.DD HH:MM:SS  [TAG] field:value, field:value, ...
+```
+
+No EA-name or timestamp prefix in the Journal tab output — just date/time + tag block.
+
+**Tag emit order per tick:**
+
+```
+[M15] → [M30] → [H1] → [H4] → [TRADEINFO] → [BBTFImpact] → [ATRSL1buf] → [ORDERINFO]
+```
+
+> **Float precision note:** The EA emits raw MQL5 doubles. Some values will appear as
+> e.g. `1.6099999999999999` or `3.7199999999999998` — this is normal IEEE 754 output,
+> not a bug. Do not round these when comparing logs.
+
+---
+
+## Tag Field Reference
+
+```
+[M15] / [M30] / [H1] / [H4]
+  W_stage_TF:(REGIME)[cur, prev, prev2]        → BBW stage + regime label
+  diffMid_Trend_TF:[cur, prev, prev2]           → midline trend  1=up 2=dn 3=flat 4=side-dn 5=side-up
+  BBUpDn_TF:[cur, prev, prev2]                  → band movement state (2-bar confirmed):
+                                                   0=neutral/mixed (no clean confirmation)
+                                                   1=expanding  Upper↑ AND Lower↓ for 2 bars
+                                                   2=shrinking  Upper↓ AND Lower↑ for 2 bars
+                                                   3=up         Upper↑ AND Lower↑ for 2 bars (parallel up)
+                                                   4=dn         Upper↓ AND Lower↓ for 2 bars (parallel down)
+  trend_TF:[cur, prev, prev2, ]                 → BB midline trend enum per bar (trailing comma)
+                                                   0=no_trend  1=up  2=dn  3=sideway
+                                                   4=sideway_dn  5=sideway_up
+                                                   7=rev_up (REVUP on chart)  8=rev_dn (REVDN on chart)
+  prev_trend_TF:N                               → trend enum of the bar before cur (same enum as above)
+  diffMid_TF:[cur, prev, prev2]                 → midline delta: [n] = MidLV[n] - MidLV[n+1]
+                                                   each step = one TF bar apart (EA runs on M5, HTF sampled at M5 resolution)
+  diffBBW_TF:[cur, prev, prev2]                 → BB-width delta: [n] = (WLV[n] - WLV[n+1]) * 100
+                                                   positive = expanding, negative = contracting
+                                                   scaled ×100; uses full-precision internal BBWLV not printed WLV
+                                                   step size varies by TF: M15=15min, M30=30min, H1=1hr, H4=4hr
+  WLV_TF:[cur, prev, prev2]                     → BB width level; prev = one TF bar ago
+                                                   M5=5min, M15=15min, M30=30min, H1=1hr, H4=4hr between samples
+  MidLV_TF:[cur, prev, prev2]                   → midline price (sampled at M5 resolution)
+                                                   prev = one TF bar ago: M15=15min, M30=30min, H1=1hr, H4=4hr
+  UppLV_TF:[cur, prev, prev2]                   → upper band price (same sampling as MidLV)
+  LowLV_TF:[cur, prev, prev2]                   → lower band price (same sampling as MidLV)
+  close_TF / high_TF / low_TF                   → OHLC (M15 only; omitted on M30/H1/H4)
+
+[TRADEINFO]
+  Gate:[Gx-LABEL] TradeAct:N cnt:N pen:N.NN| Gate:[Gy-LABEL] ...flags...|act:N atrsl:N
+
+[BBTFImpact]
+  Sideway_val:[NNNNN-...]                        → 5-digit concatenation of per-TF sideway scores [H4][H1][M30][M15][M5]
+                                                   each digit 0–6:  +4 if diffMid_Trend>=3 (flat/side)
+                                                                    +2 if stage<500 (SQZ/SW/STR)
+                                                                    +1 if stage==513 or 523 (shrink)
+                                                                     0 if clean fly (stage>=500, not 513/523)
+                                                   [NNNNN]        = sideway not confirmed
+                                                   [NNNNN-S_XX]   = sideway CONFIRMED (combined detection triggered)
+  HTF_Drive_LTF_Sideway:[TF_N, ...]
+  LTF_Drive_HTF_Fly:[TF_N, ...]
+  midline_Cluster:[N, N, N]                      → midline price spread vs M15: [|M15-M5|, |M15-M30|, |M15-H1|]
+  line_seq_touch:[TF_cur-recent,prev, ...]       → touch sequence per TF [cur state - recent touch, prev touch]
+                                                   ENUM_BB_LineTouch: 0=none 6=dnup_Dn 7=updn_Mid
+                                                   8=dnup_Mid 9=updn_Up 16=untouch_dnup_Dn
+                                                   17=untouch_updn_Mid 18=untouch_dnup_Mid 19=untouch_updn_Up
+  line_seq_cross:[TF_cur-recent,prev, ...]       → cross sequence per TF [cur state - recent cross, prev cross]
+                                                   ENUM_BB_LineCross: 0=none 10=BB_LOW 15=CrossUp_LOW
+                                                   16=CrossDn_LOW 20=BB_DN 26=CrossDn_DN 30=BB_UP
+                                                   35=CrossUp_UP 40=BB_HIGH 45=CrossUp_HIGH 46=CrossDn_HIGH
+  untouch_val:[TF_N-N, ...]                      → bars since last band touch
+  Midline_cross:[TF_cur-prev, ...]               → midline cross per TF [cur bar state - prev bar state]
+                                                   same ENUM_BB_LineCross values as line_seq_cross
+
+[ATRSL1buf]
+  dir:N                                         → 0=uptrend (LV=Lower, stop below price)
+                                                   1=downtrend (LV=Upper, stop above price)
+  Trend:[cur,prev,prev2,prev3,prev4,prev5,]     → buffer direction per bar [cur→prev5] (trailing comma)
+                                                   2=uptrend  1=downtrend
+  LV:[cur,prev,prev2,prev3,prev4,prev5,]        → active buffer value = Lower when dir:0, Upper when dir:1
+  Upper:[cur,prev,prev2,prev3,prev4,prev5,]     → upper band of ATR channel (SELL stop reference)
+  Lower:[cur,prev,prev2,prev3,prev4,prev5,]     → lower band of ATR channel (BUY stop reference)
+  SLMid:[cur,prev,prev2,prev3,prev4,prev5,]     → midpoint of ATR channel
+  Val:[cur,prev,prev2,prev3,prev4,prev5,]       → raw ATR value per bar (trailing comma)
+
+[ORDERINFO]
+  BUY_PROFIT:N, BUY_LOTS:N, BUY_TICKET_NUM:N, BUYS:N,
+  SELL_PROFIT:N, SELL_LOTS:N, SELL_TICKET_NUM:N, SELLS:N, TOTALORDERS:N
 ```
 
 ---
 
-## Example 1: Indecision / Sideway State
-**Source: 2025.03.03 06:00–06:15**
+## BBW Stage Code Reference
+
+Stage codes are 3-digit: each digit encodes Upper/Lower/Mid band direction.
+The chart label is derived from `BBW_stage` + `BB_diffBBW[LA]` at the current bar.
 
 ```
-[ORDERINFO] BUY_PROFIT:-6.42, BUY_LOTS:0.01, BUY_TICKET_NUM:2, BUYS:1
+Stage   Chart Label   Condition                        Meaning
+──────  ────────────  ───────────────────────────────  ──────────────────────────────────────
+511     fly++         stage=511 (default ≥500)         All bands rising — strong bull fly
+512     fly+-         stage=512 AND diffBBW > 0        Parallel up, BB expanding
+512     fly-+         stage=512 AND diffBBW < 0        Parallel up, BB contracting
+512     fly++         stage=512 AND diffBBW = 0        Parallel up, width unchanged
+513     fly--         stage=513                        Shrink-up (bands converging, mid rising)
+521     fly++         stage=521 (default ≥500)         All bands falling — strong bear fly
+522     fly+-         stage=522 AND diffBBW > 0        Parallel down, BB expanding
+522     fly-+         stage=522 AND diffBBW < 0        Parallel down, BB contracting
+522     fly++         stage=522 AND diffBBW = 0        Parallel down, width unchanged
+523     fly--         stage=523                        Shrink-dn (bands converging, mid falling)
+400–499 SQZ           stage 400–499                   Squeeze — bands compressed
+400–499 SQZ-@@@       stage 400–499 AND               Deep/confirmed squeeze
+                      BBW_updated_stage >= 1000
+300–399 SW            stage 300–399                   Sideways
+200–299 STR           stage 200–299                   Strong trend
 ```
-**Reading:** One open BUY losing $6.42. Only 1 active order.
+
+**Mid-band chart labels** (drawn at midline, separate from stage label):
 
 ```
-[ATRSL1buf] dir:0, Trend:[2.0,2.0,1.0,1.0,]
-            LV:[2861.85,2861.85,2865.52,2865.52,]
-            Upper:[2868.54,2869.29,2865.52,2865.52,]
-            ATRSLMid:[2864.84,2864.89,2865.36,2864.71,]
+diffMid_Trend >= 3   → prints the numeric value (3=flat, 4=side-dn, 5=side-up)
+trend == 7           → REVUP  (reversal upward detected)
+trend == 8           → REVDN  (reversal downward detected)
 ```
+
+**Note:** The `(REGIME)` string in `W_stage_TF:(REGIME)[...]` in the log prints only `FLY` or `SQZ`.
+The full `fly++/fly+-/fly-+/fly--` label is the chart annotation only, derived at draw time from
+`BBW_stage` + `diffBBW[LA]` as shown above.
+
+**BBW Stage Progression Patterns:**
+
+```
+Normal bull run:   400 → 512 → 511 → 513 → 400 → 512
+                   SQZ   fly    fly  shrink  SQZ   fly
+
+Healthy trend:     511 → 511 → 511 → 513 → 511
+                   hold  hold  hold  pause  resume
+
+Reversal pattern:  511 → 513 → 400 → 521 → 522
+                   up   shrink  SQZ  turn   down
+
+Bear trend:        522 → 522 → 522 → 523 → 400 → 512
+                   dn    dn    dn   shrink  SQZ  reversal
+```
+
+Key: `513/523 → 400` = shrink-to-SQZ. When M30 hits this, watch for direction change in next 3–10 bars.
+
+---
+
+## diffMid_Trend Value Reference
+
+```
+1 = Uptrend       mid rising cleanly
+2 = Downtrend     mid falling cleanly
+3 = Flat          mid stationary
+4 = Side-down     mid drifting lower
+5 = Side-up       mid drifting higher
+```
+
+---
+
+## BBUpDn Value Reference
+
+`BBUpDn_TF` reflects `BBUpDn_state` — band movement confirmed over 2 consecutive bars.
+Both current and previous bar must show the same pattern before a state fires; otherwise `0`.
+
+```
+Value  Meaning
+─────  ──────────────────────────────────────────────────────────────────
+0      Neutral / mixed  — no clean 2-bar confirmation
+1      Expanding        — Upper↑ AND Lower↓ on bar[cur] and bar[prev]
+2      Shrinking        — Upper↓ AND Lower↑ on bar[cur] and bar[prev]
+3      Up               — Upper↑ AND Lower↑ on bar[cur] and bar[prev] (parallel up)
+4      Down             — Upper↓ AND Lower↓ on bar[cur] and bar[prev] (parallel down)
+```
+
+---
+
+## TRADEINFO Gate Reference
+
+```
+Gate       Meaning
+─────────  ─────────────────────────────────────────────────────
+G0         Initial regime filter (M5 check)
+G1         ATRSL direction gate
+G2         HTF anchor (D1+H4 agreement)
+G3-CHAIN   Minimum TF chain length — cnt = number of TFs aligned
+G4a        M30/H1 alignment (same direction)
+G4b-H1OPP H1 opposing direction block
+G5         SQZ block (no entry during squeeze)
+G6-SHRINK  Shrink path gate — pen = size penalty (0.75–1.0)
+G7         Final entry confirmation
+
+TradeAct:  0=NEUTRAL  1=BUY  2=SELL
+act:       0=no action  4=open trade
+atrsl:     0=ATRSL not used as SL  1=ATRSL used as SL
+```
+
+**TRADEINFO pipe format:**
+
+```
+Gate:[Gx-LABEL] TradeAct:N cnt:N pen:N.NN| Gate:[Gy-LABEL] flag:N|act:N atrsl:N
+│                            │       │       │                        │
+│                            │       │       └─ subsequent gate check └─ final action
+│                            │       └─ penalty multiplier (1.0=none)
+│                            └─ TF chain count
+└─ primary gate fired
+```
+
+---
+
+## BBTFImpact Field Reference
+
+```
+Field                       Meaning
+──────────────────────────  ──────────────────────────────────────────────────
+Sideway_val:[NNNNN-...]     5-digit string [H4][H1][M30][M15][M5], each digit 0–6
+                            +4 = diffMid_Trend>=3 (flat/side-dn/side-up)
+                            +2 = stage<500 (SQZ/SW/STR)
+                            +1 = stage==513 or 523 (shrink)
+                             0 = clean fly
+                            higher digits = more sideways/compressed on that TF
+                            Format:
+                              [NNNNN]        → sideway not confirmed
+                              [NNNNN-S_XX]   → sideway CONFIRMED (combined Sideway_val
+                                               + midline_Cluster detection triggered)
+HTF_Drive_LTF_Sideway       HTFs suppressing LTFs into sideways compression
+                            TF_1 = that TF is actively suppressed; [] = none
+LTF_Drive_HTF_Fly           LTFs showing fly energy driving HTFs
+                            Both active simultaneously = conflict/volatile state
+midline_Cluster             Price spread between M15 midline and other TF midlines:
+                            [0] = |M15mid - M5mid|
+                            [1] = |M15mid - M30mid|
+                            [2] = |M15mid - H1mid|
+                            larger value = greater TF divergence from M15
+line_seq_touch              Touch sequence per TF: [TF_cur-recent,prev]
+                            cur    = current touch state
+                            recent = most recent completed touch event
+                            prev   = previous completed touch event
+                            Values (ENUM_BB_LineTouch):
+                              0  = touch_none
+                              6  = touch_dnup_BBDn    crossed dn→up at lower band
+                              7  = touch_updn_BBMid   crossed up→dn at mid band
+                              8  = touch_dnup_BBMid   crossed dn→up at mid band
+                              9  = touch_updn_BBUp    crossed up→dn at upper band
+                              16 = untouch_dnup_BBDn  nearly dn→up at lower band
+                              17 = untouch_updn_BBMid nearly up→dn at mid band
+                              18 = untouch_dnup_BBMid nearly dn→up at mid band
+                              19 = untouch_updn_BBUp  nearly up→dn at upper band
+line_seq_cross              Cross sequence per TF: [TF_cur-recent,prev]
+                            cur    = current cross state
+                            recent = most recent completed cross event
+                            prev   = previous completed cross event
+                            Values (ENUM_BB_LineCross):
+                              0  = none
+                              10 = BB_LOW          price at lower band
+                              15 = CrossUp_BB_LOW  crossed up through lower band
+                              16 = CrossDn_BB_LOW  crossed down through lower band
+                              20 = BB_DN           price below lower band
+                              26 = CrossDn_BB_DN   crossed down below lower band
+                              30 = BB_UP           price at upper band
+                              35 = CrossUp_BB_UP   crossed up through upper band
+                              40 = BB_HIGH         price above upper band
+                              45 = CrossUp_BB_HIGH crossed up above upper band
+                              46 = CrossDn_BB_HIGH crossed down from above upper band
+untouch_val                 [TF_upper-lower] bars since last touch
+Midline_cross               Midline cross state per TF: [TF_cur-prev]
+                            cur  = current bar midline cross state
+                            prev = previous bar midline cross state
+                            Same ENUM_BB_LineCross values as line_seq_cross
+```
+
+**Sideway detection combines both Sideway_val and midline_Cluster:**
+
+```
+Sideway_val    → momentum dimension: are TF stages/trends losing direction?
+midline_Cluster → spatial dimension: are TF midlines converging in price?
+
+True sideway zone = BOTH conditions met:
+  Sideway_val digits high  (stages in SQZ/shrink, diffMid_Trend flat/side)
+  midline_Cluster low      (M5/M30/H1 midlines physically close to M15 midline)
+
+On chart: BB midlines visually stack and cluster together in the sideways zone.
+In a trending market: Sideway_val digits near 0, midline_Cluster values large
+  (TF midlines spread apart as each TF trends at its own pace).
+```
+
+**TF index mapping (BBTFImpact):**
+
+```
+M5=0  M15=1  M30=2  H1=3  H4=4  D1=5  W1=6
+```
+
+**Size multiplier from BBTFImpact:**
+
+```
+HTF_Drive_LTF_Sideway on M5+M15       → sizeMultiplier = 0.25
+HTF_Drive_LTF_Sideway on M5 only      → sizeMultiplier = 0.50
+LTF_Drive_HTF_Fly active, no suppress → sizeMultiplier = 1.00
+Both active at same time              → volatile transition, hold
+```
+
+---
+
+## ATRSL1buf Field Reference
+
+```
+Field   Meaning
+──────  ──────────────────────────────────────────────────────────
+dir     0 = uptrend   → LV = Lower band (stop below price, BUY mode)
+        1 = downtrend → LV = Upper band (stop above price, SELL mode)
+Trend   [cur,prev,prev2,prev3,prev4,prev5,]  buffer direction per bar
+        2=uptrend  1=downtrend
+LV      [cur,prev,prev2,prev3,prev4,prev5,]  active buffer value
+        equals Lower[n] when dir=0, Upper[n] when dir=1
+Upper   [cur,prev,prev2,prev3,prev4,prev5,]  top orange band — SELL stop reference
+Lower   [cur,prev,prev2,prev3,prev4,prev5,]  bottom orange band — BUY stop reference
+SLMid   [cur,prev,prev2,prev3,prev4,prev5,]  midpoint of ATR channel (yellow line)
+Val     [cur,prev,prev2,prev3,prev4,prev5,]  raw ATR value per bar
+```
+
+**Stop selection:**
+
+```
+dir:0 (uptrend)   → SL for open BUY  = LV[cur] = Lower[cur]
+dir:1 (downtrend) → SL for open SELL = LV[cur] = Upper[cur]
+
+Trend history examples:
+  [2,2,2,2,1,1,] → uptrend now (2), flipped from downtrend (1) at prev3
+  [1,1,1,1,2,2,] → downtrend now (1), flipped from uptrend (2) at prev3
+```
+
+---
+
+## Example 1: Multi-TF Compression — No Trade
+
+**Source: 2026.02.19 04:00**
+
+```
+2026.02.19 04:00:02   [M15], W_stage_M15:(FLY)[522, 522, 522], diffMid_Trend_M15:[4.0, 2.0, 2.0],
+  BBUpDn_M15:[4, 4, 0], trend_M15:[2, 2, 2, ], prev_trend_M15:2,
+  diffMid_M15:[-0.34, -0.55, -0.73], diffBBW_M15:[-0.82, -0.66, 3.29],
+  WLV_M15:[0.56, 0.57, 0.58],
+  MidLV_M15:[4974.42, 4974.76, 4975.21], UppLV_M15:[4988.28, 4988.82, 4989.53],
+  LowLV_M15:[4960.56, 4960.69, 4960.88],
+  close_M15:[4973.23, 4973.32, 4973.97], high_M15:[4973.23, 4975.7, 4975.33],
+  low_M15:[4973.23, 4972.62, 4970.78],
+
+2026.02.19 04:00:03   [M30], W_stage_M30:(SQZ)[412, 412, 513], diffMid_Trend_M30:[2.0, 2.0, 3.0],
+  BBUpDn_M30:[0, 0, 2], trend_M30:[2, 8, 1, ], prev_trend_M30:2,
+  diffMid_M30:[-1.35, -0.54, 0.18], diffBBW_M30:[-2.84, 5.3, -2.93],
+  WLV_M30:[0.94, 0.97, 0.95],
+  MidLV_M30:[4983.0, 4984.35, 4984.65], UppLV_M30:[5006.52, 5008.58, 5008.25],
+  LowLV_M30:[4959.48, 4960.11, 4961.05],
+
+2026.02.19 04:00:04   [H1], W_stage_H1:(FLY)[512, 512, 512], diffMid_Trend_H1:[1.0, 1.0, 1.0],
+  BBUpDn_H1:[3, 3, 0], trend_H1:[1, 1, 1, ], prev_trend_H1:1,
+  diffMid_H1:[1.92, 1.6099999999999999, 3.14], diffBBW_H1:[-3.15, -5.4, -9.28],
+  WLV_H1:[2.38, 2.42, 2.46],
+  MidLV_H1:[4961.0, 4959.08, 4957.13], UppLV_H1:[5020.14, 5018.98, 5018.21],
+  LowLV_H1:[4901.85, 4899.18, 4896.05],
+
+2026.02.19 04:00:05   [H4], W_stage_H4:(FLY)[523, 521, 521], diffMid_Trend_H4:[2.0, 5.0, 4.0],
+  BBUpDn_H4:[2, 0, 0], trend_H4:[2, 2, 2, ], prev_trend_H4:2,
+  diffMid_H4:[-2.87, -1.21, 1.63], diffBBW_H4:[-23.71, -6.23, 7.14],
+  WLV_H4:[3.7199999999999998, 3.96, 4.02],
+  MidLV_H4:[4951.58, 4954.45, 4955.69], UppLV_H4:[5043.76, 5052.56, 5055.38],
+  LowLV_H4:[4859.41, 4856.35, 4855.99],
+
+2026.02.19 04:00:05   [TRADEINFO] Gate:[G6-SHRINK] TradeAct:0 cnt:1 pen:0.75|
+  Gate:[G4b-H1OPP] M30dn+H1up:1|act:0 atrsl:0
+
+2026.02.19 04:00:05   [BBTFImpact] Sideway_val:[10244-S_31]
+  HTF_Drive_LTF_Sideway:[M5_1, M15_1, M30_1, H4_1, D1_1],
+  LTF_Drive_HTF_Fly:[M15_1, M30_1, H4_1],
+  midline_Cluster:[7.42, 8.58, 13.42],
+  line_seq_touch:[M5_9-9,6, M15_0-6,6, M30_0-7,8, H1_0-9,9, H4_0-18,8, D1_0-17,7, W1_0-9,9],
+  line_seq_cross:[M5_30-40,30, M15_0-20,10, M30_0-20,30, H1_0-30,40, H4_0-30,20, D1_0-20,30, W1_0-30,40],
+  untouch_val:[M5_0-0, M15_0-0, M30_0-0, H1_0-0, H4_0-0, D1_0-0, W1_0-0],
+  Midline_cross:[M5_46-40, M15_20-20, M30_20-20, H1_30-30, H4_30-30, D1_20-20, W1_30-30]
+
+2026.02.19 04:00:05   [ATRSL1buf] dir:0,
+  Trend:[2.0,2.0,2.0,2.0,1.0,1.0,],
+  LV:[4967.04,4967.04,4964.64,4963.2,4970.05,4970.05,],
+  Upper:[4978.14,4978.14,4978.14,4978.14,4970.05,4970.05,],
+  Lower:[4967.04,4967.04,4964.64,4963.2,4960.42,4959.59,],
+  SLMid:[4973.73,4974.13,4973.35,4971.09,4969.54,4967.9,],
+  Val:[3.57,3.79,3.79,3.92,4.32,4.45,]
+
+2026.02.19 04:00:05   [ORDERINFO], BUY_PROFIT:0.0, BUY_LOTS:0.0, BUY_TICKET_NUM:0, BUYS:0,
+  SELL_PROFIT:0.0, SELL_LOTS:0.0, SELL_TICKET_NUM:0, SELLS:0, TOTALORDERS:0
+```
+
 **Reading:**
-- `dir:0` → ATRSL not trailing yet, static stop mode
-- `Trend:[2,2,1,1]` → ATRSL itself trending down on recent bars, up on older bars (mixed)
-- `LV:2861.85` → static lower stop at 2861.85 (BUY stop level)
-- ATRSL is FLAT → no clear directional commitment from stop system
 
-```
-[M15] W_stage_M15:[522,522,522](FLY), diffMid_Trend_M15:[2.0,4.0,2.0]
-     diffBBW_M15:[-2.96,-1.94,-0.93]
-```
-**Reading:**
-- Stage 522 all 3 bars = parallel down (all bands falling)
-- Midtrend [2,4,2] = downtrend, side-dn, downtrend = **bearish M5**
-- diffBBW negative = BB is contracting (narrowing) = losing momentum
-- **M5 is bearish but weakening — fly losing strength**
+**[M15]** Stage 522 all 3 bars = bearish fly (all bands falling). `diffMid_Trend=[4,2,2]` = side-dn cur, dn prev bars — bearish but not accelerating. `BBUpDn=[4,4,0]` = parallel-down confirmed (Upper↓ AND Lower↓) on cur and prev bars, neutral at prev2. `diffBBW` going from negative (contracting) to +3.29 = BB re-expanding this bar.
 
-```
-[M15] W_stage_M15:[423,513,513](SQZ), diffMid_Trend_M15:[3.0,5.0,5.0]
-```
-**Reading:**
-- Stage sequence [423→513→513]: M15 was in SQZ (423) and is transitioning to shrink (513)
-- diffMidtrend [3,5,5] = flat, side-up, side-up = **M15 trying to turn bullish but not confirmed**
-- SQZ deepening (423 > 423 in prev session) = compression building
+**[M30]** Stage sequence `[412, 412, 513]` = was shrinking (513 two bars ago), now in SQZ (412) for two bars. `diffMid_Trend=[2,2,3]` = dn → dn → flat. `BBUpDn=[0,0,2]` = neutral now (no 2-bar confirmation), was shrinking at prev2. M30 compressing into squeeze with mid flattening.
 
-```
-[M30] W_stage_M30:[512,512,512](FLY), diffMid_Trend_M30:[1.0,1.0,1.0]
-```
-**Reading:**
-- Stage 512 = parallel up (all bands rising)
-- Midtrend all 1 = **M30 clearly bullish** — this is the macro supporting direction for the open BUY
+**[H1]** Stage 512 all 3 bars = bullish fly, `diffMid_Trend=[1,1,1]` = clean uptrend all bars. `BBUpDn=[3,3,0]` = parallel-up confirmed (Upper↑ AND Lower↑) on cur and prev bars, neutral at prev2. `diffBBW` consistently negative = H1 BB width narrowing despite parallel-up movement.
 
-```
-[H1] first_stage_H1:[true], W_stage_H1:()[0,0,0], diffMid_Trend_H1:[3.0,3.0,3.0]
-```
-**Reading:**
-- `first_stage_H1:true` = H1 not yet initialized — insufficient bars
-- Stage 0, midtrend 3 = **H1 undefined/neutral**
-- Cannot use H1 as macro filter yet
+**[H4]** Stage `[523, 521, 521]` = bearish shrink cur bar, bearish fly prior 2 bars. `diffMid_Trend=[2,5,4]` = dn → side-up → side-dn = H4 losing momentum. `BBUpDn=[2,0,0]` = shrinking confirmed only on cur bar (Upper↓ AND Lower↑), neutral prior — shrink just started. `WLV=3.72` (raw double `3.7199999999999998`) = widest BB across TFs.
 
-```
-[TRADEINFO] L2H_sideway:1, H2L_flyUP:-1, H2L_flyDN:-1, L2H_flyUP:-1, L2H_flyDN:-1
-```
-**Reading:**
-- Only `L2H_sideway:1` fired = sideway chain detected bottom-up
-- All fly signals = -1 (no consecutive fly chain in either direction)
-- **No valid fly entry — EA correctly not opening new orders**
+**[TRADEINFO]** G6-SHRINK fired: H4 cur=523 (bearish shrink), `cnt:1` = one shrink TF, `pen:0.75` = 25% size penalty. But then G4b-H1OPP blocks: `M30dn+H1up:1` = M30 is bearish (mid=2) while H1 is bullish (mid=1) → opposing. `TradeAct:0` = NEUTRAL, `act:0` = no trade.
 
-```
-[AllTF] HTF_Drive_LTF_Sideway:[M5_1, M15_1]
-        LTF_Drive_HTF_Fly:[M15_1, H1_1]
-```
-**Reading:**
-- `HTF_Drive_LTF_Sideway_M5=1, M15=1` → Higher TFs are suppressing M5 and M15 into sideways
-- `LTF_Drive_HTF_Fly_M15=1, H1=1` → M15 and H1 showing fly energy (LTF pushing back)
-- **Conflict state: HTF suppressing LTF but LTF trying to break out**
-- This maps to `sizeMultiplier = 0.5` in the sizing logic
+**[BBTFImpact]** `Sideway_val=10244` decodes as `[H4=1][H1=0][M30=2][M15=4][M5=4]` — H4 shrinking (+1), H1 clean fly (0), M30 in SQZ (+2), M15 flat/side-dn (+4), M5 flat/side (+4). High scores on M15/M5 confirm deep LTF compression. `HTF_Drive_LTF_Sideway` active on M5/M15/M30/H4/D1 = virtually all TFs suppressed. `LTF_Drive_HTF_Fly` on M15/M30/H4 = those TFs still have residual fly energy despite suppression → conflict state, `sizeMultiplier` reduced. `midline_Cluster=[7.42, 8.58, 13.42]` = midlines spread widely across TFs → no price convergence.
+
+**[ATRSL1buf]** `dir:0` = uptrend mode, LV tracking Lower band. `Trend=[2,2,2,2,1,1]` = currently uptrend (2) for 4 bars, prior 2 bars were downtrend (1) — buffer recently flipped to uptrend. `LV[0]=4967.04 = Lower[0]=4967.04` ✓ confirms dir:0. `Upper=4978.14` = SELL stop reference if a short were open.
+
+**[ORDERINFO]** No open positions.
 
 **Overall diagnosis:**
-> Market is in a **compression/indecision phase**. M30 is bullish (512) but M5 is bearish (522) and M15 is squeezing (423→513). The open BUY was entered prematurely before SQZ resolved. Hold with tight stop at ATRSL LV=2861.85. Wait for M15 SQZ to break upward before adding. Exit if price closes below 2861.85.
+> Deep multi-TF compression. M30 has entered SQZ (412) while H1 is bullishly flying (512) and H4 is starting to shrink (523→). G4b-H1OPP correctly blocks any short entry — H1 direction directly opposes M30. The enormous `Sideway_val` (10244) confirms no tradeable state. Wait for M30 SQZ to resolve AND H1/M30 to align before any entry.
 
 ---
 
-## Example 2: Normal Fly State (High Conviction)
+## Example 2: Normal Fly State (High Conviction BUY)
 
 ```
-[M5]  W_stage_M5:(FLY)[511,511,512], diffMid_Trend_M5:[1.0,1.0,1.0]
-      diffBBW_M5:[+2.14,+3.21,+1.98]
-[M15] W_stage_M15:[511,511,511](FLY), diffMid_Trend_M15:[1.0,1.0,1.0]
-[M30] W_stage_M30:[512,512,511](FLY), diffMid_Trend_M30:[1.0,1.0,1.0]
-[H1]  W_stage_H1:[511,511,512](FLY), diffMid_Trend_H1:[1.0,1.0,1.0]
-[ATRSL1buf] dir:1
-[TRADEINFO] L2H_flyUP:3, H2L_flyUP:0
+2026.XX.XX XX:XX:XX   [M15], W_stage_M15:(FLY)[511, 511, 512], diffMid_Trend_M15:[1.0, 1.0, 1.0],
+  BBUpDn_M15:[1, 0, 0], trend_M15:[1, 1, 1, ], prev_trend_M15:1,
+  diffMid_M15:[0.42, 0.38, 0.51], diffBBW_M15:[2.14, 3.21, 1.98],
+  WLV_M15:[0.61, 0.59, 0.57], ...
+
+2026.XX.XX XX:XX:XX   [M30], W_stage_M30:(FLY)[512, 512, 511], diffMid_Trend_M30:[1.0, 1.0, 1.0], ...
+2026.XX.XX XX:XX:XX   [H1],  W_stage_H1:(FLY)[511, 511, 512],  diffMid_Trend_H1:[1.0, 1.0, 1.0], ...
+2026.XX.XX XX:XX:XX   [H4],  W_stage_H4:(FLY)[511, 511, 511],  diffMid_Trend_H4:[1.0, 1.0, 1.0], ...
+
+2026.XX.XX XX:XX:XX   [TRADEINFO] Gate:[G3-CHAIN] TradeAct:1 cnt:4 pen:1.0|act:4 atrsl:1
+
+2026.XX.XX XX:XX:XX   [ATRSL1buf] dir:1, Trend:[1.0,1.0,1.0,1.0,1.0,1.0,], ...
+2026.XX.XX XX:XX:XX   [ORDERINFO], BUY_PROFIT:0.0, ..., TOTALORDERS:0
 ```
+
 **Reading:**
-- All TFs 511/512 midtrend=1 = **full bullish alignment**
-- diffBBW positive = BB expanding = fly has momentum
-- ATRSL dir=1 = trailing stop moving up = confirms long trend
-- `L2H_flyUP:3` = fly chain detected from M5(0) through H1(3) bottom-up
-- `H2L_flyUP:0` = fly chain from H1 down to M5
 
-**Trade decision:** BUY 1.0× quality=High. SL = ATRSL LV[0]. Enter on M5 bar close.
+- All TFs 511/512, `diffMid_Trend=1` everywhere = full bullish alignment.
+- `diffBBW` positive on all TFs = BB expanding = fly has momentum.
+- `ATRSL1buf dir:1` = trailing stop moving up = stop system confirms long trend.
+- G3-CHAIN fires: `cnt:4` = all 4 TFs in aligned chain, `pen:1.0` = no penalty, `TradeAct:1` = BUY, `act:4` = execute, `atrsl:1` = use ATRSL as SL.
+- `HTF_Drive_LTF_Sideway:[]` empty = no suppression. Low `Sideway_val` = clean trend.
+
+**Trade decision:** BUY 1.0× (full size, 4-TF chain, no penalty). SL = `ATRSL1buf Lower[0]`.
 
 ---
 
-## Example 3: Double Shrink with M5 Transition
+## Example 3: SQZ Breakout — BUY
 
 ```
-[M5]  W_stage_M5:(FLY)[522,522,512], diffMid_Trend_M5:[1.0,2.0,2.0]
-      ← cur=1, prev=2 → DN→UP reversal transition!
-[M15] W_stage_M15:(FLY)[513,513,522], diffMid_Trend_M15:[1.0,2.0,2.0]
-      ← M15 shrinking (513), midtrend was 2 now 1 (turning up)
-[M30] W_stage_M30:(FLY)[513,513,513], diffMid_Trend_M30:[1.0,1.0,2.0]
-      ← M30 shrinking (513), midtrend turning up
-[H1]  W_stage_H1:(FLY)[511,511,512], diffMid_Trend_H1:[1.0,1.0,1.0]
-[ATRSL1buf] dir:1
+2026.XX.XX XX:XX:XX   [M15], W_stage_M15:(FLY)[511, 400, 400], diffMid_Trend_M15:[1.0, 3.0, 3.0],
+  BBUpDn_M15:[0, 3, 0], ...
+2026.XX.XX XX:XX:XX   [M30], W_stage_M30:(FLY)[511, 400, 400], diffMid_Trend_M30:[1.0, 3.0, 3.0], ...
+2026.XX.XX XX:XX:XX   [H1],  W_stage_H1:(SQZ)[400, 400, 400],  diffMid_Trend_H1:[3.0, 3.0, 3.0], ...
+2026.XX.XX XX:XX:XX   [H4],  W_stage_H4:(FLY)[511, 511, 512],  diffMid_Trend_H4:[1.0, 1.0, 1.0], ...
+
+2026.XX.XX XX:XX:XX   [TRADEINFO] Gate:[G3-CHAIN] TradeAct:1 cnt:2 pen:0.90|act:4 atrsl:1
 ```
+
 **Reading:**
-- H1 still flying up ✓
-- M30 shrinking (513) but midtrend turning to 1 (bullish) ← positive sign
-- M15 shrinking (513) but midtrend turning to 1 ← double shrink with bullish lean
-- M5 midtrend: cur=1, prev=2 → **DN→UP direct reversal, quality=60**
-- ATRSL dir=1 (trailing up) → confirms long bias
 
-**Shrink depth:** M30+M15 both shrink = 2 TFs → penalty × 0.5
-**M5 quality:** 60 → base size 0.5× → final: 0.5 × 0.5 = **0.25×**
-**Trade decision:** BUY 0.25× (low size, double shrink). SL = ATRSL LV[0].
+- M15 and M30 both broke from SQZ (400) to bullish fly (511) on current bar. `diffMid_Trend` flipped 3→1 (flat→up).
+- H1 still in SQZ (400). H4 confirming bull fly (511, mid=1).
+- G3-CHAIN fires: `cnt:2` = M15+M30 confirmed, `pen:0.90` = light penalty (H1 not yet confirming), `TradeAct:1` = BUY, `act:4` = execute.
+
+**Trade decision:** BUY 0.90× (M15+M30 pioneer breakout). SL = `ATRSL1buf Lower[0]` at breakout bar.
 
 ---
 
-## Example 4: SQZ Breakout Detection
+## Example 4: Bearish Shrink — Blocked by H1 Opposition
 
 ```
-[M5]  W_stage_M5:(FLY)[511,400,400], diffMid_Trend_M5:[1.0,3.0,3.0]
-      ← M5 just broke from SQZ(400) to fly(511), midtrend flipped 3→1
-[M15] W_stage_M15:(FLY)[511,400,400], diffMid_Trend_M15:[1.0,3.0,3.0]
-      ← M15 also broke from SQZ, midtrend 3→1 = FLAT→UP transition!
-[M30] W_stage_M30:(FLY)[511,400,400], diffMid_Trend_M30:[1.0,3.0,3.0]
-      ← M30 also broke from SQZ = full breakout
-[H1]  W_stage_H1:()[400,400,400], diffMid_Trend_H1:[3.0,3.0,3.0]
-      ← H1 still in SQZ
-[ATRSL1buf] dir:0→1 (just flipped)
+2026.XX.XX XX:XX:XX   [M15], W_stage_M15:(FLY)[522, 522, 522], diffMid_Trend_M15:[2.0, 2.0, 2.0], ...
+2026.XX.XX XX:XX:XX   [M30], W_stage_M30:(FLY)[523, 523, 522], diffMid_Trend_M30:[2.0, 2.0, 2.0], ...
+2026.XX.XX XX:XX:XX   [H1],  W_stage_H1:(FLY)[512, 512, 512],  diffMid_Trend_H1:[1.0, 1.0, 1.0], ...
+2026.XX.XX XX:XX:XX   [H4],  W_stage_H4:(FLY)[521, 521, 521],  diffMid_Trend_H4:[2.0, 2.0, 2.0], ...
+
+2026.XX.XX XX:XX:XX   [TRADEINFO] Gate:[G6-SHRINK] TradeAct:0 cnt:1 pen:0.75|
+  Gate:[G4b-H1OPP] M30dn+H1up:1|act:0 atrsl:0
 ```
+
 **Reading:**
-- M30+M15+M5 all broke from SQZ upward simultaneously
-- ATRSL just flipped from dir=0 to dir=1 (breakout confirmed by stop system)
-- H1 still in SQZ — this is a M30+M15 pioneer breakout
-- M15 midtrend: prev=3, cur=1 = **FLAT→UP transition, quality=70**
 
-**Trade decision:** BUY 1.0× quality=High (M30+M15 both confirmed).
-SL = ATRSL LV at the breakout bar (not current bar).
+- M15 bearish fly (522), M30 bearish shrink (523), H4 bearish fly (521) = SELL candidate chain.
+- H1 bullish fly (512, mid=1) = directly opposes M30 direction.
+- G6-SHRINK fires (M30=523, `pen:0.75`) but G4b-H1OPP then blocks: `M30dn+H1up:1` = M30 bearish vs H1 bullish → `TradeAct:0`.
 
----
-
-## TRADEINFO Flag Decoder
-
-```
-H2L_flyUP_TF  ≥ 0  →  HTF fly-up chain detected starting from TF index
-H2L_flyDN_TF  ≥ 0  →  HTF fly-down chain detected
-H2L_flyStrink_TF ≥ 0 → HTF shrink chain detected
-H2L_sideway_TF ≥ 0 → HTF sideway/SQZ chain detected
-L2H_flyUP_TF  ≥ 0  →  LTF fly-up chain detected (bottom-up)
-L2H_flyDN_TF  ≥ 0  →  LTF fly-down chain detected
-L2H_flyStrink_TF ≥ 0 → LTF shrink chain
-L2H_sideway_TF ≥ 0 → LTF sideway chain
-
-All = -1  →  no chains detected, market in mixed/neutral state
-
-Trade_act:
-  0 → NEUTRAL / no trade
-  1 → BUY signal
-  2 → SELL signal
-```
-
----
-
-## AllTF Flag Decoder
-
-```
-HTF_Drive_LTF_Sideway:[M5_1, M15_1]
-  → M5 and M15 both being pushed into sideways by higher TFs
-  → sizeMultiplier = 0.25 in Trade_Strategy
-
-LTF_Drive_HTF_Fly:[M15_1, H1_1]
-  → M15 and H1 showing fly momentum (LTF driving)
-  → sizeMultiplier restores to 1.0
-
-line_seq_touch:[M5_17-6,9, M15_0-9,0 ...]
-  → Price touch sequence count on BB lines per TF
-
-Midline_cross:[M5_20-20, M15_20-20 ...]
-  → Count of midline crossings (20=moderate activity)
-```
-
----
-
-## BBW_stage Progression Patterns
-
-```
-Normal bull run:      400 → 512 → 511 → 513 → 400 → 512 ...
-                      SQZ   fly    fly   shrink  SQZ   fly
-
-Healthy trend:        511 → 511 → 511 → 513 → 511
-                      hold  hold  hold  pause  resume
-
-Reversal pattern:     511 → 513 → 400 → 521 → 522
-                      up    shrink SQZ  turn  down
-
-Bear trend:           522 → 522 → 522 → 523 → 400 → 512
-                      dn    dn    dn    shrink SQZ   reversal
-```
-
-**Key pattern to watch:** 513/523 → 400 → direction change
-This is the classic shrink-to-SQZ-to-reversal sequence. If you see M30 go 513→400, prepare for a potential direction change in the next 3-10 bars.
-
----
-
-## Example 5: M5 Shrink + M15 Fly — Previously NEUTRAL, Now SELL
-**Source: 2026.01.07 09:15:00 (real EA log)**
-
-```
-[ORDERINFO] SELL_PROFIT:6.22, SELL_LOTS:0.01, SELL_TICKET_NUM:2, SELLS:1
-```
-**Reading:** One open SELL, currently up $6.22.
-
-```
-[ATRSL1buf] dir:0
-            Trend:[2.0,2.0,2.0,2.0,2.0,2.0,]
-            LV:[4441.29,4440.09,4439.78,...]
-            Upper:[4453.97,4453.97,4453.97,...]
-            Lower:[4441.29,4440.09,4439.78,...]
-            SLMid:[4450.56,4449.85,4448.25,...]
-            Val:[4.64,4.83,4.89,...]
-```
-**Reading:**
-- `dir:0` → ATRSL static, not yet trailing
-- `Trend:[2,2,2,...]` → ATRTrend consistently bearish
-- `Lower:[4441.29,...]` → ATRSLLower = BUY stop level
-- `Upper:[4453.97,...]` → ATRSLUpper = SELL stop level (current SELL SL)
-- Gate 1 skipped: M5 stage=523 (shrink) → ATRSL dir=0 never blocks anyway
-
-```
-[M5]  W_stage_M5:(FLY)[523,523,523]  diffMid_Trend_M5:[4.0,2.0,2.0]
-      diffBBW_M5:[-0.54,-4.53,-10.62]
-```
-**Reading:**
-- Stage 523 all 3 bars = bearish shrink (Upper↑ Lower↓ Mid↓)
-- Midtrend [4,2,2] = side-dn, down, down → **M5 bearish** but contracting
-- diffBBW negative and increasing = BB actively narrowing
-- **M5 is in bearish shrink** → triggers shrink path (was missing before fix)
-
-```
-[M15] W_stage_M15:(FLY)[521,521,521]  diffMid_Trend_M15:[2.0,2.0,2.0]
-      diffBBW_M15:[3.02,9.85,9.46]
-```
-**Reading:**
-- Stage 521 = FLY++ mid downtrend (all 3 bars)
-- Midtrend all 2 = **M15 clearly bearish and expanding**
-- diffBBW positive = M15 BB expanding = healthy fly momentum
-- M15 provides the direction: SELL
-
-```
-[TRADEINFO] |NEUTRAL  H2L[UP:-1 DN:-1 Shrk:-1 Side:3]  L2H[UP:-1 DN:-1]
-```
-**Reading (OLD — before fix):**
-- L2H chain starts at M5 (index 0): M5 stage=523 ≠ 521/522 → chain never starts
-- L2H_flyDN stays -1 → no fly decision cases fire
-- Shrink detection missed M5 → NEUTRAL incorrectly
-
-**Reading (AFTER FIX):**
-- M5 stage=523 → `M5_shrink=true` → enters shrink path
-- GetShrinkDecision: shrinkCount=0 (H1/M30/M15 not shrinking), M5 shrink only
-- depthPenalty = 0.90 (M5-only, lightest)
-- M15_mid=2, M30_mid check → no M15/M30 conflict
-- M5 midtrend cur=4 (side-dn), prev=2 → no FLAT→DN transition yet
-  → If prev bar had mid=3: would fire FLAT→DN quality=70
-  → With cur=4: fires FLAT→SIDEDN, quality=45 (early signal)
-- M15 in SQZ? No (M15=521 fly) → early signal suppressed → WAIT
-
-**Corrected diagnosis:**
-> M5 is in bearish shrink (523) while M15 is flying down (521). No M5 midtrend
-> transition has fired yet (cur=4, not FLAT→1/2). Correct action is WAIT until
-> M5 midtrend shows FLAT→2 or direct DN→2. The open SELL from earlier is still
-> valid — hold with SL at ATRSLUpper[LA]=4453.97.
-
-```
-[BBTFImpact] HTF_Drive_LTF_Sideway:[M30_1]  LTF_Drive_HTF_Fly:[M30_1,H1_1]
-```
-**Reading:**
-- `BB_HTF_Drive_LTF_Sideway[2]=1` → M30 (index 2) being pushed into sideway
-- `BB_LTF_Drive_HTF_Fly[2]=1, [3]=1` → M30 and H1 showing fly energy
-- sizeMulti: M5 [0] and M15 [1] not suppressed → sizeMulti=1.0 (full)
-- Conflict state: M30 sideways but M30+H1 also have fly energy
-  → Volatile transition period, wait for M5 to confirm direction
-
----
-
-## BBTFImpact Array Index Reference
-
-```
-Index  TF    BB_HTF_Drive_LTF_Sideway[n]         BB_LTF_Drive_HTF_Fly[n]
-─────  ────  ────────────────────────────────     ──────────────────────────
-1      M15   M15 being suppressed into sideway    M15 driving HTF into fly
-2      M30   M30 being suppressed into sideway    M30 driving HTF into fly
-3      H1    H1 being suppressed into sideway     H1 driving HTF into fly
-4      H4    H4 being suppressed                  H4 driving
-5      D1    D1 being suppressed                  D1 driving
-```
-
-**Log decode: `HTF_Drive_LTF_Sideway:[M30_1]`**
-```
-M30_1 → BB_HTF_Drive_LTF_Sideway[2] = 1
-         (M30 is index 2, value 1 = active)
-```
-
-**Log decode: `LTF_Drive_HTF_Fly:[M30_1, H1_1]`**
-```
-M30_1 → BB_LTF_Drive_HTF_Fly[2] = 1
-H1_1  → BB_LTF_Drive_HTF_Fly[3] = 1
-```
-
----
-
-## Example 6: Cascade Band Touch — SELL (upper band)
-
-```
-[M15] W_stage_M15:(SQZ)[432,423,400] diffMid_Trend_M15:[3.0,3.0,3.0] BBUpDn_M15:[1,0,0]
-[M30] W_stage_M30:(FLY)[523,523,523] diffMid_Trend_M30:[2.0,2.0,2.0] BBUpDn_M30:[1,0,0]
-[H1]  W_stage_H1:(FLY)[513,513,512]  diffMid_Trend_H1:[2.0,2.0,2.0]  BBUpDn_H1:[1,0,0]
-```
-**Reading:**
-- H1=513 (shrink) mid=2 → `cas_shrinkTF=3` (H1 is highest shrink TF)
-- M30=523 (shrink) → contributes to shrinkTF scan but H1 wins
-- M15=SQZ (432→400) → `cas_sqzCount` includes M15
-- M5=521→513 → M5 not in SQZ, contributes to count
-- H1 BBUpDn=1 (upper band touch) → **SELL signal**
-- M15+M30 both SQZ? M30=523 (NOT SQZ) → pink zone NOT triggered
-
-**Log output:**
-```
-[TRADEINFO] |CASCADE_TOUCH(TF:3 upper_band(BBUpDn=1) sqzBelow:1) dir:2 act:4 lots:0.01 sl:4453.97 |ATRSL:0
-```
-
----
-
-## Example 7: Cascade Pink Zone — NO TRADE
-
-```
-[M15] W_stage_M15:(SQZ)[432,423,400] diffMid_Trend_M15:[3.0,3.0,3.0]
-[M30] W_stage_M30:(SQZ)[443,432,423] diffMid_Trend_M30:[3.0,3.0,3.0]
-[H1]  W_stage_H1:(FLY)[513,513,513]  diffMid_Trend_H1:[2.0,2.0,2.0]
-```
-**Reading:**
-- H1=513 (shrink) → `cas_shrinkTF=3`
-- M30=SQZ (443) → `cas_M30sqz=true`
-- M15=SQZ (432) → `cas_M15sqz=true`
-- **Pink zone condition: M15+M30 both SQZ → NO TRADE + return**
-
-**Log output:**
-```
-[TRADEINFO] |CASCADE_PINK_ZONE(M15+M30_SQZ)→no_trade
-```
-This is the **pink rectangle** on the chart — fully compressed middle zone.
-
----
-
-## Example 8: Midline SQZ Loading → Break → SELL
-
-**Bar 1 (loading):**
-```
-[M15] W_stage_M15:(SQZ)[432,423,400] diffMid_Trend_M15:[4.0,3.0,3.0]
-[M30] W_stage_M30:(FLY)[523,523,523] diffMid_Trend_M30:[2.0,2.0,2.0]
-```
-- M30_shrink=true, M5 in SQZ, M15 sideway
-- M15_mid>=3 AND M5 in SQZ → `MIDLINE_SQZ_LOADING` logged
-- No entry yet — M5 still in SQZ
-
-**Log Bar 1:**
-```
-[TRADEINFO] |SHRINK_DEPTH:1 penalty:0.75 +M5_shrink |MIDLINE_SQZ_LOADING(SELL_setup→wait_M5_break)
-            [M5_trans cur:3 prev:3 prev2:3 M15_stg:432 M15_mid:4] |NO_TRANS(stable:3) |NEUTRAL
-```
-
-**Bar 2 (M5 SQZ breaks bearish):**
-```
-[M5]  W_stage_M5:(FLY)[521,423,400]  diffMid_Trend_M5:[2.0,3.0,3.0]
-      BBW_stage prev bar was 423 (SQZ), now 521 (fly bearish)
-```
-- M5_was_sqz=true (prev=423), M5_stg_now=521 → `SQZ_BREAK_DN`
-- quality=75 → sizeMulti=0.75 × depthPenalty=0.75 = 0.56×
-
-**Log Bar 2:**
-```
-[TRADEINFO] |SHRINK_DEPTH:1 penalty:0.75 [M5_trans cur:2 prev:3 M15_stg:432 M15_mid:4]
-            |SQZ_BREAK_DN(midline_continuation) |quality:75 size:0.75 |MIDLINE_SQZ_ENTRY
-            dir:2 act:4 lots:0.01 sl:4453.97
-```
-
----
-
-## Cascade State Decoder
-
-```
-cas_shrinkTF value  Meaning
-──────────────────  ─────────────────────────────────────────────
-3                   H1 is the highest active fly_shrink TF
-2                   M30 is highest (H1 already in SQZ or flat)
-1                   M15 is highest (M30+H1 in SQZ or flat)
--1                  No TF in fly_shrink — cascade not active
-
-cas_sqzCount value  Meaning
-──────────────────  ─────────────────────────────────────────────
-0                   No TFs in SQZ yet — too early for cascade
-1                   One TF squeezed (typically M5 first)
-2                   Two TFs squeezed (M5+M15 or similar)
-3+                  Deep cascade — multiple TFs compressed
-```
-
-**M15+M30 pink zone vs normal sideway:**
-```
-Gate 0 (M30_mid>=3 AND M15_mid>=3): fires when MIDTREND is sideways
-Cascade pink zone (M15_sqz AND M30_sqz): fires when STAGE is SQZ (400-499)
-These are different conditions — both may fire together, or independently.
-```
+**Trade decision:** WAIT. Hold any existing SELL with SL at `ATRSL1buf Upper[0]`. Re-enter when H1 turns to `diffMid_Trend=2` or M30 exits shrink.
