@@ -17,7 +17,34 @@ No EA-name or timestamp prefix in the Journal tab output — just date/time + ta
 **Tag emit order per tick:**
 
 ```
-[M15] → [M30] → [H1] → [H4] → [TRADEINFO] → [BBTFImpact] → [ATRSL1buf] → [ORDERINFO]
+[M15] → [M30] → [H1] → [H4] → [D1] → [W1] → [TRADEINFO] → [BBTFImpact] → [ATRSL1buf] → [ORDERINFO]
+```
+
+**HTF tag availability — lookback rule:**
+
+Not every tick emits all tags. A tag only appears when that TF's bar has updated
+on the current tick's datetime. If `[M30]`, `[H1]`, `[H4]`, `[D1]`, or `[W1]`
+is absent from a tick, their state is unchanged from the last tick that emitted them.
+
+```
+To find the current state of a missing TF tag:
+  → search backward in the log for the most recent datetime that contains [M30],
+    [H1], [H4], [D1], or [W1] respectively
+  → those field values remain valid until the next time that tag appears
+
+Example: tick at 04:07 only shows [M15] and [TRADEINFO]
+  → [M30] last seen at 04:00 → use those M30 values
+  → [H1]  last seen at 04:00 → use those H1 values
+  → [H4]  last seen at 02:00 → use those H4 values
+  → [D1]  last seen at 00:00 → use those D1 values
+  → [W1]  last seen at Monday 00:00 → use those W1 values
+
+Approximate update frequency (EA runs on M5):
+  [M30] → every 6   M5 bars  (30 min)
+  [H1]  → every 12  M5 bars  (1 hr)
+  [H4]  → every 48  M5 bars  (4 hr)
+  [D1]  → every 288 M5 bars  (1 day)
+  [W1]  → every 1440 M5 bars (1 week)
 ```
 
 > **Float precision note:** The EA emits raw MQL5 doubles. Some values will appear as
@@ -29,20 +56,23 @@ No EA-name or timestamp prefix in the Journal tab output — just date/time + ta
 ## Tag Field Reference
 
 ```
-[M15] / [M30] / [H1] / [H4]
+[M15] / [M30] / [H1] / [H4] / [D1] / [W1]
   W_stage_TF:(REGIME)[cur, prev, prev2]        → BBW stage + regime label
-  diffMid_Trend_TF:[cur, prev, prev2]           → midline trend  1=up 2=dn 3=flat 4=side-dn 5=side-up
+  diffMid_Trend_TF:[cur, prev, prev2]           → midline trend (ENUM_BBMID_trend)
+                                                   0=no_midtrend 1=uptrend 2=dntrend
+                                                   3=sidewaytrend 4=sidewaydntrend 5=sidewayuptrend
   BBUpDn_TF:[cur, prev, prev2]                  → band movement state (2-bar confirmed):
                                                    0=neutral/mixed (no clean confirmation)
                                                    1=expanding  Upper↑ AND Lower↓ for 2 bars
                                                    2=shrinking  Upper↓ AND Lower↑ for 2 bars
                                                    3=up         Upper↑ AND Lower↑ for 2 bars (parallel up)
                                                    4=dn         Upper↓ AND Lower↓ for 2 bars (parallel down)
-  trend_TF:[cur, prev, prev2, ]                 → BB midline trend enum per bar (trailing comma)
-                                                   0=no_trend  1=up  2=dn  3=sideway
-                                                   4=sideway_dn  5=sideway_up
-                                                   7=rev_up (REVUP on chart)  8=rev_dn (REVDN on chart)
-  prev_trend_TF:N                               → trend enum of the bar before cur (same enum as above)
+  trend_TF:[cur, prev, prev2, ]                 → BB midline trend (ENUM_BB_trend) per bar (trailing comma)
+                                                   0=no_trend  1=up_trend  2=dn_trend  3=sideway_trend
+                                                   4=sideway_dntrend  5=sideway_uptrend
+                                                   7=rev_uptrend (REVUP on chart)  8=rev_dntrend (REVDN on chart)
+                                                   note: shares values 0–5 with diffMid_Trend; adds 7/8 for reversals
+  prev_trend_TF:N                               → ENUM_BB_trend value of the bar before cur
   diffMid_TF:[cur, prev, prev2]                 → midline delta: [n] = MidLV[n] - MidLV[n+1]
                                                    each step = one TF bar apart (EA runs on M5, HTF sampled at M5 resolution)
   diffBBW_TF:[cur, prev, prev2]                 → BB-width delta: [n] = (WLV[n] - WLV[n+1]) * 100
@@ -55,10 +85,19 @@ No EA-name or timestamp prefix in the Journal tab output — just date/time + ta
                                                    prev = one TF bar ago: M15=15min, M30=30min, H1=1hr, H4=4hr
   UppLV_TF:[cur, prev, prev2]                   → upper band price (same sampling as MidLV)
   LowLV_TF:[cur, prev, prev2]                   → lower band price (same sampling as MidLV)
-  close_TF / high_TF / low_TF                   → OHLC (M15 only; omitted on M30/H1/H4)
+  close_TF / high_TF / low_TF                   → M5 candlestick close/high/low price
+                                                   logged in [M15] block only; values are M5 bar OHLC
+                                                   (EA runs on M5 period — these are the current M5 candle prices)
 
 [TRADEINFO]
-  Gate:[Gx-LABEL] TradeAct:N cnt:N pen:N.NN| Gate:[Gy-LABEL] ...flags...|act:N atrsl:N
+  Gate:[Gx-LABEL] TradeAct:N cnt:N pen:N.NN| ...flags...|act:N atrsl:N
+  Minimal format (no gate fired): |act:N atrsl:N
+  TradeAct: 0=NEUTRAL  1=BUY  2=SELL
+  act:      0=no action  4=open trade
+  atrsl:    0=ATRSL not used as SL  1=ATRSL used as SL
+  pen:      size penalty multiplier (1.0=none, <1.0=reduced size)
+  cnt:      number of TFs in aligned chain
+  (gate labels subject to redesign — not documented here)
 
 [BBTFImpact]
   Sideway_val:[NNNNN-...]                        → 5-digit concatenation of per-TF sideway scores [H4][H1][M30][M15][M5]
@@ -68,8 +107,10 @@ No EA-name or timestamp prefix in the Journal tab output — just date/time + ta
                                                                      0 if clean fly (stage>=500, not 513/523)
                                                    [NNNNN]        = sideway not confirmed
                                                    [NNNNN-S_XX]   = sideway CONFIRMED (combined detection triggered)
-  HTF_Drive_LTF_Sideway:[TF_N, ...]
-  LTF_Drive_HTF_Fly:[TF_N, ...]
+  HTF_Drive_LTF_Sideway:[TF_N, ...]              → HTF driving LTF into sideway; TF label = target being driven
+                                                   M5_1=M15 drives M5 sideways; M15_1=M30 drives M15 sideways
+  LTF_Drive_HTF_Fly:[TF_N, ...]                  → LTF driving HTF into fly; TF label = target being driven
+                                                   M15_1=M5 drives M15 to fly; M30_1=M15 drives M30 to fly
   midline_Cluster:[N, N, N]                      → midline price spread vs M15: [|M15-M5|, |M15-M30|, |M15-H1|]
   line_seq_touch:[TF_cur-recent,prev, ...]       → touch sequence per TF [cur state - recent touch, prev touch]
                                                    ENUM_BB_LineTouch: 0=none 6=dnup_Dn 7=updn_Mid
@@ -79,7 +120,9 @@ No EA-name or timestamp prefix in the Journal tab output — just date/time + ta
                                                    ENUM_BB_LineCross: 0=none 10=BB_LOW 15=CrossUp_LOW
                                                    16=CrossDn_LOW 20=BB_DN 26=CrossDn_DN 30=BB_UP
                                                    35=CrossUp_UP 40=BB_HIGH 45=CrossUp_HIGH 46=CrossDn_HIGH
-  untouch_val:[TF_N-N, ...]                      → bars since last band touch
+  untouch_val:[TF_cur-prev, ...]                 → price proximity to BB lines per TF [cur state - prev state]
+                                                   0=none 26=near_lower 27=near_mid_above
+                                                   28=near_mid_below 29=near_upper
   Midline_cross:[TF_cur-prev, ...]               → midline cross per TF [cur bar state - prev bar state]
                                                    same ENUM_BB_LineCross values as line_seq_cross
 
@@ -160,13 +203,27 @@ Key: `513/523 → 400` = shrink-to-SQZ. When M30 hits this, watch for direction 
 
 ## diffMid_Trend Value Reference
 
+`diffMid_Trend` uses `ENUM_BBMID_trend` — the midline direction classification:
+
 ```
-1 = Uptrend       mid rising cleanly
-2 = Downtrend     mid falling cleanly
-3 = Flat          mid stationary
-4 = Side-down     mid drifting lower
-5 = Side-up       mid drifting higher
+0 = no_midtrend   no direction established
+1 = uptrend       mid rising cleanly
+2 = dntrend       mid falling cleanly
+3 = sidewaytrend  mid stationary
+4 = sidewaydntrend mid drifting lower
+5 = sidewayuptrend mid drifting higher
 ```
+
+**Distinction from `trend_TF`:**
+
+```
+diffMid_Trend  → ENUM_BBMID_trend  values 0–5 only, no reversal states
+trend_TF       → ENUM_BB_trend     values 0–5 plus 7=rev_up, 8=rev_dn
+```
+
+Both share values 0–5 with the same meaning. `trend_TF` adds reversal detection
+(7/8) that `diffMid_Trend` does not have. `diffMid_Trend>=3` is the sideway
+threshold used in `Sideway_val` scoring and gate logic.
 
 ---
 
@@ -187,37 +244,6 @@ Value  Meaning
 
 ---
 
-## TRADEINFO Gate Reference
-
-```
-Gate       Meaning
-─────────  ─────────────────────────────────────────────────────
-G0         Initial regime filter (M5 check)
-G1         ATRSL direction gate
-G2         HTF anchor (D1+H4 agreement)
-G3-CHAIN   Minimum TF chain length — cnt = number of TFs aligned
-G4a        M30/H1 alignment (same direction)
-G4b-H1OPP H1 opposing direction block
-G5         SQZ block (no entry during squeeze)
-G6-SHRINK  Shrink path gate — pen = size penalty (0.75–1.0)
-G7         Final entry confirmation
-
-TradeAct:  0=NEUTRAL  1=BUY  2=SELL
-act:       0=no action  4=open trade
-atrsl:     0=ATRSL not used as SL  1=ATRSL used as SL
-```
-
-**TRADEINFO pipe format:**
-
-```
-Gate:[Gx-LABEL] TradeAct:N cnt:N pen:N.NN| Gate:[Gy-LABEL] flag:N|act:N atrsl:N
-│                            │       │       │                        │
-│                            │       │       └─ subsequent gate check └─ final action
-│                            │       └─ penalty multiplier (1.0=none)
-│                            └─ TF chain count
-└─ primary gate fired
-```
-
 ---
 
 ## BBTFImpact Field Reference
@@ -235,10 +261,16 @@ Sideway_val:[NNNNN-...]     5-digit string [H4][H1][M30][M15][M5], each digit 0�
                               [NNNNN]        → sideway not confirmed
                               [NNNNN-S_XX]   → sideway CONFIRMED (combined Sideway_val
                                                + midline_Cluster detection triggered)
-HTF_Drive_LTF_Sideway       HTFs suppressing LTFs into sideways compression
-                            TF_1 = that TF is actively suppressed; [] = none
-LTF_Drive_HTF_Fly           LTFs showing fly energy driving HTFs
-                            Both active simultaneously = conflict/volatile state
+HTF_Drive_LTF_Sideway       Higher TF driving lower TF into sideway compression.
+                            TF label = the TF being driven (target); driver = next higher TF
+                            e.g. M5_1  → M15 is driving M5 into sideway
+                                 M15_1 → M30 is driving M15 into sideway
+                            [] = none active
+LTF_Drive_HTF_Fly           Lower TF driving higher TF into fly.
+                            TF label = the TF being driven (target); driver = next lower TF
+                            e.g. M15_1 → M5 is driving M15 into fly
+                                 M30_1 → M15 is driving M30 into fly
+                            Both fields active simultaneously = conflict/volatile transition state
 midline_Cluster             Price spread between M15 midline and other TF midlines:
                             [0] = |M15mid - M5mid|
                             [1] = |M15mid - M30mid|
@@ -274,7 +306,16 @@ line_seq_cross              Cross sequence per TF: [TF_cur-recent,prev]
                               40 = BB_HIGH         price above upper band
                               45 = CrossUp_BB_HIGH crossed up above upper band
                               46 = CrossDn_BB_HIGH crossed down from above upper band
-untouch_val                 [TF_upper-lower] bars since last touch
+                              (values 26–29 near_ variants used by untouch_val only, not here)
+untouch_val                 Price proximity to BB lines — [TF_cur-prev] per TF
+                            cur/prev = proximity state each bar, same values:
+                              0  = none         price not near any band
+                              26 = near_dnup_BBDn   price within threshold of lower band
+                              27 = near_updn_BBMid  price within threshold above midline
+                              28 = near_dnup_BBMid  price within threshold below midline
+                              29 = near_updn_BBUp   price within threshold of upper band
+                            Uses close price AND prev bar high/low vs BBW_untouch_dist threshold
+                            Priority (first match wins): lower → upper → mid-dn → mid-up
 Midline_cross               Midline cross state per TF: [TF_cur-prev]
                             cur  = current bar midline cross state
                             prev = previous bar midline cross state
@@ -305,9 +346,9 @@ M5=0  M15=1  M30=2  H1=3  H4=4  D1=5  W1=6
 **Size multiplier from BBTFImpact:**
 
 ```
-HTF_Drive_LTF_Sideway on M5+M15       → sizeMultiplier = 0.25
-HTF_Drive_LTF_Sideway on M5 only      → sizeMultiplier = 0.50
-LTF_Drive_HTF_Fly active, no suppress → sizeMultiplier = 1.00
+HTF_Drive_LTF_Sideway on M5+M15       → M15+M30 driving M5+M15 sideways → sizeMultiplier = 0.25
+HTF_Drive_LTF_Sideway on M5 only      → M15 driving M5 sideways only    → sizeMultiplier = 0.50
+LTF_Drive_HTF_Fly active, no suppress → LTFs pushing HTFs to fly         → sizeMultiplier = 1.00
 Both active at same time              → volatile transition, hold
 ```
 
@@ -425,7 +466,102 @@ Trend history examples:
 
 ---
 
-## Example 2: Normal Fly State (High Conviction BUY)
+## Example 2: Full TF Bull Fly — No Trade (No Gate Fired)
+
+**Source: 2026.02.23 01:00**
+
+```
+2026.02.23 01:00:02   [M15], W_stage_M15:(FLY)[511, 512, 511], diffMid_Trend_M15:[1.0, 1.0, 1.0],
+  BBUpDn_M15:[1, 3, 3], trend_M15:[1, 1, 1, ], prev_trend_M15:1,
+  diffMid_M15:[2.04, 1.78, 1.85], diffBBW_M15:[12.48, 5.72, 5.97],
+  WLV_M15:[1.1, 0.97, 0.89],
+  MidLV_M15:[5080.1, 5078.06, 5076.09], UppLV_M15:[5108.0, 5102.78, 5098.62],
+  LowLV_M15:[5052.2, 5053.35, 5053.57],
+  close_M15:[5109.5, 5107.8, 5103.64], high_M15:[5109.5, 5107.96, 5107.07],
+  low_M15:[5109.5, 5102.94, 5101.88],
+
+2026.02.23 01:00:03   [M30], W_stage_M30:(FLY)[512, 511, 511], diffMid_Trend_M30:[1.0, 1.0, 1.0],
+  BBUpDn_M30:[3, 0, 1], trend_M30:[1, 1, 1, ], prev_trend_M30:1,
+  diffMid_M30:[4.6, 3.68, 3.34], diffBBW_M30:[6.31, 7.64, 14.19],
+  WLV_M30:[2.04, 1.97, 1.87],
+  MidLV_M30:[5061.6, 5057.0, 5053.09], UppLV_M30:[5113.17, 5106.92, 5100.23],
+  LowLV_M30:[5010.03, 5007.07, 5005.94],
+
+2026.02.23 01:00:04   [H1], W_stage_H1:(FLY)[511, 511, 512], diffMid_Trend_H1:[1.0, 1.0, 1.0],
+  BBUpDn_H1:[1, 1, 3], trend_H1:[1, 1, 1, ], prev_trend_H1:1,
+  diffMid_H1:[5.49, 4.61, 4.17], diffBBW_H1:[23.13, 23.53, 12.57],
+  WLV_H1:[2.61, 2.38, 2.12],
+  MidLV_H1:[5040.95, 5035.46, 5030.72], UppLV_H1:[5106.68, 5095.3, 5084.07],
+  LowLV_H1:[4975.21, 4975.62, 4977.37],
+
+2026.02.23 01:00:05   [H4], W_stage_H4:(FLY)[512, 512, 512], diffMid_Trend_H4:[1.0, 1.0, 1.0],
+  BBUpDn_H4:[3, 3, 3], trend_H4:[1, 1, 1, ], prev_trend_H4:1,
+  diffMid_H4:[11.77, 8.29, 6.71], diffBBW_H4:[20.36, 26.27, 14.87],
+  WLV_H4:[4.5600000000000005, 4.35, 4.03],
+  MidLV_H4:[4985.72, 4973.96, 4965.26], UppLV_H4:[5099.28, 5082.18, 5065.24],
+  LowLV_H4:[4872.17, 4865.73, 4865.29],
+
+2026.02.23 01:00:06   [D1], W_stage_D1:(FLY)[512, 512, 513], diffMid_Trend_D1:[5.0, 5.0, 1.0],
+  BBUpDn_D1:[0, 3, 0], trend_D1:[0, 0, 0, ], prev_trend_D1:1,
+  diffMid_D1:[2.98, 2.66, 5.9399999999999995], diffBBW_D1:[11.81, -4.17, -25.05],
+  WLV_D1:[12.1, 11.98, 12.0],
+  MidLV_D1:[5002.66, 4999.68, 4994.67], UppLV_D1:[5305.21, 5299.1, 5294.25],
+  LowLV_D1:[4700.12, 4700.27, 4695.09],
+
+2026.02.23 01:00:07   [W1], W_stage_W1:(FLY)[511, 401, 401], diffMid_Trend_W1:[1.0, 1.0, 1.0],
+  BBUpDn_W1:[3, 3, 3], trend_W1:[0, 0, 0, ], prev_trend_W1:1,
+  diffMid_W1:[56.92, 60.83, 62.31], diffBBW_W1:[119.21, 54.09, 40.1],
+  WLV_W1:[33.27, 32.08, 32.04],
+  MidLV_W1:[4456.01, 4399.09, 4341.67], UppLV_W1:[5197.22, 5104.61, 5037.2],
+  LowLV_W1:[3714.8, 3693.57, 3646.14],
+
+2026.02.23 01:00:07   [TRADEINFO] |act:0 atrsl:0
+
+2026.02.23 01:00:07   [BBTFImpact] Sideway_val:[00000]
+  HTF_Drive_LTF_Sideway:[H4_1, D1_1],
+  LTF_Drive_HTF_Fly:[M15_1, M30_1, H1_1, H4_1, D1_1, W1_1],
+  midline_Cluster:[14.45, 18.5, 39.15],
+  line_seq_touch:[M5_0-9,9, M15_19-9,9, M30_0-9,9, H1_0-9,9, H4_0-9,19, D1_0-8,7, W1_0-9,9],
+  line_seq_cross:[M5_40-30,40, M15_0-40,30, M30_0-30,40, H1_0-40,30, H4_0-40,30, D1_0-30,20, W1_0-30,40],
+  untouch_val:[M5_0-0, M15_19-0, M30_0-0, H1_0-0, H4_0-0, D1_0-0, W1_0-0],
+  Midline_cross:[M5_40-30, M15_40-40, M30_46-46, H1_40-40, ...]
+
+2026.02.23 01:00:07   [ATRSL1buf] dir:0,
+  Trend:[2.0,2.0,2.0,2.0,2.0,2.0,],
+  LV:[5101.09,5095.84,5095.84,5091.95,5091.95,5090.24,],
+  Upper:[5112.35,5112.35,5112.35,5101.8,5101.8,5101.8,],
+  Lower:[5101.09,5095.84,5095.84,5091.95,5091.95,5090.24,],
+  SLMid:[5110.06,5106.26,5104.21,5102.25,5099.32,5099.43,],
+  Val:[4.48,4.63,4.49,4.39,4.13,4.28,]
+
+2026.02.23 01:00:07   [ORDERINFO], BUY_PROFIT:0.0, BUY_LOTS:0.0, BUY_TICKET_NUM:0, BUYS:0,
+  SELL_PROFIT:0.0, SELL_LOTS:0.0, SELL_TICKET_NUM:0, SELLS:0, TOTALORDERS:0
+```
+
+**Reading:**
+
+**[M15]** Stage `[511,512,511]` = fly++ cur, fly+- prev (was expanding), fly++ prev2. `diffMid_Trend=[1,1,1]` = clean uptrend all bars. `BBUpDn=[1,3,3]` = expanding cur (Upper↑ AND Lower↓), parallel-up prev2 bars. `diffBBW=[12.48,5.72,5.97]` all positive = BB actively widening. M15 strongly bullish. `close_M15=5109.5` = M5 candle closed above upper band (`UppLV_M15=5108.0`) — price breaking out above M15 upper band.
+
+**[M30]** Stage `[512,511,511]` = fly+- cur (parallel-up expanding), fly++ prior. `BBUpDn=[3,0,1]` = parallel-up cur, neutral prev, expanding prev2 — transition into parallel-up. `diffBBW` all positive = expanding. M30 bullish and widening.
+
+**[H1]** Stage 511 all 3 bars = fly++, `diffMid_Trend=[1,1,1]` = clean uptrend. `BBUpDn=[1,1,3]` = expanding cur and prev (Upper↑ Lower↓), parallel-up prev2. `diffBBW` large and positive = strong expansion. H1 confirming bull fly.
+
+**[H4]** Stage 512 all 3 bars = fly+-, `BBUpDn=[3,3,3]` = parallel-up confirmed all 3 bars. `diffMid_H4=[11.77,8.29,6.71]` = mid rising 11+ points per H4 sample = strong bull trend. H4 parallel-up with consistent momentum.
+
+**[D1]** Stage `[512,512,513]` = fly+- cur/prev, shrinking prev2. `diffMid_Trend=[5,5,1]` = side-up cur/prev, uptrend prev2 = D1 mid slowing but still rising. `trend_D1=[0,0,0]` = no_trend on all bars (D1 trend enum not established yet). `BBUpDn=[0,3,0]` = neutral cur, parallel-up prev. D1 transitioning — was shrinking, now expanding again but mid going sideways.
+
+**[W1]** Stage `[511,401,401]` = fly++ cur, SQZ prev2 bars. `BBUpDn=[3,3,3]` = parallel-up all 3 bars. `diffMid_W1=[56.92,60.83,62.31]` = mid rising 57–62 points per W1 sample = massive weekly bull move. `trend_W1=[0,0,0]` = no_trend (W1 trend enum not established). W1 broke from SQZ (401) to fly++ = major weekly breakout.
+
+**[TRADEINFO]** `|act:0 atrsl:0` — minimal format, no gate fired, no trade. Despite strong bullish alignment across all TFs, no entry condition was met at this tick.
+
+**[BBTFImpact]** `Sideway_val:[00000]` = all 5 digits zero = every TF (M5–H4) is clean fly, no sideway pressure at all. `HTF_Drive_LTF_Sideway:[H4_1, D1_1]` = D1 driving H4 sideways, H4(?) driving D1 — some HTF suppression at higher TFs. `LTF_Drive_HTF_Fly:[M15_1,M30_1,H1_1,H4_1,D1_1,W1_1]` = full cascade of LTF→HTF fly energy, M5 driving everything up through W1. `midline_Cluster=[14.45,18.5,39.15]` = midlines spread far apart (H1 39 points from M15) — TFs at different price levels = strong trend, not compression. `untouch_val:[M15_19-0]` = M15 cur=19 (price nearly touched upper band from above = `untouch_updn_BBUp`), prev=0 — M15 price approaching upper band proximity zone this bar.
+
+**[ATRSL1buf]** `dir:0` = uptrend mode, LV=Lower. `Trend=[2,2,2,2,2,2]` = all 6 bars downtrend (2) — note: `dir:0` means uptrend but `Trend=2` means the buffer itself is moving down. This is a contradiction worth noting: LV/Lower values are rising (`5090→5102`) while Trend shows 2. Likely `Trend` reflects the ATR band direction independently of `dir`.
+
+**Overall diagnosis:**
+> Full multi-TF bull fly from M15 through W1 with W1 breaking out of SQZ. `Sideway_val=00000` = cleanest possible trend state. M5 candle closed above M15 upper band (5109.5 > 5108.0). No trade fired this tick despite ideal conditions — gate logic not satisfied at this specific bar. Strong candidate for BUY entry on next bar if gates align.
+
+---
 
 ```
 2026.XX.XX XX:XX:XX   [M15], W_stage_M15:(FLY)[511, 511, 512], diffMid_Trend_M15:[1.0, 1.0, 1.0],
