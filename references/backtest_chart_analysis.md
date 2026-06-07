@@ -2799,12 +2799,63 @@ Recovery: wait until M30 or M15 shows mid=1 or mid=2 again
 
 ---
 
-## Scenario H — Trend Reversal
+## Scenario H — SQZ Breakout Direction Confirmation
 
-**When user asks to analyze part 3 Scenario H:**
-- Read `./Backtest_data/extras/backtested_EA_trend_reversal.jpg` as the trend reversal scenario visual reference.
+**When user asks to analyze a part 3 Scenario H:**
+- Read `./Backtest_data/extras/backtested_EA_trend_reversal.jpg` as the trend reversal visual reference
+- Read `./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway2.jpg` as the fly shrink to sideway visual reference
 
-![trend reversal](./Backtest_data/extras/backtested_EA_trend_reversal.jpg)
+[![Trend reversal](https://github.com/Terrypang89/BB_MTF_M15_STRATEGY/raw/tofy5/references/Backtest_data/extras/backtested_EA_trend_reversal.jpg)](backtested_EA_trend_reversal.jpg)
+[![Fly shrink to sideway](https://github.com/Terrypang89/BB_MTF_M15_STRATEGY/raw/tofy5/references/Backtest_data/extras/backtested_EA_fly_shrink_2_sideway2.jpg)](backtested_EA_fly_shrink_2_sideway2.jpg)
+
+> **Tier:** TIER 2.5 — DIRECTION RESOLUTION (BOTTOM → D2)
+> **Cascade position:** All TFs at or near SQZ — D2 direction about to resolve
+> **When:** H4 BBUpDn_state transitions from 0 (SQZ) toward 1 (expanding) or 4 (dn)
+> **Previous scenario:** Came from E2/E3 or G2/G3 — full compression exhausted
+> **Next scenario:** → F (D2 same as D1 direction) | → C (D2 opposite to D1) | → G (false breakout)
+
+**HTF context:** H4 in SQZ or just breaking SQZ. D1 still fly (bias exists) or also SQZ (no bias).
+
+### Sub-Scenarios
+
+| Sub | Name | D1 BBW | D1 BBUpDn | H4 BBW | H4 BBUpDn | Direction | Entry | Size |
+|-----|------|--------|-----------|--------|-----------|-----------|-------|------|
+| H1 | Same as D1 | 511/512 | 1 or 3 | Breaking SQZ | 0→1 same dir as D1 | High confidence | Enter F2 rules | 0.75× |
+| H2 | Opposite to D1 | 511/512 | 1 or 3 | Breaking SQZ | 0→1 opposite to D1 | Low confidence | Enter C1 rules, small | 0.25× |
+| H3 | False breakout | Any | Any | SQZ attempted break | 1→0 reversal within 3 bars | Failed | Exit immediately | — |
+| H4 | Whipsaw | Any | Any | SQZ | Alternating 1 and 4 | Indeterminate | No trade | — |
+
+**D1 bias rule:** D1 BBUpDn=1 (expanding) + D1 mid=1 → favour H1 sub-state (same direction breakout)
+**False breakout rule:** H4 BBUpDn transitions 0→1 but reverts to 0 within 2–3 bars → H3, return to G
+**Whipsaw rule:** H4 BBUpDn alternates 1 and 4 on consecutive bars → H4, wait for 3+ bars same value
+
+### Sub-state Progression Table
+
+| Step | D1 BBW | D1 mid | H4 BBW | H4 BBUpDn | H1 BBW | M30 mid | M15 mid | PriceLoc H4 | Next predict |
+|------|--------|--------|--------|-----------|--------|---------|---------|-------------|-------------|
+| Entry state (from G) | 511/512 | 1 | 400-499 | 0 | 400-499 | 3 | 3 | inside | All TFs SQZ — wait M5 BBUpDn 0→1 |
+| H1: H4 breaks same | 511/512 | 1 | Breaking | 0→1 | Breaking | 3→1 | 3→1 | above_upper | D1 aligned — enter F2 rules, 0.75× |
+| H2: H4 breaks opposite | 511/512 | 1 | Breaking | 0→4 | Breaking | 3→2 | 3→2 | below_lower | Counter D1 — enter C1 rules, 0.25× |
+| H3: false breakout | 511/512 | 1 | 400-499 | 1→0 | 400-499 | 3 | 3 | inside | BBUpDn reverted — return to G, wait |
+| H4: whipsaw | 511/512 | 1 | 400-499 | 1↔4 | 400-499 | 3 | 3 | inside | No clear direction — wait 3+ bars |
+
+### Trade action:
+```
+H1: ENTER using F2 rules (MTF confirm needed before full size)
+    D1 fly same direction = high confidence → progress to F2→F3
+    SIZE: 0.75× scaling to 1.0× on F3 confirm
+
+H2: ENTER using C1 rules (small, counter-trend to D1)
+    Wait for D1 to also flip before adding size
+    SIZE: 0.25× only until D1 confirms new direction
+
+H3: EXIT immediately — false breakout confirmed
+    Return to G scenario rules
+    SIZE: —
+
+H4: NO TRADE — indeterminate
+    Wait for H4 BBUpDn to sustain 1 or 4 for 3+ consecutive bars
+    SIZE: —
 
 ---
 

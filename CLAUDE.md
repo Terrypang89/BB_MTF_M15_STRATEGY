@@ -1,133 +1,99 @@
-# CLAUDE.md
+# CLAUDE.md — BB MTF Strategy Repository
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## When editing references/backtest_chart_analysis.md
 
-## What This Repo Is
+### Mandatory template for image analysis blocks
 
-Development workspace for **Tofu EA** — a XAUUSD Expert Advisor for MetaTrader 5 using a multi-timeframe Bollinger Band strategy. The EA is implemented in MQL5 (`scripts/TofyTrade4.mqh`). This repo holds the strategy source, backtest data, analysis scripts, and reference documentation — not the full MT5 terminal project.
+Every scenario in Part 3 that contains an image embed must have
+the following 7-step analysis block inserted AFTER each image
+embed line and BEFORE the next existing content block.
 
-Current production version: **v22.49** (in `#property version` at top of `TofyTrade4.mqh`).
+The exact insertion anchor for each scenario is the image embed
+line itself — insert immediately after the closing `)` of each
+`[![...](...)` line.
 
-## Key Commands
+#### The 7-step template (insert verbatim):
 
-```bash
-# Regenerate version_profit.md from all V30.XX backtest JSON folders
-python scripts/gen_version_profit.py
+````
+#### Image Analysis — [REPLACE WITH ACTUAL FILENAME]
 
-# Run from repo root — output written to references/version_profit.md
+##### Step 1: Mark Reading — Cause, Event, and Impact
+
+| Mark | Cause (upstream TF state) | Event (transition at this bar) | Impact Immediate (1–5 bars) | Impact Sustained (duration) |
+|------|--------------------------|-------------------------------|----------------------------|----------------------------|
+| [describe mark] | [which TF + BBW_stage + mid caused this] | [BBW_stage or mid or BBUpDn change] | [which TF follows + gate fires + action] | [confinement rules + valid entries + size] |
+
+##### Step 2: HTF Analysis (W1 → D1 → H4)
+
+| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
+|----|-----------|---------------|--------------|------------|------|
+| W1 | [value] | [value] | [value] | [1/2/3] | [role] |
+| D1 | [value] | [value] | [value] | [1/2/3] | [role] |
+| H4 | [value] | [value] | [value] | [1/2/3] | [role] |
+
+**HTF Summary:** [macro direction] | [price target] | [why LTF sideway] | [context or compressing]
+
+##### Step 3: MTF Analysis (H1 → M30)
+
+| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
+|----|-----------|---------------|--------------|------------|------|
+| H1  | [value] | [value] | [value] | [1/2/3] | [role] |
+| M30 | [value] | [value] | [value] | [1/2/3] | [role] |
+
+**MTF Summary:** [trending or ranging] | [confinement boundary] | [touch type] | [active gate] | [impact on H4] | [impact on M15]
+
+##### Step 4: LTF Analysis (M15 → M5)
+
+| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
+|----|-----------|---------------|--------------|------------|------|
+| M15 | [value] | [value] | [value] | [1/2/3] | [role] |
+| M5  | [value] | [value] | [value] | [1/2/3] | [role] |
+
+**LTF Summary:** [D1 lagging or D2 leading] | [BBUpDn sequence] | [REVUP/REVDN visible] | [active gate] | [impact on MTF] | [impact on HTF]
+
+##### Step 5: Cross-TF Impact Chain
+
+**D1 compression (HTF → LTF):**
+- [H4 state] → [H1 consequence] → [M30 consequence] → [M15 consequence] → [M5 consequence]
+
+**D2 expansion (LTF → HTF):**
+- [M5 state] → [M15 follows X bars] → [M30 follows] → [H1 follows] → [H4 eventually]
+
+**Cascade position:** D1 depth = [deepest TF in SQZ] | D2 initiated at = [lowest TF broke SQZ or NOT YET] | Leading TF = [TF to watch]
+
+##### Step 6: Concluded Analysis
+
+[One paragraph: scenario name + sub-scenario stage + HTF context + MTF state + LTF state + cascade position + touch behavior + key observable + next scenario prediction]
+
+##### Step 7: Identification Flowchart
+
+```mermaid
+flowchart TD
+    A["Current state: [fill from Step 5]"]
+    A --> B{"Key discriminator: [fill from Step 6]"}
+    B -->|Yes| C["Next scenario: [fill]"]
+    B -->|No| D["Alternative: [fill]"]
 ```
 
-There is no build step here. Compilation happens inside MetaTrader 5. The backtest is run via MetaTrader Strategy Tester using `scripts/tester.ini` (Expert: `Tofu_EA_Simple_V4.ex5`, Symbol: XAUUSD, Period: M5, 2026-01-01 to 2026-04-30).
+**Prediction rules:**
+- IF [observable A] → next scenario = [X]
+- IF [observable B] → next scenario = [Y]
+- Watch: [specific TF + BBW_stage or mid flip]
+````
 
-## Architecture Overview
+### Rules Claude Code must follow for this file
 
-### Timeframe Stack
-
-```
-BB_datas[6] = W1   — ultra-macro context (reference only)
-BB_datas[5] = D1   — daily macro context
-BB_datas[4] = H4   — macro bias filter (MAX_TF)
-BB_datas[3] = H1   — chain anchor + G0 sideway confirm
-BB_datas[2] = M30  — primary trend driver + confirmation for M15 trigger quality
-BB_datas[1] = M15  — entry trigger (BBdiffMidTrend transition) V30.02+
-BB_datas[0] = M5   — data only; no longer the entry trigger (too noisy)
-```
-
-The **M15 transition** is the entry signal (V30.02+). The EA runs on M5 chart period but only fires entries on M15 bar closes. M30 stage+midtrend must agree with direction before entry is allowed. Each gate in `Trade_Strategy()` is evaluated in cascade order — any failing gate stops the flow for that bar.
-
-### Core Data Types per TF
-
-- `BBW_stage[LA]` — regime code (511/512/513/521/522/523/400-499/200/300/0)
-- `BB_diffMid_Trend[LA]` — midtrend direction (1=up 2=dn 3=flat 4=side-dn 5=side-up)
-
-### BBW_Stage Codes
-
-| Code | Name | Bias |
-|------|------|------|
-| 511 | FLY++ mid up | BUY |
-| 512 | FLY+- parallel up | BUY |
-| 521 | FLY++ mid dn | SELL |
-| 522 | FLY-+ parallel dn | SELL |
-| 513 | FLY-- bullish shrink | WATCH |
-| 523 | FLY-- bearish shrink | WATCH |
-| 400–499 | SQZ (squeeze) | WAIT |
-
-### Entry Gate Rule (key invariant)
-
-- Block BUY when M15/M30/H4 mid=2 (dn) or mid=4 (side-dn)
-- Block SELL when M15/M30/H4 mid=1 (up) or mid=5 (side-up)
-- mid=3 (flat) = neutral — do NOT block
-
-### Position Sizing
-
-```mql5
-// TF agreement count → lot multiplier
-≥3 TFs agree → 1.0× baseLot
-2 TFs        → 0.75×
-1 TF         → 0.5×
-```
-
-M5 transition quality score also scales size: ≥90→1.0×, ≥75→0.75×, ≥60→0.5×, ≥45→0.25×.
-
-## Source Files
-
-| File | Purpose |
-|------|---------|
-| `scripts/TofyTrade4.mqh` | Main EA strategy library — all gate logic, position sizing, ATRSL stop placement |
-| `scripts/tester.ini` | MT5 Strategy Tester config for V4 EA |
-| `scripts/gen_version_profit.py` | Generates `references/version_profit.md` from all `V30.XX` backtest folders |
-
-## Reference Files
-
-| File | Purpose |
-|------|---------|
-| `SKILL.md` | Full authoritative strategy reference — all gate codes, decision tables, log parsing recipes |
-| `references/Task_force.md` | **9-step backtest analysis SOP** — start here for every new backtest version |
-| `references/fix.md` | Chronological fix history with code diffs |
-| `references/decision_flow.md` | Gate-by-gate logic walkthrough with text diagrams |
-| `references/log_matrix.md` | Log format spec — TRADEINFO line structure, gate attribute keys |
-| `references/log_examples.md` | Annotated real log samples |
-| `references/backtest_chart_analysis.md` | Visual guide for chart screenshots — BBW_stage decode, gate label colors |
-
-## Backtest Data Layout
-
-Each backtest version lives in `references/Backtest_data/V30.XX/`:
-
-```
-report_tables_clean.json   ← net profit + deal table (Steps 1 & 2)
-log_matrix.csv             ← per-bar TF state (Steps 4 & 6 gate tracing)
-YYYYMMDD_clean.log         ← full TRADEINFO log (Step 4 entry search)
-filtered_log_json.json     ← structured log (entry search)
-metadata.json              ← test period + EA version
-```
-
-Multi-period variants: `V30.XX_M15/` and `V30.XX_M30/` (when present) — used for M5-ONLY loss isolation.
-
-## Backtest Analysis Workflow (9 steps)
-
-When new backtest data arrives in `references/Backtest_data/V30.XX/`, follow `references/Task_force.md` exactly:
-
-1. Net profit comparison vs all same-period versions → update `references/version_profit.md`
-2. Deal loss comparison (profit < −10) vs previous version
-3. Rank fix list: NEW losses first, then SAME losses by absolute size
-4. Root cause per priority deal — trace entry gate + TF context in log_matrix.csv
-5. Code fix in `scripts/TofyTrade4.mqh` + bump `#property version`
-6. Verify fix eliminates/reduces the confirmed loss deal
-7. Update `Task_force.md` (cascade gate order, RC tree, versions dict)
-8. Update `fix.md`, `decision_flow.md`, `log_matrix.md`, CLAUDE.md
-9. Git commit with message format: `vXX.XX: [gate name] [description] (RCN)`
-
-## Version Naming
-
-- EA code version: `22.XX` in `#property version` and `ORDERS_COMMENT` in tester.ini
-- Backtest folder: `V30.XX` (backtest data versioning is independent of EA code version)
-- Same test period (Jan–Apr 2026) required for meaningful net profit comparison across versions
-
-## Commit Convention
-
-```
-v22.29: G0b-M30OPP extended to bearish shrink flat mid (RC14)
-v22.28: G0b-SQZLOCK narrowed to both-mid==3 (RC13 over-filtering fix)
-```
-
-Format: `vXX.XX: [gate name(s)] [brief description] ([RC refs])`
+1. NEVER remove existing flowcharts, trade action blocks,
+   checklists, or image embed lines
+2. NEVER invent BBW_stage, diffMid_Trend, or BBUpDn_state
+   values — read them from image filenames and existing
+   text analysis only. Use [TO BE FILLED] if uncertain.
+3. BBW_stage valid values: 511 512 521 522 513 523 400-499
+4. diffMid_Trend valid values: 1 2 3 4 5 only
+5. BBUpDn_state valid values: 0 1 2 only
+6. Touch Type valid values: Type 1 Type 2 Type 3 only
+7. Insert at ### heading level — never promote to ## or #
+8. Every Step 7 flowchart must use mermaid syntax
+9. After every str_replace confirm the new line count
+10. Process one scenario at a time — do not batch all scenarios
+    in one tool call
