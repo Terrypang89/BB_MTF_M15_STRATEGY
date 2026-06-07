@@ -183,6 +183,20 @@ Format: `{value}` or `{value}-REVUP/REVDN`. Values 1 and 2 are **not shown** on 
 
 ---
 
+## 4b. BBW Velocity — diffBBW
+
+`diffBBW` measures the **rate of change** of band width per bar. Visible in EA logs as `diffBBW_M15`, `diffBBW_M30` etc.
+
+| diffBBW value | Meaning | BBW_stage relationship |
+|---------------|---------|----------------------|
+| Positive and increasing | Band actively expanding — fly has momentum | Consistent with 511/521 (FLY++) |
+| Positive and decreasing | Fly expanding but slowing — watch for shrink | Transitioning 511→512 or 511→513 |
+| Near zero | Band width stable — parallel fly or SQZ | Consistent with 512/522 or 400-499 |
+| Negative and decreasing | Band actively shrinking — compression accelerating | Consistent with 513/523 (FLY--) |
+| Negative and increasing | Shrinking slowing — about to stabilize or reverse | Transitioning 513→512 or 513→511 |
+
+---
+
 ## 5. ATRSL State
 
 | State | Visual | Meaning |
@@ -713,7 +727,7 @@ H3 false breakout → back to H/E   (failed breakout)
 
 ---
 
-## Scenario A — Normal Fly (All TFs Aligned)
+## Scenario A — Full Fly Alignment
 
 **When user asks to analyze a part 3 Scenario A:**
 - Read `./Backtest_data/extras/backtested_EA_fly_scenario.jpg` as Normal fly scenario visual reference
@@ -1304,7 +1318,7 @@ SIZE: quality score from M5 transition
 
 ##### Step 6: Concluded Analysis
 
-Scenario D — Rest Pattern, D1→D2 transition confirmed. W1/D1/H4/H1 fly unchanged throughout. M30/M15/M5 briefly compressed (shrink→SQZ) then re-expanded in same direction. M5 broke SQZ first (REVUP) driving D2 expansion. Key observable: H1 step direction maintained — if it breaks, becomes reversal (Scenario G).
+Scenario D — Rest Pattern, D1→D2 transition confirmed. W1/D1/H4/H1 fly unchanged throughout. M30/M15/M5 briefly compressed (shrink→SQZ) then re-expanded in same direction. M5 broke SQZ first (REVUP) driving D2 expansion. Key observable: H1 step direction maintained — if it breaks, becomes reversal (Scenario H2).
 
 ##### Step 7: Identification Flowchart
 
@@ -1315,12 +1329,12 @@ flowchart TD
     B -->|Yes| C{"M30 re-expanding to fly?"}
     C -->|Yes| D["Rest pattern confirmed — full entry G6-BUY"]
     C -->|No| E["D2 incomplete — wait for M30"]
-    B -->|No| F["Reversal forming — Scenario G"]
+    B -->|No| F["Reversal forming — Scenario H2"]
 ```
 
 **Prediction rules:**
 - IF H1 maintains step → rest pattern → Scenario A
-- IF H1 reverses → Scenario G (reversal)
+- IF H1 reverses → Scenario H2 (reversal)
 - Watch: H1 BBW_stage + M30 re-expansion
 
 #### Image 2 Analysis — backtested_EA_fly_2_shrink_2_fly_zoomin.jpg
@@ -1720,7 +1734,7 @@ flowchart TD
 **Prediction rules:**
 - IF M15+M30 400→511/512 → Scenario A
 - IF M30 remains 513 → Scenario B
-- IF H4 enters 513 → Scenario G risk
+- IF H4 enters 513 → Scenario E4 risk (H4 compressing → Direction pivot)
 - Watch: M30 BBW_stage + M15 midtrend
 
 **Zone progression table (preserved from original analysis):**
@@ -2114,7 +2128,7 @@ M5/M15/M30: Stage 400-499 (SQZ persistent)
 **E2 BBUpDn sequence:** M5 BBUpDn_state alternates 0 (no_state) and 2 (shrinking) on consecutive bars = SQZ peak, band so narrow it catches every candle = G0b-PINK
 **E3 BBUpDn sequence:** M5 BBUpDn_state 2→1 (shrinking→expanding) = band actively expanding upward = D2 initiated = G6-LOAD fires. PriceLoc transitions from at_lower → above_upper confirming breakout direction.
 
-**E4 note (formerly Scenario G1):** When H4 BBUpDn transitions from 1/3 to 2 (shrinking)
+**E4 note:** When H4 BBUpDn transitions from 1/3 to 2 (shrinking)
 while LTF already SQZ — D1 has now reached HTF level. This is the deepest compression state.
 All TFs SQZ simultaneously → transition to Scenario H (Direction pivot).
 D2 direction will be determined by which side H4 breaks SQZ toward.
@@ -2999,7 +3013,7 @@ Using regime table from Step 3:
 - HTF fly, inner TFs rest then resume → Scenario D
 - H4/H1 fly + M30/M15/M5 compress within envelope → Scenario E
 - All TFs SQZ, about to break → Scenario F
-- M30+M15 mid both ≥ 3 → Scenario G
+- M30+M15 mid both ≥ 3 → Scenario H (Direction pivot)
 
 **Step 8 — Apply trade decision**
 Read Part 4 nxt:/tch: labels. State: current regime, price target, which gate fires next, open position status.
@@ -3064,7 +3078,7 @@ Read Part 4 nxt:/tch: labels. State: current regime, price target, which gate fi
 | D: Rest Pattern | Rest vs reversal identification checklist |
 | E: Fly expand + confined compression | Range trade rules, compression threshold, entry conditions, touch patterns |
 | F: SQZ → Fly | SQZ breakout momentum sequence, entry quality scoring |
-| G: All TFs Sideway | G0 exit trigger conditions, holding vs exiting decision, recovery criteria |
+| H: Direction Pivot | H1/H2/H3/H4 sub-scenarios, cascade position, trade action, identification flowchart |
 | All | Scenario Summary table |
 
 ### Part 4 — Next-Stage Direction (Enhancements)
