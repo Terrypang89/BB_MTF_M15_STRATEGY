@@ -2736,6 +2736,220 @@ TARGET: H4 outer band (if H4 also breaking) → D1 outer band
 [![Trend reversal](https://github.com/Terrypang89/BB_MTF_M15_STRATEGY/raw/tofy5/references/Backtest_data/extras/backtested_EA_trend_reversal.jpg)](backtested_EA_trend_reversal.jpg)
 [![Fly shrink to sideway](https://github.com/Terrypang89/BB_MTF_M15_STRATEGY/raw/tofy5/references/Backtest_data/extras/backtested_EA_fly_shrink_2_sideway2.jpg)](backtested_EA_fly_shrink_2_sideway2.jpg)
 
+#### Image 1 Analysis — backtested_EA_trend_reversal.jpg
+
+##### Step 1: Mark Reading — Cause, Event, and Impact
+
+| Mark | Cause (upstream TF state) | Event (transition at this bar) | Impact Immediate (1–5 bars) | Impact Sustained (duration) |
+|------|--------------------------|-------------------------------|----------------------------|----------------------------|
+| [TO BE FILLED: describe mark color and location] | [TO BE FILLED: which TF, BBW_stage, mid value caused this] | [TO BE FILLED: BBW_stage change / mid flip / BBUpDn change / gate fire] | [TO BE FILLED: which TF follows, what gate fires, what action triggered] | [TO BE FILLED: confinement boundaries, valid entries, size rules, active gates] |
+
+##### Step 2: HTF Analysis (W1 → D1 → H4)
+
+| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role in Image |
+|----|-----------|---------------|--------------|------------|---------------|
+| W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
+| D1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
+| H4 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
+
+**HTF Summary:**
+- Macro direction: [TO BE FILLED]
+- Price target: [TO BE FILLED]
+- Why LTF sideway: [TO BE FILLED]
+- HTF providing context or also compressing: [TO BE FILLED]
+
+##### Step 3: MTF Analysis (H1 → M30)
+
+| TF  | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role in Image |
+|-----|-----------|---------------|--------------|------------|---------------|
+| H1  | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
+| M30 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
+
+**MTF Summary:**
+- Trending or ranging: [TO BE FILLED]
+- Confinement boundary: [TO BE FILLED]
+- Touch type at MTF: [TO BE FILLED]
+- Active gate: [TO BE FILLED]
+- Impact on H4: [TO BE FILLED]
+- Impact on M15: [TO BE FILLED]
+
+##### Step 4: LTF Analysis (M15 → M5)
+
+| TF  | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role in Image |
+|-----|-----------|---------------|--------------|------------|---------------|
+| M15 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
+| M5  | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
+
+**LTF Summary:**
+- LTF leading (D2) or lagging (D1): [TO BE FILLED]
+- M5 BBUpDn_state sequence: [TO BE FILLED]
+- REVUP/REVDN visible: [TO BE FILLED]
+- Active gate: [TO BE FILLED]
+- Impact on MTF: [TO BE FILLED]
+- Impact on HTF eventually: [TO BE FILLED]
+
+##### Step 5: Cross-TF Impact Chain
+
+**D1 direction (HTF causing LTF confinement):**
+```
+[TO BE FILLED: H4 state]
+  → [TO BE FILLED: H1 consequence]
+    → [TO BE FILLED: M30 consequence]
+      → [TO BE FILLED: M15 consequence]
+        → [TO BE FILLED: M5 consequence]
+```
+
+**D2 direction (LTF signalling HTF):**
+```
+[TO BE FILLED: M5 state]
+  → [TO BE FILLED: M15 follows in X bars]
+    → [TO BE FILLED: M30 follows]
+      → [TO BE FILLED: H1 follows]
+        → [TO BE FILLED: H4 eventually]
+```
+
+**Cascade position at time of image:**
+- D1 reached depth: [TO BE FILLED — deepest TF in SQZ]
+- D2 initiated at: [TO BE FILLED — lowest TF that broke SQZ, or NOT YET]
+- Leading TF to watch: [TO BE FILLED]
+
+##### Step 6: Concluded Image Analysis
+
+[TO BE FILLED: single paragraph — scenario name + sub-scenario stage + HTF context + MTF state + LTF state + cascade position + touch behavior + key observable + next scenario prediction]
+
+##### Step 7: Identification Flowchart for Trend Prediction
+
+```mermaid
+flowchart TD
+    A["[TO BE FILLED: current state from image]"]
+    A --> B{"[TO BE FILLED: key discriminator observable]"}
+    B -->|Yes| C{"[TO BE FILLED: second check]"}
+    C -->|Yes| D["[TO BE FILLED: next scenario + action]"]
+    C -->|No| E["[TO BE FILLED: alternative next scenario]"]
+    B -->|No| F{"[TO BE FILLED: alternative check]"}
+    F -->|Yes| G["[TO BE FILLED: action]"]
+    F -->|No| H["[TO BE FILLED: wait condition]"]
+```
+
+**Prediction rules from this image:**
+- IF [TO BE FILLED: observable A] THEN next scenario = [TO BE FILLED]
+- IF [TO BE FILLED: observable B] THEN next scenario = [TO BE FILLED]
+- Discriminator TF: [TO BE FILLED]
+- Watch: [TO BE FILLED: specific BBW_stage or mid flip to monitor]
+
+#### Image 2 Analysis — backtested_EA_fly_shrink_2_sideway2.jpg
+
+##### Step 1: Mark Reading — Cause, Event, and Impact
+
+| Mark | Cause (upstream TF state) | Event (transition at this bar) | Impact Immediate (1–5 bars) | Impact Sustained (duration) |
+|------|--------------------------|-------------------------------|----------------------------|----------------------------|
+| [TO BE FILLED: describe mark color and location] | [TO BE FILLED: which TF, BBW_stage, mid value caused this] | [TO BE FILLED: BBW_stage change / mid flip / BBUpDn change / gate fire] | [TO BE FILLED: which TF follows, what gate fires, what action triggered] | [TO BE FILLED: confinement boundaries, valid entries, size rules, active gates] |
+
+##### Step 2: HTF Analysis (W1 → D1 → H4)
+
+| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role in Image |
+|----|-----------|---------------|--------------|------------|---------------|
+| W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
+| D1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
+| H4 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
+
+**HTF Summary:**
+- Macro direction: [TO BE FILLED]
+- Price target: [TO BE FILLED]
+- Why LTF sideway: [TO BE FILLED]
+- HTF providing context or also compressing: [TO BE FILLED]
+
+##### Step 3: MTF Analysis (H1 → M30)
+
+| TF  | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role in Image |
+|-----|-----------|---------------|--------------|------------|---------------|
+| H1  | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
+| M30 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
+
+**MTF Summary:**
+- Trending or ranging: [TO BE FILLED]
+- Confinement boundary: [TO BE FILLED]
+- Touch type at MTF: [TO BE FILLED]
+- Active gate: [TO BE FILLED]
+- Impact on H4: [TO BE FILLED]
+- Impact on M15: [TO BE FILLED]
+
+##### Step 4: LTF Analysis (M15 → M5)
+
+| TF  | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role in Image |
+|-----|-----------|---------------|--------------|------------|---------------|
+| M15 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
+| M5  | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
+
+**LTF Summary:**
+- LTF leading (D2) or lagging (D1): [TO BE FILLED]
+- M5 BBUpDn_state sequence: [TO BE FILLED]
+- REVUP/REVDN visible: [TO BE FILLED]
+- Active gate: [TO BE FILLED]
+- Impact on MTF: [TO BE FILLED]
+- Impact on HTF eventually: [TO BE FILLED]
+
+##### Step 5: Cross-TF Impact Chain
+
+**D1 direction (HTF causing LTF confinement):**
+```
+[TO BE FILLED: H4 state]
+  → [TO BE FILLED: H1 consequence]
+    → [TO BE FILLED: M30 consequence]
+      → [TO BE FILLED: M15 consequence]
+        → [TO BE FILLED: M5 consequence]
+```
+
+**D2 direction (LTF signalling HTF):**
+```
+[TO BE FILLED: M5 state]
+  → [TO BE FILLED: M15 follows in X bars]
+    → [TO BE FILLED: M30 follows]
+      → [TO BE FILLED: H1 follows]
+        → [TO BE FILLED: H4 eventually]
+```
+
+**Cascade position at time of image:**
+- D1 reached depth: [TO BE FILLED — deepest TF in SQZ]
+- D2 initiated at: [TO BE FILLED — lowest TF that broke SQZ, or NOT YET]
+- Leading TF to watch: [TO BE FILLED]
+
+##### Step 6: Concluded Image Analysis
+
+[TO BE FILLED: single paragraph — scenario name + sub-scenario stage + HTF context + MTF state + LTF state + cascade position + touch behavior + key observable + next scenario prediction]
+
+##### Step 7: Identification Flowchart for Trend Prediction
+
+```mermaid
+flowchart TD
+    A["[TO BE FILLED: current state from image]"]
+    A --> B{"[TO BE FILLED: key discriminator observable]"}
+    B -->|Yes| C{"[TO BE FILLED: second check]"}
+    C -->|Yes| D["[TO BE FILLED: next scenario + action]"]
+    C -->|No| E["[TO BE FILLED: alternative next scenario]"]
+    B -->|No| F{"[TO BE FILLED: alternative check]"}
+    F -->|Yes| G["[TO BE FILLED: action]"]
+    F -->|No| H["[TO BE FILLED: wait condition]"]
+```
+
+**Prediction rules from this image:**
+- IF [TO BE FILLED: observable A] THEN next scenario = [TO BE FILLED]
+- IF [TO BE FILLED: observable B] THEN next scenario = [TO BE FILLED]
+- Discriminator TF: [TO BE FILLED]
+- Watch: [TO BE FILLED: specific BBW_stage or mid flip to monitor]
+
+### Cross-Image Conclusion
+
+| Image | Cascade Position | Depth | Leading TF | Key Observable |
+|-------|-----------------|-------|------------|----------------|
+| Image 1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
+| Image 2 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
+
+**Progression confirmed:** [TO BE FILLED: D1 → BOTTOM → D2 sequence]
+**Touch type evolution:** [TO BE FILLED: Type X image 1 → Type Y image 2]
+**Entry point:** [TO BE FILLED: which image, which bar, which TF transition]
+**Duration observed:** [TO BE FILLED: how many bars D1 lasted]
+
 > **Tier:** TIER 2 — COMPRESSION AND BOTTOM (D1)
 > **Scenario:** H — Direction pivot
 > **Cascade position:** D1 complete — all TFs at or near SQZ. D2 direction about to resolve.
