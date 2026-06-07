@@ -17,7 +17,11 @@ Scan this first. One full tick shown with every field labelled inline.
 
 ```
 YYYY.MM.DD HH:MM:SS  [M15]  ← per-bar state of M15 BB (same layout for M30/H1/H4/D1/W1)
-  W_stage_M15:(FLY)[cur, prev, prev2]       stage code + regime: FLY or SQZ
+  first_stage_TF:[1]                            ← init flag; only present while TF has insufficient bars
+                                                   stage=()[0,0,0] trend=0 while initializing
+                                                   partial: (FLY)[511,0,0] = cur valid, prev/prev2 still 0
+                                                   fully ready: flag absent, all 3 stage values non-zero
+  W_stage_M15:(FLY)[cur, prev, prev2]           stage code + regime: FLY or SQZ; () = not yet initialized
   diffMid_Trend_M15:[cur, prev, prev2]      midline trend  0=none 1=up 2=dn 3=flat 4=side-dn 5=side-up
   BBUpDn_M15:[cur, prev, prev2]             band movement (2-bar confirmed)
                                               0=neutral 1=expanding 2=shrinking 3=par-up 4=par-dn
@@ -160,6 +164,7 @@ To find the current state of a missing TF tag:
   → search backward in the log for the most recent datetime that contains [M30],
     [H1], [H4], [D1], or [W1] respectively
   → those field values remain valid until the next time that tag appears
+  → skip ticks where first_stage_TF:[1] is present — values are 0 and not usable
 
 Example: tick at 04:07 only shows [M15] and [TRADEINFO]
   → [M30] last seen at 04:00 → use those M30 values
@@ -186,7 +191,11 @@ Approximate update frequency (EA runs on M5):
 
 ```
 [M15] / [M30] / [H1] / [H4] / [D1] / [W1]
-  W_stage_TF:(REGIME)[cur, prev, prev2]        → BBW stage + regime label
+  first_stage_TF:[1]                              → initialization flag; present only while TF has insufficient bars
+                                                   when present: W_stage shows () and stage=[0,0,0]
+                                                   disappears once TF is fully initialized (all 3 bars valid)
+                                                   partial init: W_stage:(FLY)[511,0,0] = cur valid, prev still 0
+  W_stage_TF:(REGIME)[cur, prev, prev2]           → BBW stage + regime label
   diffMid_Trend_TF:[cur, prev, prev2]           → midline trend (ENUM_BBMID_trend)
                                                    0=no_midtrend 1=uptrend 2=dntrend
                                                    3=sidewaytrend 4=sidewaydntrend 5=sidewayuptrend
@@ -261,7 +270,8 @@ Approximate update frequency (EA runs on M5):
   Trend:[cur,prev,prev2,prev3,prev4,prev5,]     → buffer direction per bar [cur→prev5] (trailing comma)
                                                    2=uptrend  1=downtrend
                                                    log-verified: dir:0 + Trend=2.0 = uptrend ✓
-                                                   dir and Trend[cur] agree when buffer is stable;
+                                                   dir and Trend[cur] agree when buffer is stable
+                                                   0.0 = uninitialized slot (EA startup / insufficient bars);
                                                    Trend[n]=1 while dir=0 = buffer recently flipped
   LV:[cur,prev,prev2,prev3,prev4,prev5,]        → active buffer value = Lower when dir:0, Upper when dir:1
   Upper:[cur,prev,prev2,prev3,prev4,prev5,]     → upper band of ATR channel (SELL stop reference)
