@@ -2806,7 +2806,138 @@ Recovery: wait until M30 or M15 shows mid=1 or mid=2 again
 - Read `./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway2.jpg` as the fly shrink to sideway visual reference
 
 [![Trend reversal](https://github.com/Terrypang89/BB_MTF_M15_STRATEGY/raw/tofy5/references/Backtest_data/extras/backtested_EA_trend_reversal.jpg)](backtested_EA_trend_reversal.jpg)
+
+#### Image Analysis — backtested_EA_trend_reversal.jpg
+
+##### Step 1: Mark Reading — Cause, Event, and Impact
+
+| Mark | Cause (upstream TF state) | Event (transition at this bar) | Impact Immediate (1–5 bars) | Impact Sustained (duration) |
+|------|--------------------------|-------------------------------|----------------------------|----------------------------|
+| Bullish breakout from SQZ | H4+H1+M30 all in SQZ (409, mid=3) — compression exhausted | M5 BBW 409→511, mid=3→1 (REVUP) at bar 34, then M15 follows same | M15 FLAT→UP transition — G6-LOAD fires, arms for entry | M5/M15 fly sustained as long as H4 remains SQZ (no HTF target yet — trade capped at M30 band) |
+
+##### Step 2: HTF Analysis (W1 → D1 → H4)
+
+| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
+|----|-----------|---------------|--------------|------------|------|
+| W1 | 511 | 1 | 1 | — | Macro bullish — sets long-term direction |
+| D1 | 511 | 1 | 1 | — | Macro bullish — confirms W1, sets D2 bias |
+| H4 | 409 | 3 | 0 | Type 3 | SQZ — no HTF target, confines all below TFs. Touch Type 3: BBUpDn=0 (no_state), band too narrow |
+
+**HTF Summary:** Bullish macro (W1+D1 fly BUY) | H4 SQZ — no immediate HTF target, price confined within H4 band | H4 in SQZ — all bands narrow, mid=3 | H4 BBUpDn=0 (no_state) — compression peak, breakout imminent
+
+##### Step 3: MTF Analysis (H1 → M30)
+
+| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
+|----|-----------|---------------|--------------|------------|------|
+| H1  | 409 | 3 | 0 | Type 3 | SQZ — confined by H4 SQZ above, no MTF direction |
+| M30 | 409 | 3 | 0 | Type 3 | SQZ — confined by H1 SQZ, no MTF direction |
+
+**MTF Summary:** Ranging — both SQZ | H4 band as confinement boundary | Touch Type 3 — SQZ peak, BBUpDn=0 (no_state) | G0c-SQZLOCK active — no entry from MTF | No impact on H4 (H4 is driver) | M15 breakout must confirm before M30 impact
+
+##### Step 4: LTF Analysis (M15 → M5)
+
+| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
+|----|-----------|---------------|--------------|------------|------|
+| M15 | 511 | 1 | 1 | — | D2 initiated — just broke SQZ, expanding upward, confirming M5 |
+| M5  | 511 | 1 | 1 | — | D2 leader — broke SQZ first at bar 34, expanding upward |
+
+**LTF Summary:** D2 leading — M5 led breakout, M15 confirmed in 0 bars | BBUpDn sequence: M5 0→1 (SQZ→expanding) then M15 0→1 | REVUP visible at M5 bar 34 | G6-LOAD fires at M5, G6-BUY fires at M15 confirm | M15 will push M30 out of SQZ if sustained | LTF signal traveling upward toward HTF
+
+##### Step 5: Cross-TF Impact Chain
+
+**D1 compression (HTF → LTF):**
+- H4 SQZ (409) → H1 confined SQZ (409) → M30 confined SQZ (409) → M15 was SQZ then broke → M5 broke SQZ first
+
+**D2 expansion (LTF → HTF):**
+- M5 breaks SQZ (REVUP, bar 34) → M15 follows immediately (FLAT→UP) → M30 still SQZ (awaiting M15 sustain) → H1 still SQZ (awaiting M30) → H4 eventually may break SQZ upward
+
+**Cascade position:** D1 depth = M30 (deepest TF still in SQZ) | D2 initiated at = M5 (broke SQZ first) | Leading TF = M15 (entry trigger — watch for FLAT→UP sustain)
+
+##### Step 6: Concluded Analysis
+
+Scenario H1 — Same as D1 direction breakout. M5 and M15 broke SQZ simultaneously in the same direction as D1 (bullish). H4 remains in SQZ (409, mid=3, BBUpDn=0) — no HTF target yet. This is a D2 breakout from deep compression with D1 bias aligned (D1 fly BUY). Entry quality: M15 FLAT→UP confirmed, but M30 still SQZ → quality capped at ~59 without M30 confirm → G5-WEAK may block. Wait for M30 breakout to confirm before full entry. Touch Type 3 at H4/H1/M30 (SQZ peak). Key observable: M30 exit from SQZ → confirms H1. Next scenario: → F2 if M30 breaks SQZ in same direction, → G if M15 reverts to SQZ.
+
+##### Step 7: Identification Flowchart
+
+```mermaid
+flowchart TD
+    A["Current state: M5+M15 broke SQZ upward, M30+H1+H4 still SQZ"]
+    A --> B{"M30 exits SQZ in same direction (BBW→511, mid→1)?"}
+    B -->|Yes| C["Next scenario: F2 — MTF confirmed breakout, enter 0.75×"]
+    B -->|No — M15 reverts to SQZ| D["Alternative: H3 — false breakout, return to G"]
+```
+
+**Prediction rules:**
+- IF M30 BBW exits 409 → 511 AND mid flips 3→1 → next scenario = F2
+- IF M15 BBW reverts 511 → 409 within 3 bars → next scenario = H3 (false breakout)
+- Watch: M30 BBW_stage and mid for breakout confirmation
+
 [![Fly shrink to sideway](https://github.com/Terrypang89/BB_MTF_M15_STRATEGY/raw/tofy5/references/Backtest_data/extras/backtested_EA_fly_shrink_2_sideway2.jpg)](backtested_EA_fly_shrink_2_sideway2.jpg)
+
+#### Image Analysis — backtested_EA_fly_shrink_2_sideway2.jpg
+
+##### Step 1: Mark Reading — Cause, Event, and Impact
+
+| Mark | Cause (upstream TF state) | Event (transition at this bar) | Impact Immediate (1–5 bars) | Impact Sustained (duration) |
+|------|--------------------------|-------------------------------|----------------------------|----------------------------|
+| M5 bullish fly in bearish compression | H4 shrinking (513, mid=3, BBUpDn=2) confines all below TFs; H1+M30+M15 all SQZ (409) | M5 breaks SQZ upward (511, mid=1, BBUpDn=1) — lone bullish fly in sea of compression | M5 BBUpDn 0→1 = D2 signal initiated, G6-LOAD fires | M5 fly will not sustain — H4 shrinking (BBUpDn=2) confines price downward. M15/M30 still SQZ → no MTF confirm → G5-WEAK blocks entry |
+
+##### Step 2: HTF Analysis (W1 → D1 → H4)
+
+| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
+|----|-----------|---------------|--------------|------------|------|
+| W1 | 511 | 1 | 1 | — | Macro bullish — sets long-term direction |
+| D1 | 511 | 1 | 1 | — | Macro bullish — confirms W1, sets D2 bias upward |
+| H4 | 513 | 3 | 2 | Type 1 | Shrinking bearish — confines all below TFs. Touch Type 1: BBUpDn=2 (shrinking), band moving toward price — compression geometry noise |
+
+**HTF Summary:** Bullish macro (W1+D1 fly BUY) | H4 shrinking — price target is H4 upper band for short trades | H4 shrink confines MTF/LTF — M15/M30/M1 sideway because H4 compression | H4 BBUpDn=2 (shrinking) — bands narrowing, compression deepening
+
+##### Step 3: MTF Analysis (H1 → M30)
+
+| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
+|----|-----------|---------------|--------------|------------|------|
+| H1  | 409 | 3 | 0 | Type 3 | SQZ — confined by H4 shrink above, no MTF direction |
+| M30 | 409 | 3 | 0 | Type 3 | SQZ — confined by H1 SQZ, no MTF direction |
+
+**MTF Summary:** Ranging — both SQZ | H4 band as confinement boundary | Touch Type 3 — SQZ peak, BBUpDn=0 (no_state) | G0c-SQZLOCK active — no entry from MTF | No impact on H4 (H4 is driver) | M15 remains SQZ — no entry trigger possible
+
+##### Step 4: LTF Analysis (M15 → M5)
+
+| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
+|----|-----------|---------------|--------------|------------|------|
+| M15 | 409 | 3 | 0 | Type 3 | SQZ — no breakout, confined by M30 SQZ |
+| M5  | 511 | 1 | 1 | — | D2 leader — lone bullish fly, broke SQZ but no M15 confirm |
+
+**LTF Summary:** D2 initiated at M5 only — M5 broke SQZ upward (BBUpDn 0→1) but M15 remains SQZ | BBUpDn sequence: M5 0→1 (SQZ→expanding) | REVUP visible at M5 | G6-LOAD fires at M5 — arms for entry, but M15 not confirmed → no G6-BUY | M5 fly alone unlikely to sustain without M15 confirm | No impact on MTF without M15
+
+##### Step 5: Cross-TF Impact Chain
+
+**D1 compression (HTF → LTF):**
+- H4 shrinking (513, BBUpDn=2) → H1 confined SQZ (409) → M30 confined SQZ (409) → M15 confined SQZ (409) → M5 broke SQZ but confined by M15
+
+**D2 expansion (LTF → HTF):**
+- M5 breaks SQZ (REVUP, BBUpDn 0→1) → M15 NOT following (still SQZ) → D2 stalled — no upward propagation
+
+**Cascade position:** D1 depth = M15 (deepest TF still in SQZ below H4) | D2 initiated at = M5 only (no M15 confirm — stalled) | Leading TF = M15 (watch for SQZ breakout or M5 reversion)
+
+##### Step 6: Concluded Analysis
+
+Scenario H1 with stalled D2 — M5 broke SQZ in same direction as D1 (bullish), but M15 remains in SQZ (409, mid=3). H4 is shrinking (513, BBUpDn=2) — compression deepening, not SQZ, so H4 confinement is active. This is NOT a valid entry — M15 SQZ means no entry trigger, G5-WEAK blocks, and H4 shrinking confines price. M5 fly is a false signal without M15 confirm. Touch Type 1 at H4 (BBUpDn=2, shrinking — band moved to price, noise). Key observable: if M15 breaks SQZ → H1 confirmed. If M5 reverts to SQZ → M5 was noise. Next scenario: → F1 if M15 breaks SQZ upward, → G if M5 reverts to SQZ.
+
+##### Step 7: Identification Flowchart
+
+```mermaid
+flowchart TD
+    A["Current state: M5 fly BUY, M15+M30+H1 SQZ, H4 shrinking bearish"]
+    A --> B{"M15 exits SQZ in same direction as M5 (BBW→511, mid→1)?"}
+    B -->|Yes| C["Next scenario: F1 — LTF breakout confirmed, wait M30 for entry"]
+    B -->|No — M5 reverts to SQZ| D["Alternative: G — M5 was noise, all TFs SQZ, no trade"]
+```
+
+**Prediction rules:**
+- IF M15 BBW exits 409 → 511 AND mid flips 3→1 → next scenario = F1
+- IF M5 BBW reverts 511 → 409 within 3 bars → next scenario = G (all SQZ)
+- Watch: M15 BBW_stage and mid for breakout confirmation
 
 > **Tier:** TIER 2.5 — DIRECTION RESOLUTION (BOTTOM → D2)
 > **Cascade position:** All TFs at or near SQZ — D2 direction about to resolve
