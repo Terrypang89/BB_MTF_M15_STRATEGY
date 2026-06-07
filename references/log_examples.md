@@ -2,6 +2,131 @@
 
 ## Annotated EA Log Samples — How to Decode Each Line
 
+> **Scope:** This document applies exclusively to pre-processed clean log files named
+> `YYYYMMDD_clean.log` (e.g. `20260606_clean.log`), located under
+> `references/Backtest_data/<version>/`.
+> These are EA Journal output files that have been cleaned of raw MT5 noise,
+> retaining only EA tag lines and MT5 order execution lines.
+> Do not use this reference for unprocessed raw Journal exports.
+
+---
+
+## Quick Decode Cheat Sheet
+
+Scan this first. One full tick shown with every field labelled inline.
+
+```
+YYYY.MM.DD HH:MM:SS  [M15]  ← per-bar state of M15 BB (same layout for M30/H1/H4/D1/W1)
+  W_stage_M15:(FLY)[cur, prev, prev2]       stage code + regime: FLY or SQZ
+  diffMid_Trend_M15:[cur, prev, prev2]      midline trend  0=none 1=up 2=dn 3=flat 4=side-dn 5=side-up
+  BBUpDn_M15:[cur, prev, prev2]             band movement (2-bar confirmed)
+                                              0=neutral 1=expanding 2=shrinking 3=par-up 4=par-dn
+  trend_M15:[cur, prev, prev2, ]            ENUM_BB_trend per bar (trailing comma)
+                                              0=none 1=up 2=dn 3=sideway 4=side-dn 5=side-up 7=REVUP 8=REVDN
+  prev_trend_M15:N                          trend enum one bar before cur
+  diffMid_M15:[cur, prev, prev2]            midline delta: MidLV[n]-MidLV[n+1] per TF bar interval
+  diffBBW_M15:[cur, prev, prev2]            BB-width delta: (WLV[n]-WLV[n+1])×100 per TF bar interval
+  WLV_M15:[cur, prev, prev2]               BB width level; each step = one TF bar (M5-sampled)
+  MidLV_M15:[cur, prev, prev2]             midline price; each step = one TF bar
+  UppLV_M15:[cur, prev, prev2]             upper band price; each step = one TF bar
+  LowLV_M15:[cur, prev, prev2]             lower band price; each step = one TF bar
+  close_M15:[cur, prev, prev2]             M5 candle close price  ← M15 block only
+  high_M15:[cur, prev, prev2]              M5 candle high price   ← M15 block only
+  low_M15:[cur, prev, prev2]               M5 candle low price    ← M15 block only
+
+YYYY.MM.DD HH:MM:SS  [BBTFImpact]  ← cross-TF impact, runs after ALL timeframe tags are processed
+  Sideway_val:[H4 H1 M30 M15 M5 - S_XX]   5-digit score per TF (0–6 each); S_XX = sideway confirmed
+  HTF_Drive_LTF_Sideway:[TF_1, ...]        next-higher TF driving TF into sideway (TF = target)
+  LTF_Drive_HTF_Fly:[TF_1, ...]            next-lower TF driving TF into fly (TF = target)
+  midline_Cluster:[|M15-M5|, |M15-M30|, |M15-H1|]   midline price spread (small=converging)
+  line_seq_touch:[TF_cur-recent,prev, ...] touch sequence per TF  → ENUM_BB_LineTouch
+  line_seq_cross:[TF_cur-recent,prev, ...] cross sequence per TF  → ENUM_BB_LineCross
+  untouch_val:[TF_cur-prev, ...]           near-band proximity per TF  → near_ subset of ENUM_BB_LineCross
+  Midline_cross:[TF_cur-prev, ...]         midline cross state per TF  → ENUM_BB_LineCross
+
+YYYY.MM.DD HH:MM:SS  [ATRSL1buf]   ← ATR Stop Loss indicator, 1 buffer (single active trend line)
+  dir:N                                    0=uptrend(active buffer=Lower)  1=downtrend(active buffer=Upper)
+  Trend:[cur,prev,prev2,prev3,prev4,prev5,] buffer direction  2=uptrend  1=downtrend
+  LV:[cur,prev,prev2,prev3,prev4,prev5,]   active buffer line (=Lower if dir:0, =Upper if dir:1)
+  Upper:[cur,prev,prev2,prev3,prev4,prev5,] upper ATR band — SELL SL when dir=1
+  Lower:[cur,prev,prev2,prev3,prev4,prev5,] lower ATR band — BUY SL when dir=0
+  SLMid:[cur,prev,prev2,prev3,prev4,prev5,] ATR channel midpoint
+  Val:[cur,prev,prev2,prev3,prev4,prev5,]   raw ATR value
+
+YYYY.MM.DD HH:MM:SS  [TRADEINFO]   ← trade decision (emitted after all TF tags + BBTFImpact)
+  Gate:[Gx-LABEL] TradeAct:N cnt:N pen:N.NN| ...flags... |act:N atrsl:N
+  Minimal (no gate): |act:N atrsl:N
+  TradeAct: 0=NEUTRAL  1=BUY  2=SELL  |  act: 0=none  4=open  |  pen: size multiplier
+
+── only on close/open ticks ──
+  market buy/sell N SYMBOL (bid/ask/last)          ← MT5 terminal system line
+  deal #N buy/sell N SYMBOL at PRICE done ...      ← MT5 terminal system line
+  order performed buy/sell N at PRICE [#N ...]     ← MT5 terminal system line
+
+YYYY.MM.DD HH:MM:SS  [NEW_ORDER_CLOSE]  ← position closed this tick
+  OPEN_TICKET:N  OPEN_Type:BUY/SELL  OPEN_LOTS:N  OPEN_PRICE:N  OPEN_TIME:DATETIME
+  CLOSED_TICKET:N  CLOSED_TYPE:BUY/SELL  CLOSED_LOT:N  CLOSED_PRICE:N
+  PROFIT:N  SWAP:N  COMMISION:N  FEE:N
+  TOTAL_PROFIT:N  TOTAL_SWAP:N  LAST_PROFIT:N
+
+YYYY.MM.DD HH:MM:SS  [NEW_ORDER_OPEN]   ← new position opened this tick
+  OPEN_TICKET:N  OPEN_TYPE:BUY/SELL  OPEN_LOTS:N
+  DEAL_PRICE:N  FREEMARGIN:N  MARGINREQUIRED:N
+
+── end conditional tags ──
+
+YYYY.MM.DD HH:MM:SS  [ORDERINFO]   ← open positions
+  BUY_PROFIT:N, BUY_LOTS:N, BUY_TICKET_NUM:N, BUYS:N,
+  SELL_PROFIT:N, SELL_LOTS:N, SELL_TICKET_NUM:N, SELLS:N, TOTALORDERS:N
+```
+
+**[Timeframe tag] flow — how to read a tick:**
+
+```
+Step 1  Read [M15] first — M5 candle close/high/low + M15 BB state
+Step 2  Read [M30] [H1] [H4] [D1] [W1] — each TF's BB state
+        If a TF tag is missing: look back in log for last occurrence of that tag
+Step 3  Read [TRADEINFO] — gate decision based on all TF states
+Step 4  If position closed/opened this tick:
+          MT5 system lines (deal/order) → execution confirmation from terminal
+          [NEW_ORDER_CLOSE] → closed trade P&L, entry/exit details
+          [NEW_ORDER_OPEN]  → new position ticket, price, margin
+Step 5  Read [BBTFImpact] — cross-TF analysis runs AFTER all TF tags are processed
+        Sideway_val  = momentum score across M5–H4 (5 digits)
+        midline_Cluster = are TF midlines spatially converging?
+        HTF_Drive / LTF_Drive = which TFs are being pushed into sideway or fly
+        line_seq_touch / line_seq_cross / untouch_val = price interaction with bands
+        Midline_cross = price crossing midline per TF
+Step 6  Read [ATRSL1buf] — ATR stop loss single buffer state
+Step 7  Read [ORDERINFO] — open position summary
+```
+
+**Stage quick reference:**
+
+```
+fly++   511/521       all bands moving same direction — strong trend
+fly+-   512/522 diffBBW>0   parallel, expanding
+fly-+   512/522 diffBBW<0   parallel, contracting
+fly--   513/523       shrinking (converging bands)
+SQZ     400–499       squeeze
+SQZ-@@@ 400–499 + BBW_updated_stage≥1000   deep confirmed squeeze
+SW      300–399       sideways
+STR     200–299       strong trend
+```
+
+**Key enum quick reference:**
+
+```
+diffMid_Trend / trend_TF:   0=none 1=up 2=dn 3=flat 4=side-dn 5=side-up [7=REVUP 8=REVDN trend only]
+BBUpDn_state:               0=neutral 1=expanding 2=shrinking 3=par-up 4=par-dn
+ATRSL dir/Trend:            dir 0=uptrend(LV=Lower) 1=dn(LV=Upper) | Trend 2=up 1=dn
+ENUM_BB_LineTouch:          0=none 6=dnup_Dn 7=updn_Mid 8=dnup_Mid 9=updn_Up
+                            16=untouch_dnup_Dn 17=untouch_updn_Mid 18=untouch_dnup_Mid 19=untouch_updn_Up
+ENUM_BB_LineCross:          0=none 10=BB_LOW 15=CrossUp_LOW 16=CrossDn_LOW 20=BB_DN 26=CrossDn_DN
+                            30=BB_UP 35=CrossUp_UP 40=BB_HIGH 45=CrossUp_HIGH 46=CrossDn_HIGH
+untouch_val (near_):        0=none 26=near_lower 27=near_mid_above 28=near_mid_below 29=near_upper
+```
+
 ---
 
 ## Log Line Format Reference
@@ -17,7 +142,11 @@ No EA-name or timestamp prefix in the Journal tab output — just date/time + ta
 **Tag emit order per tick:**
 
 ```
-[M15] → [M30] → [H1] → [H4] → [D1] → [W1] → [TRADEINFO] → [BBTFImpact] → [ATRSL1buf] → [ORDERINFO]
+[M15] → [M30] → [H1] → [H4] → [D1] → [W1] → [TRADEINFO] → [NEW_ORDER_CLOSE]* → [NEW_ORDER_OPEN]*
+  → [BBTFImpact] → [ATRSL1buf] → [ORDERINFO]
+
+* conditional — only emitted when a position is closed or opened on that tick
+  MT5 system lines (deal/order) appear between [TRADEINFO] and [NEW_ORDER_CLOSE]
 ```
 
 **HTF tag availability — lookback rule:**
@@ -131,6 +260,9 @@ Approximate update frequency (EA runs on M5):
                                                    1=downtrend (LV=Upper, stop above price)
   Trend:[cur,prev,prev2,prev3,prev4,prev5,]     → buffer direction per bar [cur→prev5] (trailing comma)
                                                    2=uptrend  1=downtrend
+                                                   log-verified: dir:0 + Trend=2.0 = uptrend ✓
+                                                   dir and Trend[cur] agree when buffer is stable;
+                                                   Trend[n]=1 while dir=0 = buffer recently flipped
   LV:[cur,prev,prev2,prev3,prev4,prev5,]        → active buffer value = Lower when dir:0, Upper when dir:1
   Upper:[cur,prev,prev2,prev3,prev4,prev5,]     → upper band of ATR channel (SELL stop reference)
   Lower:[cur,prev,prev2,prev3,prev4,prev5,]     → lower band of ATR channel (BUY stop reference)
@@ -140,6 +272,44 @@ Approximate update frequency (EA runs on M5):
 [ORDERINFO]
   BUY_PROFIT:N, BUY_LOTS:N, BUY_TICKET_NUM:N, BUYS:N,
   SELL_PROFIT:N, SELL_LOTS:N, SELL_TICKET_NUM:N, SELLS:N, TOTALORDERS:N
+
+── Trade execution tags (only appear when a position is opened or closed) ──
+
+[NEW_ORDER_CLOSE]   emitted when an existing position is closed
+  TradeAct:[]
+  OPEN_TICKET:N          ticket number of the position being closed
+  OPEN_Type:BUY/SELL     direction of the closed position
+  OPEN_LOTS:N            lot size of the closed position
+  OPEN_PRICE:N           entry price of the closed position
+  OPEN_TIME:YYYY.MM.DD HH:MM:SS   entry datetime of the closed position
+  CLOSED_TICKET:N        ticket number of the closing order
+  CLOSED_TYPE:BUY/SELL   direction of the closing order
+  CLOSED_LOT:N           lot size of the closing order
+  CLOSED_PRICE:N         execution price of the close
+  PROFIT:N               P&L of this closed trade (negative = loss)
+  SWAP:N                 swap charges accumulated (raw double)
+  COMMISION:N            commission charged
+  FEE:N                  any additional fees
+  TOTAL_PROFIT:N         cumulative session P&L including this trade
+  TOTAL_SWAP:N           cumulative session swap
+  LAST_PROFIT:N          P&L of the trade just before this one
+
+[NEW_ORDER_OPEN]    emitted when a new position is opened
+  TradeAct:[]
+  OPEN_TICKET:N          ticket number of the new position
+  OPEN_TYPE:BUY/SELL     direction of the new position
+  OPEN_LOTS:N            lot size
+  DEAL_PRICE:N           execution price
+  FREEMARGIN:N           free margin remaining after open
+  MARGINREQUIRED:N       margin required for this position
+
+── MT5 system lines (no [TAG], emitted by terminal on order execution) ──
+  market buy/sell N SYMBOL (bid/ask/last)
+  deal #N buy/sell N SYMBOL at PRICE done (based on order #N)
+  deal performed [#N ...]
+  order performed buy/sell N at PRICE [#N ...]
+  These lines appear between [TRADEINFO] and [NEW_ORDER_CLOSE]/[NEW_ORDER_OPEN]
+  and are MT5 terminal output, not EA log output.
 ```
 
 ---
@@ -356,18 +526,24 @@ Both active at same time              → volatile transition, hold
 
 ## ATRSL1buf Field Reference
 
+`ATRSL1buf` = ATR Stop Loss indicator with 1 buffer (single active trend line).
+Upper and Lower bands are both computed, but only one is the active buffer (`LV`)
+at a time, determined by `dir`. The single buffer line switches band when trend flips.
+
 ```
 Field   Meaning
 ──────  ──────────────────────────────────────────────────────────
-dir     0 = uptrend   → LV = Lower band (stop below price, BUY mode)
-        1 = downtrend → LV = Upper band (stop above price, SELL mode)
-Trend   [cur,prev,prev2,prev3,prev4,prev5,]  buffer direction per bar
+dir     0 = uptrend   → active buffer = Lower band (stop below price)
+        1 = downtrend → active buffer = Upper band (stop above price)
+Trend   [cur,prev,prev2,prev3,prev4,prev5,]  direction of the active buffer per bar
         2=uptrend  1=downtrend
-LV      [cur,prev,prev2,prev3,prev4,prev5,]  active buffer value
-        equals Lower[n] when dir=0, Upper[n] when dir=1
-Upper   [cur,prev,prev2,prev3,prev4,prev5,]  top orange band — SELL stop reference
-Lower   [cur,prev,prev2,prev3,prev4,prev5,]  bottom orange band — BUY stop reference
-SLMid   [cur,prev,prev2,prev3,prev4,prev5,]  midpoint of ATR channel (yellow line)
+        log-verified: dir:0 + Trend=2.0 = uptrend ✓
+        dir and Trend[cur] agree when buffer is stable
+LV      [cur,prev,prev2,prev3,prev4,prev5,]  active buffer value (the single tracking line)
+        = Lower[n] when dir=0, = Upper[n] when dir=1
+Upper   [cur,prev,prev2,prev3,prev4,prev5,]  upper ATR band (active when dir=1, SELL SL)
+Lower   [cur,prev,prev2,prev3,prev4,prev5,]  lower ATR band (active when dir=0, BUY SL)
+SLMid   [cur,prev,prev2,prev3,prev4,prev5,]  midpoint of ATR channel
 Val     [cur,prev,prev2,prev3,prev4,prev5,]  raw ATR value per bar
 ```
 
@@ -377,9 +553,13 @@ Val     [cur,prev,prev2,prev3,prev4,prev5,]  raw ATR value per bar
 dir:0 (uptrend)   → SL for open BUY  = LV[cur] = Lower[cur]
 dir:1 (downtrend) → SL for open SELL = LV[cur] = Upper[cur]
 
-Trend history examples:
+Trend history reading:
+  [2,2,2,2,2,2,] → stable uptrend, buffer consistently tracking Lower
   [2,2,2,2,1,1,] → uptrend now (2), flipped from downtrend (1) at prev3
   [1,1,1,1,2,2,] → downtrend now (1), flipped from uptrend (2) at prev3
+
+When Trend[n] differs from dir: buffer recently changed direction;
+older history bars still show the previous trend state.
 ```
 
 ---
