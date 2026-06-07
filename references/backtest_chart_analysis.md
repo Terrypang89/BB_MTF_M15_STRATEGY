@@ -447,23 +447,83 @@ The cascade is top-down: **W1 sets D1's range → D1 sets H4's range → H4 sets
 
 Two cascade directions drive every market cycle in this strategy.
 
-### D1 — Compression Cascade (HTF → LTF)
+### Compression — Check HTF First, Then Read LTF
 
-HTF tightens → confines TF below → cascades downward until LTF reaches SQZ.
-HTF is the driver. Observable as BBW_stage dropping TF by TF from top down.
+Compression is NOT a simple one-direction cascade. The HTF state at the time
+LTF starts shrinking determines whether it's a rest, confinement, or reversal warning.
 
-```
-H4 shrinks (513/523)
-  → H1 confined within H4 band → H1 ranges within H4 upper/lower
-    → M30 confined within H1 band → M30 shrinks
-      → M15 confined within M30 band → M15 shrinks
-        → M5 reaches SQZ (400-499) — deepest confinement point
-```
+**Always check HTF BEFORE interpreting LTF shrink:**
 
-### D2 — Expansion Cascade (LTF → HTF)
+| H4 state | D1 state | LTF shrink meaning | Scenario path | Reversal probability |
+|----------|----------|-------------------|---------------|---------------------|
+| Fly (511/512) | Fly (511/512) | REST — internal LTF pullback, HTF intact | B→D (rest recovery) | Low |
+| Shrink (513) | Fly (511/512) | CONFINED — H4 caused LTF compression, D1 may rescue | B→E (deep compression) | Medium |
+| Shrink (513) | Shrink (513) | REVERSAL WARNING — both HTF losing direction | B→E→E4 (HTF reversal) | High |
+| SQZ (400-499) | Fly (511/512) | BOTTOM with D1 bias — old H4 trend exhausted | E4→H (direction pivot, D1 gives bias) | High for H4, low for macro |
+| SQZ (400-499) | Shrink/SQZ | DEEP BOTTOM — no macro bias exists | E4→H (direction pivot, no bias) | Very high — full reversal |
+
+**Two phenomena happen simultaneously during compression:**
+
+1. **Shrink propagation (LTF → HTF):** LTF bands shrink first because they react to price faster.
+   M15 enters 513 before M30 before H1 before H4. LTF is the leading indicator.
+   Each TF confirming shrink increases reversal probability.
+
+2. **Confinement effect (HTF → LTF consequence):** Once H4 IS in shrink, its band boundaries
+   act as ceiling/floor for all lower TFs. M30/M15 oscillate within H4 upper/lower band.
+   This is the RESULT of H4 shrink, not the initiation of shrink.
+
+**The critical question is: did HTF shrink FIRST (causing LTF compression) or did LTF shrink
+FIRST (warning of HTF reversal)?**
+
+- If H4 entered shrink BEFORE M15 → H4 is the cause → confinement (check D1 for rescue)
+- If M15 entered shrink BEFORE H4 → LTF is warning → watch if H4 follows (reversal ladder)
+- If both entered shrink simultaneously → strong reversal signal
+
+**Reversal probability ladder — each TF confirming shrink escalates:**
+
+| Depth reached | Reversal probability | Scenario |
+|---------------|---------------------|----------|
+| M15 only (H4 still fly) | Low — likely rest/continuation | B1 |
+| M30 added (H4 still fly) | Low-Medium — watch H1 | B2 |
+| H1 added (H4 still fly) | Medium — H4 likely to follow | B3 |
+| H4 enters shrink (D1 still fly) | High — HTF reversal warning | E/E4 |
+| H4 SQZ + D1 still fly | High for H4, D1 gives bias | H (D1 bias) |
+| H4 SQZ + D1 shrink/SQZ | Very high — full macro reversal | H (no bias) |
+
+Shrink propagation (LTF leads — early warning of reversal):
+  M15 BBUpDn→2 first (trend weakening at entry TF)
+    → M30 BBUpDn→2 follows (momentum fading at driver TF)
+      → H1 BBUpDn→2 follows (chain anchor losing direction)
+        → H4 BBUpDn→2 follows (macro bias losing direction — reversal warning confirmed)
+          → H4 BBUpDn→0 (SQZ) — old trend exhausted → Scenario H (direction pivot)
+
+  BUT CHECK at each step: was H4 already shrinking when M15 started?
+    YES → H4 caused LTF compression (confinement — H4 is driver, not victim)
+    NO  → M15 is warning that H4 will follow (genuine reversal signal from LTF)
+
+Confinement effect (HTF → LTF — consequence of HTF shrink, not cause):
+  Once H4 IS in shrink → H4 band boundaries act as ceiling/floor:
+    H4 upper/lower band → confines H1 range
+      → H1 upper/lower band → confines M30 range
+        → M30 upper/lower band → confines M15 range
+          → M15 upper/lower band → confines M5 range
+  This is the RESULT of H4 shrink. M30/M15 range within these boundaries
+  until H4 exits shrink. Gate G8-BNDTGT fires when price touches these boundaries.
+
+### Expansion Cascade (LTF → HTF)
 
 LTF breaks SQZ first → signal travels upward → HTF confirms last.
-LTF is the leading indicator. Observable as REVUP/REVDN at M5, then M15 fly, then M30, H1, H4.
+Observable as BBUpDn_state transitioning 0→1 (expanding) TF by TF bottom-up.
+Same direction as shrink propagation — LTF always leads both shrink and expansion.
+
+**CHECK HTF context to determine expansion quality:**
+
+| H4 state when M5 breaks SQZ | D1 state | Expansion meaning | Scenario |
+|------------------------------|----------|-------------------|----------|
+| Still fly (511/512) | Fly | High quality — macro intact, rest over | D (rest recovery) |
+| Shrink (513) | Fly | Medium — H4 confined but D1 backing | F (compression release) |
+| SQZ (400-499) | Fly | Medium — H4 exhausted but D1 gives bias | H1→F (direction pivot same) |
+| SQZ (400-499) | Shrink/SQZ | Low until confirmed — no macro backing | H2→C (direction pivot opposite) |
 
 ```
 M5 breaks SQZ (REVUP/REVDN) — G6-LOAD fires
@@ -476,11 +536,24 @@ M5 breaks SQZ (REVUP/REVDN) — G6-LOAD fires
 ### Cycle Sequence
 
 ```
-A (full fly) → B (BBUpDn=2 at M15: D1 shallow) → E (BBUpDn=0 at M30/M15: D1 deep)
-→ E4 (BBUpDn=0/2 at H4: D1 reached HTF) → H (all BBUpDn=0: BOTTOM, direction resolving)
-→ H1→F (BBUpDn=1 same dir: D2 compression release) → A (continuation)
-→ H2→C (BBUpDn=1 opposite: D2 trend reversal) → new A (reversal)
-→ B→D→A (BBUpDn 0→1 at M5 while H4 still fly: rest recovery short cycle)
+CHECK HTF FIRST at every step:
+
+A (full fly, all TFs aligned)
+  → B (M15 shrinks: CHECK — is H4 still fly?)
+    → H4 still fly + D1 fly: rest likely
+      → B→D→A (rest recovery — H4 never broke, LTF pullback only)
+    → H4 also shrinking: confinement
+      → B→E (H4 caused LTF compression — LTF confined within H4 band)
+      → CHECK D1: D1 still fly?
+        → Yes: E (deep compression, D1 may rescue H4)
+        → D1 also shrinking: E→E4 (HTF reversal warning — both H4 and D1 losing direction)
+          → E4→H (all TFs SQZ: BOTTOM — old trend exhausted, direction resolving)
+            → H1→F→A (M5 expands same direction: compression release → continuation)
+            → H2→C→new A (M5 expands opposite: trend reversal complete)
+
+Both shrink propagation (LTF→HTF warning) and expansion (LTF→HTF breakout) travel bottom-up.
+Confinement (HTF→LTF range restriction) is the consequence of HTF shrink, not the cause.
+The CHECK at each step determines whether LTF shrink is rest vs confinement vs reversal warning.
 ```
 
 ### Touch Type Classification
