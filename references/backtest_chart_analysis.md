@@ -414,6 +414,342 @@ flowchart TD
 
 ---
 
+## 14. Candlestick Behavior During Fly → Shrink → SQZ Transition
+
+During fly → shrink → SQZ, candlesticks form a **zigzag oscillation pattern** between
+HTF band boundaries. Each zigzag leg is one complete MTF fly cycle (M30 drives the leg).
+The zigzag gets progressively tighter as H4 bands narrow — this is the visual signature
+of compression. Recognizing which phase the zigzag is in tells you the current scenario
+and what comes next.
+
+Three reference charts illustrate the full range of zigzag behaviors:
+
+**Image 1 — Phase 3a Symmetric Zigzag (9–19 Jan 2026):**
+Phase 2→3a symmetric decay → Phase 4 SQZ → Phase 5 explosive breakout.
+Equal amplitude decay — both ceiling and floor close in equally. H4 mid = 3.
+
+[![Phase 3a symmetric](Backtest_data/extras/backtested_EA_phase_3a_symmetric.jpg)](backtested_EA_phase_3a_symmetric.jpg)
+
+**Image 2 — Phase 3b Asymmetric Cascade (2–12 Jan 2026):**
+BUY trending shrink — UP targets drop through H4 upper → H1 mid → H4 mid
+while DN targets hold at H4 mid. H4 mid = 1→5→3.
+
+[![Phase 3b asymmetric](Backtest_data/extras/backtested_EA_phase_3b_asymmetric.jpg)](backtested_EA_phase_3b_asymmetric.jpg)
+
+**Image 3 — Phase 3a→3b Transition (23–26 Feb 2026):**
+Symmetric first (H4 mid=3), then develops SELL lean mid-shrink (H4 mid shifts 3→4).
+UP targets start dropping while DN targets hold steady.
+
+[![Phase 3a to 3b transition](Backtest_data/extras/backtested_EA_phase_3a_to_3b.jpg)](backtested_EA_phase_3a_to_3b.jpg)
+
+---
+
+### Phase 1 — Full Fly: Directional Trend (Scenario A)
+
+```
+Pattern:
+  ╱  ╱  ╱  ╱  ╱  ╱  ╱     Price trending in one direction
+ ╱  ╱  ╱  ╱  ╱  ╱  ╱      Candles mostly same color
+╱  ╱  ╱  ╱  ╱  ╱  ╱       Pullbacks brief and shallow
+```
+
+| Dimension | Value |
+|-----------|-------|
+| H4 BBW_stage | 511/512 (FLY++) |
+| H4 BBUpDn_state | 1 (expanding) or 3 (up) |
+| M30 behavior | Fly same direction as H4 — sustained trend leg |
+| Candle character | Mostly same-colored, directional, pullbacks < 30% of leg |
+| diffBBW | Positive — band actively expanding |
+| Impulse legs | All legs go SAME DIRECTION (no zigzag yet) |
+
+**CHECK HTF:** H4 fly intact. No zigzag behavior. Trend trading.
+**Visible on:** Image 2 left edge (2–5 Jan) — directional up before zigzag begins.
+
+---
+
+### Phase 2 — Fly → Shrink Onset: Impulse + Counter-Impulse (Scenario B1/B2)
+
+```
+Pattern:
+    ╱╲      ╱╲      ╱╲        Price makes sharp up-down legs
+   ╱  ╲    ╱  ╲    ╱  ╲       Each leg = one M30 fly cycle
+  ╱    ╲  ╱    ╲  ╱    ╲      Legs SAME HEIGHT (H4 band still wide)
+```
+
+This is where the **zigzag begins**. Price no longer trends in one direction —
+instead it impulses UP (yellow arrow) to H4 upper band, then reverses DOWN
+(red arrow) to H4 lower band or H1 mid, then impulses UP again.
+
+| Dimension | Value |
+|-----------|-------|
+| H4 BBW_stage | 511/512 transitioning to 513 (FLY → FLY--) |
+| H4 BBUpDn_state | 1/3 transitioning to 2 (expanding → shrinking) |
+| M30 behavior | Completes full fly cycles alternating BUY and SELL |
+| Candle character | Alternating bullish and bearish impulse clusters |
+| diffBBW | Transitioning positive → near zero → slightly negative |
+| Leg height | Full H4 band width — legs are TALL (H4 still wide) |
+| Leg duration | 4–12 hours per leg (one complete M30 fly cycle) |
+| Leg reversal trigger | G8-BNDTGT fires at H4 band boundary — price reverses |
+
+**CHECK HTF:** H4 BBUpDn still 1/3 = H4 fly intact.
+Zigzag is MTF cycling within H4 confinement, NOT H4 reversal.
+**Visible on:** Image 1 center-left (12–13 Jan) — first red and yellow arrow pair.
+
+---
+
+### Phase 3 — Shrink Deepening: Tightening Zigzag (Scenario B3/E1)
+
+Phase 3 has **two sub-patterns** depending on whether H4 has a directional lean.
+The discriminator is H4 diffMid_Trend during the shrink.
+
+#### Phase 3a vs 3b Discriminator
+
+| H4 diffMid_Trend | Phase | Pattern | Oscillation center |
+|-------------------|-------|---------|-------------------|
+| 3 (sideways, no lean) | 3a — Symmetric Tightening | Both ceiling and floor close in equally | Centered around H4 mid |
+| 1 or 5 (uptrend / sideway-up) | 3b — Asymmetric Cascade (BUY) | UP targets drop progressively, DN targets hold at H4 mid then break | Biased above H4 mid initially |
+| 2 or 4 (downtrend / sideway-dn) | 3b — Asymmetric Cascade (SELL) | DN targets rise progressively, UP targets hold at H4 mid then break | Biased below H4 mid initially |
+
+**Mid-shrink transition:** H4 mid can shift during an active shrink.
+If H4 mid = 3 at shrink onset → Phase 3a begins (symmetric).
+If H4 mid later shifts to 4/2 or 5/1 → Phase 3a transitions to 3b mid-cycle.
+The reverse is also possible: 3b can decay to 3a when H4 mid reaches 3.
+**Watch for:** first zigzag leg where UP target is measurably lower than previous
+while DN target holds steady (or vice versa) = 3a→3b transition has occurred.
+
+---
+
+#### Phase 3a — Symmetric Tightening (H4 mid = 3, no directional lean)
+
+```
+Pattern:
+   ╱╲    ╱╲    ╱╲             Same zigzag pattern BUT
+  ╱  ╲  ╱  ╲  ╱  ╲            Legs getting SHORTER each cycle
+  ╱   ╲ ╱   ╲╱   ╲            BOTH ceiling and floor close in equally
+```
+
+Both the upper and lower targets close in at the same rate.
+Oscillation is centered around H4 mid — no directional bias.
+
+| Dimension | Value |
+|-----------|-------|
+| H4 BBW_stage | 513/523 (SHRINK confirmed) |
+| H4 BBUpDn_state | 2 (shrinking — upper falling, lower rising) |
+| H4 diffMid_Trend | 3 (sideways — no directional lean) |
+| M30 behavior | Still completes full fly cycles but with LESS ROOM each time |
+| Candle character | Zigzag continues, amplitude visibly decreasing symmetrically |
+| diffBBW | Negative — band actively contracting |
+| Leg height | Decreasing each cycle — BOTH UP and DN legs shorter equally |
+| Leg reversal trigger | G8-BNDTGT fires at progressively CLOSER band boundaries |
+
+**CHECK HTF:** H4 BBUpDn = 2 AND H4 mid = 3 = symmetric shrink.
+Trade BOTH directions equally at each reversal — no bias.
+
+**Visible on:**
+- Image 1 center (13–15 Jan) — orange arrows oscillating with equal amplitude decay.
+- Image 3 center (24–25 Feb) — orange arrows approximately equal height UP and DN.
+
+---
+
+#### Phase 3b — Asymmetric Target Cascade (H4 mid ≠ 3, directional lean exists)
+
+```
+BUY trending shrink pattern (H4 mid = 1 or 5):
+
+H4 Upper ──╱─────────────────────────
+           ╱╲
+H4 Mid ────╱──╲──────────────────────    UP targets drop through band hierarchy
+               ╲╱╲                       DN targets hold at H4 mid then break
+H1 Mid ────────╱──╲──────────────────
+                   ╲╱╲
+H4 Lower ──────────╱──╲─────────────    Eventually reaches H4 lower → SQZ
+                       ╲
+```
+
+When H4 is shrinking BUT still has a directional lean, the zigzag is asymmetric —
+the ceiling drops faster than the floor rises (BUY case) because H4 upper band
+curls downward while H4 lower band still rises.
+
+**BUY trending shrink (H4 mid = 1 or 5):**
+
+| Step | UP target (ceiling) | DN target (floor) | H4 mid | What's happening |
+|------|--------------------|--------------------|--------|-----------------|
+| Step 1 | H4 upper band (full reach) | H4 mid band (support holds) | 1 (uptrend) | H4 fly momentum still; H4 mid acts as floor |
+| Step 2 | H1 mid band (ceiling dropped) | H4 mid → breaks through | 1→5 (weakening) | H4 upper curling down (BBUpDn→2); ceiling closes in first |
+| Step 3 | H4 mid only (ceiling dropped further) | H4 lower band (full retrace) | 5→3 (exhausted) | H4 mid no longer support; price reaches floor |
+| Step 4 | → Phase 4 (SQZ) or Phase 3a | → Phase 4 (SQZ) | 3 (sideways) | Trend exhausted; becomes symmetric or collapses |
+
+**SELL trending shrink (H4 mid = 2 or 4) — mirror:**
+
+| Step | DN target (floor) | UP target (ceiling) | H4 mid | What's happening |
+|------|-------------------|---------------------|--------|-----------------|
+| Step 1 | H4 lower band (full reach) | H4 mid band (resistance holds) | 2 (downtrend) | H4 fly momentum still; H4 mid acts as ceiling |
+| Step 2 | H1 mid band (floor risen) | H4 mid → breaks through | 2→4 (weakening) | H4 lower curling up; floor rises first |
+| Step 3 | H4 mid only (floor risen further) | H4 upper band (full retrace) | 4→3 (exhausted) | H4 mid no longer resistance |
+| Step 4 | → Phase 4 (SQZ) or Phase 3a | → Phase 4 (SQZ) | 3 (sideways) | Trend exhausted; becomes symmetric or collapses |
+
+**Band level target sequence (BUY trending — visible as yellow arrows):**
+
+```
+Arrow 1 UP: → H4 upper band     (H4 fly still has momentum)
+Arrow 1 DN: → H4 mid band       (mid holds as support)
+Arrow 2 UP: → H1 mid band       (can't reach H4 upper — ceiling dropped)
+Arrow 2 DN: → H4 mid → through  (mid breaking as support)
+Arrow 3 UP: → H4 mid only       (ceiling at H4 mid level now)
+Arrow 3 DN: → H4 lower band     (floor reached — SQZ approaching)
+```
+
+**Key difference from Phase 3a:**
+- 3a: price oscillates evenly around H4 mid — both sides tighten equally
+- 3b: price biased to one side of H4 mid — trending side loses reach first
+  while counter-trend side holds its level until H4 mid flips to 3
+
+**Trade implications:**
+- Phase 3a (symmetric): trade BOTH directions equally at each reversal — no bias
+- Phase 3b (asymmetric): favour the TRENDING side while H4 mid still = 1/5 or 2/4
+  → Trending-direction legs are longer and more reliable
+  → Counter-trend legs are shorter and less reliable
+  → STOP favouring when H4 mid flips to 3 — trend exhausted
+
+**H4 mid flip is the transition signal:**
+- 1/5 → 3: Phase 3b (BUY) ends → becomes 3a or Phase 4
+- 2/4 → 3: Phase 3b (SELL) ends → becomes 3a or Phase 4
+- 3 → 4/2 or 5/1: Phase 3a → 3b transition mid-shrink
+
+**Visible on:**
+- Image 2 (5–9 Jan) — BUY trending shrink: yellow arrows UP targets dropping from H4 upper → H1 mid → H4 mid while DN targets hold at H4 mid.
+- Image 3 right (25–26 Feb) — 3a→3b transition: symmetric zigzag develops SELL lean as H4 mid shifts 3→4, UP targets start dropping while DN targets hold steady.
+
+**diffBBW during Phase 3b:**
+- Step 1: diffBBW slightly negative — H4 barely shrinking, fly momentum persists
+- Step 2: diffBBW moderately negative — shrink accelerating, ceiling dropping visibly
+- Step 3: diffBBW strongly negative — shrink aggressive, approaching SQZ
+
+**TRADEINFO transition signal:**
+H4 mid flip from 1/5 → 3 observable as: `H2L_flyStrink` clears,
+replaced by `H2L_sideway` — shrink chain converted to sideway chain.
+
+**BBTFImpact observable:** `HTF_Drive_LTF_Sideway` values increasing = deeper confinement.
+**cas_shrinkTF observable:** Value increasing (1→2→3) = shrink propagating upward through TFs.
+
+---
+
+### Phase 4 — Approaching SQZ: Compressed Oscillation (Scenario E2/E3)
+
+```
+Pattern:
+     ╱╲╱╲╱╲╱╲╱╲╱╲            Zigzag collapsed to noise range
+    ╱╲╱╲╱╲╱╲╱╲╱╲╱╲           Candles small, alternating direction rapidly
+   ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲          Band width < typical candle range
+```
+
+The zigzag has collapsed — individual legs are no longer distinguishable.
+Price oscillates within a very narrow range. M30/M15 both in SQZ — no clean
+fly cycles are possible. Reached from either Phase 3a or Phase 3b.
+
+| Dimension | Value |
+|-----------|-------|
+| H4 BBW_stage | 513/523 deep or transitioning to 400-499 |
+| H4 BBUpDn_state | 2 → 0 (shrinking → no_state = SQZ boundary) |
+| M30/M15 BBW_stage | 400-499 (SQZ) |
+| M30/M15 BBUpDn_state | 0 (no_state) |
+| Candle character | Small bodies, mixed colors, no sustained direction |
+| diffBBW | Near zero — band width stabilized at minimum |
+| Leg height | ≈ single candle body height — no distinguishable legs |
+| Gate active | G0b-PINK fires (M15+M30 both SQZ) — EXIT all positions |
+| PriceLoc behavior | Alternates at_upper and at_lower on consecutive bars |
+
+**CHECK HTF:** H4 BBUpDn approaching 0 = SQZ confirmed.
+- D1 still fly? → Scenario E4 with D1 bias → H1 (same dir) likely
+- D1 also shrinking/SQZ? → Scenario E4 no bias → H direction uncertain
+
+**Visible on:** Image 1 (15–16 Jan) — H4-SQZ labels appear, price chops sideways.
+**Log label:** `MIDLINE_SQZ_LOADING` may appear = E3 loading state.
+**cas_sqzCount:** Value = 2+ (multiple TFs squeezed).
+
+---
+
+### Phase 5 — SQZ Break: Explosive Directional Move (Scenario H → F)
+
+```
+Pattern:
+                        ╱╱╱╱      Sudden large candles same direction
+   ╱╲╱╲╱╲╱╲╱╲╱╲       ╱╱╱╱       M5 breaks SQZ first (BBUpDn 0→1)
+  ╱╲╱╲╱╲╱╲╱╲╱╲╱╲     ╱╱╱╱        M15 follows — G6-BUY/SELL fires
+```
+
+After the compressed oscillation, price suddenly breaks out with
+2–3× sized candles in one direction. This is the expansion cascade
+initiating — M5 breaks SQZ first, M15 follows, M30 confirms.
+
+| Dimension | Value |
+|-----------|-------|
+| H4 BBW_stage | 400-499 → transitioning to 511/512 or 521/522 |
+| H4 BBUpDn_state | 0 → 1 (no_state → expanding = direction resolved) |
+| M5 BBUpDn_state | 0 → 1 first (earliest signal) |
+| M15 BBUpDn_state | 0 → 1 follows in 2-5 bars |
+| Candle character | Large directional candles 2–3× SQZ candle size |
+| diffBBW | Positive and increasing sharply — band expanding rapidly |
+| Gate sequence | G6-LOAD → G6-BUY or G6-SELL |
+| PriceLoc | Sustained above_upper (BUY) or below_lower (SELL) |
+
+**CHECK HTF at breakout:**
+- H4 BBUpDn 0→1 same direction as D1 fly → H1 → F (high confidence)
+- H4 BBUpDn 0→1 opposite to D1 → H2 → C (lower confidence)
+- H4 BBUpDn 0→1 then reverts to 0 within 3 bars → H3 (false breakout)
+
+**Visible on:** Image 1 right (16–18 Jan) — explosive upward breakout after H4-SQZ zone.
+**Log label:** `SQZ_BREAK_UP` or `SQZ_BREAK_DN` appears.
+**TRADEINFO:** `L2H_flyUP` or `L2H_flyDN` appears = LTF leading expansion upward.
+
+---
+
+### Summary: Three Reference Charts — Phase Mapping
+
+| Chart | Date range | What it shows | Phase sequence visible |
+|-------|-----------|---------------|----------------------|
+| Image 1 (9–19 Jan) | Full cycle | Symmetric zigzag decay → SQZ → explosive breakout | Phase 2 → 3a → 4 → 5 |
+| Image 2 (2–12 Jan) | BUY trending shrink | Asymmetric cascade — UP targets drop through band hierarchy | Phase 1 → 2 → 3b (BUY) → 4 → 5 |
+| Image 3 (23–26 Feb) | Mid-shrink transition | Symmetric first → develops SELL lean mid-shrink | Phase 2 → 3a → 3a→3b transition → 3b (SELL) |
+
+---
+
+### Summary: Zigzag Amplitude Decay = diffBBW Made Visual
+
+| Amplitude behavior | diffBBW | Shrink type | Phase | Scenario path |
+|-------------------|---------|-------------|-------|---------------|
+| No zigzag — directional trend | Positive | No shrink | Phase 1 | A — hold until M15 enters 513 |
+| Equal-height legs (no decay) | ≈ zero | Parallel fly, no narrowing | Phase 2 onset | A2 or I (macro sideways) |
+| Symmetric decay — both sides equal | Negative | H4 mid=3 sideways shrink | Phase 3a | B→E — trade both directions equally |
+| Asymmetric decay — one side drops first | Negative | H4 mid=1/2/4/5 trending shrink | Phase 3b | B→E — favour trending side |
+| Collapsed to noise (no legs) | ≈ zero at minimum | SQZ confirmed | Phase 4 | E2/E3→H — wait for direction |
+| Explosive breakout (2-3× candles) | Positive, sharply increasing | SQZ break | Phase 5 | H→F or C — enter on M15 confirm |
+
+---
+
+### Summary: Each Zigzag Leg = One MTF Fly Cycle
+
+| Leg direction | MTF state | PriceLoc at reversal | Gate at reversal | Trade action |
+|--------------|-----------|---------------------|-----------------|-------------|
+| Upward (yellow arrow) | M30 fly up (511/512 BUY) | at_upper at H4 level | G8-BNDTGT | Exit BUY, watch for SELL |
+| Downward (red arrow) | M30 fly down (521/522 SELL) | at_lower at H4 level or at_mid at H1 | G8-BNDTGT or G5-FADE | Exit SELL, watch for BUY |
+| Upward again | M30 reverses to fly up | at_lower (reversal point) | G6-BUY arms | New BUY entry if quality ≥ 60 |
+
+**Leg reversal sequence:**
+1. M30 fly reaches H4 band boundary → G8-BNDTGT fires → exit current trade
+2. M15 mid flips (UP→FLAT or DN→FLAT) → G5-FADE fires → confirms exit
+3. M15 mid flips again (FLAT→DN or FLAT→UP) → G6-SELL or G6-BUY fires → new entry opposite
+4. New M30 fly cycle begins → repeat until zigzag decays to Phase 4
+
+**Size scaling during zigzag decay:**
+- Phase 2 (equal height legs): full size per quality score
+- Phase 3a (symmetric decay): reduce size as legs shorten — 0.75× to 0.50×, trade both directions
+- Phase 3b (asymmetric decay): reduce size, favour trending direction while H4 mid ≠ 3
+- Phase 4 (collapsed to noise): no new entries — G0b-PINK active
+- Phase 5 (explosive breakout): re-enter per Scenario H/F rules
+
+---
+
 ## 12. Risk Management Guidelines
 
 **ATRSL stop behavior:**
