@@ -24,9 +24,9 @@ Work through: **Part 1** (read the chart) → **Part 2** (HTF context) → **Par
 | Next-stage direction | Part 4 — Per-TF nxt: labels |
 | Trade decision table | Part 5 — Scenario → Action Table |
 | Compression analysis                   | Part 1 Section 8 — Compression Zone Identification  |
-| Cascade direction model                | Part 1 Section 13 — Cascade Direction Model         |
-| BBUpDn_state reference                 | Part 1 Section 13 — BBUpDn_state Quick Reference    |
-| Touch classification                   | Part 1 Section 13 — Touch Classification Reference  |
+| Cascade direction model                | Part 1 Section 12 — Cascade Direction Model         |
+| BBUpDn_state reference                 | Part 1 Section 12 — BBUpDn_state Quick Reference    |
+| Touch classification                   | Part 1 Section 12 — Touch Classification Reference  |
 | Scenario cycle sequence                | Part 3 — Cycle sequence (top of Part 3)             |
 | Direction pivot / BOTTOM state         | Part 3 — Scenario H (Direction pivot)               |
 
@@ -414,7 +414,7 @@ flowchart TD
 
 ---
 
-## 14. Candlestick Behavior During Fly → Shrink → SQZ Transition
+## 13. Candlestick Behavior During Fly → Shrink → SQZ Transition
 
 During fly → shrink → SQZ, candlesticks form a **zigzag oscillation pattern** between
 HTF band boundaries. Each zigzag leg is one complete MTF fly cycle (M30 drives the leg).
@@ -750,7 +750,7 @@ initiating — M5 breaks SQZ first, M15 follows, M30 confirms.
 
 ---
 
-## 12. Risk Management Guidelines
+## 14. Risk Management Guidelines
 
 **ATRSL stop behavior:**
 - dir=0 (uptrend): orange stop below price, trailing upward
@@ -779,7 +779,7 @@ The cascade is top-down: **W1 sets D1's range → D1 sets H4's range → H4 sets
 
 ---
 
-## 13. Cascade Direction Model
+## 12. Cascade Direction Model
 
 Two cascade directions drive every market cycle in this strategy.
 
@@ -915,11 +915,11 @@ HTF confinement boundary touch WITH PriceLoc=at_upper/lower AND diffMid=4/5 = Ty
 
 ---
 
-## 13b. TRADEINFO Chain Flags — Cascade Direction Observable
+## 12b. TRADEINFO Chain Flags — Cascade Direction Observable
 
 TRADEINFO flags are the EA's real-time observable for cascade direction.
 They appear in the journal log under the `[TRADEINFO]` tag and map directly
-to the cascade model in Section 13.
+to the cascade model in Section 12.
 
 **How to read:** Each flag has a TF index value. When ≥ 0, that flag's chain
 is active up to that TF level. When = -1, the chain is not detected.
@@ -964,14 +964,14 @@ is active up to that TF level. When = -1, the chain is not detected.
 | `L2H_flyDN:1` + `H2L_flyUP:3` (opposing) | C1 — MTF reversal only | Small entry 0.25× — wait H4 |
 | `L2H_flyDN:3` + `H2L_flyDN:0` | C2 — H4 confirmed reversal | → New Scenario A opposite dir |
 
-**Phase 3a/3b connection (Section 14):**
+**Phase 3a/3b connection (Section 13):**
 - Phase 3a (symmetric zigzag): `H2L_flyStrink` active + `H2L_sideway` not yet
 - Phase 3b onset: `H2L_flyStrink` active + one `L2H_fly` flag starting to appear (LTF attempting expansion within shrink)
 - Phase 3a→3b transition: `H2L_flyStrink` clears → replaced by `H2L_sideway` = shrink chain converted to sideway chain
 
 ---
 
-## 13c. BBTFImpact Flags — Cascade Pressure Indicators
+## 12c. BBTFImpact Flags — Cascade Pressure Indicators
 
 BBTFImpact flags appear in the journal log under the `[BBTFImpact]` tag.
 They show which TFs are being suppressed by higher TFs (D1 pressure)
@@ -1028,7 +1028,7 @@ Both `HTF_Drive_LTF_Sideway` and `LTF_Drive_HTF_Fly` active simultaneously at a 
 - sizeMultiplier = 0.5 (compromise between suppression and drive signals)
 - Watch M5 BBUpDn_state: 0→1 resolves the conflict in favour of expansion
 
-**Section 14 connection:**
+**Section 13 connection:**
 - Phase 2 onset: first `HTF_Drive_LTF_Sideway` flag appears = zigzag starting
 - Phase 3 deepening: `HTF_Drive_LTF_Sideway` count increasing = more TFs suppressed = legs shortening
 - Phase 4 (SQZ): all `HTF_Drive_LTF_Sideway`, no `LTF_Drive_HTF_Fly` = noise oscillation
@@ -1036,7 +1036,7 @@ Both `HTF_Drive_LTF_Sideway` and `LTF_Drive_HTF_Fly` active simultaneously at a 
 
 ---
 
-## 13d. Cascade State Decoder — cas_shrinkTF and cas_sqzCount
+## 12d. Cascade State Decoder — cas_shrinkTF and cas_sqzCount
 
 These internal EA values map directly to scenario sub-states.
 They provide the fastest single-variable identification of where
@@ -1053,7 +1053,7 @@ in the compression cascade the market currently sits.
 | 5 | D1 is highest shrink TF | Scenario I — Macro sideways | Very high |
 | -1 | No TF in fly_shrink | Not in B — check E/H or A | Depends on other flags |
 
-**cas_shrinkTF maps to Section 14 Phase 3 amplitude:**
+**cas_shrinkTF maps to Section 13 Phase 3 amplitude:**
 - cas_shrinkTF = 1: Phase 3 zigzag legs still tall (only M15 confined)
 - cas_shrinkTF = 2: Phase 3 legs moderately shortened (M30 now confined too)
 - cas_shrinkTF = 3: Phase 3 legs significantly shortened (H1 confined)
@@ -1100,7 +1100,7 @@ These labels appear in EA journal output and map to specific scenario sub-states
 | `CASCADE_TOUCH(TF:n lower_band)` | G0b-TOUCH fired at TF index n, lower band | Confinement boundary reached | Check G0b 6 filters |
 | `CASCADE_PINK_ZONE` | G0b-PINK fired — M15+M30 both SQZ | E2 — Pink zone active | EXIT all — no entries |
 
-**How to use with Section 14 phases:**
+**How to use with Section 13 phases:**
 - Phase 2 onset: `CASCADE_TOUCH` starts appearing = zigzag legs hitting band boundaries
 - Phase 3 deepening: `CASCADE_TOUCH` TF index increasing = confinement propagating upward
 - Phase 4: `CASCADE_PINK_ZONE` appears = zigzag collapsed to noise
