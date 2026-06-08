@@ -25,6 +25,9 @@ Work through: **Part 1** (read the chart) → **Part 2** (HTF context) → **Par
 | Trade decision table | Part 5 — Scenario → Action Table |
 | Compression analysis                   | Part 1 Section 8 — Compression Zone Identification  |
 | Cascade direction model                | Part 1 Section 12 — Cascade Direction Model         |
+| TRADEINFO chain flags                  | Part 1 Section 12b — TRADEINFO Chain Flags          |
+| BBTFImpact pressure indicators         | Part 1 Section 12c — BBTFImpact Flags               |
+| Cascade state decoder                  | Part 1 Section 12d — Cascade State Decoder           |
 | BBUpDn_state reference                 | Part 1 Section 12 — BBUpDn_state Quick Reference    |
 | Touch classification                   | Part 1 Section 12 — Touch Classification Reference  |
 | Scenario cycle sequence                | Part 3 — Cycle sequence (top of Part 3)             |
@@ -685,7 +688,7 @@ in the compression cascade the market currently sits.
 | 2 | M30 is highest shrink TF | B2 — Moderate compression | Low-Medium |
 | 3 | H1 is highest shrink TF | B3 — Deep compression | Medium |
 | 4 | H4 is highest shrink TF | E4 — HTF also compressing | High |
-| 5 | D1 is highest shrink TF | Scenario I — Macro sideways | Very high |
+| 5 | D1 is highest shrink TF | Scenario I — Macro sideways (planned — not yet defined) | Very high |
 | -1 | No TF in fly_shrink | Not in B — check E/H or A | Depends on other flags |
 
 **cas_shrinkTF maps to Section 13 Phase 3 amplitude:**
@@ -1413,7 +1416,7 @@ flowchart TD
 | Leading TF | H4 (watch for shrink) |
 | Next scenario if D1 continues | B (Fly → Shrink) |
 | Next scenario if D2 initiates same direction | A remains (already at TOP) |
-| Next scenario if D2 initiates opposite direction | G (All Sideway) via reversal |
+| Next scenario if D2 initiates opposite direction | H (Direction pivot) via reversal |
 | Discriminator observable | H4 BBW_stage 511→513 |
 
 > **Tier:** TIER 1 — EXPANSION COMPLETE (TOP)
@@ -1745,7 +1748,7 @@ SIZE: 0.75× (M15 or M30 shrink alone) → 0.50× (M30+H1 both) → 0.25× (all 
 | Leading TF | M30 (watch for SQZ or fly resume) |
 | Next scenario if D1 continues | E (Confined Compression) |
 | Next scenario if D2 initiates same direction | D (Rest Pattern) |
-| Next scenario if D2 initiates opposite direction | G (All Sideway) via reversal |
+| Next scenario if D2 initiates opposite direction | H (Direction pivot) via reversal |
 | Discriminator observable | M30 BBW_stage 513→511/512 or 513→400-499 |
 
 ---
@@ -1858,9 +1861,9 @@ SIZE: quality score from M5 transition
 | Cascade direction now | BOTTOM (D1 complete, awaiting D2) |
 | Cascade depth | H4 (H4+M30 in SQZ, M15/M5 shrink) |
 | Leading TF | M5 (watch for SQZ break) |
-| Next scenario if D1 continues | G (All Sideway) |
+| Next scenario if D1 continues | H (Direction pivot) |
 | Next scenario if D2 initiates same direction | D (Rest Pattern) |
-| Next scenario if D2 initiates opposite direction | G (All Sideway) via reversal |
+| Next scenario if D2 initiates opposite direction | H (Direction pivot) via reversal |
 | Discriminator observable | M5 REVUP/REVDN + M15 midtrend transition |
 
 ---
@@ -2116,7 +2119,7 @@ EXIT: ATRSL stop | M5 UP→FLAT (G5-FADE) | M30+M15 go sideway
 | Leading TF | M30 (confirm fly = full entry) |
 | Next scenario if D1 continues | B (Fly → Shrink) |
 | Next scenario if D2 initiates same direction | A (Normal Fly) |
-| Next scenario if D2 initiates opposite direction | G (All Sideway) via reversal |
+| Next scenario if D2 initiates opposite direction | H (Direction pivot) via reversal |
 | Discriminator observable | H1 step direction maintained or reversed |
 
 ---
@@ -2190,7 +2193,7 @@ flowchart TD
     A --> B{"M5 breaks SQZ (REVUP/REVDN)?"}
     B -->|Yes| C["D2 initiated — M15 follows → M30 follows"]
     B -->|No| D{"H4 enters shrink?"}
-    D -->|Yes| E["D1 deepens — G (All Sideway) risk"]
+    D -->|Yes| E["D1 deepens — E4 (H4 also compressing) → H (Direction pivot)"]
     D -->|No| F["Remains Scenario E — wait"]
 ```
 
@@ -3028,9 +3031,9 @@ SIZE: 0.75× (1-2 TFs compress) → 0.50× (3 TFs compress) → 0.25× (all 3 co
 | Cascade direction now | D1→BOTTOM→D2 (full cycle) |
 | Cascade depth | M5 (all lower TF SQZ) |
 | Leading TF | M5 (first to break SQZ) |
-| Next scenario if D1 continues | G (All Sideway) |
+| Next scenario if D1 continues | H (Direction pivot) |
 | Next scenario if D2 initiates same direction | A (Normal Fly) via D (Rest Pattern) |
-| Next scenario if D2 initiates opposite direction | G (All Sideway) via reversal |
+| Next scenario if D2 initiates opposite direction | H (Direction pivot) via reversal |
 | Discriminator observable | M5 REVUP/REVDN + H4 BBW_stage maintained |
 
 ---
@@ -3308,9 +3311,9 @@ TARGET: H4 outer band (if H4 also breaking) → D1 outer band
 | Cascade direction now | D2 (expansion from SQZ) |
 | Cascade depth | M5→M15 (D2 initiated) |
 | Leading TF | M30 (confirm fly = full entry) |
-| Next scenario if D1 continues | G (All Sideway) |
+| Next scenario if D1 continues | H (Direction pivot) |
 | Next scenario if D2 initiates same direction | A (Normal Fly) |
-| Next scenario if D2 initiates opposite direction | G (All Sideway) via reversal |
+| Next scenario if D2 initiates opposite direction | H (Direction pivot) via reversal |
 | Discriminator observable | M30 BBW_stage 400→511/512 |
 
 
@@ -3860,54 +3863,28 @@ Read Part 4 nxt:/tch: labels. State: current regime, price target, which gate fi
 
 ## 15. Document Update Summary
 
-**Enhancements completed through comprehensive image analysis:**
-
-### Part 1 — Chart Basics (New Sections Added)
-
-| Section | Content |
-|---------|---------|
-| 7 | Visual Entry Trigger Identification |
-| 8 | Compression Zone Identification |
-| 9 | Compression Resolution — Reversal vs Continuation |
-| 10 | Block Gate Reference Table |
-| 11 | Position Sizing Matrix |
-| 12 | Risk Management Guidelines |
-| 6 | Gate Label Color Reference (completed - was empty) |
-
-### Part 2 — HTF Analysis (Enhancements)
-
-| Addition | Description |
-|----------|-------------|
-| HTF Compression Cascade Dynamics | Top-down cascade principle, compression confinement mechanics |
-| H4 shrink confinement pattern | Pink rectangle pattern explanation |
-| D1 band boundary rule | Ceiling concept for H4 BUY trades |
-| Scenario Identification Flowchart | Visual decision tree for scenario matching |
-| HTF Compression Zone Analysis | Building phase, peak compression, release, confirmation |
-| Compression duration guidelines | Typical compression times per timeframe |
-
-### Part 3 — MTF/LTF Scenarios (Enhancements)
-
-| Scenario | Enhancements |
-|----------|-------------|
-| A: Normal Fly | Visual identification checklist, holding vs exiting decision table |
-| B: Fly → Shrink | Shrink depth measurement, optimal entry timing |
-| C: Cascade | Band touch point identification, filter evaluation sequence |
-| D: Rest Pattern | Rest vs reversal identification checklist |
-| E: Fly expand + confined compression | Range trade rules, compression threshold, entry conditions, touch patterns |
-| F: SQZ → Fly | SQZ breakout momentum sequence, entry quality scoring |
-| H: Direction Pivot | H1/H2/H3/H4 sub-scenarios, cascade position, trade action, identification flowchart |
-| All | Scenario Summary table |
-
-### Part 4 — Next-Stage Direction (Enhancements)
-
-| Addition | Description |
-|----------|-------------|
-| Visual Band Region Analysis | Touch count patterns and interpretation |
-| Per-TF nxt: labels | Next-stage direction for each TF |
-
-### Part 5 — Trade Decision (Enhancements)
-
-| Addition | Description |
-|----------|-------------|
-| Size column | Position size guidance added to action table |
-| Comprehensive Block Gate Table | All blocking conditions with colors and resolution |
+| Section | Name | Status |
+|---------|------|--------|
+| 1 | Chart Layers | Complete |
+| 2 | BB Stage Labels (Upper Band) | Complete |
+| 3 | BB Stage Labels (Lower Band) | Complete |
+| 4 | Middle Band Labels | Complete |
+| 4b | BBW Velocity — diffBBW | Complete |
+| 5 | ATRSL Indicator | Complete |
+| 6 | Gate Label Colors | Complete |
+| 7 | Entry Trigger Labels | Complete |
+| 8 | Compression Zone Identification | Complete |
+| 9 | Compression Resolution | Complete |
+| 10 | Block Gate Reference Table | Complete |
+| 11 | Position Sizing Matrix | Complete |
+| 12 | Cascade Direction Model | Complete |
+| 12b | TRADEINFO Chain Flags | Complete |
+| 12c | BBTFImpact Flags | Complete |
+| 12d | Cascade State Decoder | Complete |
+| 13 | Candlestick Behavior During Fly → Shrink → SQZ | Complete |
+| 14 | Risk Management Guidelines | Complete |
+| Part 2 | HTF Reference Charts | Complete |
+| Part 3 | Scenario Analysis (Tier 1/2/3: A,B,E,H,D,F,C) | Complete |
+| Part 4 | Trend Prediction | Planned |
+| Part 5 | Trade Action via Trend Prediction | Planned |
+| Scenario I | Macro Sideways | Planned |
