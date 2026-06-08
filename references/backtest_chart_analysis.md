@@ -21,8 +21,8 @@ Work through: **Part 1** (read the chart) → **Part 2** (HTF context) → **Par
 | HTF cascade rules | Part 2 — HTF Compression Cascade |
 | Scenario matching | Part 2 — Scenario Identification Flowchart |
 | Scenario details | Part 3 — Tier 1 (A) / Tier 2 (B, E, H) / Tier 3 (D, F, C) |
-| Next-stage direction | Part 4 — Per-TF nxt: labels |
-| Trade decision table | Part 5 — Scenario → Action Table |
+| Trend prediction | Part 4 — Direction, Target, Timeline, Confidence |
+| Trade action rules | Part 5 — Entry/Exit/Block/Size/Stop |
 | Compression analysis                   | Part 1 Section 8 — Compression Zone Identification  |
 | Cascade direction model                | Part 1 Section 12 — Cascade Direction Model         |
 | TRADEINFO chain flags                  | Part 1 Section 12b — TRADEINFO Chain Flags          |
@@ -3836,159 +3836,501 @@ flowchart TD
 
 ---
 
-# PART 4 — NEXT-STAGE DIRECTION
+# PART 4 — TREND PREDICTION
 
-For each TF, read what stage it is heading toward using the `nxt:` labels, and where price has been using the `tch:` touch counts.
+Part 4 answers: **given where I am, what will price do next?**
 
----
+**Inputs (from Part 3):**
+- Current scenario (A/B/E/H/D/F/C) + sub-state (A1/B2/E3 etc)
+- Current phase (Phase 1–6 from Section 13)
+- CHECK HTF result (H4 state + D1 state from Section 12)
 
-## Visual Band Region Analysis
-
-Uses `BB_diffMid_Trend[]` over the last 5 bars per TF as a proxy for price's recent position relative to bands.
-
-| BB_diffMid_Trend value | Region | What it means |
-|----------------------|--------|---------------|
-| 1 (uptrend) | Upper | Price above midband, likely near upper band |
-| 2 (downtrend) | Lower | Price below midband, likely near lower band |
-| 3 / 4 / 5 | Mid | Price oscillating around midband |
-
-The `tch:` field in the log counts how many of the last 5 bars were in each region:
-
-```
-tch:M15=U2/M1/L2   → M15 spent 2 bars upper, 1 bar mid, 2 bars lower (balanced oscillation)
-tch:M30=U0/M2/L3   → M30 spent 3 bars lower (bearish pressure, building lower support)
-tch:H1=U1/M0/L4    → H1 mostly lower (strong bearish phase or approaching lower band)
-tch:H4=U0/M3/L2    → H4 oscillating at mid with some lower pressure (SQZ/shrink)
-```
-
-### Reading Touch Counts on the Chart
-
-When reviewing annotated chart images:
-- **White circles at bottom** = lower-band touches (L count high for that TF)
-- **Yellow ovals near midline** = midband touches (M count high)
-- **Circles near top** = upper-band touches (U count high)
-
-### What Touch Count Patterns Tell You
-
-| Pattern | Interpretation |
-|---------|---------------|
-| L high + mid now transitioning up (3→1) | Price bounced off lower band repeatedly → support building → breakout up likely |
-| U high + mid now transitioning down (1→3 or 1→2) | Price rejected at upper band repeatedly → resistance → breakout down likely |
-| M high + SQZ stage | Price oscillating at midband → loading zone before directional break |
-| L high + U high alternating | Price ranging between bands (H4 shrink zone) |
-| L high + mid=2 stable | Downtrend with lower band as magnet |
+**Outputs (for Part 5):**
+- DIRECTION — which way will price move next?
+- TARGET — how far will it go? (which TF band boundary)
+- TIMELINE — how soon? (bars/hours)
+- NEXT SCENARIO — what scenario follows this one?
+- CONFIDENCE — how reliable is this prediction?
 
 ---
 
-## `nxt:` — Per-TF Next-Stage Labels
+## Rule 1 — Direction Prediction
 
-`PredictTFNextStage()` maps current stage+mid+transition to a label for each TF:
+Direction is determined by combining current phase with CHECK HTF result.
 
-| Label | Meaning | When it appears |
-|-------|---------|-----------------|
-| `fly_up_cont` | Fly BUY continuing | stage=511/512, mid=1 stable |
-| `fly_dn_cont` | Fly SELL continuing | stage=521/522, mid=2 stable |
-| `fly_up_resume` | Shrink resolved — fly BUY resuming | stage=513, mid=1 or 5 |
-| `fly_dn_resume` | Shrink resolved — fly SELL resuming | stage=523, mid=2 or 4 |
-| `fly_up` | SQZ breakout upward | stage=SQZ, mid=1/5 or transitioning up |
-| `fly_dn` | SQZ breakout downward | stage=SQZ, mid=2/4 or transitioning down |
-| `sqz_wait` | SQZ with no directional signal | stage=SQZ, mid=3 stable |
-| `shrink_watch` | Fly weakening — watch for reversal | fly→shrink stage, mid fading |
-| `reversal_forming` | Stage and mid opposing | fly or shrink with mid contradicting |
-| `sideway` | No clear next state | other combinations |
-
-### Reading the Full Output
-
-```
-NEXT   → nxt: per-TF stage label (what this TF is heading toward)
-TOUCH  → tch: U/M/L counts (where price has been in each TF's bands)
-```
-
-**Conclude interpretation pattern:**
-```
-nxt:M15=fly_up M30=fly_up H1=fly_up H4=sqz_wait
-→ M15/M30/H1 are all building toward fly up
-→ H4 is in SQZ (no macro target yet, but not blocking)
-→ OVERALL: M15/M30/H1 fly up until they touch H4 upper band
-
-tch:M15=U0/M1/L4 M30=U0/M2/L3 H1=U0/M1/L4 H4=U0/M2/L3
-→ All TFs have been spending time in the lower region
-→ Lower band has been tested repeatedly across multiple TFs
-→ Support building at lower bands → bounce/reversal signal confirming fly_up prediction
-```
-
-**Wait condition** = any TF showing `sqz_wait` in `nxt:` → that TF needs to break SQZ before it can contribute macro tailwind.
-
----
-
-# PART 5 — TRADE DECISION QUICK REFERENCE
-
-First establish HTF context (Part 2), then apply this table:
-
-## HTF Context → MTF Trade Quality
-
-| W1 | D1 | H4 | MTF Trade Quality | MTF Target |
-|----|----|----|-------------------|------------|
-| 511/512 BUY | 511/512 BUY | 511/512 BUY | Full quality 1.0× — hold longs | H4 outer → D1 outer |
-| 511/512 BUY | 511/512 BUY | 513 shrink | Reduced quality 0.75× — shorter BUY | H4 outer band boundary |
-| 511/512 BUY | 511/512 BUY | 400-499 SQZ | Weak — G0b cascade only; require M5 confirm | H4 band range |
-| 511/512 BUY | 521/522 SELL | Any | Counter-trend — smaller size, fast exit | D1 pullback target |
-| Any | Any | 521/522 SELL | SELL backed by H4 | H4 lower band |
-| 400-499 | 400-499 | 400-499 | No trade — full macro SQZ | Wait for breakout |
-
-## Scenario → Action Table
-
-| What you see | Scenario | Action | Gate | Size |
-|---|---|---|---|---|
-| H1+M30+M15 all 511/512, mid=1 | Normal fly BUY | Enter on M15 FLAT→UP | G6-BUY | 1.0× |
-| H1+M30+M15 all 521/522, mid=2 | Normal fly SELL | Enter on M15 FLAT→DN | G6-SELL | 1.0× |
-| H1/M30 in fly, M15/M5 shrinking | Fly→Shrink BUY/SELL | Enter on M15 FLAT→UP/DN | G6-BUY/SELL | 0.75× |
-| Only M5 shrinking, M15 still fly | M5 noise | **Wait** — not yet | — | — |
-| H1+M30 SQZ, M15/M5 shrink, band touch | Cascade | Enter at outer band touch | G0b-TOUCH | Quality |
-| M15+M30 both SQZ | Pink zone | **Exit all** | G0b-PINK | — |
-| M15 fading (UP→FLAT or DN→FLAT) | Fade | Exit open position | G5-FADE | — |
-| All TFs SQZ | Full lock | **Wait** for breakout | G0c/G6-LOAD | — |
-| M15 breaks SQZ → REVUP/REVDN | Breakout | Enter quality=75 | G6-ENTRY | 0.5-1.0× |
-| M30 mid≥3 AND M15 mid≥3, H1 trending | Near-G0 | Hold, no new entry | G0-HOLD | — |
-| M30 mid≥3 AND M15 mid≥3, H1 sideway | G0 | **Exit all** | G0 | — |
-| H4 fly opposing direction | H4 filter | Block | H4-OPPOSE | — |
-| Float loss < −$50 | Emergency | Exit immediately | G0e-MAXLOSS | — |
-| Price touches outer band of lowest fly TF (all below compressed) | Cascade target hit | Exit (auto) | G8-BNDTGT | — |
-
-## Comprehensive Entry Block Gate Reference
-
-| Gate | Block Condition | Color | Resolution |
-|------|----------------|-------|------------|
-| H4-OPPOSE | H4 fly opposing entry direction | DarkOrange | Wait for H4 to align |
-| H4-SQZ | H4 in SQZ with no conviction | DarkOrange | Wait for H4 breakout |
-| G0b-H4OPP | H4 fly/shrink opposing entry | DarkOrange | H4 mid must align with entry |
-| G0b-M30OPP | M30 fly/shrink/SQZ with opposing mid | DarkMagenta | M30 mid must align |
-| G4e-H4OPP | H4 in shrink with flat mid (sideway) | Orange | Wait for H4 to exit shrink |
-| G4c-M15OPP | M15 fly/shrink/SQZ with opposing mid | Orange | M15 mid must align |
-| G4f-M30OPP | M30 fly/shrink/SQZ with opposing mid | Orange | M30 mid must align |
-| G0b-SQZLOCK | H1+M30 both SQZ, both mid==3 | Magenta | At least one TF must break SQZ |
-| G0b-H1SQZDN | H1-SQZ with mid=2/4 vs BUY, or mid=5 vs SELL | Magenta | H1 mid must align with entry |
-| G0b-M5OPP | M5 sole trigger + M5 shrink with opposing mid | Magenta | M5 mid must align |
-| G0b-M5FLY | M5 in committed opposing fly | Magenta | Wait for M5 to align |
-
-## Cascading Price Targets
-
-When TFs compress bottom-up, price gravitates to the outer band of the **lowest TF still in fly**.
-
-| Lowest TF still in fly | WHY it is lowest | Price target | Exit |
+| Current phase | CHECK HTF result | Predicted direction | Confidence |
 |---|---|---|---|
-| H4 (M30/M15/M5/H1 all below) | D1 fly still providing H4 target | D1 outer band | D1 starts shrinking |
-| H1 (M30/M15/M5 compressed) | H4 shrink forcing H1 range | H4 outer band | G0-HOLD or G8-BNDTGT |
-| M30 (M15+M5 compressed) | H1 shrink forcing M30 range | H1 outer band | G8-BNDTGT |
-| M15 (M5 compressed) | M30 shrink forcing M15 range | M30 outer band | G8-BNDTGT |
-| M5 only fly | M15+ still fly — M5 is noise | Not applicable | Wait for M15 to confirm |
-| All sideway | H4 SQZ — no macro target | None | G0 → exit all |
+| Phase 1 (directional trend) | H4 fly + D1 fly same direction | Continue same direction | High |
+| Phase 2 (zigzag onset) | H4 fly + D1 fly same direction | Each leg: M30 fly direction. Overall bias: H4 direction | Medium per leg |
+| Phase 3a (symmetric decay) | H4 shrink + H4 mid=3 | Next leg: opposite to current leg. Overall: UNKNOWN | Low |
+| Phase 3b-INTO (trending shrink) | H4 shrink + H4 mid=1/5 or 2/4 | Next leg: opposite. Overall: trending side favoured while H4 mid ≠ 3 | Medium for trending side |
+| Phase 3b-OUT (recovery) | H4 exiting SQZ + D1 opposing | Recovery direction — until D1 confinement boundary reached | Medium |
+| Phase 4 (compressed oscillation) | H4 SQZ | UNKNOWN — direction not determinable. Wait for M5 BBUpDn 0→1 | None — do not predict |
+| Phase 5 (explosive breakout) | H4 breaking SQZ | Direction of M5 expansion. CHECK D1 for alignment | Medium → High as TFs confirm |
+| Phase 6 (post-SQZ oscillation) | H4 cycling fly→SQZ→fly | Next leg: opposite to current. Overall: D1 direction eventually | Low per leg, Medium overall |
 
-**Rules:**
-1. Only M5 sideway → wait; M5 alone is noise within M30/H1 fly
-2. Target = outer band of lowest still-flying TF (upper for BUY, lower for SELL)
-3. HTF is why lower TF goes sideway: H4 SQZ → M30 flat; H4 shrink → M30 ranges within H4 band
-4. G8-BNDTGT fires automatically at target band touch when all lower TFs are compressed
+**Direction prediction requires CHECK HTF at every step:**
+
+When predicting UP:
+- H4 mid = 1 or 5 (upward lean) → supports UP prediction
+- D1 mid = 1 (uptrend) → strongly supports UP prediction
+- H4 mid = 2 or 4 (downward lean) → contradicts UP → lower confidence
+- D1 mid = 2 (downtrend) → strongly contradicts UP → counter-trend, lowest confidence
+
+When predicting DN:
+- H4 mid = 2 or 4 (downward lean) → supports DN prediction
+- D1 mid = 2 (downtrend) → strongly supports DN prediction
+- H4 mid = 1 or 5 (upward lean) → contradicts DN → lower confidence
+- D1 mid = 1 (uptrend) → strongly contradicts DN → counter-trend, lowest confidence
+
+---
+
+## Rule 2 — Target Prediction
+
+The target is always the **next confinement boundary** price is travelling toward.
+Which boundary depends on the current scenario and which TFs are still flying.
+
+### Target by Scenario
+
+| Scenario | UP target | DN target | Target TF (confinement) |
+|---|---|---|---|
+| A (full fly) | D1 outer band (furthest target) | Brief pullback to M30 mid then resume | D1 — highest confinement |
+| B1 (M15 shrink) | M30 outer band | M30 mid or M30 lower | M30 — highest still-flying MTF |
+| B2 (M30 shrink) | H1 outer band | H1 mid or H1 lower | H1 — highest still-flying MTF |
+| B3 (H1 shrink) | H4 outer band | H4 mid or H4 lower | H4 — confinement ceiling |
+| E1-E3 (deep compression) | H4 outer band (confined) | H4 lower band | H4 — hard ceiling/floor |
+| E4 (H4 compressing) | D1 mid or D1 outer band | D1 lower band | D1 — next level up |
+| H (direction pivot) | Unknown until M5 breaks SQZ | Unknown until M5 breaks SQZ | Wait — no target yet |
+| D1 (M5 break) | M30 outer band (arm — not confirmed) | M30 mid | M30 — wait for confirm |
+| D2 (M15 confirm) | H1 outer band → H4 outer band | M30 mid (brief pullback) | Escalates as TFs confirm |
+| D3 (MTF re-align) | H4 outer band → D1 outer band | M30 mid | → Scenario A target |
+| F1 (LTF only) | M30 outer band (weak — wait) | M15 mid | M30 — not confirmed yet |
+| F2 (MTF confirmed) | H4 outer band | M30 mid | H4 — MTF backing the move |
+| F3 (HTF confirmed) | D1 outer band (→ Scenario A) | H1 mid | D1 — full fly restored |
+| C1 (MTF reversal) | Previous H4 lower (now ceiling) | New H4 outer band (new direction) | H4 — transitioning |
+| C2 (H4 confirmed) | New D1 outer band (new direction) | New H4 mid (pullback) | D1 — new trend confirmed |
+| C3 (counter-trend) | H4 outer band (limited by W1/D1) | H4 mid | H4 — W1/D1 still opposing |
+
+### Target by Phase (Section 13)
+
+| Phase | Target for current leg | How to identify on chart |
+|---|---|---|
+| Phase 1 | D1 outer band (trend continues) | D1 stepping band at top/bottom of chart |
+| Phase 2 | H4 outer band per leg (full width) | H4 band boundaries — each leg reaches them |
+| Phase 3a | H4 outer band per leg (shrinking) | Each leg's target is closer than previous (bands narrowing) |
+| Phase 3b-INTO | Trending side: H4 outer band → H1 mid → H4 mid (dropping). Counter side: H4 mid (holds then breaks) | Ceiling dropping (BUY) or floor rising (SELL) |
+| Phase 3b-OUT | Recovery side: D1 confinement boundary (ceiling/floor). Return side: H4 mid → H4 outer (gaining) | D1 band = hard limit for recovery |
+| Phase 4 | No target — oscillation within SQZ noise range | Candle range only — no distinguishable targets |
+| Phase 5 | H4 outer band → D1 outer band (explosive reach) | Large candles breaking through band boundaries |
+| Phase 6 | H4 outer band per leg (full width, not decaying) | Same H4 boundaries repeatedly — no progression |
+
+---
+
+## Rule 3 — Timeline Prediction
+
+Timeline depends on phase (determines leg duration) and diffBBW (determines compression speed).
+
+| Phase | Leg duration | Full cycle to next phase | diffBBW signal |
+|---|---|---|---|
+| Phase 1 | Sustained — days to weeks | Until M15 BBW enters 513 (shrink) | diffBBW positive → no end imminent |
+| Phase 2 | 4–12 hours per leg | 2–5 days until Phase 3 | diffBBW transitioning positive → near zero |
+| Phase 3a | 3–8 hours per leg (shortening) | 1–3 days until Phase 4 | diffBBW negative → more negative = faster compression |
+| Phase 3b-INTO | 3–8 hours per leg (shortening) | 1–3 days until Phase 4 | diffBBW negative |
+| Phase 3b-OUT | 4–12 hours per leg (lengthening) | 1–5 days until D1 boundary reached | diffBBW near zero → positive (recovering) |
+| Phase 4 | No legs — noise oscillation | Hours to 1 day until M5 breaks | diffBBW ≈ zero at minimum (SQZ floor) |
+| Phase 5 | Single explosive move — hours | Immediate — one move | diffBBW sharply positive (band expanding fast) |
+| Phase 6 | 12–24 hours per leg | Days to weeks until commitment | diffBBW alternating positive ↔ negative each cycle |
+
+**diffBBW as timeline accelerator/decelerator:**
+- diffBBW strongly negative → compression accelerating → Phase 4 arrives sooner
+- diffBBW slightly negative → compression slow → Phase 3 legs persist longer
+- diffBBW near zero → SQZ floor reached → breakout imminent (Phase 5 within hours)
+- diffBBW positive after zero → expansion initiated → Phase 5 in progress
+
+---
+
+## Rule 4 — Next Scenario Prediction
+
+Based on CHECK HTF at each transition point. Always CHECK before predicting.
+
+### From Scenario A (Full Fly Alignment)
+
+```
+CHECK: Is M15 entering shrink (BBW_stage → 513)?
+  YES → Next: Scenario B (shallow compression begins)
+        Timeline: immediate
+        Sub-question: CHECK H4 — was H4 already shrinking?
+          YES → B is HTF-confined → will deepen to E
+          NO  → B is LTF pullback → may resolve as D (rest)
+  NO  → A continues — no scenario change imminent
+```
+
+### From Scenario B (Shallow Compression)
+
+```
+CHECK: H4 state — is H4 already shrinking when LTF shrinks?
+  H4 still fly + D1 fly:
+    → LTF shrink is REST (not reversal)
+    → CHECK: M5 BBUpDn 0→1 same direction as H4?
+      YES → Next: Scenario D (rest recovery)
+            Timeline: M15 confirms in 2–5 bars after M5
+      NO  → B continues — wait for M5 signal
+
+  H4 entering shrink:
+    → LTF shrink is CONFINED by H4 (H4 is the cause)
+    → Next: Scenario E (deep compression)
+    → Timeline: hours to days as SQZ builds
+    → Sub-question: CHECK D1 — is D1 also shrinking?
+      D1 still fly → E, D1 may rescue H4 (medium reversal probability)
+      D1 also shrinking → E4 (high reversal probability)
+
+  H4 already SQZ:
+    → Already in E4 territory
+    → Next: Scenario H (direction pivot)
+```
+
+### From Scenario E (Deep Compression)
+
+```
+CHECK: H4 entering SQZ (BBW_stage → 400-499)?
+  YES → Next: E4 (H4 also compressing) → H (direction pivot)
+        Timeline: hours — SQZ builds fast once H4 joins
+  NO  → E continues — wait for SQZ deepening
+
+CHECK: M5 BBUpDn 0→1 (expansion initiating)?
+  YES → Next: transition to F1 (LTF leading breakout)
+        → Then CHECK H4 for F2/F3 confirmation
+  NO  → E continues — compression not yet resolved
+```
+
+### From Scenario H (Direction Pivot)
+
+```
+CHECK: H4 BBUpDn sustaining 1 for 3+ bars?
+  YES, same direction as D1:
+    → Next: Scenario F (compression release) — H1 sub-state
+    → Confidence: HIGH (D1 aligned)
+    → Timeline: M15 confirms in 2–5 bars
+
+  YES, opposite direction to D1:
+    → Next: Scenario C (trend reversal) — H2 sub-state
+    → Confidence: LOW until D1 also confirms
+    → Timeline: days until D1 flips
+
+  NO, reverts to 0 within 3 bars:
+    → H3 (false breakout) → back to E/H
+    → Timeline: immediate — reset
+
+  NO, alternates 1 and 4:
+    → H4 (whipsaw) → Phase 6 if persists
+    → Timeline: days — wait for sustained direction
+
+CHECK: D1 also shrinking (BBUpDn → 2)?
+  YES → Next: Scenario I (macro sideways) if D1 loses direction
+        Timeline: weeks — extended compression
+```
+
+### From Scenario D (Rest Recovery)
+
+```
+CHECK: M30 BBUpDn = 1 (expanding)?
+  YES → Next: Scenario A (back to full fly) — D3 confirmed
+        Timeline: hours — M30 is confirming
+  NO  → D continues — wait for MTF confirmation
+
+CHECK: M15 mid flips back to 3 (lost direction again)?
+  YES → D stalled — may return to B
+        Timeline: hours — watch M5 for new signal
+```
+
+### From Scenario F (Compression Release)
+
+```
+CHECK: H4 BBUpDn = 1 sustained?
+  YES → Next: Scenario A (F3 → new full fly)
+        Timeline: H4 confirming — hours
+  NO, H4 still 0/2:
+    → F continues (F1 or F2 depending on M30)
+    → May fail: if M15 reverses within 3–5 bars → back to H/E
+
+CHECK: H4 BBUpDn reverts after initial expansion?
+  YES → False breakout → back to E/H
+        Timeline: immediate
+```
+
+### From Scenario C (Trend Reversal)
+
+```
+CHECK: H4 BBUpDn = 1 in new direction?
+  YES → Next: new Scenario A (C2 → full fly opposite)
+        Timeline: confirmed — treat as A immediately
+
+CHECK: W1/D1 also reversed?
+  YES → C2 full → new A1 (strong fly new direction)
+  NO  → C3 (counter-trend) — limited hold, W1/D1 will pull back
+```
+
+---
+
+## Rule 5 — Confidence Matrix
+
+Confidence determines Part 5 position size.
+
+| Confidence level | Conditions | Part 5 size multiplier |
+|---|---|---|
+| High | H4 fly + D1 fly + same direction + Phase 1 or 2 | 1.0× |
+| Medium-High | H4 fly + D1 fly + Phase 3b trending side | 0.75× |
+| Medium | M30 confirmed expansion + H4 not opposing | 0.75× |
+| Medium-Low | LTF expansion only + H4 still SQZ or shrink | 0.50× |
+| Low | Counter-trend to D1 + Phase 3b-OUT or C1 | 0.25× |
+| None | Phase 4 (SQZ) or Phase 6 (H4 uncommitted) or H4 whipsaw | 0 (no entry) or 0.25× max |
+
+**Confidence adjustments based on diffBBW:**
+- diffBBW strongly positive → confidence +1 level (expansion has momentum)
+- diffBBW near zero after negative → confidence +1 (SQZ floor, breakout imminent)
+- diffBBW negative and getting more negative → confidence -1 (compression accelerating)
+- diffBBW alternating → no adjustment (Phase 6 — direction uncertain)
+
+---
+
+## Prediction Summary Table — Quick Reference
+
+For quick chart reading, use this table to go directly from
+Part 3 identification to Part 4 prediction:
+
+| Part 3 result | Direction | Target | Timeline | Next scenario | Confidence |
+|---|---|---|---|---|---|
+| A + Phase 1 | Same as H4 fly | D1 outer band | Days | A continues until M15 shrinks → B | High |
+| B1 + Phase 2 | Each leg: M30 dir | M30 outer band per leg | 4-12h per leg | D (if H4 fly) or E (if H4 shrink) | Medium |
+| B2 + Phase 3a | Opposite to current leg | H1 outer band (shrinking) | 3-8h per leg | E if depth increases | Low-Medium |
+| B3 + Phase 3b-INTO | Trending side favoured | H4 outer band (dropping) | 3-8h per leg | E (H4 about to SQZ) | Medium for trend side |
+| E2 + Phase 4 | UNKNOWN | None — noise | Hours to 1 day | H (direction pivot) | None |
+| E3 + Phase 4→5 | M5 expansion direction | H4 outer band → D1 | Hours | H → F or C | Medium → High |
+| H1 + Phase 5 | Same as D1 | H4 → D1 outer band | Hours | F → A | High |
+| H2 + Phase 5 | Opposite to D1 | H4 outer band (new dir) | Hours → days | C → new A | Low → Medium |
+| H4 + Phase 6 | Each leg opposite | H4 boundaries | 12-24h per leg | Eventually F or C or Scenario I | Low |
+| D2 + Phase 5 | Same as H4 fly | H4 outer band | Hours | A (full fly restored) | Medium-High |
+| F2 | Same as M30 expansion | H4 outer band | Hours | F3 → A or back to H | Medium |
+| C2 | New direction confirmed | D1 outer band (new dir) | Days | New A | High |
+| Phase 3b-OUT | Recovery direction | D1 confinement boundary | Days | D1 boundary → Phase 3a or C | Medium |
+
+---
+
+# PART 5 — TRADE ACTION VIA TREND PREDICTION
+
+Part 5 converts Part 4 predictions into executable trade decisions.
+
+**Inputs (from Part 4):**
+- DIRECTION — up / down / sideways / unknown
+- TARGET — which TF band boundary
+- TIMELINE — hours / days
+- CONFIDENCE — high / medium / low / none
+- NEXT SCENARIO — what follows current state
+
+**Outputs (trade execution):**
+- ACTION — enter / exit / hold / wait / exit all
+- DIRECTION — BUY / SELL / none
+- SIZE — multiplier (1.0× / 0.75× / 0.50× / 0.25× / 0)
+- STOP — which TF band level
+- TARGET — which TF band level (from Part 4)
+- EXIT TRIGGER — what condition closes the trade
+
+---
+
+## Entry Conditions
+
+Entry requires Part 4 direction ≠ UNKNOWN and confidence ≠ None.
+
+| ID | Condition name | What must be true | Trigger (what you watch for) | Scenario |
+|---|---|---|---|---|
+| E1 | Trend entry | H4 fly + D1 fly + M30 fly all same direction | M15 mid flips 3→1 (BUY) or 3→2 (SELL) | A1 |
+| E2 | Partial trend entry | H4 fly + M30 fly same direction, W1 or D1 opposing | M15 mid flips 3→1 or 3→2 | A2 |
+| E3 | Confinement boundary entry | Highest flying TF has directional lean (mid=4/5), PriceLoc at outer band | M15 mid flips to trade direction + 6 confinement checks pass (see below) | B, E range trade |
+| E4 | Expansion arm | H4 fly intact, M30/M15 in SQZ or shrink | M5 BBUpDn transitions 0→1 (expansion begins) | D1, E3, F1 — ARM only, do not enter yet |
+| E5 | Expansion entry | M5 BBUpDn=1 confirmed, M30 starting to confirm | M15 mid flips 3→1 or 3→2 (direction confirmed) | D2, F2 |
+| E6 | Full confirmation entry | H4 BBUpDn=1 sustained 3+ bars, M30+H1 both expanding | M15 mid confirms same direction | F3, C2 → becomes Scenario A |
+
+### 6 Confinement Checks for E3 (Confinement Boundary Entry)
+
+These checks replace the previous filter references.
+ALL 6 must pass for E3 entry to be valid:
+
+| Check | What it verifies | Pass condition | Fail = no entry |
+|-------|-----------------|---------------|-----------------|
+| 1. H4 directional lean | H4 has bias — not pure sideways | H4 diffMid = 4 or 5 (lean exists) | H4 diffMid = 3 → no lean, no entry |
+| 2. No SQZ lock | M15 and M30 not both in SQZ | At most ONE of M15/M30 is BBW 400-499 | BOTH M15+M30 BBW 400-499 → SQZ lock |
+| 3. M5 direction confirm | M5 agrees with trade direction | M5 diffMid = 1 (for BUY) or 2 (for SELL) | M5 diffMid opposing or 3 → no confirm |
+| 4. M30 not opposing | M30 not actively opposing trade | M30 diffMid ≠ opposing direction | M30 diffMid directly opposing → no entry |
+| 5. No pink zone | Not in M15+M30 simultaneous SQZ | M15+M30 not both SQZ at same time | Both SQZ simultaneously → exit all |
+| 6. Quality threshold | Sufficient signal quality | Quality score ≥ 60 | Quality < 60 → too weak |
+
+---
+
+## Exit Conditions
+
+| ID | Condition name | What triggers it | Variable to watch | Applies to |
+|---|---|---|---|---|
+| X1 | Target reached | Price hits the Part 4 predicted target band | PriceLoc = above_upper or below_lower at target TF | All scenarios |
+| X2 | M15 trend fading | M15 loses direction — move exhausted | M15 diffMid flips 1→3 (BUY fading) or 2→3 (SELL fading) | All scenarios |
+| X3 | Quality degraded | Signal quality dropped below threshold | Quality score < 60 | F1 (LTF only) |
+| X4 | Pink zone — forced exit | M15+M30 both enter SQZ simultaneously | M15 BBW=400-499 AND M30 BBW=400-499 same time | E2, Phase 4 — EXIT ALL |
+
+---
+
+## Block Conditions (No Entry Allowed)
+
+| ID | Condition name | What it checks | Variable check | Result | Scenario |
+|---|---|---|---|---|---|
+| B1 | M15 sideways | M15 has no direction — cannot trigger entry | M15 diffMid ≥ 3 | No NEW entries. Existing position HOLDS if H4/H1 still fly | B, E1, between Phase legs |
+| B2 | Pink zone | M15+M30 both SQZ simultaneously | M15 BBW=400-499 AND M30 BBW=400-499 | EXIT ALL positions + no new entries | E2, Phase 4 |
+| B3 | H4 opposing | H4 direction opposes trade direction | H4 diffMid = 1 when trying SELL, or 2 when trying BUY | No entry in that direction | C3 counter-trend |
+| B4 | Full SQZ | All MTF/LTF in SQZ | cas_sqzCount ≥ 3 | No entries at all — wait for M5 expansion | E4, H |
+
+**Critical block rule — M30 SQZ alone is NOT a block:**
+```
+M30 in SQZ (BBW 400-499) → existing trade STAYS OPEN
+  M30 is compressed but position is managed by M15 transitions
+  Size may reduce but position is maintained
+
+M15 diffMid ≥ 3 (sideways) → THIS blocks NEW entries
+  M15 is the entry trigger TF — no direction = no entry
+  Existing position: hold if H4/H1 still fly, otherwise exit
+
+M15 + M30 BOTH SQZ simultaneously → EXIT ALL (B2 pink zone)
+  This is the ONLY condition that forces exit of existing positions
+```
+
+---
+
+## Size Matrix
+
+Size is determined by Part 4 confidence level.
+
+| Part 4 confidence | Size multiplier | When |
+|---|---|---|
+| High | 1.0× | H4+D1 fly aligned, Phase 1/2, E1/E6 entry |
+| Medium-High | 0.75× | H4 fly + M30 confirmed, Phase 3b trending side, E2/E5 entry |
+| Medium | 0.50× | Counter-trend recovery (3b-OUT), C3 counter-trend |
+| Low | 0.25× | Phase 6 legs, H2 opposite direction, C1 waiting H4 |
+| None | 0 | Phase 4 (SQZ), H4 whipsaw, B4 full SQZ |
+
+**Size adjustments by diffBBW:**
+- diffBBW strongly positive → +0.25× (expansion has momentum)
+- diffBBW near zero after negative → +0.25× (SQZ floor, breakout imminent)
+- diffBBW negative and accelerating → -0.25× (compression deepening)
+- diffBBW alternating pos↔neg → no adjustment (Phase 6 uncertainty)
+
+---
+
+## Stop Loss Placement
+
+Stop is placed beyond the nearest confinement boundary AGAINST the trade direction.
+
+| Scenario | BUY stop placement | SELL stop placement | ATR TF |
+|---|---|---|---|
+| A (full fly) | Below M30 lower band | Above M30 upper band | M30 ATR |
+| B1 (M15 shrink) | Below M30 lower band | Above M30 upper band | M30 ATR |
+| B2 (M30 shrink) | Below H1 lower band | Above H1 upper band | H1 ATR |
+| B3 (H1 shrink) | Below H4 lower band | Above H4 upper band | H4 ATR |
+| E (range trade) | Beyond H4 outer band | Beyond H4 outer band | H4 ATR |
+| D (rest recovery) | Below M30 lower band | Above M30 upper band | M30 ATR |
+| F1/F2 (compression release) | Below H1 lower band | Above H1 upper band | H1 ATR |
+| F3 (HTF confirmed) | Below M30 lower band (→ Scenario A) | Above M30 upper band | M30 ATR |
+| C1 (MTF reversal) | Beyond H4 outer band (tight — counter-trend) | Beyond H4 outer band | H4 ATR |
+| C2 (H4 confirmed) | Below M30 lower band (→ new A) | Above M30 upper band | M30 ATR |
+| Phase 6 (legs) | Beyond H4 boundary that was just touched (tight) | Same — tight to boundary | H4 ATR |
+
+**ATRSL reference:** Stop levels use `ATRSL1buf` values from EA.
+- `dir:0` = stop tracking upward (BUY trailing stop)
+- `dir:1` = stop tracking downward (SELL trailing stop)
+- Stop level = ATRSL LV value at the ATR TF specified above
+
+---
+
+## Trade Action by Scenario — Complete Decision Table
+
+This is the master table. Read Part 3 scenario → Part 4 prediction → this table.
+
+### Tier 1 — Expansion Complete
+
+| Scenario | Part 4 prediction | Action | Entry | Size | Stop | Target | Exit trigger |
+|---|---|---|---|---|---|---|---|
+| A1 Strong fly | Direction: H4 fly dir, Confidence: High | ENTER | E1: M15 mid flips to direction | 1.0× | Below M30 lower (BUY) | D1 outer band | X1 (target) or X2 (M15 fades) |
+| A2 Partial fly | Direction: H4 fly dir, Confidence: Med-High | ENTER | E2: M15 mid flips | 0.75× | Below M30 lower (BUY) | H4 outer band | X1 or X2 |
+| A3 Noise SQZ | Direction: same, Confidence: High | HOLD through | No new entry — hold existing | Maintain | Existing stop | Existing target | Wait for M15 mid to restore |
+
+### Tier 2 — Compression and Bottom
+
+| Scenario | Part 4 prediction | Action | Entry | Size | Stop | Target | Exit trigger |
+|---|---|---|---|---|---|---|---|
+| B1 M15 shrink | Direction: each leg, Confidence: Medium | ENTER per leg | E3: confinement boundary + 6 checks | 0.75× | Beyond M30 outer band | M30 outer band opposite side | X1 (M30 target) or X2 |
+| B2 M30 shrink | Direction: each leg, Confidence: Medium | ENTER per leg | E3: at H1 level | 0.50× | Beyond H1 outer band | H1 outer band opposite | X1 (H1 target) or X2 |
+| B3 H1 shrink | Direction: each leg, Confidence: Low-Med | ENTER per leg | E3: at H4 level only | 0.25× | Beyond H4 outer band | H4 outer band opposite | X1 (H4 target) or X2 |
+| E1 Partial SQZ | Direction: unknown, Confidence: None | WAIT — no entry | Block B1 (M15 sideways) | 0 | — | — | Wait for M5 BBUpDn 0→1 |
+| E2 Full SQZ | Direction: unknown, Confidence: None | EXIT ALL | Block B2 (pink zone) forces exit | 0 | — | — | X4 (pink zone forced exit) |
+| E3 Loading | Direction: M5 expansion dir, Confidence: Low | ARM only | E4: M5 BBUpDn 0→1 = arm | — | — | — | Wait M15 to confirm (→E5) |
+| E4 H4 compressing | Direction: unknown, Confidence: None | NO ENTRY | Block B4 (full SQZ) | 0 | — | — | Wait — transition to H |
+| H1 Same dir | Direction: D1 dir, Confidence: Med-High | ENTER | E5: M15 mid confirms | 0.75× | Beyond H1 lower/upper | H4 outer band | X1 or X2 |
+| H2 Opposite dir | Direction: opposite D1, Confidence: Low | ENTER small | E5: M15 mid confirms (small) | 0.25× | Beyond H4 outer band (tight) | H4 outer band new dir | X1 or X2 |
+| H3 False breakout | Direction: failed, Confidence: None | EXIT immediately | — | 0 | — | — | Return to E/H rules |
+| H4 Whipsaw | Direction: unknown, Confidence: None | NO ENTRY | Block B4 | 0 | — | — | Wait 3+ bars sustained BBUpDn |
+
+### Tier 3 — Expansion in Progress
+
+| Scenario | Part 4 prediction | Action | Entry | Size | Stop | Target | Exit trigger |
+|---|---|---|---|---|---|---|---|
+| D1 M5 break | Direction: H4 fly dir, Confidence: Low | ARM only | E4: M5 BBUpDn 0→1 | — | — | — | Wait M15 confirm |
+| D2 M15 confirm | Direction: H4 fly dir, Confidence: Medium | ENTER | E5: M15 mid flips to direction | 0.75× | Below M30 lower (BUY) | H4 outer band | X1 or X2 |
+| D3 MTF re-align | Direction: H4 fly dir, Confidence: Med-High | HOLD / add | Add if quality ≥ 90 | → 1.0× | Tighten to M30 lower | H4 → D1 outer band | X1 or X2 |
+| F1 LTF only | Direction: M5 dir, Confidence: Low | WAIT | Block X3 (quality < 60) | 0 | — | — | Wait M30 BBUpDn=1 |
+| F2 MTF confirmed | Direction: M30 expansion dir, Confidence: Medium | ENTER | E5: M15 mid confirms | 0.75× | Beyond H1 lower/upper | H4 outer band | X1 or X2 |
+| F3 HTF confirmed | Direction: H4 expansion dir, Confidence: High | ENTER (→ Scenario A) | E6: H4 BBUpDn=1 sustained | 1.0× | Below M30 lower (BUY) | D1 outer band | X1 or X2 |
+| C1 MTF reversal | Direction: opposite to previous, Confidence: Low | ENTER small | E5: M15 mid confirms (small) | 0.25× | Beyond H4 outer band | H4 outer band new dir | X1 or X2 |
+| C2 H4 confirmed | Direction: new direction confirmed, Confidence: High | ENTER (→ new A) | E6: H4 BBUpDn=1 new dir | 1.0× | Below M30 lower (new dir) | D1 outer band new dir | X1 or X2 |
+| C3 Counter-trend | Direction: opposite to W1/D1, Confidence: Medium | ENTER limited | E5: M15 mid confirms | 0.50× | Beyond H4 outer band (tight) | H4 outer band | X1 or X2 |
+
+### Phase-Based Trade Rules (Section 13 Phases)
+
+| Phase | Action per leg | Size | Entry trigger | Exit trigger | Special rule |
+|---|---|---|---|---|---|
+| Phase 1 | ENTER trend direction | 1.0× | E1/E2 (M15 mid flip) | X1 (D1 target) or X2 (M15 fades) | Hold through brief M5/M15 noise |
+| Phase 2 | ENTER each leg | 1.0× | E1 at each reversal | X1 (H4 band per leg) | Size stays full — legs still tall |
+| Phase 3a | ENTER each leg, both directions | 0.75→0.50× | E3 at each reversal | X1 (H4 band, closer each time) | Reduce size as legs shorten |
+| Phase 3b-INTO | ENTER, favour trending side | 0.75→0.50× | E3, trending direction preferred | X1 (dropping target) | Stop favouring when H4 mid → 3 |
+| Phase 3b-OUT | ENTER, favour recovery direction | 0.50× max | E3, recovery direction | X1 (D1 boundary = hard limit) | Counter-trend to D1, exit at D1 band |
+| Phase 4 | NO ENTRY — exit all | 0 | — | X4 (pink zone) | B2 active — wait for M5 signal |
+| Phase 5 | ENTER on breakout | 0.75→1.0× | E5/E6 (M15 confirms expansion) | X1 (H4→D1 target) or X2 | Size escalates as TFs confirm |
+| Phase 6 | ENTER each leg — minimum size | 0.25× max | E3 at H4 boundary | X1 at opposite H4 boundary | Do NOT hold through reversal |
+
+---
+
+## Gate Decoder — EA Implementation Reference
+
+This section maps the plain-language conditions used above back to
+the EA's internal gate names. Used for EA log verification and
+debugging only. Not required for chart analysis or trade decisions.
+
+| Condition ID | Plain language | EA gate name |
+|---|---|---|
+| E1 / E2 | M15 mid flips 3→1 or 3→2 | G6-BUY / G6-SELL |
+| E3 | Confinement boundary entry + 6 checks | G0b-TOUCH path |
+| E4 | M5 BBUpDn 0→1 (arm) | G6-LOAD |
+| E5 | M15 mid confirms expansion | G6-BUY / G6-SELL |
+| E6 | H4 BBUpDn=1 sustained | (no single gate — composite condition) |
+| X1 | Price reaches target band | G8-BNDTGT |
+| X2 | M15 mid flips to 3 | G5-FADE |
+| X3 | Quality < 60 | G5-WEAK |
+| X4 | M15+M30 both SQZ | G0b-PINK |
+| B1 | M15 diffMid ≥ 3 | G0 / G0-HOLD |
+| B2 | M15+M30 both SQZ simultaneously | G0b-PINK (also exits) |
+| B3 | H4 direction opposing trade | G4e-H4OPP / H4-OPPOSE |
+| B4 | All TFs SQZ | G0c-SQZLOCK |
+| Check 1 | H4 diffMid = 4/5 | G0b-H4OPP filter |
+| Check 2 | Not both M15+M30 SQZ | G0b-SQZLOCK filter |
+| Check 3 | M5 confirms direction | G0b-M5OPP filter |
+| Check 4 | M30 not opposing | G0b-M30OPP / G4f-M30OPP filter |
+| Check 5 | Not in pink zone | G0b-PINK filter |
+| Check 6 | Quality ≥ 60 | Quality score check |
 
 ---
 
