@@ -962,6 +962,96 @@ Arrow 3 DN: → H4 lower band     (floor reached — SQZ approaching)
 H4 mid flip from 1/5 → 3 observable as: `H2L_flyStrink` clears,
 replaced by `H2L_sideway` — shrink chain converted to sideway chain.
 
+#### Phase 3b Temporal Context: INTO vs OUT of Compression
+
+Phase 3b can occur in two temporal contexts depending on whether H4 is
+entering compression or recovering from it:
+
+**Phase 3b-INTO (normal — H4 fly → shrink):**
+```
+Trending INTO compression:
+H4 Upper ──╱─────────────────    Ceiling DROPS progressively
+           ╱╲                    (trending side loses reach)
+H4 Mid ────╱──╲──────────────    Floor holds then breaks
+               ╲╱╲
+H4 Lower ──────╱──╲─────────    → Leads to Phase 4 (SQZ)
+```
+- H4 BBW_stage: 511/512 → 513/523 (fly → shrink)
+- H4 BBUpDn_state: 1/3 → 2 (expanding → shrinking)
+- diffBBW: positive → negative (bands contracting)
+- Legs LOSING reach — each cycle shorter than previous
+- Described in main Phase 3b section above
+
+**Phase 3b-OUT (recovery — H4 SQZ → fly recovery):**
+
+**Reference image — Phase 3b-OUT (28 Jan–10 Feb 2026):**
+H4 recovers from crash, floor rises from 4630→4850 while D1-fly-- acts as ceiling ~5130.
+
+[![Phase 3b-OUT recovery](./Backtest_data/extras/backtested_EA_phase_3b_out_recovery.jpg)](backtested_EA_phase_3b_out_recovery.jpg)
+
+```
+Trending OUT OF compression (counter-trend to D1):
+                       ╱╲  ╱╲       Ceiling roughly STABLE
+                      ╱  ╲╱  ╲      (D1 confinement boundary acts as cap)
+                ╱╲   ╱         ╲
+               ╱  ╲ ╱
+H4 Lower ──╱──╱────╲─────────────    Floor RISES progressively
+           ╱                         (recovery building from SQZ bottom)
+SQZ bottom ╱
+```
+- H4 BBW_stage: 400-499 → 511/512 (SQZ → fly recovery)
+- H4 BBUpDn_state: 0 → 1 (no_state → expanding)
+- diffBBW: near zero → positive (bands expanding from SQZ)
+- Legs GAINING reach — each recovery leg higher floor than previous
+- Counter-trend to D1 direction — D1 band acts as ceiling
+
+**Phase 3b-OUT dimension table:**
+
+| Dimension | Value |
+|-----------|-------|
+| H4 BBW_stage | 400-499 → 511/512 (recovering from SQZ) |
+| H4 BBUpDn_state | 0 → 1 (expanding — fly energy building) |
+| H4 diffMid_Trend | 2→4→5 (downtrend → sideway → recovering up) |
+| D1 BBW_stage | 511/512 or 521/522 (D1 still trending — acts as confinement) |
+| D1 diffMid_Trend | Still original direction (opposing H4 recovery) |
+| diffBBW | Near zero → positive (bands expanding from SQZ minimum) |
+| Candle character | Impulse legs gaining strength — each pullback at higher floor |
+| Leg height | Increasing initially then stabilizing as D1 ceiling reached |
+
+**BUY recovery (after crash — H4 recovering UP while D1 still DN):**
+
+| Step | UP target (ceiling) | DN target (floor) | H4 mid | What's happening |
+|------|--------------------|--------------------|--------|-----------------|
+| Step 1 | H4 upper area (first fly from SQZ) | SQZ bottom (deepest point) | 2→4 (weak recovery) | First fly attempt — large impulse from bottom |
+| Step 2 | ~Same ceiling (D1 confines) | HIGHER than Step 1 (recovery holding) | 4→5 (strengthening) | Recovery building — floor rising |
+| Step 3 | ~Same ceiling or slightly higher | HIGHER again (pullbacks shallow) | 5 (sideway-up) | Approaching D1 confinement boundary |
+| Step 4 (resolution) | D1 boundary reached | — | 5→3 or 5→1 | D1 ceiling stops recovery → Phase 3a or Phase 4 again. OR D1 also reverses → Scenario C → new Phase 1 |
+
+**SELL recovery (after spike — H4 recovering DN while D1 still UP) — mirror:**
+
+| Step | DN target (floor) | UP target (ceiling) | H4 mid | What's happening |
+|------|-------------------|---------------------|--------|-----------------|
+| Step 1 | H4 lower area (first fly from SQZ) | SQZ top (highest point) | 1→5 (weak recovery dn) | First fly attempt downward |
+| Step 2 | ~Same floor (D1 confines) | LOWER than Step 1 | 5→4 (strengthening dn) | Recovery building — ceiling dropping |
+| Step 3 | ~Same floor | LOWER again | 4 (sideway-dn) | Approaching D1 confinement boundary |
+| Step 4 (resolution) | D1 boundary reached | — | 4→3 or 4→2 | D1 floor stops recovery → Phase 3a/4. OR D1 reverses → Scenario C |
+
+**CHECK HTF discriminator — INTO vs OUT:**
+- H4 entering shrink (BBUpDn 1→2) + legs LOSING reach = Phase 3b-INTO (normal)
+- H4 exiting SQZ (BBUpDn 0→1) + legs GAINING reach = Phase 3b-OUT (recovery)
+- D1 direction tells you which side is the confinement ceiling/floor
+
+**Phase 3b-OUT ends when:**
+1. H4 recovery reaches D1 confinement boundary → reverses → Phase 3a or Phase 4 (most common)
+2. D1 also reverses → Scenario C (trend reversal) → new Phase 1 in recovery direction
+3. H4 recovery fails → falls back to SQZ → Phase 4 again (false recovery)
+
+**Trade implications of 3b-OUT:**
+- Favour RECOVERY direction (BUY in BUY recovery) while floor is rising
+- Size: 0.50× maximum — counter-trend to D1, lower confidence than normal 3b
+- Exit at D1 confinement boundary (G8-BNDTGT at D1 level)
+- If D1 mid also starts flipping → increase to 0.75× (Scenario C developing)
+
 **BBTFImpact observable:** `HTF_Drive_LTF_Sideway` values increasing = deeper confinement.
 **cas_shrinkTF observable:** Value increasing (1→2→3) = shrink propagating upward through TFs.
 
@@ -1037,6 +1127,105 @@ initiating — M5 breaks SQZ first, M15 follows, M30 confirms.
 
 ---
 
+### Phase 6 — Post-SQZ Oscillation: H4 Uncommitted (Extended Scenario H4)
+
+**Reference image — Phase 6 (2–13 Mar 2026):**
+H4 exits SQZ then oscillates with equal-height legs for 5+ days.
+D1-fly+ provides upward bias that H4 refuses to commit to.
+H4 cycles fly→shrink→SQZ→fly repeatedly without sustaining direction.
+
+[![Phase 6 post-SQZ oscillation](./Backtest_data/extras/backtested_EA_phase_6_post_sqz_oscillation.jpg)](backtested_EA_phase_6_post_sqz_oscillation.jpg)
+
+> **See also:** Part 2 — HTF Reference Charts → Fly to Sideway images show the same H4 cycling behavior from the HTF perspective.
+
+```
+Pattern:
+    ╱╲    ╱╲    ╱╲           Full amplitude zigzag AFTER SQZ
+   ╱  ╲  ╱  ╲  ╱  ╲          Legs are TALL (H4 band re-expanded)
+  ╱    ╲╱    ╲╱    ╲         Legs do NOT decay — EQUAL height each cycle
+                              H4 cycles: fly→shrink→SQZ→fly repeatedly
+```
+
+After Phase 4 (compressed oscillation) and Phase 5 (explosive breakout),
+a sixth pattern can occur: H4 exits SQZ and re-expands, but instead of
+committing to one direction (Phase 5), it oscillates with full-amplitude
+legs that do NOT decay. H4 cycles through fly→shrink→SQZ→fly repeatedly
+without sustaining any direction.
+
+This is **Scenario H4 (whipsaw) extended over days** — the "wait for 3+ bars
+same BBUpDn direction" condition from Scenario H is never met.
+
+| Dimension | Value |
+|-----------|-------|
+| H4 BBW_stage | Cycling: 511→513→400-499→511 repeatedly |
+| H4 BBUpDn_state | Cycling: 1→2→0→1 repeatedly — never sustains one value |
+| H4 diffMid_Trend | Alternating 1/5 and 2/4 — no sustained direction |
+| D1 state | D1-fly (has direction) but H4 won't follow |
+| Candle character | Large impulse legs alternating direction — looks like Phase 2 but AFTER SQZ |
+| diffBBW | Alternating positive → negative → positive each H4 cycle |
+| Leg height | Full H4 band width — NOT decaying (key difference from Phase 3) |
+| Leg duration | 12–24 hours per leg (full H4 fly→shrink cycle per leg) |
+
+**How Phase 6 differs from all other phases:**
+
+| Feature | Phase 2 (pre-SQZ) | Phase 3a (symmetric) | Phase 3b-OUT (recovery) | Phase 6 (post-SQZ) |
+|---------|-------------------|---------------------|------------------------|-------------------|
+| Position in cycle | Before compression | During compression | After compression | After compression |
+| Leg amplitude | Equal then decays | Decaying each cycle | Gaining each cycle | EQUAL — no change |
+| H4 BBW_stage | Stable fly | Sustained shrink | SQZ→fly recovery | Cycling fly→shrink→SQZ→fly |
+| diffBBW | Transitioning pos→neg | Sustained negative | Near zero→positive | Alternating pos↔neg |
+| Floor/ceiling | Both stable | Both closing in | One side rising/dropping | Both stable — full range |
+| Direction | Pre-existing trend | Losing trend | Counter-trend recovery | No trend — oscillation |
+| Leads to | Phase 3 | Phase 4 | D1 boundary or Phase 4 | Phase 5 eventually or Scenario I |
+
+**Phase 6 discriminator from Phase 2:**
+Phase 2 and Phase 6 look identical on the chart (equal-amplitude zigzag).
+The discriminator is HISTORY — what came before:
+- Preceded by Phase 1 (directional trend) → Phase 2 (pre-compression zigzag beginning)
+- Preceded by Phase 4/5 (SQZ/breakout) → Phase 6 (post-compression oscillation)
+
+Also check H4 BBW_stage:
+- Phase 2: H4 BBW_stage = stable 511/512 (sustained fly) → Phase 2
+- Phase 6: H4 BBW_stage = cycling 511→513→400-499→511 → Phase 6
+
+**Phase 6 ends when:**
+1. H4 BBUpDn sustains 1 or 4 for 3+ consecutive H4 bars → Phase 5 (breakout committed) → Scenario H1/H2
+2. D1 also starts shrinking → Scenario I (Macro sideways) if D1 loses direction
+3. Phase 6 collapses back into Phase 4 (SQZ) → reset → wait again
+
+**Phase 6 + D1 context determines eventual resolution:**
+
+| D1 state during Phase 6 | Meaning | Resolution | Timeline |
+|-------------------------|---------|------------|----------|
+| D1 fly (BBUpDn=1/3) same dir persists | D1 gives bias — H4 will eventually follow | H1 → F → A | Days — eventually commits |
+| D1 fly but weakening (diffBBW neg) | D1 bias fading — oscillation may persist | Extended Phase 6 → Phase 4 | Days to weeks |
+| D1 entering shrink (BBUpDn→2) | Macro bias lost — Scenario I territory | Scenario I (Macro sideways) | Weeks |
+| D1 SQZ (BBUpDn=0) | No macro reference at all | Scenario I — only W1 gives levels | Weeks to months |
+
+**Trade rules during Phase 6:**
+- Each leg IS tradeable (full M30 fly cycle) but confidence is LOW
+- Size: 0.25× maximum — direction reverses every 12–24 hours
+- Entry: G0b-TOUCH at H4 boundary → ride to opposite boundary
+- Exit: G8-BNDTGT at opposite H4 boundary — do NOT hold through reversal
+- D1 bias: if D1 mid=1, slightly favour BUY legs (longer hold, higher quality)
+  if D1 mid=2, slightly favour SELL legs
+  if D1 mid=3, trade both equally at minimum size
+- Stop: tight — beyond the H4 boundary that was just touched
+
+**TRADEINFO during Phase 6:**
+- All chain flags frequently = -1 (no sustained chain detected)
+- Brief `L2H_flyUP` or `L2H_flyDN` appear and disappear each H4 cycle
+- `H2L_sideway` may appear persistently = H4 oscillation suppressing chain detection
+- No sustained chain = Scenario H4 (whipsaw) confirmed
+
+**Gate behavior during Phase 6:**
+- G6-BUY/SELL fires at each M15 transition → but quality capped
+- G8-BNDTGT fires at each H4 boundary → reliable exit signal
+- G0b-TOUCH fires frequently at alternating boundaries → entry signal
+- G0b-PINK may flash briefly during H4 mini-SQZ cycles → wait through these
+
+---
+
 ### Summary: Three Reference Charts — Phase Mapping
 
 | Chart | Date range | What it shows | Phase sequence visible |
@@ -1052,11 +1241,13 @@ initiating — M5 breaks SQZ first, M15 follows, M30 confirms.
 | Amplitude behavior | diffBBW | Shrink type | Phase | Scenario path |
 |-------------------|---------|-------------|-------|---------------|
 | No zigzag — directional trend | Positive | No shrink | Phase 1 | A — hold until M15 enters 513 |
-| Equal-height legs (no decay) | ≈ zero | Parallel fly, no narrowing | Phase 2 onset | A2 or I (macro sideways) |
+| Equal-height legs (no decay) — before SQZ | ≈ zero | Parallel fly, no narrowing | Phase 2 onset | A2 or I (macro sideways) |
 | Symmetric decay — both sides equal | Negative | H4 mid=3 sideways shrink | Phase 3a | B→E — trade both directions equally |
-| Asymmetric decay — one side drops first | Negative | H4 mid=1/2/4/5 trending shrink | Phase 3b | B→E — favour trending side |
+| Asymmetric decay — one side drops first (INTO) | Negative | H4 mid≠3 trending shrink | Phase 3b-INTO | B→E — favour trending side |
+| Asymmetric gain — one side rises (OUT) | Near zero→positive | H4 recovering from SQZ | Phase 3b-OUT | Counter-trend recovery — 0.50× max |
 | Collapsed to noise (no legs) | ≈ zero at minimum | SQZ confirmed | Phase 4 | E2/E3→H — wait for direction |
-| Explosive breakout (2-3× candles) | Positive, sharply increasing | SQZ break | Phase 5 | H→F or C — enter on M15 confirm |
+| Explosive one-direction breakout | Positive sharply | SQZ break — committed | Phase 5 | H→F or C — enter on M15 confirm |
+| Equal-height legs (no decay) — AFTER SQZ | Alternating pos↔neg | H4 cycling fly→SQZ→fly | Phase 6 | H4 whipsaw — 0.25× at H4 boundaries |
 
 ---
 
@@ -1074,12 +1265,15 @@ initiating — M5 breaks SQZ first, M15 follows, M30 confirms.
 3. M15 mid flips again (FLAT→DN or FLAT→UP) → G6-SELL or G6-BUY fires → new entry opposite
 4. New M30 fly cycle begins → repeat until zigzag decays to Phase 4
 
-**Size scaling during zigzag decay:**
-- Phase 2 (equal height legs): full size per quality score
-- Phase 3a (symmetric decay): reduce size as legs shorten — 0.75× to 0.50×, trade both directions
-- Phase 3b (asymmetric decay): reduce size, favour trending direction while H4 mid ≠ 3
+**Size scaling during zigzag phases:**
+- Phase 1 (directional trend): full size per quality score
+- Phase 2 (equal height legs, pre-SQZ): full size — clear fly cycles
+- Phase 3a (symmetric decay): reduce as legs shorten — 0.75× to 0.50×, trade both directions
+- Phase 3b-INTO (asymmetric decay): reduce size, favour trending direction while H4 mid ≠ 3
+- Phase 3b-OUT (recovery zigzag): 0.50× max, favour recovery direction, exit at D1 boundary
 - Phase 4 (collapsed to noise): no new entries — G0b-PINK active
 - Phase 5 (explosive breakout): re-enter per Scenario H/F rules
+- Phase 6 (post-SQZ oscillation): 0.25× max, trade each leg to opposite H4 boundary, do not hold
 
 ---
 
