@@ -3269,7 +3269,7 @@ F3: ENTER → treat as Scenario A1 or A2 depending on W1/D1 alignment
 
 **When user asks to analyze part 3 Scenario F:**
 - Read `./Backtest_data/extras/backtested_EA_sideway_2_fly.jpg` as the Sideway to fly scenario visual reference.
-- ead `./Backtest_data/extras/backtested_EA_sideway_2_fly_zoomin.jpg` as the Sideway to fly zoomin scenario visual reference.
+- Read `./Backtest_data/extras/backtested_EA_sideway_2_fly_zoomin.jpg` as the Sideway to fly zoomin scenario visual reference.
 
 ![Sideway to fly](./Backtest_data/extras/backtested_EA_sideway_2_fly.jpg)
 
@@ -4336,43 +4336,320 @@ debugging only. Not required for chart analysis or trade decisions.
 
 # PART 6 — ANALYSIS WORKFLOW
 
-Apply these steps in order for any attached chart image.
+Complete step-by-step workflow from chart observation to trade execution
+to log verification.
 
-**Step 1 — HTF first: W1 → D1 → H4**
-- W1 direction? (fly BUY/SELL / shrink / SQZ)
-- D1 direction? Same as W1 = aligned; opposite = counter-trend
-- H4 stage? → determines M30 trade target and duration
-- What is the current HTF price target for M30 trades?
+---
 
-**Step 2 — Identify each band**
-Map colors to TFs (Section 2). Which bands are wide (fly) vs narrow (shrink/SQZ)?
+## Step 1 — Read Chart Variables (Part 1)
 
-**Step 3 — Build regime table**
+For each TF (M5, M15, M30, H1, H4, D1), identify:
+
+| Variable | Where defined | What to read |
+|---|---|---|
+| BBW_stage | Section 2–3 | Upper/lower band labels → 511/512/521/522/513/523/400-499 |
+| diffMid_Trend | Section 4 | Middle band label → 1/2/3/4/5 (shown on chart when ≥3) |
+| BBUpDn_state | Section 12 | Band movement direction → 0/1/2/3/4 (not on chart — derived from band shape) |
+| PriceLoc | Section 12 | Price vs band levels → above_upper/at_upper/inside/at_mid/at_lower/below_lower |
+| diffBBW | Section 4b | Band width velocity → positive (expanding) / negative (contracting) / near zero |
+
+---
+
+## Step 2 — CHECK HTF (Part 2)
+
+Read H4 and D1 state BEFORE interpreting any lower TF.
+
+| CHECK | What to look for | What it determines |
+|---|---|---|
+| H4 BBW_stage | Is H4 fly (511/512), shrink (513), or SQZ (400-499)? | Confinement level |
+| H4 diffMid_Trend | What direction is H4? (1=up, 2=dn, 3-5=sideways) | Directional bias |
+| D1 BBW_stage | Is D1 fly, shrink, or SQZ? | Macro context |
+| D1 diffMid_Trend | What direction is D1? | Macro bias for Scenario H resolution |
+| H4 shrink BEFORE or AFTER M15? | Which TF entered shrink first? | Rest vs confinement vs reversal warning |
+
+---
+
+## Step 3 — Identify Scenario (Part 3)
+
+Using Step 1 + Step 2 results, match to scenario:
+
+| CHECK result | Scenario | Tier |
+|---|---|---|
+| All TFs fly aligned | A — Full fly alignment | Tier 1 |
+| H4 fly + M15/M30 shrinking | B — Shallow compression | Tier 2 |
+| H4 fly + LTF SQZ | E — Deep compression | Tier 2 |
+| H4 also SQZ | E4 → H — Direction pivot | Tier 2 |
+| H4 fly + M5 expanding same dir | D — Rest recovery | Tier 3 |
+| LTF expanding from deep SQZ | F — Compression release | Tier 3 |
+| All TFs expanding opposite dir | C — Trend reversal | Tier 3 |
+
+Identify sub-state (A1/A2/A3, B1/B2/B3, etc) from sub-scenario tables.
+
+---
+
+## Step 4 — Identify Phase (Section 13)
+
+Using the candlestick behavior pattern, match to phase:
+
+| Visual observation | Phase | diffBBW confirms |
+|---|---|---|
+| Directional candles, no zigzag | Phase 1 | Positive |
+| Equal-height zigzag legs, pre-SQZ | Phase 2 | Transitioning pos→zero |
+| Symmetric decay — both sides tightening | Phase 3a | Negative, H4 mid=3 |
+| Asymmetric decay — one side drops first (trending INTO compression) | Phase 3b-INTO | Negative, H4 mid≠3 |
+| Asymmetric gain — one side rises (trending OUT OF compression) | Phase 3b-OUT | Near zero→positive |
+| Noise oscillation — no distinguishable legs | Phase 4 | Near zero at minimum |
+| Explosive directional move, 2-3× candle size | Phase 5 | Sharply positive |
+| Equal-height zigzag legs AFTER SQZ, no decay | Phase 6 | Alternating pos↔neg |
+
+---
+
+## Step 5 — Predict (Part 4)
+
+Using scenario + phase + CHECK HTF, apply prediction rules:
+
+| Determine | Using | Reference |
+|---|---|---|
+| DIRECTION | Rule 1 — Phase + CHECK HTF result | Part 4 Direction Prediction table |
+| TARGET | Rule 2 — Scenario → next confinement boundary | Part 4 Target by Scenario table |
+| TIMELINE | Rule 3 — Phase + diffBBW | Part 4 Timeline Prediction table |
+| NEXT SCENARIO | Rule 4 — CHECK HTF at transition point | Part 4 Next Scenario section |
+| CONFIDENCE | Rule 5 — Matrix of all factors | Part 4 Confidence Matrix |
+
+---
+
+## Step 6 — Act (Part 5)
+
+Using Part 4 prediction outputs, execute trade decision:
+
+| Determine | Using | Reference |
+|---|---|---|
+| Entry condition | E1–E6 based on scenario | Part 5 Entry Conditions table |
+| Exit condition | X1–X4 based on target/fade | Part 5 Exit Conditions table |
+| Block check | B1–B4 — M15 sideways / pink zone / H4 opposing | Part 5 Block Conditions table |
+| Size | Confidence level → size multiplier | Part 5 Size Matrix |
+| Stop | Scenario → ATR TF → band level | Part 5 Stop Loss Placement table |
+
+---
+
+## Step 7 — Verify Against EA Log
+
+After completing Steps 1–6 visually, verify by extracting EA journal log data.
+If your visual analysis disagrees with the log, **the log is ground truth**.
+
+### Log File Location
+
 ```
-W1: ___ | D1: ___ | H4: ___ | H1: ___ | M30: ___ | M15: ___ | M5: ___
+.\Backtest_data\(version)\(YYYYMMDD)_clean.log
 ```
 
-**Step 4 — Read middle band labels**
-Note values 3/4/5 and REVUP/REVDN flags. Flat labels = that TF is ranging. Ask: which HTF is causing this lower TF to be flat?
+Where:
+- `(version)` = the EA version folder (e.g., `v22.17`, `V30.02`)
+- `(YYYYMMDD)` = the backtest date in year-month-day format
 
-**Step 5 — Read ATRSL state**
-dir=0 (orange below price) = uptrend stop. dir=1 (orange above) = downtrend stop.
+**Log format reference:** See `.\log_examples.md` for complete documentation of:
+- Journal log output format and field ordering
+- AllTF decoder (line_seq_touch, Midline_cross, BBW_stage arrays)
+- TRADEINFO field semantics and enum values
+- BBTFImpact flag format and index reference
+- ATRSL1buf struct fields (dir, Trend, LV, Upper, Lower, ATRSLMid, Val)
+- Cascade state decoder (cas_shrinkTF, cas_sqzCount)
+- Example log entries with annotated field breakdowns
 
-**Step 6 — Read gate labels**
-List visible tags with bar position. Match color to meaning (Part 1 Section 6).
+When grep output is unclear, check `log_examples.md` for the exact field
+format before interpreting values.
 
-**Step 7 — Match scenario**
-Using regime table from Step 3:
-- All mid TFs fly same direction → Scenario A
-- HTF fly, inner TFs shrinking → Scenario B
-- HTF SQZ, inner TFs shrinking, band touch → Scenario C
-- HTF fly, inner TFs rest then resume → Scenario D
-- H4/H1 fly + M30/M15/M5 compress within envelope → Scenario E
-- All TFs SQZ, about to break → Scenario F
-- M30+M15 mid both ≥ 3 → Scenario H (Direction pivot)
+Example:
+```
+.\Backtest_data\V30.02\20260606_clean.log
+```
 
-**Step 8 — Apply trade decision**
-Read Part 4 nxt:/tch: labels. State: current regime, price target, which gate fires next, open position status.
+### Extraction Commands
+
+#### 7a. Verify HTF State (confirms Step 2)
+
+```bash
+# D1 state — confirm D1 direction and regime
+grep -r "\[D1\]" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -20
+
+# H4 state — confirm H4 direction and regime
+grep -r "\[H4\]" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -20
+
+# BBW_stage per TF — confirm regime at each level
+grep -r "BBW_stage" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -10
+
+# diffMid_Trend per TF — confirm direction at each level
+grep -r "diffMid" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -10
+
+# BBUpDn_state per TF — confirm band movement direction
+grep -r "BBUpDn" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -10
+```
+
+#### 7b. Verify Scenario Identification (confirms Step 3)
+
+```bash
+# TRADEINFO chain flags — confirm cascade direction
+grep -r "\[TRADEINFO\]" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -10
+# Expected match:
+#   H2L_flyStrink active    = Scenario B/E (compression)
+#   L2H_flyUP/DN active     = Scenario D/F (expansion)
+#   H2L_sideway active      = Scenario E4/H (all suppressed)
+#   All flags = -1           = Scenario H (direction pivot, transitional)
+
+# BBTFImpact — confirm compression depth = sub-scenario
+grep -r "\[BBTFImpact\]" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -10
+# Expected match:
+#   HTF_Drive_LTF_Sideway:[M15_1]              = B1
+#   HTF_Drive_LTF_Sideway:[M15_1, M30_1]       = B2
+#   HTF_Drive_LTF_Sideway:[M15_1, M30_1, H1_1] = B3
+#   + LTF_Drive_HTF_Fly appearing              = E3 loading / transition to F
+
+# Cascade state values — confirm sub-scenario directly
+grep -r "cas_shrinkTF" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
+grep -r "cas_sqzCount" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
+# Expected match:
+#   cas_shrinkTF=1 → B1    =2 → B2    =3 → B3    =-1 → not in B
+#   cas_sqzCount=0 → B     =1 → E1    =2 → E2 (pink)   =3+ → E4/H
+```
+
+#### 7c. Verify Phase Identification (confirms Step 4)
+
+```bash
+# diffBBW — confirm compression/expansion rate = phase
+grep -r "diffBBW" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -10
+# Expected match:
+#   Negative values            = Phase 3 (shrink deepening)
+#   Near zero at minimum       = Phase 4 (SQZ floor)
+#   Sharply positive           = Phase 5 (expansion)
+#   Alternating pos↔neg        = Phase 6 (post-SQZ oscillation)
+
+# SQZ loading and break labels — confirm Phase 4→5 transition
+grep -r "MIDLINE_SQZ" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
+grep -r "SQZ_BREAK" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
+# Expected match:
+#   MIDLINE_SQZ_LOADING    = E3 / Phase 4 (loading state)
+#   MIDLINE_SQZ_ENTRY      = Phase 4→5 transition (entry fires)
+#   SQZ_BREAK_UP           = Phase 5 BUY direction
+#   SQZ_BREAK_DN           = Phase 5 SELL direction
+
+# Cascade touch and pink zone events — confirm Phase boundary hits
+grep -r "CASCADE_TOUCH" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
+grep -r "CASCADE_PINK" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
+# Expected match:
+#   CASCADE_TOUCH(TF:n upper_band) = confinement boundary hit (E3 entry check)
+#   CASCADE_TOUCH(TF:n lower_band) = confinement boundary hit
+#   CASCADE_PINK_ZONE              = Phase 4 / E2 pink zone (exit all)
+```
+
+#### 7d. Verify Trade Action (confirms Step 6)
+
+```bash
+# Entry gate fires — confirm entry conditions E1-E6
+grep -r "G6-BUY\|G6-SELL\|G6-LOAD" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -10
+# G6-BUY/SELL maps to: E1/E2/E5 (M15 mid flip entry)
+# G6-LOAD maps to: E4 (arm — M5 expansion initiated)
+
+# Exit gate fires — confirm exit conditions X1-X4
+grep -r "G8-BNDTGT" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
+# Maps to: X1 (target reached — PriceLoc at target band)
+
+grep -r "G5-FADE" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
+# Maps to: X2 (M15 trend fading — diffMid 1→3 or 2→3)
+
+grep -r "G5-WEAK" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
+# Maps to: X3 (quality degraded — score < 60)
+
+# Block gate fires — confirm block conditions B1-B4
+grep -r "G0b-PINK\|PINK_ZONE" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
+# Maps to: B2/X4 (pink zone — M15+M30 both SQZ → exit all)
+
+grep -r "G0c-SQZLOCK\|SQZLOCK" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
+# Maps to: B4 (full SQZ — all TFs squeezed)
+
+# ATRSL stop levels — confirm stop placement
+grep -r "ATRSL" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
+# dir:0 = tracking upward (BUY trailing stop)
+# dir:1 = tracking downward (SELL trailing stop)
+```
+
+### Verification Checklist
+
+Match log values against expected values for your identified scenario:
+
+| Your visual observation (Steps 1-4) | Log field to verify | Expected log value if correct |
+|---|---|---|
+| D1 sideway on chart | D1 diffMid_Trend | 3, 4, or 5 |
+| D1 fly up on chart | D1 diffMid_Trend | 1 |
+| D1 fly down on chart | D1 diffMid_Trend | 2 |
+| H4 fly on chart | H4 BBW_stage | 511 or 512 |
+| H4 shrinking on chart | H4 BBUpDn_state | 2 (shrinking) |
+| H4 SQZ on chart | H4 BBW_stage | 400-499 |
+| M15 sideways (blocking entry) | M15 diffMid_Trend | ≥ 3 |
+| M30 SQZ but still in trade | M30 BBW_stage | 400-499 (NOT a block alone) |
+| Pink zone — exit all | CASCADE_PINK_ZONE | Present in log |
+| Phase 3 (legs shortening) | diffBBW_H4 | Negative values |
+| Phase 4 (noise oscillation) | diffBBW_H4 | Near zero |
+| Phase 5 (explosive breakout) | SQZ_BREAK_UP or SQZ_BREAK_DN | Present in log |
+| Phase 6 (equal legs post-SQZ) | diffBBW_H4 | Alternating positive and negative |
+| Scenario B1 | cas_shrinkTF | 1 |
+| Scenario B2 | cas_shrinkTF | 2 |
+| Scenario B3 | cas_shrinkTF | 3 |
+| Scenario E2 (pink zone) | cas_sqzCount | ≥ 2 |
+| Scenario H (all SQZ) | TRADEINFO all flags | -1 |
+| Entry fired | G6-BUY or G6-SELL | Present in log at expected bar |
+| Target exit | G8-BNDTGT | Present in log at target level |
+| Forced exit (pink) | G0b-PINK | Present in log |
+
+### When Log Disagrees With Chart
+
+| Situation | Likely cause | Action |
+|---|---|---|
+| Chart shows H4 fly but log shows H4 BBUpDn=2 | H4 just entered shrink — visual lags behind computation | Trust log — reassess as Scenario B |
+| Chart shows SQZ but log shows BBW_stage=513 | Not yet full SQZ — still in late shrink | Wait — not Phase 4 yet, still Phase 3 |
+| Chart shows breakout but no SQZ_BREAK label | M5 broke but M15 hasn't confirmed yet | Wait — still E3/F1, not Phase 5 |
+| Log shows G6-BUY fired but chart looks sideways | Entry valid by computed values — visual is deceptive | Trust entry condition — use small size, tight stop |
+| Log shows pink zone but chart looks tradeable | M15+M30 both hit BBW 400-499 — hard block | Trust log — EXIT ALL, do not override pink zone |
+| cas_shrinkTF=3 but chart shows H1 still fly | H1 just entered shrink — band hasn't visually changed yet | Trust log — H1 shrink confirmed, reduce to 0.25× |
+| TRADEINFO all=-1 but chart shows M30 fly | Chain detection couldn't confirm sustained chain | Likely Phase 6 or H4 transition — treat with caution |
+
+### Multi-Day Verification Example
+
+For verifying D1 sideway over multiple days:
+
+```bash
+# Extract past 5 days of D1 state from multiple log files
+grep -r "\[D1\]" .\Backtest_data\V30.02\20260606_clean.log | tail -5
+grep -r "\[D1\]" .\Backtest_data\V30.02\20260606_clean.log | tail -5
+grep -r "\[D1\]" .\Backtest_data\V30.02\20260606_clean.log | tail -5
+grep -r "\[D1\]" .\Backtest_data\V30.02\20260606_clean.log | tail -5
+grep -r "\[D1\]" .\Backtest_data\V30.02\20260606_clean.log | tail -5
+
+# Or use wildcard for date range
+grep -r "\[D1\]" .\Backtest_data\V30.02\20260606_clean.log | tail -25
+```
+
+Confirm D1 diffMid_Trend = 3/4/5 across all extracted lines = D1 sideway confirmed.
+If D1 diffMid_Trend = 1 or 2 appears in any line = D1 still has direction, NOT sideway.
+
+### Full Verification Workflow Example
+
+```
+1. Chart shows: H4-fly-- labels, M30 oscillating, legs shortening
+   Visual assessment: Scenario B3, Phase 3a
+
+2. Extract log:
+   grep -r "cas_shrinkTF" (log) → cas_shrinkTF=3 ✅ matches B3
+   grep -r "diffBBW_H4" (log) → negative values ✅ matches Phase 3
+   grep -r "\[BBTFImpact\]" (log) → HTF_Drive_LTF_Sideway:[M15_1,M30_1,H1_1] ✅ matches B3
+   grep -r "\[TRADEINFO\]" (log) → H2L_flyStrink:3 ✅ matches compression
+
+3. All match → visual assessment confirmed
+   Proceed to Part 4 prediction with HIGH confidence in scenario identification
+
+4. If mismatch found:
+   grep shows cas_shrinkTF=2 (not 3) → actually B2, not B3
+   → Reassess: H1 hasn't entered shrink yet — adjust size from 0.25× to 0.50×
+```
 
 ---
 
