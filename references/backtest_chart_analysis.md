@@ -414,6 +414,336 @@ flowchart TD
 
 ---
 
+## 12. Cascade Direction Model
+
+Two cascade directions drive every market cycle in this strategy.
+
+### Compression — Check HTF First, Then Read LTF
+
+Compression is NOT a simple one-direction cascade. The HTF state at the time
+LTF starts shrinking determines whether it's a rest, confinement, or reversal warning.
+
+**Always check HTF BEFORE interpreting LTF shrink:**
+
+| H4 state | D1 state | LTF shrink meaning | Scenario path | Reversal probability |
+|----------|----------|-------------------|---------------|---------------------|
+| Fly (511/512) | Fly (511/512) | REST — internal LTF pullback, HTF intact | B→D (rest recovery) | Low |
+| Shrink (513) | Fly (511/512) | CONFINED — H4 caused LTF compression, D1 may rescue | B→E (deep compression) | Medium |
+| Shrink (513) | Shrink (513) | REVERSAL WARNING — both HTF losing direction | B→E→E4 (HTF reversal) | High |
+| SQZ (400-499) | Fly (511/512) | BOTTOM with D1 bias — old H4 trend exhausted | E4→H (direction pivot, D1 gives bias) | High for H4, low for macro |
+| SQZ (400-499) | Shrink/SQZ | DEEP BOTTOM — no macro bias exists | E4→H (direction pivot, no bias) | Very high — full reversal |
+
+**Two phenomena happen simultaneously during compression:**
+
+1. **Shrink propagation (LTF → HTF):** LTF bands shrink first because they react to price faster.
+   M15 enters 513 before M30 before H1 before H4. LTF is the leading indicator.
+   Each TF confirming shrink increases reversal probability.
+
+2. **Confinement effect (HTF → LTF consequence):** Once H4 IS in shrink, its band boundaries
+   act as ceiling/floor for all lower TFs. M30/M15 oscillate within H4 upper/lower band.
+   This is the RESULT of H4 shrink, not the initiation of shrink.
+
+**The critical question is: did HTF shrink FIRST (causing LTF compression) or did LTF shrink
+FIRST (warning of HTF reversal)?**
+
+- If H4 entered shrink BEFORE M15 → H4 is the cause → confinement (check D1 for rescue)
+- If M15 entered shrink BEFORE H4 → LTF is warning → watch if H4 follows (reversal ladder)
+- If both entered shrink simultaneously → strong reversal signal
+
+**Reversal probability ladder — each TF confirming shrink escalates:**
+
+| Depth reached | Reversal probability | Scenario |
+|---------------|---------------------|----------|
+| M15 only (H4 still fly) | Low — likely rest/continuation | B1 |
+| M30 added (H4 still fly) | Low-Medium — watch H1 | B2 |
+| H1 added (H4 still fly) | Medium — H4 likely to follow | B3 |
+| H4 enters shrink (D1 still fly) | High — HTF reversal warning | E/E4 |
+| H4 SQZ + D1 still fly | High for H4, D1 gives bias | H (D1 bias) |
+| H4 SQZ + D1 shrink/SQZ | Very high — full macro reversal | H (no bias) |
+
+Shrink propagation (LTF leads — early warning of reversal):
+  M15 BBUpDn→2 first (trend weakening at entry TF)
+    → M30 BBUpDn→2 follows (momentum fading at driver TF)
+      → H1 BBUpDn→2 follows (chain anchor losing direction)
+        → H4 BBUpDn→2 follows (macro bias losing direction — reversal warning confirmed)
+          → H4 BBUpDn→0 (SQZ) — old trend exhausted → Scenario H (direction pivot)
+
+  BUT CHECK at each step: was H4 already shrinking when M15 started?
+    YES → H4 caused LTF compression (confinement — H4 is driver, not victim)
+    NO  → M15 is warning that H4 will follow (genuine reversal signal from LTF)
+
+Confinement effect (HTF → LTF — consequence of HTF shrink, not cause):
+  Once H4 IS in shrink → H4 band boundaries act as ceiling/floor:
+    H4 upper/lower band → confines H1 range
+      → H1 upper/lower band → confines M30 range
+        → M30 upper/lower band → confines M15 range
+          → M15 upper/lower band → confines M5 range
+  This is the RESULT of H4 shrink. M30/M15 range within these boundaries
+  until H4 exits shrink. Gate G8-BNDTGT fires when price touches these boundaries.
+
+### Expansion Cascade (LTF → HTF)
+
+LTF breaks SQZ first → signal travels upward → HTF confirms last.
+Observable as BBUpDn_state transitioning 0→1 (expanding) TF by TF bottom-up.
+Same direction as shrink propagation — LTF always leads both shrink and expansion.
+
+**CHECK HTF context to determine expansion quality:**
+
+| H4 state when M5 breaks SQZ | D1 state | Expansion meaning | Scenario |
+|------------------------------|----------|-------------------|----------|
+| Still fly (511/512) | Fly | High quality — macro intact, rest over | D (rest recovery) |
+| Shrink (513) | Fly | Medium — H4 confined but D1 backing | F (compression release) |
+| SQZ (400-499) | Fly | Medium — H4 exhausted but D1 gives bias | H1→F (direction pivot same) |
+| SQZ (400-499) | Shrink/SQZ | Low until confirmed — no macro backing | H2→C (direction pivot opposite) |
+
+```
+M5 breaks SQZ (REVUP/REVDN) — G6-LOAD fires
+  → M15 follows in 2-5 bars (FLAT→UP/DN) — G6-BUY/SELL fires — ENTRY
+    → M30 confirms (511/512) — quality boost +10 to +15
+      → H1 confirms — hold signal sustained
+        → H4 confirms — full fly → Scenario A
+```
+
+### Cycle Sequence
+
+```
+CHECK HTF FIRST at every step:
+
+A (full fly, all TFs aligned)
+  → B (M15 shrinks: CHECK — is H4 still fly?)
+    → H4 still fly + D1 fly: rest likely
+      → B→D→A (rest recovery — H4 never broke, LTF pullback only)
+    → H4 also shrinking: confinement
+      → B→E (H4 caused LTF compression — LTF confined within H4 band)
+      → CHECK D1: D1 still fly?
+        → Yes: E (deep compression, D1 may rescue H4)
+        → D1 also shrinking: E→E4 (HTF reversal warning — both H4 and D1 losing direction)
+          → E4→H (all TFs SQZ: BOTTOM — old trend exhausted, direction resolving)
+            → H1→F→A (M5 expands same direction: compression release → continuation)
+            → H2→C→new A (M5 expands opposite: trend reversal complete)
+
+Both shrink propagation (LTF→HTF warning) and expansion (LTF→HTF breakout) travel bottom-up.
+Confinement (HTF→LTF range restriction) is the consequence of HTF shrink, not the cause.
+The CHECK at each step determines whether LTF shrink is rest vs confinement vs reversal warning.
+```
+
+### Touch Type Classification
+
+During D1, bands move toward price — candle wicks touch multiple TF bands simultaneously.
+Three touch types must be distinguished:
+
+| Type | BBW_stage | diffMid_Trend | BBUpDn_state | Meaning | Action |
+|------|-----------|---------------|--------------|---------|--------|
+| Type 1 | Shrinking 513/523 | 3/4/5 — flat or weak | 2 (shrinking — band moving toward price) | Band moved to price — compression geometry noise | IGNORE — not a signal |
+| Type 2 | Highest still-flying TF at outer band | 4 or 5 — directional lean | 1 (expanding) at HTF level — PriceLoc=at_upper or at_lower | Price reached confinement boundary — real signal | Check G0b filters — valid entry |
+| Type 3 | Multiple TFs SQZ 400-499 | 3 all TFs | 0 (no_state) alternating with 2 same bar/adjacent bars | SQZ peak — band width < candle range, geometric overlap | G0b-PINK zone — EXIT all, wait |
+
+**Key rule:** The signal always comes from the HIGHEST TF that is currently at its outer band (PriceLoc=at_upper or at_lower).
+Lower TF outer band touches during HTF shrink = Type 1 noise (BBUpDn_state=2 shrinking, band moved to price).
+HTF confinement boundary touch WITH PriceLoc=at_upper/lower AND diffMid=4/5 = Type 2 valid signal.
+**BBUpDn_state measures band movement direction — NOT price location:**
+- 0 = no_state (SQZ or transitional)
+- 1 = expanding (upper rising AND lower falling — confirmed 2 bars)
+- 2 = shrinking (upper falling AND lower rising — confirmed 2 bars)
+- 3 = up (both bands moving upward together)
+- 4 = dn (both bands moving downward together)
+
+---
+
+## 12b. TRADEINFO Chain Flags — Cascade Direction Observable
+
+TRADEINFO flags are the EA's real-time observable for cascade direction.
+They appear in the journal log under the `[TRADEINFO]` tag and map directly
+to the cascade model in Section 12.
+
+**How to read:** Each flag has a TF index value. When ≥ 0, that flag's chain
+is active up to that TF level. When = -1, the chain is not detected.
+
+| Flag | Active (≥0) meaning | Cascade mapping | When you see it |
+|------|--------------------|-----------------|-----------------| 
+| H2L_flyUP | HTF→LTF fly uptrend chain confirmed | Expansion confirmed top-down — all TFs aligned UP | Scenario A (full fly up) |
+| H2L_flyDN | HTF→LTF fly downtrend chain confirmed | Expansion confirmed top-down — all TFs aligned DN | Scenario A (full fly dn) |
+| H2L_flyStrink | HTF→LTF shrink chain active | Shrink propagating — compression cascade in progress | Scenario B/E (compression) |
+| H2L_sideway | HTF→LTF sideway/SQZ chain | All TFs suppressed — compression complete | Scenario E4/H (BOTTOM) |
+| L2H_flyUP | LTF→HTF fly uptrend chain (bottom-up) | LTF leading expansion upward — D2 initiated | Scenario D/F (expansion up) |
+| L2H_flyDN | LTF→HTF fly downtrend chain (bottom-up) | LTF leading expansion downward — D2 initiated | Scenario D/F (expansion dn) |
+| L2H_sideway | LTF→HTF sideway chain | LTF being suppressed by HTF — D1 active | Scenario B/E (LTF confined) |
+| All = -1 | No chains detected | Mixed/neutral — transitional state | Scenario H (direction pivot) |
+
+**TF index reference (used for all TRADEINFO and BBTFImpact flags):**
+
+| Index | Timeframe |
+|-------|-----------|
+| 0 | M5 |
+| 1 | M15 |
+| 2 | M30 |
+| 3 | H1 |
+| 4 | H4 |
+| 5 | D1 |
+
+**Scenario identification from TRADEINFO flags:**
+
+| TRADEINFO state | Scenario | Trade implication |
+|----------------|----------|-------------------|
+| `H2L_flyUP:0` + `L2H_flyUP:3` | A — Full fly alignment (up) | Full size trend entry BUY |
+| `H2L_flyDN:0` + `L2H_flyDN:3` | A — Full fly alignment (dn) | Full size trend entry SELL |
+| `H2L_flyStrink:1` + `L2H_sideway:1` | B1 — M15 shrink only | Reduce to 0.75×, watch depth |
+| `H2L_flyStrink:2` + `L2H_sideway:2` | B2 — M30 shrink | Reduce to 0.50×, watch H1 |
+| `H2L_flyStrink:3` + `L2H_sideway:3` | B3 — H1 shrink | Reduce to 0.25×, watch H4 |
+| `H2L_sideway:1` + `L2H_sideway:1` | E1/E2 — Deep compression | No entry — G0b-PINK may fire |
+| `H2L_sideway:3` + all L2H = -1 | E4/H — BOTTOM | No entry — wait M5 BBUpDn 0→1 |
+| All flags = -1 | H — Direction pivot (transitional) | No entry — direction unknown |
+| `L2H_flyUP:1` + `H2L_flyStrink:3` | D1/F1 — LTF leading, HTF not confirmed | ARM — wait M30 confirm |
+| `L2H_flyUP:2` + `H2L_flyStrink:3` or clearing | D2/F2 — MTF confirmed | ENTER — 0.75× |
+| `L2H_flyUP:3` + `H2L_flyUP:0` | D3/F3 — Full chain restored | → Scenario A, full size |
+| `L2H_flyDN:1` + `H2L_flyUP:3` (opposing) | C1 — MTF reversal only | Small entry 0.25× — wait H4 |
+| `L2H_flyDN:3` + `H2L_flyDN:0` | C2 — H4 confirmed reversal | → New Scenario A opposite dir |
+
+**Phase 3a/3b connection (Section 13):**
+- Phase 3a (symmetric zigzag): `H2L_flyStrink` active + `H2L_sideway` not yet
+- Phase 3b onset: `H2L_flyStrink` active + one `L2H_fly` flag starting to appear (LTF attempting expansion within shrink)
+- Phase 3a→3b transition: `H2L_flyStrink` clears → replaced by `H2L_sideway` = shrink chain converted to sideway chain
+
+---
+
+## 12c. BBTFImpact Flags — Cascade Pressure Indicators
+
+BBTFImpact flags appear in the journal log under the `[BBTFImpact]` tag.
+They show which TFs are being suppressed by higher TFs (D1 pressure)
+vs which TFs are showing independent fly energy (D2 pressure).
+
+| Flag | Format | Active (=1) meaning | Cascade mapping |
+|------|--------|--------------------|--------------------|
+| HTF_Drive_LTF_Sideway | [TF_name_index] | TF at that index being pushed into sideways by higher TFs | Shrink/confinement active at this TF level |
+| LTF_Drive_HTF_Fly | [TF_name_index] | TF at that index showing fly energy despite HTF pressure | Expansion energy building at this TF level |
+
+**Index reference:** 1=M15, 2=M30, 3=H1, 4=H4, 5=D1
+
+**Log format examples:**
+```
+[BBTFImpact] HTF_Drive_LTF_Sideway:[M15_1]
+  → M15 (index 1) being suppressed — Scenario B1
+
+[BBTFImpact] HTF_Drive_LTF_Sideway:[M15_1, M30_1]
+  → M15 and M30 both suppressed — Scenario B2
+
+[BBTFImpact] HTF_Drive_LTF_Sideway:[M15_1, M30_1, H1_1]
+  → M15, M30, and H1 all suppressed — Scenario B3
+
+[BBTFImpact] LTF_Drive_HTF_Fly:[M30_1, H1_1]
+  → M30 and H1 showing fly energy — expansion building at MTF level
+
+[BBTFImpact] HTF_Drive_LTF_Sideway:[M30_1] LTF_Drive_HTF_Fly:[M30_1, H1_1]
+  → CONFLICT — M30 being suppressed AND showing fly energy simultaneously
+  → Volatile transition state — Scenario E3 or H territory
+```
+
+**Scenario B sub-scenario mapping:**
+
+| BBTFImpact pattern | Scenario | Size multiplier |
+|-------------------|----------|----------------|
+| `HTF_Drive_LTF_Sideway:[M15_1]` only | B1 — M15 shrink only | 0.75× |
+| `HTF_Drive_LTF_Sideway:[M15_1, M30_1]` | B2 — M30 shrink | 0.50× |
+| `HTF_Drive_LTF_Sideway:[M15_1, M30_1, H1_1]` | B3 — H1 shrink | 0.25× |
+| `HTF_Drive_LTF_Sideway:[M15_1, M30_1, H1_1, H4_1]` | E4 — H4 also compressing | No entry |
+
+**Scenario E/H transition mapping:**
+
+| BBTFImpact pattern | Scenario | Action |
+|-------------------|----------|--------|
+| All `HTF_Drive_LTF_Sideway`, no `LTF_Drive_HTF_Fly` | E2 — Full SQZ, no expansion energy | Wait — G0b-PINK |
+| `HTF_Drive_LTF_Sideway` + `LTF_Drive_HTF_Fly` appearing | E3 — Loading, expansion building | Watch — G6-LOAD may fire |
+| `LTF_Drive_HTF_Fly` growing, `HTF_Drive_LTF_Sideway` clearing | F1/F2 — Expansion taking over | ARM / ENTER |
+| Only `LTF_Drive_HTF_Fly`, no `HTF_Drive_LTF_Sideway` | F3/A — Full expansion | Full size entry |
+
+**Conflict state (both flags active at same TF):**
+Both `HTF_Drive_LTF_Sideway` and `LTF_Drive_HTF_Fly` active simultaneously at a TF
+= volatile transition. HTF suppressing but LTF pushing back.
+- Maps to Scenario E3 (loading) or Scenario H (direction pivot)
+- sizeMultiplier = 0.5 (compromise between suppression and drive signals)
+- Watch M5 BBUpDn_state: 0→1 resolves the conflict in favour of expansion
+
+**Section 13 connection:**
+- Phase 2 onset: first `HTF_Drive_LTF_Sideway` flag appears = zigzag starting
+- Phase 3 deepening: `HTF_Drive_LTF_Sideway` count increasing = more TFs suppressed = legs shortening
+- Phase 4 (SQZ): all `HTF_Drive_LTF_Sideway`, no `LTF_Drive_HTF_Fly` = noise oscillation
+- Phase 5 (breakout): `LTF_Drive_HTF_Fly` appears and grows = explosive move starting
+
+---
+
+## 12d. Cascade State Decoder — cas_shrinkTF and cas_sqzCount
+
+These internal EA values map directly to scenario sub-states.
+They provide the fastest single-variable identification of where
+in the compression cascade the market currently sits.
+
+### cas_shrinkTF — Highest TF Currently in Shrink
+
+| cas_shrinkTF | Meaning | Scenario sub-state | Reversal probability |
+|-------------|---------|-------------------|---------------------|
+| 1 | M15 is highest active shrink TF | B1 — Shallow compression | Low |
+| 2 | M30 is highest shrink TF | B2 — Moderate compression | Low-Medium |
+| 3 | H1 is highest shrink TF | B3 — Deep compression | Medium |
+| 4 | H4 is highest shrink TF | E4 — HTF also compressing | High |
+| 5 | D1 is highest shrink TF | Scenario I — Macro sideways | Very high |
+| -1 | No TF in fly_shrink | Not in B — check E/H or A | Depends on other flags |
+
+**cas_shrinkTF maps to Section 13 Phase 3 amplitude:**
+- cas_shrinkTF = 1: Phase 3 zigzag legs still tall (only M15 confined)
+- cas_shrinkTF = 2: Phase 3 legs moderately shortened (M30 now confined too)
+- cas_shrinkTF = 3: Phase 3 legs significantly shortened (H1 confined)
+- cas_shrinkTF = 4: Phase 3 → Phase 4 transition (H4 confined = approaching SQZ)
+
+### cas_sqzCount — Number of TFs Currently in SQZ
+
+| cas_sqzCount | Meaning | Scenario sub-state | Gate status |
+|-------------|---------|-------------------|------------|
+| 0 | No TFs in SQZ | B (shallow compression) — shrink only | Normal gates |
+| 1 | One TF squeezed (typically M5 first) | E1 — LTF partial SQZ | G0c-SQZLOCK may activate |
+| 2 | Two TFs squeezed (M5+M15) | E2 — LTF full SQZ | G0b-PINK fires — EXIT all |
+| 3 | Three TFs squeezed (M5+M15+M30) | E3/E4 — Deep cascade | G0b-PINK + G0c-SQZLOCK |
+| 4+ | Four or more TFs squeezed | E4/H — BOTTOM | All gates locked — wait |
+
+**Pink zone condition:**
+cas_sqzCount ≥ 2 AND M15+M30 both SQZ simultaneously → G0b-PINK fires → EXIT all.
+This maps to E2 (LTF full SQZ) or deeper.
+
+**Combined cas_shrinkTF + cas_sqzCount reading:**
+
+| cas_shrinkTF | cas_sqzCount | Full state | Scenario | Action |
+|-------------|-------------|-----------|----------|--------|
+| 1 | 0 | M15 shrink, nothing squeezed | B1 | Trade at 0.75× |
+| 2 | 0 | M30 shrink, nothing squeezed | B2 early | Trade at 0.50× |
+| 2 | 1 | M30 shrink, M5 squeezed | B2 late → E1 | Reduce to 0.25× |
+| 3 | 1 | H1 shrink, M5 squeezed | B3 → E1 | Reduce to 0.25× |
+| 3 | 2 | H1 shrink, M5+M15 squeezed | E2 | EXIT — G0b-PINK |
+| -1 | 2 | No shrink but 2 TFs squeezed | E2/E3 transition | Wait — G6-LOAD may fire |
+| -1 | 3+ | No shrink, 3+ TFs squeezed | E4/H — BOTTOM | No entry — wait M5 expand |
+| -1 | 0 | No shrink, no squeeze | A (fly) or transition | Check TRADEINFO for direction |
+
+### Journal Log Label Reference
+
+These labels appear in EA journal output and map to specific scenario sub-states:
+
+| Log label | Meaning | Scenario sub-state | Action |
+|-----------|---------|-------------------|--------|
+| `MIDLINE_SQZ_LOADING` | M5 in SQZ, M30 shrinking — loading state | E3 — Loading | Wait — G6-LOAD about to fire |
+| `MIDLINE_SQZ_ENTRY` | Loading complete — entry condition met | E3→D/F transition | ENTER on next bar |
+| `SQZ_BREAK_UP` | M5 broke SQZ bullish — expansion initiated upward | D1 or F1 initiating BUY | ARM — wait M15 confirm |
+| `SQZ_BREAK_DN` | M5 broke SQZ bearish — expansion initiated downward | D1 or F1 initiating SELL | ARM — wait M15 confirm |
+| `CASCADE_TOUCH(TF:n upper_band)` | G0b-TOUCH fired at TF index n, upper band | Confinement boundary reached | Check G0b 6 filters |
+| `CASCADE_TOUCH(TF:n lower_band)` | G0b-TOUCH fired at TF index n, lower band | Confinement boundary reached | Check G0b 6 filters |
+| `CASCADE_PINK_ZONE` | G0b-PINK fired — M15+M30 both SQZ | E2 — Pink zone active | EXIT all — no entries |
+
+**How to use with Section 13 phases:**
+- Phase 2 onset: `CASCADE_TOUCH` starts appearing = zigzag legs hitting band boundaries
+- Phase 3 deepening: `CASCADE_TOUCH` TF index increasing = confinement propagating upward
+- Phase 4: `CASCADE_PINK_ZONE` appears = zigzag collapsed to noise
+- Phase 5: `SQZ_BREAK_UP/DN` appears = explosive breakout starting
+- Entry: `MIDLINE_SQZ_LOADING` → `MIDLINE_SQZ_ENTRY` → `SQZ_BREAK_UP/DN` = full entry sequence
+
+---
+
 ## 13. Candlestick Behavior During Fly → Shrink → SQZ Transition
 
 During fly → shrink → SQZ, candlesticks form a **zigzag oscillation pattern** between
@@ -776,336 +1106,6 @@ initiating — M5 breaks SQZ first, M15 follows, M30 confirms.
 4. **MTF Predict** — if H4 is sideway and D1 is shrinking, in the same time M30 & H1 in fly in direction, able to predict the fly will end at H4 upper band or H1 will drive H4 to fly. 
 
 The cascade is top-down: **W1 sets D1's range → D1 sets H4's range → H4 sets H1's range -> H1 sets M30's range → M30 sets M15's range**.
-
----
-
-## 12. Cascade Direction Model
-
-Two cascade directions drive every market cycle in this strategy.
-
-### Compression — Check HTF First, Then Read LTF
-
-Compression is NOT a simple one-direction cascade. The HTF state at the time
-LTF starts shrinking determines whether it's a rest, confinement, or reversal warning.
-
-**Always check HTF BEFORE interpreting LTF shrink:**
-
-| H4 state | D1 state | LTF shrink meaning | Scenario path | Reversal probability |
-|----------|----------|-------------------|---------------|---------------------|
-| Fly (511/512) | Fly (511/512) | REST — internal LTF pullback, HTF intact | B→D (rest recovery) | Low |
-| Shrink (513) | Fly (511/512) | CONFINED — H4 caused LTF compression, D1 may rescue | B→E (deep compression) | Medium |
-| Shrink (513) | Shrink (513) | REVERSAL WARNING — both HTF losing direction | B→E→E4 (HTF reversal) | High |
-| SQZ (400-499) | Fly (511/512) | BOTTOM with D1 bias — old H4 trend exhausted | E4→H (direction pivot, D1 gives bias) | High for H4, low for macro |
-| SQZ (400-499) | Shrink/SQZ | DEEP BOTTOM — no macro bias exists | E4→H (direction pivot, no bias) | Very high — full reversal |
-
-**Two phenomena happen simultaneously during compression:**
-
-1. **Shrink propagation (LTF → HTF):** LTF bands shrink first because they react to price faster.
-   M15 enters 513 before M30 before H1 before H4. LTF is the leading indicator.
-   Each TF confirming shrink increases reversal probability.
-
-2. **Confinement effect (HTF → LTF consequence):** Once H4 IS in shrink, its band boundaries
-   act as ceiling/floor for all lower TFs. M30/M15 oscillate within H4 upper/lower band.
-   This is the RESULT of H4 shrink, not the initiation of shrink.
-
-**The critical question is: did HTF shrink FIRST (causing LTF compression) or did LTF shrink
-FIRST (warning of HTF reversal)?**
-
-- If H4 entered shrink BEFORE M15 → H4 is the cause → confinement (check D1 for rescue)
-- If M15 entered shrink BEFORE H4 → LTF is warning → watch if H4 follows (reversal ladder)
-- If both entered shrink simultaneously → strong reversal signal
-
-**Reversal probability ladder — each TF confirming shrink escalates:**
-
-| Depth reached | Reversal probability | Scenario |
-|---------------|---------------------|----------|
-| M15 only (H4 still fly) | Low — likely rest/continuation | B1 |
-| M30 added (H4 still fly) | Low-Medium — watch H1 | B2 |
-| H1 added (H4 still fly) | Medium — H4 likely to follow | B3 |
-| H4 enters shrink (D1 still fly) | High — HTF reversal warning | E/E4 |
-| H4 SQZ + D1 still fly | High for H4, D1 gives bias | H (D1 bias) |
-| H4 SQZ + D1 shrink/SQZ | Very high — full macro reversal | H (no bias) |
-
-Shrink propagation (LTF leads — early warning of reversal):
-  M15 BBUpDn→2 first (trend weakening at entry TF)
-    → M30 BBUpDn→2 follows (momentum fading at driver TF)
-      → H1 BBUpDn→2 follows (chain anchor losing direction)
-        → H4 BBUpDn→2 follows (macro bias losing direction — reversal warning confirmed)
-          → H4 BBUpDn→0 (SQZ) — old trend exhausted → Scenario H (direction pivot)
-
-  BUT CHECK at each step: was H4 already shrinking when M15 started?
-    YES → H4 caused LTF compression (confinement — H4 is driver, not victim)
-    NO  → M15 is warning that H4 will follow (genuine reversal signal from LTF)
-
-Confinement effect (HTF → LTF — consequence of HTF shrink, not cause):
-  Once H4 IS in shrink → H4 band boundaries act as ceiling/floor:
-    H4 upper/lower band → confines H1 range
-      → H1 upper/lower band → confines M30 range
-        → M30 upper/lower band → confines M15 range
-          → M15 upper/lower band → confines M5 range
-  This is the RESULT of H4 shrink. M30/M15 range within these boundaries
-  until H4 exits shrink. Gate G8-BNDTGT fires when price touches these boundaries.
-
-### Expansion Cascade (LTF → HTF)
-
-LTF breaks SQZ first → signal travels upward → HTF confirms last.
-Observable as BBUpDn_state transitioning 0→1 (expanding) TF by TF bottom-up.
-Same direction as shrink propagation — LTF always leads both shrink and expansion.
-
-**CHECK HTF context to determine expansion quality:**
-
-| H4 state when M5 breaks SQZ | D1 state | Expansion meaning | Scenario |
-|------------------------------|----------|-------------------|----------|
-| Still fly (511/512) | Fly | High quality — macro intact, rest over | D (rest recovery) |
-| Shrink (513) | Fly | Medium — H4 confined but D1 backing | F (compression release) |
-| SQZ (400-499) | Fly | Medium — H4 exhausted but D1 gives bias | H1→F (direction pivot same) |
-| SQZ (400-499) | Shrink/SQZ | Low until confirmed — no macro backing | H2→C (direction pivot opposite) |
-
-```
-M5 breaks SQZ (REVUP/REVDN) — G6-LOAD fires
-  → M15 follows in 2-5 bars (FLAT→UP/DN) — G6-BUY/SELL fires — ENTRY
-    → M30 confirms (511/512) — quality boost +10 to +15
-      → H1 confirms — hold signal sustained
-        → H4 confirms — full fly → Scenario A
-```
-
-### Cycle Sequence
-
-```
-CHECK HTF FIRST at every step:
-
-A (full fly, all TFs aligned)
-  → B (M15 shrinks: CHECK — is H4 still fly?)
-    → H4 still fly + D1 fly: rest likely
-      → B→D→A (rest recovery — H4 never broke, LTF pullback only)
-    → H4 also shrinking: confinement
-      → B→E (H4 caused LTF compression — LTF confined within H4 band)
-      → CHECK D1: D1 still fly?
-        → Yes: E (deep compression, D1 may rescue H4)
-        → D1 also shrinking: E→E4 (HTF reversal warning — both H4 and D1 losing direction)
-          → E4→H (all TFs SQZ: BOTTOM — old trend exhausted, direction resolving)
-            → H1→F→A (M5 expands same direction: compression release → continuation)
-            → H2→C→new A (M5 expands opposite: trend reversal complete)
-
-Both shrink propagation (LTF→HTF warning) and expansion (LTF→HTF breakout) travel bottom-up.
-Confinement (HTF→LTF range restriction) is the consequence of HTF shrink, not the cause.
-The CHECK at each step determines whether LTF shrink is rest vs confinement vs reversal warning.
-```
-
-### Touch Type Classification
-
-During D1, bands move toward price — candle wicks touch multiple TF bands simultaneously.
-Three touch types must be distinguished:
-
-| Type | BBW_stage | diffMid_Trend | BBUpDn_state | Meaning | Action |
-|------|-----------|---------------|--------------|---------|--------|
-| Type 1 | Shrinking 513/523 | 3/4/5 — flat or weak | 2 (shrinking — band moving toward price) | Band moved to price — compression geometry noise | IGNORE — not a signal |
-| Type 2 | Highest still-flying TF at outer band | 4 or 5 — directional lean | 1 (expanding) at HTF level — PriceLoc=at_upper or at_lower | Price reached confinement boundary — real signal | Check G0b filters — valid entry |
-| Type 3 | Multiple TFs SQZ 400-499 | 3 all TFs | 0 (no_state) alternating with 2 same bar/adjacent bars | SQZ peak — band width < candle range, geometric overlap | G0b-PINK zone — EXIT all, wait |
-
-**Key rule:** The signal always comes from the HIGHEST TF that is currently at its outer band (PriceLoc=at_upper or at_lower).
-Lower TF outer band touches during HTF shrink = Type 1 noise (BBUpDn_state=2 shrinking, band moved to price).
-HTF confinement boundary touch WITH PriceLoc=at_upper/lower AND diffMid=4/5 = Type 2 valid signal.
-**BBUpDn_state measures band movement direction — NOT price location:**
-- 0 = no_state (SQZ or transitional)
-- 1 = expanding (upper rising AND lower falling — confirmed 2 bars)
-- 2 = shrinking (upper falling AND lower rising — confirmed 2 bars)
-- 3 = up (both bands moving upward together)
-- 4 = dn (both bands moving downward together)
-
----
-
-## 12b. TRADEINFO Chain Flags — Cascade Direction Observable
-
-TRADEINFO flags are the EA's real-time observable for cascade direction.
-They appear in the journal log under the `[TRADEINFO]` tag and map directly
-to the cascade model in Section 12.
-
-**How to read:** Each flag has a TF index value. When ≥ 0, that flag's chain
-is active up to that TF level. When = -1, the chain is not detected.
-
-| Flag | Active (≥0) meaning | Cascade mapping | When you see it |
-|------|--------------------|-----------------|-----------------| 
-| H2L_flyUP | HTF→LTF fly uptrend chain confirmed | Expansion confirmed top-down — all TFs aligned UP | Scenario A (full fly up) |
-| H2L_flyDN | HTF→LTF fly downtrend chain confirmed | Expansion confirmed top-down — all TFs aligned DN | Scenario A (full fly dn) |
-| H2L_flyStrink | HTF→LTF shrink chain active | Shrink propagating — compression cascade in progress | Scenario B/E (compression) |
-| H2L_sideway | HTF→LTF sideway/SQZ chain | All TFs suppressed — compression complete | Scenario E4/H (BOTTOM) |
-| L2H_flyUP | LTF→HTF fly uptrend chain (bottom-up) | LTF leading expansion upward — D2 initiated | Scenario D/F (expansion up) |
-| L2H_flyDN | LTF→HTF fly downtrend chain (bottom-up) | LTF leading expansion downward — D2 initiated | Scenario D/F (expansion dn) |
-| L2H_sideway | LTF→HTF sideway chain | LTF being suppressed by HTF — D1 active | Scenario B/E (LTF confined) |
-| All = -1 | No chains detected | Mixed/neutral — transitional state | Scenario H (direction pivot) |
-
-**TF index reference (used for all TRADEINFO and BBTFImpact flags):**
-
-| Index | Timeframe |
-|-------|-----------|
-| 0 | M5 |
-| 1 | M15 |
-| 2 | M30 |
-| 3 | H1 |
-| 4 | H4 |
-| 5 | D1 |
-
-**Scenario identification from TRADEINFO flags:**
-
-| TRADEINFO state | Scenario | Trade implication |
-|----------------|----------|-------------------|
-| `H2L_flyUP:0` + `L2H_flyUP:3` | A — Full fly alignment (up) | Full size trend entry BUY |
-| `H2L_flyDN:0` + `L2H_flyDN:3` | A — Full fly alignment (dn) | Full size trend entry SELL |
-| `H2L_flyStrink:1` + `L2H_sideway:1` | B1 — M15 shrink only | Reduce to 0.75×, watch depth |
-| `H2L_flyStrink:2` + `L2H_sideway:2` | B2 — M30 shrink | Reduce to 0.50×, watch H1 |
-| `H2L_flyStrink:3` + `L2H_sideway:3` | B3 — H1 shrink | Reduce to 0.25×, watch H4 |
-| `H2L_sideway:1` + `L2H_sideway:1` | E1/E2 — Deep compression | No entry — G0b-PINK may fire |
-| `H2L_sideway:3` + all L2H = -1 | E4/H — BOTTOM | No entry — wait M5 BBUpDn 0→1 |
-| All flags = -1 | H — Direction pivot (transitional) | No entry — direction unknown |
-| `L2H_flyUP:1` + `H2L_flyStrink:3` | D1/F1 — LTF leading, HTF not confirmed | ARM — wait M30 confirm |
-| `L2H_flyUP:2` + `H2L_flyStrink:3` or clearing | D2/F2 — MTF confirmed | ENTER — 0.75× |
-| `L2H_flyUP:3` + `H2L_flyUP:0` | D3/F3 — Full chain restored | → Scenario A, full size |
-| `L2H_flyDN:1` + `H2L_flyUP:3` (opposing) | C1 — MTF reversal only | Small entry 0.25× — wait H4 |
-| `L2H_flyDN:3` + `H2L_flyDN:0` | C2 — H4 confirmed reversal | → New Scenario A opposite dir |
-
-**Phase 3a/3b connection (Section 13):**
-- Phase 3a (symmetric zigzag): `H2L_flyStrink` active + `H2L_sideway` not yet
-- Phase 3b onset: `H2L_flyStrink` active + one `L2H_fly` flag starting to appear (LTF attempting expansion within shrink)
-- Phase 3a→3b transition: `H2L_flyStrink` clears → replaced by `H2L_sideway` = shrink chain converted to sideway chain
-
----
-
-## 12c. BBTFImpact Flags — Cascade Pressure Indicators
-
-BBTFImpact flags appear in the journal log under the `[BBTFImpact]` tag.
-They show which TFs are being suppressed by higher TFs (D1 pressure)
-vs which TFs are showing independent fly energy (D2 pressure).
-
-| Flag | Format | Active (=1) meaning | Cascade mapping |
-|------|--------|--------------------|--------------------|
-| HTF_Drive_LTF_Sideway | [TF_name_index] | TF at that index being pushed into sideways by higher TFs | Shrink/confinement active at this TF level |
-| LTF_Drive_HTF_Fly | [TF_name_index] | TF at that index showing fly energy despite HTF pressure | Expansion energy building at this TF level |
-
-**Index reference:** 1=M15, 2=M30, 3=H1, 4=H4, 5=D1
-
-**Log format examples:**
-```
-[BBTFImpact] HTF_Drive_LTF_Sideway:[M15_1]
-  → M15 (index 1) being suppressed — Scenario B1
-
-[BBTFImpact] HTF_Drive_LTF_Sideway:[M15_1, M30_1]
-  → M15 and M30 both suppressed — Scenario B2
-
-[BBTFImpact] HTF_Drive_LTF_Sideway:[M15_1, M30_1, H1_1]
-  → M15, M30, and H1 all suppressed — Scenario B3
-
-[BBTFImpact] LTF_Drive_HTF_Fly:[M30_1, H1_1]
-  → M30 and H1 showing fly energy — expansion building at MTF level
-
-[BBTFImpact] HTF_Drive_LTF_Sideway:[M30_1] LTF_Drive_HTF_Fly:[M30_1, H1_1]
-  → CONFLICT — M30 being suppressed AND showing fly energy simultaneously
-  → Volatile transition state — Scenario E3 or H territory
-```
-
-**Scenario B sub-scenario mapping:**
-
-| BBTFImpact pattern | Scenario | Size multiplier |
-|-------------------|----------|----------------|
-| `HTF_Drive_LTF_Sideway:[M15_1]` only | B1 — M15 shrink only | 0.75× |
-| `HTF_Drive_LTF_Sideway:[M15_1, M30_1]` | B2 — M30 shrink | 0.50× |
-| `HTF_Drive_LTF_Sideway:[M15_1, M30_1, H1_1]` | B3 — H1 shrink | 0.25× |
-| `HTF_Drive_LTF_Sideway:[M15_1, M30_1, H1_1, H4_1]` | E4 — H4 also compressing | No entry |
-
-**Scenario E/H transition mapping:**
-
-| BBTFImpact pattern | Scenario | Action |
-|-------------------|----------|--------|
-| All `HTF_Drive_LTF_Sideway`, no `LTF_Drive_HTF_Fly` | E2 — Full SQZ, no expansion energy | Wait — G0b-PINK |
-| `HTF_Drive_LTF_Sideway` + `LTF_Drive_HTF_Fly` appearing | E3 — Loading, expansion building | Watch — G6-LOAD may fire |
-| `LTF_Drive_HTF_Fly` growing, `HTF_Drive_LTF_Sideway` clearing | F1/F2 — Expansion taking over | ARM / ENTER |
-| Only `LTF_Drive_HTF_Fly`, no `HTF_Drive_LTF_Sideway` | F3/A — Full expansion | Full size entry |
-
-**Conflict state (both flags active at same TF):**
-Both `HTF_Drive_LTF_Sideway` and `LTF_Drive_HTF_Fly` active simultaneously at a TF
-= volatile transition. HTF suppressing but LTF pushing back.
-- Maps to Scenario E3 (loading) or Scenario H (direction pivot)
-- sizeMultiplier = 0.5 (compromise between suppression and drive signals)
-- Watch M5 BBUpDn_state: 0→1 resolves the conflict in favour of expansion
-
-**Section 13 connection:**
-- Phase 2 onset: first `HTF_Drive_LTF_Sideway` flag appears = zigzag starting
-- Phase 3 deepening: `HTF_Drive_LTF_Sideway` count increasing = more TFs suppressed = legs shortening
-- Phase 4 (SQZ): all `HTF_Drive_LTF_Sideway`, no `LTF_Drive_HTF_Fly` = noise oscillation
-- Phase 5 (breakout): `LTF_Drive_HTF_Fly` appears and grows = explosive move starting
-
----
-
-## 12d. Cascade State Decoder — cas_shrinkTF and cas_sqzCount
-
-These internal EA values map directly to scenario sub-states.
-They provide the fastest single-variable identification of where
-in the compression cascade the market currently sits.
-
-### cas_shrinkTF — Highest TF Currently in Shrink
-
-| cas_shrinkTF | Meaning | Scenario sub-state | Reversal probability |
-|-------------|---------|-------------------|---------------------|
-| 1 | M15 is highest active shrink TF | B1 — Shallow compression | Low |
-| 2 | M30 is highest shrink TF | B2 — Moderate compression | Low-Medium |
-| 3 | H1 is highest shrink TF | B3 — Deep compression | Medium |
-| 4 | H4 is highest shrink TF | E4 — HTF also compressing | High |
-| 5 | D1 is highest shrink TF | Scenario I — Macro sideways | Very high |
-| -1 | No TF in fly_shrink | Not in B — check E/H or A | Depends on other flags |
-
-**cas_shrinkTF maps to Section 13 Phase 3 amplitude:**
-- cas_shrinkTF = 1: Phase 3 zigzag legs still tall (only M15 confined)
-- cas_shrinkTF = 2: Phase 3 legs moderately shortened (M30 now confined too)
-- cas_shrinkTF = 3: Phase 3 legs significantly shortened (H1 confined)
-- cas_shrinkTF = 4: Phase 3 → Phase 4 transition (H4 confined = approaching SQZ)
-
-### cas_sqzCount — Number of TFs Currently in SQZ
-
-| cas_sqzCount | Meaning | Scenario sub-state | Gate status |
-|-------------|---------|-------------------|------------|
-| 0 | No TFs in SQZ | B (shallow compression) — shrink only | Normal gates |
-| 1 | One TF squeezed (typically M5 first) | E1 — LTF partial SQZ | G0c-SQZLOCK may activate |
-| 2 | Two TFs squeezed (M5+M15) | E2 — LTF full SQZ | G0b-PINK fires — EXIT all |
-| 3 | Three TFs squeezed (M5+M15+M30) | E3/E4 — Deep cascade | G0b-PINK + G0c-SQZLOCK |
-| 4+ | Four or more TFs squeezed | E4/H — BOTTOM | All gates locked — wait |
-
-**Pink zone condition:**
-cas_sqzCount ≥ 2 AND M15+M30 both SQZ simultaneously → G0b-PINK fires → EXIT all.
-This maps to E2 (LTF full SQZ) or deeper.
-
-**Combined cas_shrinkTF + cas_sqzCount reading:**
-
-| cas_shrinkTF | cas_sqzCount | Full state | Scenario | Action |
-|-------------|-------------|-----------|----------|--------|
-| 1 | 0 | M15 shrink, nothing squeezed | B1 | Trade at 0.75× |
-| 2 | 0 | M30 shrink, nothing squeezed | B2 early | Trade at 0.50× |
-| 2 | 1 | M30 shrink, M5 squeezed | B2 late → E1 | Reduce to 0.25× |
-| 3 | 1 | H1 shrink, M5 squeezed | B3 → E1 | Reduce to 0.25× |
-| 3 | 2 | H1 shrink, M5+M15 squeezed | E2 | EXIT — G0b-PINK |
-| -1 | 2 | No shrink but 2 TFs squeezed | E2/E3 transition | Wait — G6-LOAD may fire |
-| -1 | 3+ | No shrink, 3+ TFs squeezed | E4/H — BOTTOM | No entry — wait M5 expand |
-| -1 | 0 | No shrink, no squeeze | A (fly) or transition | Check TRADEINFO for direction |
-
-### Journal Log Label Reference
-
-These labels appear in EA journal output and map to specific scenario sub-states:
-
-| Log label | Meaning | Scenario sub-state | Action |
-|-----------|---------|-------------------|--------|
-| `MIDLINE_SQZ_LOADING` | M5 in SQZ, M30 shrinking — loading state | E3 — Loading | Wait — G6-LOAD about to fire |
-| `MIDLINE_SQZ_ENTRY` | Loading complete — entry condition met | E3→D/F transition | ENTER on next bar |
-| `SQZ_BREAK_UP` | M5 broke SQZ bullish — expansion initiated upward | D1 or F1 initiating BUY | ARM — wait M15 confirm |
-| `SQZ_BREAK_DN` | M5 broke SQZ bearish — expansion initiated downward | D1 or F1 initiating SELL | ARM — wait M15 confirm |
-| `CASCADE_TOUCH(TF:n upper_band)` | G0b-TOUCH fired at TF index n, upper band | Confinement boundary reached | Check G0b 6 filters |
-| `CASCADE_TOUCH(TF:n lower_band)` | G0b-TOUCH fired at TF index n, lower band | Confinement boundary reached | Check G0b 6 filters |
-| `CASCADE_PINK_ZONE` | G0b-PINK fired — M15+M30 both SQZ | E2 — Pink zone active | EXIT all — no entries |
-
-**How to use with Section 13 phases:**
-- Phase 2 onset: `CASCADE_TOUCH` starts appearing = zigzag legs hitting band boundaries
-- Phase 3 deepening: `CASCADE_TOUCH` TF index increasing = confinement propagating upward
-- Phase 4: `CASCADE_PINK_ZONE` appears = zigzag collapsed to noise
-- Phase 5: `SQZ_BREAK_UP/DN` appears = explosive breakout starting
-- Entry: `MIDLINE_SQZ_LOADING` → `MIDLINE_SQZ_ENTRY` → `SQZ_BREAK_UP/DN` = full entry sequence
 
 ---
 
@@ -3858,7 +3858,7 @@ Read Part 4 nxt:/tch: labels. State: current regime, price target, which gate fi
 
 ---
 
-## 13. Document Update Summary
+## 15. Document Update Summary
 
 **Enhancements completed through comprehensive image analysis:**
 
