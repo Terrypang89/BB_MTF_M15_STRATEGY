@@ -1489,6 +1489,20 @@ A → B → D → A                     (rest — short cycle, shallow D1 only)
 H3 false breakout → back to H/E   (failed breakout)
 ```
 
+**Scenario identification variable priority (normative):**
+
+When BBW_stage conflicts with diffMid_Trend or diffBBW, the scenario MUST be
+identified from diffBBW + diffMid_Trend. BBW_stage is a 3-bar lagging label and
+is confirmation only — never the primary input.
+
+Priority: diffBBW (fastest) > diffMid_Trend > BBW_stage (slowest).
+
+This applies to every scenario table in Part 3 and every gate/condition in Part 5.
+March 2026 verification found 7 lag conflicts, all clustered at scenario transition
+timestamps — exactly the moments where acting on the stale label produces wrong
+blocks and wrong scenario reads (e.g., 03.09 04:00: BBW=422 SQZ label while
+diffBBW=+41.34 — breakout already underway).
+
 ---
 
 ## TIER 1 — EXPANSION COMPLETE (TOP)
@@ -4164,6 +4178,29 @@ ALL 6 must pass for E3 entry to be valid:
 | 5. No pink zone | Not in M15+M30 simultaneous SQZ | M15+M30 not both SQZ at same time | Both SQZ simultaneously → exit all |
 | 6. Quality threshold | Sufficient signal quality | Quality score ≥ 60 | Quality < 60 → too weak |
 
+**Entry path priority by phase:**
+
+The M15-mid-flip entries (E1/E2/E5) are a 1–2 bar transition window. If that single
+bar is blocked, the leg is missed permanently — there is no mid-leg entry. Therefore
+the boundary entry E3 is the PRIMARY path in zigzag phases:
+
+| Phase | Primary entry path | Secondary | Notes |
+|---|---|---|---|
+| Phase 1 (trend) | E1/E2 (M15 mid flip) | — | Trend-following entries correct here |
+| Phase 2 (zigzag onset) | E3 (boundary touch + lean) | E1 at flip | Legs reverse AT boundaries — enter there |
+| Phase 3a (symmetric) | E3 both directions | — | B3 disabled (no H4 direction exists) |
+| Phase 3b-INTO | E3 favouring trending side | E5 | Counter-trend side 0.25× max |
+| Phase 3b-OUT | E3 recovery side | — | Exit hard at D1 boundary |
+| Phase 4 (SQZ) | NONE | — | B2/B4 — wait |
+| Phase 5 (breakout) | E5/E6 (transition entries) | — | Transition window IS the signal here |
+| Phase 6 (post-SQZ) | E3 at H4 boundary, 0.25× | — | Never hold through reversal |
+
+**Failure mode this prevents (March 2026 verification):** zero E3 boundary entries
+fired in the entire 03.02–03.20 window; only 4 G6 transition entries occurred against
+~10 tradeable boundary-reversal legs. The transition window was repeatedly blocked at
+the exact flip bar, leaving legs permanently missed (e.g., 03.05: M15 mid already 2
+all day — no fresh flip, no entry, full SELL leg missed).
+
 ---
 
 ## Exit Conditions
@@ -4175,6 +4212,24 @@ ALL 6 must pass for E3 entry to be valid:
 | X3 | Quality degraded | Signal quality dropped below threshold | Quality score < 60 | F1 (LTF only) |
 | X4 | Pink zone — forced exit | M15+M30 both enter SQZ simultaneously | M15 BBW=400-499 AND M30 BBW=400-499 same time | E2, Phase 4 — EXIT ALL |
 
+**Exit priority by phase — X1 before X2 in zigzag phases:**
+
+X2 (M15 mid fades to 3) fires on every M15 wobble. In zigzag phases M15 passes
+through 3 constantly MID-LEG, producing exit churn and — combined with the
+transition-window entry problem — permanent loss of the leg.
+
+| Phase | Primary exit | X2 role | Rule |
+|---|---|---|---|
+| Phase 1 | X2 (trend fade) | Primary | Trend exits on genuine fade |
+| Phase 2 / 3a / 3b / 6 | X1 (opposite boundary target) | Failsafe ONLY | Ignore M15 mid=3 wobble unless price has stalled ≥3 bars short of target OR target TF band invalidated |
+| Phase 4 | X4 (pink zone) | — | Forced exit |
+| Phase 5 | X1 at escalating targets | Secondary | Hold while diffBBW sharply positive |
+
+**Failure mode this prevents (March 2026 verification):** 25 EXIT events against
+4 entries; 12+ exits clustered 03.17–03.18 at M30/M15 mid readings of 3/4/5 during
+a sustained bearish run that should have been held as one or two legs to the
+boundary target.
+
 ---
 
 ## Block Conditions (No Entry Allowed)
@@ -4185,6 +4240,21 @@ ALL 6 must pass for E3 entry to be valid:
 | B2 | Pink zone | M15+M30 both SQZ simultaneously | M15 BBW=400-499 AND M30 BBW=400-499 | EXIT ALL positions + no new entries | E2, Phase 4 |
 | B3 | H4 opposing | H4 direction opposes trade direction | H4 diffMid = 1 when trying SELL, or 2 when trying BUY | No entry in that direction | C3 counter-trend |
 | B4 | Full SQZ | All MTF/LTF in SQZ | cas_sqzCount ≥ 3 | No entries at all — wait for M5 expansion | E4, H |
+
+**B3 scope limits — when H4-OPPOSE must NOT block:**
+
+B3 is only valid when H4 has a REAL committed direction. It must be DISABLED when:
+
+| Condition | Why B3 is invalid | Evidence rule |
+|---|---|---|
+| H4 diffMid = 3 (sideways) | There is no "opposing" direction — H4 has none. Phase 3a zigzag legs are tradeable BOTH directions | diffMid is primary over BBW_stage |
+| H4 diffBBW contradicts H4 BBW_stage (e.g., BBW=521 bearish but diffBBW positive and mid=3) | BBW_stage is lagging — the labelled direction no longer exists | Section 12 priority: diffBBW > diffMid > BBW_stage |
+| Phase = 3a, 6 (identified per Section 13) | These phases are defined as both-direction range phases | Phase rules override directional blocks |
+
+**Failure mode this prevents (March 2026 verification):** H4-OPPOSE keyed off lagging
+H4 BBW_stage blocked the entire counter-H4 half of zigzag legs (03.04–03.05 up-legs
+blocked by stale 521/522 label while H4 mid=3), and blocked the 03.03 crash SELL leg
+because H4 label was still 512 fly-up after the down-move had begun.
 
 **Critical block rule — M30 SQZ alone is NOT a block:**
 ```
@@ -4213,6 +4283,14 @@ Size is determined by Part 4 confidence level.
 | Medium | 0.50× | Counter-trend recovery (3b-OUT), C3 counter-trend |
 | Low | 0.25× | Phase 6 legs, H2 opposite direction, C1 waiting H4 |
 | None | 0 | Phase 4 (SQZ), H4 whipsaw, B4 full SQZ |
+
+**§12d combined decoder OVERRIDES the confidence matrix when stricter:**
+
+When Section 12d's combined cas_shrinkTF + cas_sqzCount reading prescribes a
+smaller size than the confidence matrix, the decoder wins. Example from March 2026
+verification: 03.03 07:45 BUY — confidence matrix allowed 0.75×, but decoder state
+(cas_shrinkTF=2 + cas_sqzCount=1 = "B2 late → E1") prescribes 0.25×. The EA sized
+0.75×. Rule: final size = min(confidence size, decoder size).
 
 **Size adjustments by diffBBW:**
 - diffBBW strongly positive → +0.25× (expansion has momentum)
