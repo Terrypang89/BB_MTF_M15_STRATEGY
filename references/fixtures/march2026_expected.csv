@@ -32,7 +32,7 @@ row,timestamp,expected_scenario,expected_substate,expected_phase,expected_b1_blo
 31,03.09 20:00,G3,false_breakout,PH_4,FALSE,FALSE,H4=522→423 re-SQZ
 32,03.10 04:00,G3,false_breakout,PH_4,FALSE,FALSE,H4=523 mid=3 at SQZ floor
 33,03.10 08:00,G3,false_breakout,PH_4,FALSE,FALSE,H4=423 re-SQZ
-34,03.10 12:00,H1,bullish_resolution,PH_5,FALSE,FALSE,H4=423→511 breakout D1-aligned; cas_sqzCount=2 (H4+M30) not pink
+34,03.10 12:00,G1,bullish_resolution,PH_5,FALSE,FALSE,H4=423→511 breakout D1-aligned; cas_sqzCount=2 (H4+M30) not pink
 35,03.10 16:00,F1,compression_release,PH_5,FALSE,FALSE,H4=511 mid=5 strong recovery — H1 confirmed → F
 36,03.10 20:00,F2,compression_release,PH_5,FALSE,FALSE,H4=511→512 fly UP D1 mid=1
 37,03.11 04:00,F2,compression_release,PH_1,FALSE,FALSE,Recovery trend Phase 1
