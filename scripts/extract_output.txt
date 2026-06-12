@@ -1,0 +1,1050 @@
+============================================================================================================================================================================================================================
+SUMMARY TABLE — V30.02 Log Data, 2026.03.02 to 2026.03.20 09:00
+Sampled at H4 bar boundaries (00:00/04:00/08:00/12:00/16:00/20:00) + trade events
+============================================================================================================================================================================================================================
+Time                  | H4stg H4mid H4ud | H1stg H1mid H1ud | M30stg M30mid M30ud | M15stg M15mid M15ud | D1stg D1mid |  dBBW_H4 | casShrk casSqz | Trade Event
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+2026.03.02 04:00:05   |   511     1    1 |   512     1    3 |    512      1     3 |    513      1     2 |   523     3 |    +58.7 |       5      0 | 
+2026.03.02 08:00:05   |   511     1    1 |   512     1    3 |    512      1     3 |    413      3     0 |   523     3 |    +73.4 |       5      1 | 
+2026.03.02 12:00:05   |   511     1    1 |   512     1    3 |    511      1     0 |    513      1     2 |   523     3 |    +77.0 |       5      0 | 
+2026.03.02 16:00:05   |   511     1    1 |   512     1    0 |    512      1     0 |    424      4     0 |   523     3 |    +59.0 |       5      1 | 
+2026.03.02 20:00:05   |   512     1    3 |   513     1    2 |    522      2     4 |    522      2     0 |   523     3 |     +2.5 |       5      0 | 
+2026.03.03 04:00:05   |   512     1    3 |   422     4    0 |    413      1     0 |    512      5     3 |   523     1 |     +3.7 |       5      2 | 
+2026.03.03 07:45:02   |   512     1    3 |   422     2    2 |    513      1     2 |    511      5     1 |   523     1 |     +3.7 |       5      1 | OPEN BUY @5343.82
+2026.03.03 08:00:05   |   512     1    3 |   422     2    0 |    513      3     0 |    521      2     1 |   523     1 |     -8.9 |       5      1 | 
+2026.03.03 12:00:05   |   512     1    3 |   422     2    4 |    521      2     1 |    522      2     4 |   523     1 |    -13.3 |       5      1 | 
+2026.03.03 16:00:05   |   512     3    1 |   521     2    1 |    522      2     4 |    522      2     4 |   523     1 |    +12.6 |       5      0 | 
+2026.03.03 20:00:05   |   512     3    1 |   522     2    4 |    522      2     4 |    523      2     2 |   523     1 |    +50.5 |       5      0 | 
+2026.03.04 04:00:05   |   521     3    1 |   523     2    2 |    413      3     0 |    511      1     1 |   513     1 |     +1.9 |       5      1 | 
+2026.03.04 08:00:05   |   521     4    1 |   523     2    2 |    512      1     3 |    513      5     2 |   513     1 |     +7.1 |       5      0 | 
+2026.03.04 12:00:05   |   521     3    1 |   523     3    0 |    513      1     0 |    511      1     1 |   513     1 |     +1.2 |       5      0 | 
+2026.03.04 16:00:05   |   521     3    1 |   421     1    0 |    512      3     0 |    513      5     2 |   513     1 |     +5.3 |       5      1 | 
+2026.03.04 20:00:05   |   521     2    1 |   421     1    2 |    521      2     1 |    522      2     4 |   513     1 |    +18.7 |       5      1 | 
+2026.03.05 04:00:05   |   522     2    4 |   413     5    0 |    511      1     1 |    512      1     3 |   512     1 |     +8.5 |      -1      1 | 
+2026.03.05 08:00:05   |   522     2    4 |   511     3    4 |    513      1     2 |    521      2     1 |   512     1 |    -10.9 |       2      0 | 
+2026.03.05 12:00:05   |   522     2    4 |   523     2    2 |    413      3     0 |    523      2     2 |   512     1 |    -19.3 |       3      1 | 
+2026.03.05 16:00:05   |   522     2    4 |   521     2    1 |    521      2     4 |    521      2     1 |   512     1 |    -48.9 |      -1      0 | 
+2026.03.05 20:00:05   |   522     2    4 |   521     2    1 |    522      2     0 |    523      2     2 |   512     1 |    -50.4 |       1      0 | 
+2026.03.06 04:00:05   |   522     2    0 |   523     2    2 |    413      3     1 |    511      1     1 |   513     1 |    -51.2 |       5      1 | 
+2026.03.06 08:00:05   |   523     2    2 |   523     2    2 |    512      1     3 |    513      1     2 |   513     1 |   -101.0 |       5      0 | 
+2026.03.06 12:00:05   |   523     2    2 |   523     2    0 |    513      3     2 |    522      2     4 |   513     1 |   -123.3 |       5      0 | 
+2026.03.06 16:00:05   |   523     2    2 |   522     5    0 |    522      2     0 |    523      3     2 |   513     1 |    -92.9 |       5      0 | 
+2026.03.06 20:00:05   |   523     4    2 |   512     1    3 |    511      1     1 |    512      1     0 |   513     1 |    -14.9 |       5      0 | 
+2026.03.09 04:00:05   |   422     2    0 |   521     2    1 |    521      2     1 |    522      2     4 |   513     1 |    +41.3 |       5      1 | 
+2026.03.09 08:00:05   |   521     2    1 |   522     3    4 |    522      2     4 |    413      1     3 |   513     1 |     +8.3 |       5      1 | 
+2026.03.09 12:00:05   |   522     2    4 |   513     3    0 |    523      2     2 |    513      5     2 |   513     1 |     -3.7 |       5      0 | 
+2026.03.09 16:00:05   |   522     2    4 |   522     2    4 |    413      3     0 |    523      4     0 |   513     1 |     -0.5 |       5      1 | 
+2026.03.09 20:00:05   |   522     2    0 |   523     2    2 |    423      3     0 |    512      1     3 |   513     1 |    -22.1 |       5      1 | 
+2026.03.10 04:00:05   |   523     3    0 |   512     1    3 |    512      1     0 |    513      5     2 |   512     1 |     +0.1 |       4      0 | 
+2026.03.10 08:00:05   |   423     3    0 |   512     1    3 |    513      1     2 |    512      1     0 |   512     1 |     -1.1 |       2      1 | 
+2026.03.10 12:00:05   |   423     3    1 |   512     1    3 |    411      1     3 |    512      1     3 |   512     1 |     +8.7 |      -1      2 | 
+2026.03.10 16:00:05   |   511     5    1 |   512     1    0 |    423      1     0 |    511      5     3 |   512     1 |    +20.7 |      -1      1 | 
+2026.03.10 20:00:05   |   511     1    1 |   512     1    3 |    511      1     0 |    512      1     0 |   512     1 |    +50.8 |      -1      0 | 
+2026.03.11 04:00:05   |   512     1    3 |   512     1    3 |    421      1     3 |    511      1     1 |   512     1 |    +11.1 |      -1      1 | 
+2026.03.11 08:00:05   |   512     1    3 |   512     1    0 |    423      3     0 |    513      1     2 |   512     1 |    +11.5 |       1      1 | 
+2026.03.11 12:00:05   |   512     1    3 |   513     5    2 |    423      3     1 |    521      2     0 |   512     1 |     +6.7 |       3      1 | 
+2026.03.11 16:00:05   |   512     1    3 |   425     2    4 |    522      2     4 |    521      2     1 |   512     1 |     -6.9 |      -1      1 | 
+2026.03.11 20:00:05   |   512     1    3 |   521     2    0 |    522      2     0 |    522      4     4 |   512     1 |    -10.9 |      -1      0 | 
+2026.03.12 04:00:05   |   512     3    0 |   522     2    4 |    521      2     0 |    522      2     4 |   512     1 |     +0.0 |      -1      0 | 
+2026.03.12 06:30:03   |   512     3    0 |   522     2    4 |    522      2     4 |    523      4     0 |   512     1 |     +0.0 |       1      0 | CLOSE BUYSELL @5152.53 P&L:-191.29
+2026.03.12 06:30:03   |   512     3    0 |   522     2    4 |    522      2     4 |    523      4     0 |   512     1 |     +0.0 |       1      0 | OPEN SELL @5152.53
+2026.03.12 08:00:05   |   512     4    0 |   522     2    4 |    522      2     0 |    523      5     2 |   512     1 |     -7.5 |       1      0 | 
+2026.03.12 12:00:05   |   512     1    0 |   423     3    2 |    511      1     0 |    512      1     3 |   512     1 |    -51.6 |      -1      1 | 
+2026.03.12 15:15:02   |   512     1    0 |   421     3    0 |    512      5     0 |    423      3     2 |   512     1 |    -51.6 |      -1      2 | CLOSE SELLBUY @5169.15 P&L:-16.53
+2026.03.12 16:00:05   |   513     1    2 |   421     5    0 |    512      1     3 |    521      4     0 |   512     1 |    -15.7 |       4      1 | 
+2026.03.12 20:00:05   |   513     3    2 |   521     2    0 |    521      2     1 |    522      2     4 |   512     1 |    -10.4 |       4      0 | 
+2026.03.13 04:00:05   |   513     3    0 |   522     2    4 |    523      2     2 |    511      1     1 |   513     1 |     +2.7 |       5      0 | 
+2026.03.13 08:00:05   |   513     4    1 |   522     2    4 |    423      3     4 |    513      3     2 |   513     1 |    +15.7 |       5      1 | 
+2026.03.13 12:00:05   |   521     2    1 |   522     2    0 |    424      3     1 |    522      2     0 |   513     1 |    +26.9 |       5      1 | 
+2026.03.13 16:00:05   |   521     2    0 |   523     4    2 |    521      4     0 |    511      1     0 |   513     1 |     +5.7 |       5      0 | 
+2026.03.13 20:00:05   |   521     2    1 |   521     2    1 |    521      2     1 |    522      2     4 |   513     1 |    +43.9 |       5      0 | 
+2026.03.16 04:00:05   |   521     2    0 |   522     2    4 |    523      2     2 |    523      2     2 |   513     3 |    +23.3 |       5      0 | 
+2026.03.16 08:00:05   |   521     2    0 |   522     2    4 |    523      2     2 |    513      3     0 |   513     3 |    +18.0 |       5      0 | 
+2026.03.16 12:00:05   |   522     2    4 |   522     2    0 |    522      3     0 |    521      2     0 |   513     3 |    +16.0 |       5      0 | 
+2026.03.16 16:00:05   |   522     2    4 |   523     2    2 |    522      3     1 |    511      1     1 |   513     3 |     -4.1 |       5      0 | 
+2026.03.16 20:00:05   |   522     2    4 |   422     2    4 |    522      2     4 |    521      4     1 |   513     3 |     +7.1 |       5      1 | 
+2026.03.17 04:00:05   |   522     2    4 |   422     2    0 |    523      2     2 |    425      2     4 |   513     3 |     -9.6 |       5      2 | 
+2026.03.17 08:00:05   |   522     2    4 |   511     1    1 |    512      1     3 |    512      1     3 |   513     3 |    -19.4 |       5      0 | 
+2026.03.17 12:00:05   |   522     2    4 |   421     1    3 |    513      1     2 |    522      4     4 |   513     3 |    -24.9 |       5      1 | 
+2026.03.17 16:00:05   |   522     2    0 |   421     1    2 |    521      3     4 |    523      2     2 |   513     3 |    -34.9 |       5      1 | 
+2026.03.17 16:30:03   |   522     2    0 |   421     1    2 |    522      2     4 |    523      4     2 |   513     3 |    -34.9 |       5      1 | OPEN SELL @5012.11
+2026.03.17 19:30:03   |   522     2    0 |   423     3    1 |    521      4     0 |    521      4     0 |   513     3 |    -34.9 |       5      1 | CLOSE SELLBUY @5004.10 P&L:8.01
+2026.03.17 20:00:05   |   523     2    2 |   423     4    1 |    522      2     4 |    522      4     0 |   513     3 |    -60.0 |       5      1 | 
+2026.03.18 04:00:05   |   523     2    0 |   423     2    2 |    422      4     2 |    511      3     0 |   513     5 |    -14.3 |       5      2 | 
+2026.03.18 08:00:05   |   522     2    4 |   422     2    4 |    521      2     1 |    521      2     0 |   513     5 |    -15.4 |       5      1 | 
+2026.03.18 12:00:05   |   522     2    0 |   424     2    0 |    511      2     0 |    521      4     1 |   513     5 |    -45.3 |       5      1 | 
+2026.03.18 16:00:05   |   522     2    0 |   521     2    1 |    521      2     1 |    521      2     1 |   513     5 |    +59.5 |       5      0 | 
+2026.03.18 20:00:05   |   522     2    0 |   521     2    0 |    522      2     4 |    523      2     2 |   513     5 |    +10.0 |       5      0 | 
+2026.03.19 04:00:05   |   521     2    1 |   522     2    4 |    522      2     4 |    523      2     2 |   521     2 |    +47.1 |       1      0 | 
+2026.03.19 08:00:05   |   521     2    1 |   523     2    2 |    523      2     2 |    513      5     2 |   521     2 |    +39.4 |       3      0 | 
+2026.03.19 12:00:05   |   521     2    1 |   521     2    0 |    521      2     1 |    522      2     4 |   521     2 |   +135.2 |      -1      0 | 
+2026.03.19 16:00:05   |   521     2    1 |   521     2    1 |    522      2     0 |    521      2     1 |   521     2 |   +213.9 |      -1      0 | 
+2026.03.19 20:00:05   |   521     2    1 |   522     2    4 |    522      2     4 |    523      2     2 |   521     2 |   +147.3 |       1      0 | 
+2026.03.20 04:00:05   |   522     2    4 |   523     2    2 |    411      1     3 |    513      5     2 |   521     2 |    +51.3 |       3      1 | 
+2026.03.20 08:00:05   |   522     2    4 |   403     3    0 |    512      1     3 |    512      1     3 |   521     2 |     -0.3 |      -1      1 | 
+
+
+========================================================================================================================================================================================================
+DETAILED STATE PER SNAPSHOT
+========================================================================================================================================================================================================
+
+--- [1] 2026.03.02 04:00:05 (H4 boundary) ---
+  Log line: 22245
+  [D1] stg:523/523(FLY) mid:3/3 BBUpDn:0/0 diffBBW:-94.47 trend:8 MidLV:5034.67 Upp:5291.52 Low:4777.83 WLV:10.2  [upd:2026.03.02 01:00:06]
+  [W1] stg:511/511(FLY) mid:1/1 BBUpDn:0/3 diffBBW:280.0 trend:0 MidLV:4515.64 Upp:5343.65 Low:3687.62 WLV:36.67  [upd:2026.03.02 01:00:07]
+  [H4] stg:511/511(FLY) mid:1/1 BBUpDn:1/1 diffBBW:58.7 trend:1 MidLV:5203.0 Upp:5301.73 Low:5104.26 WLV:3.8  [upd:2026.03.02 04:00:05]
+  [H1] stg:512/511(FLY) mid:1/1 BBUpDn:3/1 diffBBW:19.27 trend:1 MidLV:5238.96 Upp:5355.54 Low:5122.39 WLV:4.45  [upd:2026.03.02 04:00:04]
+  [M30] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-1.02 trend:1 MidLV:5279.44 Upp:5380.09 Low:5178.78 WLV:3.81  [upd:2026.03.02 04:00:03]
+  [M15] stg:513/512(FLY) mid:1/1 BBUpDn:2/3 diffBBW:-18.48 trend:1 MidLV:5319.22 Upp:5407.73 Low:5230.72 WLV:3.33 close:5324.87  [upd:2026.03.02 04:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=0 shrink_tfs=['M15', 'D1'] sqz_tfs=[]
+  TRADEINFO: gate=H4-OPPOSE act=0 tradeact=0
+  BBTFImpact: sideway=00010 htf_drive=M5_1, M15_1, H4_1 ltf_drive=M15_1, H1_1, H4_1, D1_1 midCluster=20.99, 39.79, 80.26
+
+--- [2] 2026.03.02 08:00:05 (H4 boundary) ---
+  Log line: 22338
+  [D1] stg:523/523(FLY) mid:3/3 BBUpDn:0/0 diffBBW:-94.47 trend:8 MidLV:5034.67 Upp:5291.52 Low:4777.83 WLV:10.2  [upd:2026.03.02 01:00:06]
+  [W1] stg:511/511(FLY) mid:1/1 BBUpDn:0/3 diffBBW:280.0 trend:0 MidLV:4515.64 Upp:5343.65 Low:3687.62 WLV:36.67  [upd:2026.03.02 01:00:07]
+  [H4] stg:511/511(FLY) mid:1/1 BBUpDn:1/1 diffBBW:73.44 trend:1 MidLV:5214.4 Upp:5337.03 Low:5091.76 WLV:4.7  [upd:2026.03.02 08:00:05]
+  [H1] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:1.32 trend:1 MidLV:5274.53 Upp:5407.52 Low:5141.53 WLV:5.04  [upd:2026.03.02 08:00:04]
+  [M30] stg:512/512(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-19.34 trend:1 MidLV:5327.49 Upp:5411.43 Low:5243.54 WLV:3.15  [upd:2026.03.02 08:00:03]
+  [M15] stg:413/413(SQZ) mid:3/3 BBUpDn:0/0 diffBBW:1.46 trend:2 MidLV:5348.32 Upp:5376.0 Low:5320.65 WLV:1.03 close:5366.1  [upd:2026.03.02 08:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=1 shrink_tfs=['D1'] sqz_tfs=['M15']
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=00065 htf_drive=M5_1, M15_1, H4_1 ltf_drive=H1_1, H4_1, D1_1 midCluster=7.92, 20.84, 73.8
+
+--- [3] 2026.03.02 12:00:05 (H4 boundary) ---
+  Log line: 22431
+  [D1] stg:523/523(FLY) mid:3/3 BBUpDn:0/0 diffBBW:-94.47 trend:8 MidLV:5034.67 Upp:5291.52 Low:4777.83 WLV:10.2  [upd:2026.03.02 01:00:06]
+  [W1] stg:511/511(FLY) mid:1/1 BBUpDn:0/3 diffBBW:280.0 trend:0 MidLV:4515.64 Upp:5343.65 Low:3687.62 WLV:36.67  [upd:2026.03.02 01:00:07]
+  [H4] stg:511/511(FLY) mid:1/1 BBUpDn:1/1 diffBBW:77.02 trend:1 MidLV:5225.84 Upp:5375.39 Low:5076.28 WLV:5.72  [upd:2026.03.02 12:00:05]
+  [H1] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-10.51 trend:1 MidLV:5316.97 Upp:5447.61 Low:5186.33 WLV:4.91  [upd:2026.03.02 12:00:04]
+  [M30] stg:511/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:4.03 trend:1 MidLV:5368.29 Upp:5423.94 Low:5312.64 WLV:2.07  [upd:2026.03.02 12:00:03]
+  [M15] stg:513/512(FLY) mid:1/1 BBUpDn:2/0 diffBBW:-13.6 trend:1 MidLV:5389.82 Upp:5426.41 Low:5353.24 WLV:1.3599999999999999 close:5392.18  [upd:2026.03.02 12:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=0 shrink_tfs=['M15', 'D1'] sqz_tfs=[]
+  TRADEINFO: gate=H4-OPPOSE act=0 tradeact=0
+  BBTFImpact: sideway=00010 htf_drive=M5_1, M30_1, H4_1 ltf_drive=M15_1, H1_1, H4_1, D1_1 midCluster=8.73, 21.53, 72.85
+
+--- [4] 2026.03.02 16:00:05 (H4 boundary) ---
+  Log line: 22524
+  [D1] stg:523/523(FLY) mid:3/3 BBUpDn:0/0 diffBBW:-94.47 trend:8 MidLV:5034.67 Upp:5291.52 Low:4777.83 WLV:10.2  [upd:2026.03.02 01:00:06]
+  [W1] stg:511/511(FLY) mid:1/1 BBUpDn:0/3 diffBBW:280.0 trend:0 MidLV:4515.64 Upp:5343.65 Low:3687.62 WLV:36.67  [upd:2026.03.02 01:00:07]
+  [H4] stg:511/511(FLY) mid:1/1 BBUpDn:1/1 diffBBW:58.98 trend:1 MidLV:5236.28 Upp:5402.42 Low:5070.15 WLV:6.35  [upd:2026.03.02 16:00:05]
+  [H1] stg:512/512(FLY) mid:1/1 BBUpDn:0/3 diffBBW:-37.33 trend:1 MidLV:5349.16 Upp:5456.51 Low:5241.81 WLV:4.01  [upd:2026.03.02 16:00:04]
+  [M30] stg:512/512(FLY) mid:1/1 BBUpDn:0/3 diffBBW:-6.57 trend:1 MidLV:5387.9 Upp:5421.42 Low:5354.39 WLV:1.24  [upd:2026.03.02 16:00:03]
+  [M15] stg:424/415(SQZ) mid:4/4 BBUpDn:0/2 diffBBW:-0.09 trend:2 MidLV:5392.59 Upp:5401.6 Low:5383.58 WLV:0.33 close:5394.02  [upd:2026.03.02 16:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=1 shrink_tfs=['D1'] sqz_tfs=['M15']
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=00065-S_13 htf_drive=M5_1, M15_1, M30_1, H4_1 ltf_drive=H1_1, H4_1, D1_1 midCluster=3.66, 4.6899999999999995, 43.43
+
+--- [5] 2026.03.02 20:00:05 (H4 boundary) ---
+  Log line: 22617
+  [D1] stg:523/523(FLY) mid:3/3 BBUpDn:0/0 diffBBW:-94.47 trend:8 MidLV:5034.67 Upp:5291.52 Low:4777.83 WLV:10.2  [upd:2026.03.02 01:00:06]
+  [W1] stg:511/511(FLY) mid:1/1 BBUpDn:0/3 diffBBW:280.0 trend:0 MidLV:4515.64 Upp:5343.65 Low:3687.62 WLV:36.67  [upd:2026.03.02 01:00:07]
+  [H4] stg:512/511(FLY) mid:1/1 BBUpDn:3/1 diffBBW:2.49 trend:1 MidLV:5239.57 Upp:5396.12 Low:5083.02 WLV:5.98  [upd:2026.03.02 20:00:05]
+  [H1] stg:513/513(FLY) mid:1/1 BBUpDn:2/2 diffBBW:-27.26 trend:1 MidLV:5357.99 Upp:5426.46 Low:5289.52 WLV:2.56  [upd:2026.03.02 20:00:04]
+  [M30] stg:522/521(FLY) mid:2/2 BBUpDn:4/0 diffBBW:2.83 trend:2 MidLV:5358.41 Upp:5440.55 Low:5276.27 WLV:3.07  [upd:2026.03.02 20:00:03]
+  [M15] stg:522/522(FLY) mid:2/2 BBUpDn:0/4 diffBBW:-17.1 trend:2 MidLV:5330.5 Upp:5401.1 Low:5259.9 WLV:2.65 close:5306.87  [upd:2026.03.02 20:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=0 shrink_tfs=['H1', 'D1'] sqz_tfs=[]
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=01001 htf_drive=M5_1, M30_1, H4_1 ltf_drive=M30_1, H1_1, D1_1 midCluster=27.61, 27.91, 27.49
+
+--- [6] 2026.03.03 04:00:05 (H4 boundary) ---
+  Log line: 22781
+  [D1] stg:523/523(FLY) mid:1/3 BBUpDn:3/0 diffBBW:35.97 trend:1 MidLV:5061.23 Upp:5336.53 Low:4785.94 WLV:10.88  [upd:2026.03.03 01:00:06]
+  [W1] stg:511/511(FLY) mid:1/1 BBUpDn:0/3 diffBBW:280.0 trend:0 MidLV:4515.64 Upp:5343.65 Low:3687.62 WLV:36.67  [upd:2026.03.02 01:00:07]
+  [H4] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:3.73 trend:1 MidLV:5256.43 Upp:5420.52 Low:5092.33 WLV:6.24  [upd:2026.03.03 04:00:05]
+  [H1] stg:422/422(SQZ) mid:4/3 BBUpDn:0/4 diffBBW:1.25 trend:8 MidLV:5354.72 Upp:5425.52 Low:5283.92 WLV:2.64  [upd:2026.03.03 04:00:04]
+  [M30] stg:413/413(SQZ) mid:1/3 BBUpDn:0/1 diffBBW:1.33 trend:7 MidLV:5327.68 Upp:5370.15 Low:5285.22 WLV:1.5899999999999999  [upd:2026.03.03 04:00:03]
+  [M15] stg:512/511(FLY) mid:5/1 BBUpDn:3/0 diffBBW:-0.38 trend:1 MidLV:5344.22 Upp:5369.76 Low:5318.68 WLV:0.96 close:5339.67  [upd:2026.03.03 04:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=2 shrink_tfs=['D1'] sqz_tfs=['M30', 'H1']
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=06245 htf_drive=M15_1, M30_1, H4_1 ltf_drive=M30_1, D1_1 midCluster=15.83, 16.54, 10.5
+
+--- [7] 2026.03.03 07:45:02 *** OPEN BUY @5343.82 *** ---
+  Log line: 22868
+  [D1] stg:523/523(FLY) mid:1/3 BBUpDn:3/0 diffBBW:35.97 trend:1 MidLV:5061.23 Upp:5336.53 Low:4785.94 WLV:10.88  [upd:2026.03.03 01:00:06]
+  [W1] stg:511/511(FLY) mid:1/1 BBUpDn:0/3 diffBBW:280.0 trend:0 MidLV:4515.64 Upp:5343.65 Low:3687.62 WLV:36.67  [upd:2026.03.02 01:00:07]
+  [H4] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:3.73 trend:1 MidLV:5256.43 Upp:5420.52 Low:5092.33 WLV:6.24  [upd:2026.03.03 04:00:05]
+  [H1] stg:422/422(SQZ) mid:2/2 BBUpDn:2/0 diffBBW:-15.02 trend:2 MidLV:5350.9 Upp:5413.75 Low:5288.04 WLV:2.35  [upd:2026.03.03 07:00:04]
+  [M30] stg:513/512(FLY) mid:1/1 BBUpDn:2/0 diffBBW:-21.23 trend:1 MidLV:5349.3 Upp:5378.72 Low:5319.88 WLV:1.1  [upd:2026.03.03 07:30:03]
+  [M15] stg:511/425(FLY) mid:5/5 BBUpDn:1/2 diffBBW:4.83 trend:1 MidLV:5361.33 Upp:5378.66 Low:5343.99 WLV:0.65 close:5345.22  [upd:2026.03.03 07:45:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=1 shrink_tfs=['M30', 'D1'] sqz_tfs=['H1']
+  TRADEINFO: gate=G6-SHRINK | G5 | G6-ENTRY | G6-BUY act=1 tradeact=0
+  BBTFImpact: sideway=02164-S_22 htf_drive=M5_1, M15_1, M30_1, H4_1 ltf_drive=M15_1, D1_1 midCluster=2.4, 13.04, 11.45
+
+--- [8] 2026.03.03 08:00:05 (H4 boundary) ---
+  Log line: 22880
+  [D1] stg:523/523(FLY) mid:1/3 BBUpDn:3/0 diffBBW:35.97 trend:1 MidLV:5061.23 Upp:5336.53 Low:4785.94 WLV:10.88  [upd:2026.03.03 01:00:06]
+  [W1] stg:511/511(FLY) mid:1/1 BBUpDn:0/3 diffBBW:280.0 trend:0 MidLV:4515.64 Upp:5343.65 Low:3687.62 WLV:36.67  [upd:2026.03.02 01:00:07]
+  [H4] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-8.86 trend:1 MidLV:5263.53 Upp:5425.55 Low:5101.5 WLV:6.16  [upd:2026.03.03 08:00:05]
+  [H1] stg:422/422(SQZ) mid:2/2 BBUpDn:0/2 diffBBW:-7.97 trend:2 MidLV:5345.82 Upp:5406.61 Low:5285.03 WLV:2.27  [upd:2026.03.03 08:00:04]
+  [M30] stg:513/513(FLY) mid:3/1 BBUpDn:0/2 diffBBW:3.12 trend:1 MidLV:5347.73 Upp:5378.53 Low:5316.92 WLV:1.15  [upd:2026.03.03 08:00:03]
+  [M15] stg:521/511(FLY) mid:2/5 BBUpDn:1/1 diffBBW:24.01 trend:8 MidLV:5358.36 Upp:5386.98 Low:5329.73 WLV:1.07 close:5319.2  [upd:2026.03.03 08:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=1 shrink_tfs=['M30', 'D1'] sqz_tfs=['H1']
+  TRADEINFO: gate=H4-OPPOSE act=0 tradeact=0
+  BBTFImpact: sideway=02500 htf_drive=M15_1, M30_1, H4_1 ltf_drive=M15_1, M30_1, D1_1 midCluster=5.13, 10.63, 12.53
+
+--- [9] 2026.03.03 12:00:05 (H4 boundary) ---
+  Log line: 22973
+  [D1] stg:523/523(FLY) mid:1/3 BBUpDn:3/0 diffBBW:35.97 trend:1 MidLV:5061.23 Upp:5336.53 Low:4785.94 WLV:10.88  [upd:2026.03.03 01:00:06]
+  [W1] stg:511/511(FLY) mid:1/1 BBUpDn:0/3 diffBBW:280.0 trend:0 MidLV:4515.64 Upp:5343.65 Low:3687.62 WLV:36.67  [upd:2026.03.02 01:00:07]
+  [H4] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-13.27 trend:1 MidLV:5265.93 Upp:5422.86 Low:5109.01 WLV:5.96  [upd:2026.03.03 12:00:05]
+  [H1] stg:422/422(SQZ) mid:2/2 BBUpDn:4/4 diffBBW:-14.15 trend:2 MidLV:5325.25 Upp:5382.03 Low:5268.47 WLV:2.13  [upd:2026.03.03 12:00:04]
+  [M30] stg:521/521(FLY) mid:2/2 BBUpDn:1/1 diffBBW:16.86 trend:2 MidLV:5330.72 Upp:5401.34 Low:5260.11 WLV:2.65  [upd:2026.03.03 12:00:03]
+  [M15] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:-11.06 trend:2 MidLV:5306.8 Upp:5357.84 Low:5255.75 WLV:1.92 close:5275.01  [upd:2026.03.03 12:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=1 shrink_tfs=['D1'] sqz_tfs=['H1']
+  TRADEINFO: gate=H4-OPPOSE act=0 tradeact=0
+  BBTFImpact: sideway=02000 htf_drive=M5_1, M30_1, H1_1, H4_1 ltf_drive=M15_1, M30_1, H1_1, D1_1 midCluster=19.55, 23.93, 18.45
+
+--- [10] 2026.03.03 16:00:05 (H4 boundary) ---
+  Log line: 23066
+  [D1] stg:523/523(FLY) mid:1/3 BBUpDn:3/0 diffBBW:35.97 trend:1 MidLV:5061.23 Upp:5336.53 Low:4785.94 WLV:10.88  [upd:2026.03.03 01:00:06]
+  [W1] stg:511/511(FLY) mid:1/1 BBUpDn:0/3 diffBBW:280.0 trend:0 MidLV:4515.64 Upp:5343.65 Low:3687.62 WLV:36.67  [upd:2026.03.02 01:00:07]
+  [H4] stg:512/512(FLY) mid:3/1 BBUpDn:1/3 diffBBW:12.59 trend:1 MidLV:5259.73 Upp:5424.17 Low:5095.29 WLV:6.25  [upd:2026.03.03 16:00:05]
+  [H1] stg:521/521(FLY) mid:2/2 BBUpDn:1/1 diffBBW:61.5 trend:2 MidLV:5295.2 Upp:5431.62 Low:5158.77 WLV:5.15  [upd:2026.03.03 16:00:04]
+  [M30] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:3.85 trend:2 MidLV:5258.67 Upp:5404.55 Low:5112.79 WLV:5.55  [upd:2026.03.03 16:00:03]
+  [M15] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:-17.58 trend:2 MidLV:5203.75 Upp:5305.54 Low:5101.96 WLV:3.91 close:5156.72  [upd:2026.03.03 16:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=0 shrink_tfs=['D1'] sqz_tfs=[]
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=40000 htf_drive=M5_1, H1_1, H4_1 ltf_drive=M15_1, M30_1, H1_1, H4_1, D1_1 midCluster=25.6, 54.92, 91.44
+
+--- [11] 2026.03.03 20:00:05 (H4 boundary) ---
+  Log line: 23159
+  [D1] stg:523/523(FLY) mid:1/3 BBUpDn:3/0 diffBBW:35.97 trend:1 MidLV:5061.23 Upp:5336.53 Low:4785.94 WLV:10.88  [upd:2026.03.03 01:00:06]
+  [W1] stg:511/511(FLY) mid:1/1 BBUpDn:0/3 diffBBW:280.0 trend:0 MidLV:4515.64 Upp:5343.65 Low:3687.62 WLV:36.67  [upd:2026.03.02 01:00:07]
+  [H4] stg:512/512(FLY) mid:3/3 BBUpDn:1/1 diffBBW:50.54 trend:1 MidLV:5251.6 Upp:5440.28 Low:5062.91 WLV:7.19  [upd:2026.03.03 20:00:05]
+  [H1] stg:522/521(FLY) mid:2/2 BBUpDn:4/0 diffBBW:41.89 trend:2 MidLV:5243.79 Upp:5463.3 Low:5024.28 WLV:8.37  [upd:2026.03.03 20:00:04]
+  [M30] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:-39.68 trend:2 MidLV:5159.97 Upp:5317.38 Low:5002.56 WLV:6.1  [upd:2026.03.03 20:00:03]
+  [M15] stg:523/522(FLY) mid:2/2 BBUpDn:2/0 diffBBW:-27.89 trend:2 MidLV:5100.67 Upp:5183.06 Low:5018.28 WLV:3.23 close:5079.16  [upd:2026.03.03 20:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=0 shrink_tfs=['M15', 'D1'] sqz_tfs=[]
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=40010 htf_drive=M5_1, M15_1, H4_1 ltf_drive=M15_1, H1_1, H4_1, D1_1 midCluster=5.52, 59.3, 143.13
+
+--- [12] 2026.03.04 04:00:05 (H4 boundary) ---
+  Log line: 23323
+  [D1] stg:513/523(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-10.12 trend:1 MidLV:5060.89 Upp:5313.52 Low:4808.27 WLV:9.98  [upd:2026.03.04 01:00:06]
+  [W1] stg:511/511(FLY) mid:1/1 BBUpDn:0/3 diffBBW:280.0 trend:0 MidLV:4515.64 Upp:5343.65 Low:3687.62 WLV:36.67  [upd:2026.03.02 01:00:07]
+  [H4] stg:521/521(FLY) mid:3/2 BBUpDn:1/1 diffBBW:1.8599999999999999 trend:8 MidLV:5251.47 Upp:5438.44 Low:5064.5 WLV:7.12  [upd:2026.03.04 04:00:05]
+  [H1] stg:523/523(FLY) mid:2/2 BBUpDn:2/2 diffBBW:-61.51 trend:2 MidLV:5166.64 Upp:5327.61 Low:5005.66 WLV:6.23  [upd:2026.03.04 04:00:04]
+  [M30] stg:413/413(SQZ) mid:3/3 BBUpDn:0/0 diffBBW:-16.33 trend:2 MidLV:5115.27 Upp:5166.54 Low:5064.0 WLV:2.0  [upd:2026.03.04 04:00:03]
+  [M15] stg:511/511(FLY) mid:1/1 BBUpDn:1/1 diffBBW:22.38 trend:1 MidLV:5124.39 Upp:5174.0 Low:5074.77 WLV:1.94 close:5175.13  [upd:2026.03.04 04:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=1 shrink_tfs=['H1', 'D1'] sqz_tfs=['M30']
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=41600 htf_drive=M15_1, M30_1, H4_1 ltf_drive=M15_1, M30_1, D1_1 midCluster=24.87, 9.11, 42.25
+
+--- [13] 2026.03.04 08:00:05 (H4 boundary) ---
+  Log line: 23416
+  [D1] stg:513/523(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-10.12 trend:1 MidLV:5060.89 Upp:5313.52 Low:4808.27 WLV:9.98  [upd:2026.03.04 01:00:06]
+  [W1] stg:511/511(FLY) mid:1/1 BBUpDn:0/3 diffBBW:280.0 trend:0 MidLV:4515.64 Upp:5343.65 Low:3687.62 WLV:36.67  [upd:2026.03.02 01:00:07]
+  [H4] stg:521/521(FLY) mid:4/3 BBUpDn:1/1 diffBBW:7.13 trend:8 MidLV:5249.96 Upp:5439.52 Low:5060.4 WLV:7.22  [upd:2026.03.04 08:00:05]
+  [H1] stg:523/523(FLY) mid:2/2 BBUpDn:2/2 diffBBW:-58.24 trend:2 MidLV:5138.9 Upp:5230.47 Low:5047.33 WLV:3.56  [upd:2026.03.04 08:00:04]
+  [M30] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:1.54 trend:1 MidLV:5140.12 Upp:5194.48 Low:5085.75 WLV:2.12  [upd:2026.03.04 08:00:03]
+  [M15] stg:513/513(FLY) mid:5/1 BBUpDn:2/2 diffBBW:-3.67 trend:1 MidLV:5164.36 Upp:5180.96 Low:5147.76 WLV:0.64 close:5160.06  [upd:2026.03.04 08:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=0 shrink_tfs=['M15', 'H1', 'D1'] sqz_tfs=[]
+  TRADEINFO: gate=G6-SHRINK | G5 | G5-NONE act=0 tradeact=0
+  BBTFImpact: sideway=41051 htf_drive=M5_1, M30_1, H4_1 ltf_drive=H1_1, D1_1 midCluster=3.7199999999999998, 24.24, 25.46
+
+--- [14] 2026.03.04 12:00:05 (H4 boundary) ---
+  Log line: 23509
+  [D1] stg:513/523(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-10.12 trend:1 MidLV:5060.89 Upp:5313.52 Low:4808.27 WLV:9.98  [upd:2026.03.04 01:00:06]
+  [W1] stg:511/511(FLY) mid:1/1 BBUpDn:0/3 diffBBW:280.0 trend:0 MidLV:4515.64 Upp:5343.65 Low:3687.62 WLV:36.67  [upd:2026.03.02 01:00:07]
+  [H4] stg:521/521(FLY) mid:3/4 BBUpDn:1/1 diffBBW:1.21 trend:8 MidLV:5249.42 Upp:5439.9 Low:5058.93 WLV:7.26  [upd:2026.03.04 12:00:05]
+  [H1] stg:523/523(FLY) mid:3/3 BBUpDn:0/2 diffBBW:3.23 trend:2 MidLV:5132.79 Upp:5204.46 Low:5061.13 WLV:2.79  [upd:2026.03.04 12:00:04]
+  [M30] stg:513/513(FLY) mid:1/1 BBUpDn:0/2 diffBBW:-19.77 trend:1 MidLV:5162.46 Upp:5187.44 Low:5137.47 WLV:0.97  [upd:2026.03.04 12:00:03]
+  [M15] stg:511/521(FLY) mid:1/4 BBUpDn:1/1 diffBBW:5.95 trend:7 MidLV:5163.83 Upp:5187.35 Low:5140.32 WLV:0.91 close:5182.31  [upd:2026.03.04 12:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=0 shrink_tfs=['M30', 'H1', 'D1'] sqz_tfs=[]
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=45100 htf_drive=M15_1, M30_1, H4_1 ltf_drive=M15_1, M30_1, D1_1 midCluster=9.39, 1.37, 31.04
+
+--- [15] 2026.03.04 16:00:05 (H4 boundary) ---
+  Log line: 23602
+  [D1] stg:513/523(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-10.12 trend:1 MidLV:5060.89 Upp:5313.52 Low:4808.27 WLV:9.98  [upd:2026.03.04 01:00:06]
+  [W1] stg:511/511(FLY) mid:1/1 BBUpDn:0/3 diffBBW:280.0 trend:0 MidLV:4515.64 Upp:5343.65 Low:3687.62 WLV:36.67  [upd:2026.03.02 01:00:07]
+  [H4] stg:521/521(FLY) mid:3/3 BBUpDn:1/1 diffBBW:5.28 trend:8 MidLV:5248.46 Upp:5440.39 Low:5056.53 WLV:7.31  [upd:2026.03.04 16:00:05]
+  [H1] stg:421/421(SQZ) mid:1/1 BBUpDn:0/0 diffBBW:-22.87 trend:1 MidLV:5152.36 Upp:5211.54 Low:5093.17 WLV:2.3  [upd:2026.03.04 16:00:04]
+  [M30] stg:512/512(FLY) mid:3/1 BBUpDn:0/3 diffBBW:0.23 trend:1 MidLV:5171.98 Upp:5201.5 Low:5142.45 WLV:1.1400000000000001  [upd:2026.03.04 16:00:03]
+  [M15] stg:513/512(FLY) mid:5/1 BBUpDn:2/0 diffBBW:-1.9 trend:1 MidLV:5184.23 Upp:5203.6 Low:5164.86 WLV:0.75 close:5168.01  [upd:2026.03.04 16:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=1 shrink_tfs=['M15', 'D1'] sqz_tfs=['H1']
+  TRADEINFO: gate=G0-HOLD act=0 tradeact=0
+  BBTFImpact: sideway=42451 htf_drive=M5_1, M30_1, H4_1 ltf_drive=H1_1, D1_1 midCluster=5.02, 12.25, 31.87
+
+--- [16] 2026.03.04 20:00:05 (H4 boundary) ---
+  Log line: 23695
+  [D1] stg:513/523(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-10.12 trend:1 MidLV:5060.89 Upp:5313.52 Low:4808.27 WLV:9.98  [upd:2026.03.04 01:00:06]
+  [W1] stg:511/511(FLY) mid:1/1 BBUpDn:0/3 diffBBW:280.0 trend:0 MidLV:4515.64 Upp:5343.65 Low:3687.62 WLV:36.67  [upd:2026.03.02 01:00:07]
+  [H4] stg:521/521(FLY) mid:2/3 BBUpDn:1/1 diffBBW:18.67 trend:8 MidLV:5244.51 Upp:5442.6 Low:5046.42 WLV:7.55  [upd:2026.03.04 20:00:05]
+  [H1] stg:421/421(SQZ) mid:1/1 BBUpDn:2/2 diffBBW:-28.73 trend:1 MidLV:5159.02 Upp:5201.73 Low:5116.31 WLV:1.6600000000000001  [upd:2026.03.04 20:00:04]
+  [M30] stg:521/521(FLY) mid:2/2 BBUpDn:1/1 diffBBW:7.0 trend:2 MidLV:5167.62 Upp:5205.7 Low:5129.53 WLV:1.47  [upd:2026.03.04 20:00:03]
+  [M15] stg:522/522(FLY) mid:2/2 BBUpDn:4/0 diffBBW:-5.47 trend:2 MidLV:5155.79 Upp:5188.1 Low:5123.49 WLV:1.25 close:5141.11  [upd:2026.03.04 20:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=1 shrink_tfs=['D1'] sqz_tfs=['H1']
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=02000 htf_drive=M30_1, H4_1 ltf_drive=M15_1, M30_1, H1_1, D1_1 midCluster=11.97, 11.82, 3.23
+
+--- [17] 2026.03.05 04:00:05 (H4 boundary) ---
+  Log line: 23859
+  [D1] stg:512/513(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-42.66 trend:1 MidLV:5075.9 Upp:5320.46 Low:4831.33 WLV:9.64  [upd:2026.03.05 01:00:06]
+  [W1] stg:511/511(FLY) mid:1/1 BBUpDn:0/3 diffBBW:280.0 trend:0 MidLV:4515.64 Upp:5343.65 Low:3687.62 WLV:36.67  [upd:2026.03.02 01:00:07]
+  [H4] stg:522/521(FLY) mid:2/2 BBUpDn:4/0 diffBBW:8.46 trend:2 MidLV:5236.4 Upp:5440.84 Low:5031.96 WLV:7.8100000000000005  [upd:2026.03.05 04:00:05]
+  [H1] stg:413/413(SQZ) mid:5/3 BBUpDn:0/0 diffBBW:1.5699999999999998 trend:8 MidLV:5159.82 Upp:5199.98 Low:5119.66 WLV:1.56  [upd:2026.03.05 04:00:04]
+  [M30] stg:511/411(FLY) mid:1/1 BBUpDn:1/1 diffBBW:7.37 trend:1 MidLV:5147.91 Upp:5181.97 Low:5113.85 WLV:1.32  [upd:2026.03.05 04:00:03]
+  [M15] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-3.16 trend:1 MidLV:5157.03 Upp:5189.72 Low:5124.34 WLV:1.27 close:5172.59  [upd:2026.03.05 04:00:02]
+  Cascade: cas_shrinkTF=-1 cas_sqzCount=1 shrink_tfs=[] sqz_tfs=['H1']
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=06006 htf_drive=M5_1, M15_1, M30_1, H4_1 ltf_drive=M30_1, H1_1, D1_1, W1_1 midCluster=17.31, 9.12, 2.79
+
+--- [18] 2026.03.05 08:00:05 (H4 boundary) ---
+  Log line: 23952
+  [D1] stg:512/513(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-42.66 trend:1 MidLV:5075.9 Upp:5320.46 Low:4831.33 WLV:9.64  [upd:2026.03.05 01:00:06]
+  [W1] stg:511/511(FLY) mid:1/1 BBUpDn:0/3 diffBBW:280.0 trend:0 MidLV:4515.64 Upp:5343.65 Low:3687.62 WLV:36.67  [upd:2026.03.02 01:00:07]
+  [H4] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:-10.92 trend:2 MidLV:5226.37 Upp:5427.6 Low:5025.13 WLV:7.7  [upd:2026.03.05 08:00:05]
+  [H1] stg:511/511(FLY) mid:3/3 BBUpDn:4/3 diffBBW:1.06 trend:1 MidLV:5161.73 Upp:5203.9 Low:5119.56 WLV:1.63  [upd:2026.03.05 08:00:04]
+  [M30] stg:513/512(FLY) mid:1/1 BBUpDn:2/0 diffBBW:-8.02 trend:1 MidLV:5162.66 Upp:5200.4 Low:5124.92 WLV:1.46  [upd:2026.03.05 08:00:03]
+  [M15] stg:521/521(FLY) mid:2/4 BBUpDn:1/1 diffBBW:19.26 trend:8 MidLV:5176.44 Upp:5195.66 Low:5157.22 WLV:0.74 close:5148.62  [upd:2026.03.05 08:00:02]
+  Cascade: cas_shrinkTF=2 cas_sqzCount=0 shrink_tfs=['M30'] sqz_tfs=[]
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=04100 htf_drive=M15_1, H4_1 ltf_drive=M15_1, M30_1, H4_1, D1_1, W1_1 midCluster=6.71, 13.78, 14.71
+
+--- [19] 2026.03.05 12:00:05 (H4 boundary) ---
+  Log line: 24045
+  [D1] stg:512/513(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-42.66 trend:1 MidLV:5075.9 Upp:5320.46 Low:4831.33 WLV:9.64  [upd:2026.03.05 01:00:06]
+  [W1] stg:511/511(FLY) mid:1/1 BBUpDn:0/3 diffBBW:280.0 trend:0 MidLV:4515.64 Upp:5343.65 Low:3687.62 WLV:36.67  [upd:2026.03.02 01:00:07]
+  [H4] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:-19.26 trend:2 MidLV:5217.43 Upp:5413.06 Low:5021.8 WLV:7.5  [upd:2026.03.05 12:00:05]
+  [H1] stg:523/523(FLY) mid:2/2 BBUpDn:2/2 diffBBW:-6.6899999999999995 trend:2 MidLV:5156.49 Upp:5190.62 Low:5122.36 WLV:1.32  [upd:2026.03.05 12:00:04]
+  [M30] stg:413/513(SQZ) mid:3/1 BBUpDn:0/0 diffBBW:1.01 trend:1 MidLV:5168.6 Upp:5193.79 Low:5143.4 WLV:0.97  [upd:2026.03.05 12:00:03]
+  [M15] stg:523/523(FLY) mid:2/4 BBUpDn:2/2 diffBBW:-3.26 trend:2 MidLV:5159.0 Upp:5180.55 Low:5137.45 WLV:0.84 close:5161.11  [upd:2026.03.05 12:00:02]
+  Cascade: cas_shrinkTF=3 cas_sqzCount=1 shrink_tfs=['M15', 'H1'] sqz_tfs=['M30']
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=01611 htf_drive=M5_1, M15_1, M30_1, H1_1, H4_1 ltf_drive=D1_1, W1_1 midCluster=4.79, 9.59, 2.51
+
+--- [20] 2026.03.05 16:00:05 (H4 boundary) ---
+  Log line: 24138
+  [D1] stg:512/513(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-42.66 trend:1 MidLV:5075.9 Upp:5320.46 Low:4831.33 WLV:9.64  [upd:2026.03.05 01:00:06]
+  [W1] stg:511/511(FLY) mid:1/1 BBUpDn:0/3 diffBBW:280.0 trend:0 MidLV:4515.64 Upp:5343.65 Low:3687.62 WLV:36.67  [upd:2026.03.02 01:00:07]
+  [H4] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:-48.87 trend:2 MidLV:5202.16 Upp:5387.06 Low:5017.25 WLV:7.11  [upd:2026.03.05 16:00:05]
+  [H1] stg:521/423(FLY) mid:2/5 BBUpDn:1/3 diffBBW:9.59 trend:2 MidLV:5154.96 Upp:5194.66 Low:5115.27 WLV:1.54  [upd:2026.03.05 16:00:04]
+  [M30] stg:521/413(FLY) mid:2/2 BBUpDn:4/0 diffBBW:10.7 trend:2 MidLV:5155.15 Upp:5187.25 Low:5123.05 WLV:1.25  [upd:2026.03.05 16:00:03]
+  [M15] stg:521/422(FLY) mid:2/2 BBUpDn:1/1 diffBBW:13.21 trend:2 MidLV:5153.83 Upp:5187.44 Low:5120.22 WLV:1.3 close:5118.0  [upd:2026.03.05 16:00:02]
+  Cascade: cas_shrinkTF=-1 cas_sqzCount=0 shrink_tfs=[] sqz_tfs=[]
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=00000 htf_drive=M5_1, M15_1, M30_1, H1_1, H4_1 ltf_drive=M15_1, M30_1, H1_1, H4_1, D1_1, W1_1 midCluster=11.63, 1.32, 1.13
+
+--- [21] 2026.03.05 20:00:05 (H4 boundary) ---
+  Log line: 24231
+  [D1] stg:512/513(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-42.66 trend:1 MidLV:5075.9 Upp:5320.46 Low:4831.33 WLV:9.64  [upd:2026.03.05 01:00:06]
+  [W1] stg:511/511(FLY) mid:1/1 BBUpDn:0/3 diffBBW:280.0 trend:0 MidLV:4515.64 Upp:5343.65 Low:3687.62 WLV:36.67  [upd:2026.03.02 01:00:07]
+  [H4] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:-50.39 trend:2 MidLV:5184.13 Upp:5358.2 Low:5010.05 WLV:6.72  [upd:2026.03.05 20:00:05]
+  [H1] stg:521/521(FLY) mid:2/2 BBUpDn:1/1 diffBBW:36.43 trend:2 MidLV:5143.23 Upp:5219.44 Low:5067.01 WLV:2.96  [upd:2026.03.05 20:00:04]
+  [M30] stg:522/522(FLY) mid:2/2 BBUpDn:0/4 diffBBW:17.69 trend:2 MidLV:5123.45 Upp:5200.32 Low:5046.57 WLV:3.0  [upd:2026.03.05 20:00:03]
+  [M15] stg:523/523(FLY) mid:2/2 BBUpDn:2/0 diffBBW:-25.98 trend:2 MidLV:5090.75 Upp:5131.94 Low:5049.56 WLV:1.62 close:5062.55  [upd:2026.03.05 20:00:02]
+  Cascade: cas_shrinkTF=1 cas_sqzCount=0 shrink_tfs=['M15'] sqz_tfs=[]
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=00010 htf_drive=M5_1, H1_1, H4_1 ltf_drive=M15_1, H1_1, H4_1, D1_1, W1_1 midCluster=18.82, 32.69, 52.47
+
+--- [22] 2026.03.06 04:00:05 (H4 boundary) ---
+  Log line: 24395
+  [D1] stg:513/512(FLY) mid:1/1 BBUpDn:0/3 diffBBW:-126.61 trend:1 MidLV:5088.39 Upp:5300.2 Low:4876.58 WLV:8.33  [upd:2026.03.06 01:00:06]
+  [W1] stg:511/511(FLY) mid:1/1 BBUpDn:0/3 diffBBW:280.0 trend:0 MidLV:4515.64 Upp:5343.65 Low:3687.62 WLV:36.67  [upd:2026.03.02 01:00:07]
+  [H4] stg:522/522(FLY) mid:2/2 BBUpDn:0/4 diffBBW:-51.17 trend:2 MidLV:5164.3 Upp:5313.54 Low:5015.06 WLV:5.78  [upd:2026.03.06 04:00:05]
+  [H1] stg:523/522(FLY) mid:2/2 BBUpDn:2/4 diffBBW:-9.54 trend:2 MidLV:5115.0 Upp:5188.65 Low:5041.35 WLV:2.88  [upd:2026.03.06 04:00:04]
+  [M30] stg:413/523(SQZ) mid:3/2 BBUpDn:1/2 diffBBW:38.46 trend:2 MidLV:5082.68 Upp:5115.64 Low:5049.73 WLV:1.3  [upd:2026.03.06 04:00:03]
+  [M15] stg:511/513(FLY) mid:1/1 BBUpDn:1/0 diffBBW:26.66 trend:1 MidLV:5089.12 Upp:5121.02 Low:5057.21 WLV:1.25 close:5134.72  [upd:2026.03.06 04:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=1 shrink_tfs=['H1', 'D1'] sqz_tfs=['M30']
+  TRADEINFO: gate=H4-OPPOSE act=0 tradeact=0
+  BBTFImpact: sideway=01600 htf_drive=M5_1, M15_1, M30_1, H1_1, H4_1 ltf_drive=M15_1, M30_1, D1_1 midCluster=6.66, 6.43, 25.88
+
+--- [23] 2026.03.06 08:00:05 (H4 boundary) ---
+  Log line: 24488
+  [D1] stg:513/512(FLY) mid:1/1 BBUpDn:0/3 diffBBW:-126.61 trend:1 MidLV:5088.39 Upp:5300.2 Low:4876.58 WLV:8.33  [upd:2026.03.06 01:00:06]
+  [W1] stg:511/511(FLY) mid:1/1 BBUpDn:0/3 diffBBW:280.0 trend:0 MidLV:4515.64 Upp:5343.65 Low:3687.62 WLV:36.67  [upd:2026.03.02 01:00:07]
+  [H4] stg:523/522(FLY) mid:2/2 BBUpDn:2/0 diffBBW:-101.04 trend:2 MidLV:5152.23 Upp:5275.38 Low:5029.07 WLV:4.78  [upd:2026.03.06 08:00:05]
+  [H1] stg:523/523(FLY) mid:2/2 BBUpDn:2/2 diffBBW:-19.25 trend:2 MidLV:5108.43 Upp:5170.25 Low:5046.6 WLV:2.42  [upd:2026.03.06 08:00:04]
+  [M30] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-5.87 trend:1 MidLV:5103.67 Upp:5152.33 Low:5055.0 WLV:1.9100000000000001  [upd:2026.03.06 08:00:03]
+  [M15] stg:513/513(FLY) mid:1/1 BBUpDn:2/2 diffBBW:-30.74 trend:1 MidLV:5125.26 Upp:5149.81 Low:5100.71 WLV:0.96 close:5117.47  [upd:2026.03.06 08:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=0 shrink_tfs=['M15', 'H1', 'H4', 'D1'] sqz_tfs=[]
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=11010 htf_drive=M5_1, M30_1, H1_1, H4_1 ltf_drive=M15_1, H1_1 midCluster=0.79, 21.6, 16.84
+
+--- [24] 2026.03.06 12:00:05 (H4 boundary) ---
+  Log line: 24581
+  [D1] stg:513/512(FLY) mid:1/1 BBUpDn:0/3 diffBBW:-126.61 trend:1 MidLV:5088.39 Upp:5300.2 Low:4876.58 WLV:8.33  [upd:2026.03.06 01:00:06]
+  [W1] stg:511/511(FLY) mid:1/1 BBUpDn:0/3 diffBBW:280.0 trend:0 MidLV:4515.64 Upp:5343.65 Low:3687.62 WLV:36.67  [upd:2026.03.02 01:00:07]
+  [H4] stg:523/523(FLY) mid:2/2 BBUpDn:2/2 diffBBW:-123.3 trend:2 MidLV:5138.82 Upp:5230.94 Low:5046.7 WLV:3.59  [upd:2026.03.06 12:00:05]
+  [H1] stg:523/523(FLY) mid:2/2 BBUpDn:0/2 diffBBW:-3.64 trend:2 MidLV:5098.2 Upp:5140.28 Low:5056.12 WLV:1.65  [upd:2026.03.06 12:00:04]
+  [M30] stg:513/513(FLY) mid:3/3 BBUpDn:2/2 diffBBW:-1.83 trend:1 MidLV:5113.62 Upp:5147.68 Low:5079.55 WLV:1.33  [upd:2026.03.06 12:00:03]
+  [M15] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:7.87 trend:2 MidLV:5110.38 Upp:5132.37 Low:5088.39 WLV:0.86 close:5085.81  [upd:2026.03.06 12:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=0 shrink_tfs=['M30', 'H1', 'H4', 'D1'] sqz_tfs=[]
+  TRADEINFO: gate=G1-OK | G5 act=0 tradeact=0
+  BBTFImpact: sideway=11500 htf_drive=M5_1, M15_1, M30_1, H1_1, H4_1 ltf_drive=M15_1, M30_1 midCluster=10.68, 3.23, 12.18
+
+--- [25] 2026.03.06 16:00:05 (H4 boundary) ---
+  Log line: 24674
+  [D1] stg:513/512(FLY) mid:1/1 BBUpDn:0/3 diffBBW:-126.61 trend:1 MidLV:5088.39 Upp:5300.2 Low:4876.58 WLV:8.33  [upd:2026.03.06 01:00:06]
+  [W1] stg:511/511(FLY) mid:1/1 BBUpDn:0/3 diffBBW:280.0 trend:0 MidLV:4515.64 Upp:5343.65 Low:3687.62 WLV:36.67  [upd:2026.03.02 01:00:07]
+  [H4] stg:523/523(FLY) mid:2/2 BBUpDn:2/2 diffBBW:-92.94 trend:2 MidLV:5129.49 Upp:5196.47 Low:5062.51 WLV:2.61  [upd:2026.03.06 16:00:05]
+  [H1] stg:522/522(FLY) mid:5/3 BBUpDn:0/0 diffBBW:-4.4 trend:2 MidLV:5098.05 Upp:5138.72 Low:5057.37 WLV:1.6  [upd:2026.03.06 16:00:04]
+  [M30] stg:522/522(FLY) mid:2/2 BBUpDn:0/4 diffBBW:-5.91 trend:2 MidLV:5101.69 Upp:5134.04 Low:5069.34 WLV:1.27  [upd:2026.03.06 16:00:03]
+  [M15] stg:523/522(FLY) mid:3/3 BBUpDn:2/1 diffBBW:-3.81 trend:2 MidLV:5088.5 Upp:5103.35 Low:5073.64 WLV:0.58 close:5085.21  [upd:2026.03.06 16:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=0 shrink_tfs=['M15', 'H4', 'D1'] sqz_tfs=[]
+  TRADEINFO: gate=G6-SHRINK | G5 | G5-NONE act=0 tradeact=0
+  BBTFImpact: sideway=14054-S_11 htf_drive=M15_1, M30_1, H1_1, H4_1 ltf_drive=M15_1, H1_1, H4_1 midCluster=3.5, 13.19, 9.55
+
+--- [26] 2026.03.06 20:00:05 (H4 boundary) ---
+  Log line: 24767
+  [D1] stg:513/512(FLY) mid:1/1 BBUpDn:0/3 diffBBW:-126.61 trend:1 MidLV:5088.39 Upp:5300.2 Low:4876.58 WLV:8.33  [upd:2026.03.06 01:00:06]
+  [W1] stg:511/511(FLY) mid:1/1 BBUpDn:0/3 diffBBW:280.0 trend:0 MidLV:4515.64 Upp:5343.65 Low:3687.62 WLV:36.67  [upd:2026.03.02 01:00:07]
+  [H4] stg:523/523(FLY) mid:4/2 BBUpDn:2/2 diffBBW:-14.88 trend:2 MidLV:5129.66 Upp:5189.48 Low:5069.84 WLV:2.33  [upd:2026.03.06 20:00:05]
+  [H1] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-1.88 trend:1 MidLV:5113.03 Upp:5156.01 Low:5070.05 WLV:1.6800000000000002  [upd:2026.03.06 20:00:04]
+  [M30] stg:511/511(FLY) mid:1/1 BBUpDn:1/1 diffBBW:7.78 trend:1 MidLV:5110.13 Upp:5161.3 Low:5058.96 WLV:2.0  [upd:2026.03.06 20:00:03]
+  [M15] stg:512/512(FLY) mid:1/1 BBUpDn:0/3 diffBBW:-19.46 trend:1 MidLV:5127.61 Upp:5173.81 Low:5081.41 WLV:1.8 close:5140.82  [upd:2026.03.06 20:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=0 shrink_tfs=['H4', 'D1'] sqz_tfs=[]
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=50005 htf_drive=M5_1, H1_1, H4_1 ltf_drive=M30_1, H1_1, H4_1 midCluster=11.96, 17.48, 14.58
+
+--- [27] 2026.03.09 04:00:05 (H4 boundary) ---
+  Log line: 24932
+  [D1] stg:513/513(FLY) mid:1/1 BBUpDn:0/0 diffBBW:3.52 trend:1 MidLV:5097.58 Upp:5311.01 Low:4884.14 WLV:8.37  [upd:2026.03.09 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:422/424(SQZ) mid:2/4 BBUpDn:0/0 diffBBW:41.34 trend:2 MidLV:5128.45 Upp:5196.89 Low:5060.02 WLV:2.67  [upd:2026.03.09 04:00:05]
+  [H1] stg:521/512(FLY) mid:2/3 BBUpDn:1/0 diffBBW:28.61 trend:8 MidLV:5115.12 Upp:5184.79 Low:5045.44 WLV:2.7199999999999998  [upd:2026.03.09 04:00:04]
+  [M30] stg:521/521(FLY) mid:2/2 BBUpDn:1/1 diffBBW:36.86 trend:2 MidLV:5131.07 Upp:5210.87 Low:5051.26 WLV:3.11  [upd:2026.03.09 04:00:03]
+  [M15] stg:522/521(FLY) mid:2/2 BBUpDn:4/0 diffBBW:13.12 trend:2 MidLV:5114.7 Upp:5209.93 Low:5019.48 WLV:3.7199999999999998 close:5050.09  [upd:2026.03.09 04:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=1 shrink_tfs=['D1'] sqz_tfs=['H4']
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=20001 htf_drive=H1_1, H4_1 ltf_drive=M30_1, H1_1, H4_1 midCluster=55.66, 16.36, 0.41
+
+--- [28] 2026.03.09 08:00:05 (H4 boundary) ---
+  Log line: 25025
+  [D1] stg:513/513(FLY) mid:1/1 BBUpDn:0/0 diffBBW:3.52 trend:1 MidLV:5097.58 Upp:5311.01 Low:4884.14 WLV:8.37  [upd:2026.03.09 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:521/422(FLY) mid:2/2 BBUpDn:1/0 diffBBW:8.32 trend:2 MidLV:5126.99 Upp:5194.87 Low:5059.12 WLV:2.65  [upd:2026.03.09 08:00:05]
+  [H1] stg:522/522(FLY) mid:3/2 BBUpDn:4/4 diffBBW:1.15 trend:2 MidLV:5111.1 Upp:5183.48 Low:5038.73 WLV:2.83  [upd:2026.03.09 08:00:04]
+  [M30] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:-14.68 trend:2 MidLV:5106.66 Upp:5187.43 Low:5025.89 WLV:3.16  [upd:2026.03.09 08:00:03]
+  [M15] stg:413/413(SQZ) mid:1/1 BBUpDn:3/3 diffBBW:-4.31 trend:1 MidLV:5078.5 Upp:5112.58 Low:5044.42 WLV:1.34 close:5090.24  [upd:2026.03.09 08:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=1 shrink_tfs=['D1'] sqz_tfs=['M15']
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=04026 htf_drive=M5_1, M15_1, H1_1, H4_1 ltf_drive=H1_1, H4_1, D1_1 midCluster=11.69, 28.16, 32.6
+
+--- [29] 2026.03.09 12:00:05 (H4 boundary) ---
+  Log line: 25118
+  [D1] stg:513/513(FLY) mid:1/1 BBUpDn:0/0 diffBBW:3.52 trend:1 MidLV:5097.58 Upp:5311.01 Low:4884.14 WLV:8.37  [upd:2026.03.09 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:522/521(FLY) mid:2/2 BBUpDn:4/1 diffBBW:-3.68 trend:2 MidLV:5124.5 Upp:5189.75 Low:5059.25 WLV:2.55  [upd:2026.03.09 12:00:05]
+  [H1] stg:513/513(FLY) mid:3/5 BBUpDn:0/2 diffBBW:0.54 trend:7 MidLV:5115.0 Upp:5183.79 Low:5046.22 WLV:2.69  [upd:2026.03.09 12:00:04]
+  [M30] stg:523/523(FLY) mid:2/2 BBUpDn:2/2 diffBBW:-6.05 trend:2 MidLV:5088.36 Upp:5128.8 Low:5047.93 WLV:1.5899999999999999  [upd:2026.03.09 12:00:03]
+  [M15] stg:513/512(FLY) mid:5/3 BBUpDn:2/0 diffBBW:-1.02 trend:1 MidLV:5102.71 Upp:5127.76 Low:5077.67 WLV:0.98 close:5096.01  [upd:2026.03.09 12:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=0 shrink_tfs=['M15', 'M30', 'H1', 'D1'] sqz_tfs=[]
+  TRADEINFO: gate=G6-SHRINK | G5 | G5-WEAK act=0 tradeact=0
+  BBTFImpact: sideway=05156-S_21 htf_drive=M15_1, M30_1, H4_1 ltf_drive=D1_1 midCluster=3.82, 14.35, 12.29
+
+--- [30] 2026.03.09 16:00:05 (H4 boundary) ---
+  Log line: 25211
+  [D1] stg:513/513(FLY) mid:1/1 BBUpDn:0/0 diffBBW:3.52 trend:1 MidLV:5097.58 Upp:5311.01 Low:4884.14 WLV:8.37  [upd:2026.03.09 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:-0.45 trend:2 MidLV:5122.16 Upp:5186.48 Low:5057.84 WLV:2.51  [upd:2026.03.09 16:00:05]
+  [H1] stg:522/523(FLY) mid:2/2 BBUpDn:4/4 diffBBW:-4.63 trend:2 MidLV:5108.19 Upp:5173.62 Low:5042.77 WLV:2.56  [upd:2026.03.09 16:00:04]
+  [M30] stg:413/413(SQZ) mid:3/1 BBUpDn:0/0 diffBBW:-0.47 trend:1 MidLV:5100.46 Upp:5121.74 Low:5079.18 WLV:0.83  [upd:2026.03.09 16:00:03]
+  [M15] stg:523/523(FLY) mid:4/5 BBUpDn:0/0 diffBBW:-0.28 trend:2 MidLV:5099.16 Upp:5117.26 Low:5081.05 WLV:0.71 close:5095.04  [upd:2026.03.09 16:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=1 shrink_tfs=['M15', 'D1'] sqz_tfs=['M30']
+  TRADEINFO: gate=G0-HOLD act=0 tradeact=0
+  BBTFImpact: sideway=00650 htf_drive=M5_1, M15_1, M30_1, H1_1, H4_1 ltf_drive=M15_1, H4_1, D1_1 midCluster=2.8, 1.31, 9.04
+
+--- [31] 2026.03.09 20:00:05 (H4 boundary) ---
+  Log line: 25304
+  [D1] stg:513/513(FLY) mid:1/1 BBUpDn:0/0 diffBBW:3.52 trend:1 MidLV:5097.58 Upp:5311.01 Low:4884.14 WLV:8.37  [upd:2026.03.09 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:522/522(FLY) mid:2/2 BBUpDn:0/4 diffBBW:-22.05 trend:2 MidLV:5117.98 Upp:5177.28 Low:5058.68 WLV:2.32  [upd:2026.03.09 20:00:05]
+  [H1] stg:523/523(FLY) mid:2/2 BBUpDn:2/2 diffBBW:-36.76 trend:2 MidLV:5095.38 Upp:5136.41 Low:5054.35 WLV:1.6099999999999999  [upd:2026.03.09 20:00:04]
+  [M30] stg:423/523(SQZ) mid:3/2 BBUpDn:0/2 diffBBW:1.16 trend:2 MidLV:5097.71 Upp:5115.63 Low:5079.79 WLV:0.7  [upd:2026.03.09 20:00:03]
+  [M15] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:1.78 trend:1 MidLV:5095.43 Upp:5115.67 Low:5075.18 WLV:0.79 close:5104.79  [upd:2026.03.09 20:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=1 shrink_tfs=['H1', 'D1'] sqz_tfs=['M30']
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=01601 htf_drive=M15_1, M30_1, H1_1, H4_1 ltf_drive=M30_1, D1_1 midCluster=6.74, 2.29, 0.05
+
+--- [32] 2026.03.10 04:00:05 (H4 boundary) ---
+  Log line: 25468
+  [D1] stg:512/513(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-4.9399999999999995 trend:1 MidLV:5099.3 Upp:5308.51 Low:4890.09 WLV:8.21  [upd:2026.03.10 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:523/523(FLY) mid:3/3 BBUpDn:0/2 diffBBW:0.11 trend:2 MidLV:5117.9 Upp:5175.48 Low:5060.33 WLV:2.25  [upd:2026.03.10 04:00:05]
+  [H1] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:0.17 trend:1 MidLV:5110.97 Upp:5147.5 Low:5074.44 WLV:1.43  [upd:2026.03.10 04:00:04]
+  [M30] stg:512/512(FLY) mid:1/1 BBUpDn:0/3 diffBBW:-17.97 trend:1 MidLV:5120.48 Upp:5158.72 Low:5082.24 WLV:1.49  [upd:2026.03.10 04:00:03]
+  [M15] stg:513/513(FLY) mid:5/1 BBUpDn:2/2 diffBBW:-3.52 trend:1 MidLV:5137.03 Upp:5148.43 Low:5125.63 WLV:0.44 close:5131.1  [upd:2026.03.10 04:00:02]
+  Cascade: cas_shrinkTF=4 cas_sqzCount=0 shrink_tfs=['M15', 'H4'] sqz_tfs=[]
+  TRADEINFO: gate=G6-SHRINK | G5 | G5-NONE act=0 tradeact=0
+  BBTFImpact: sideway=50050 htf_drive=M5_1, M15_1, H1_1, H4_1 ltf_drive=M15_1, H1_1, H4_1, W1_1 midCluster=0.19, 16.55, 26.06
+
+--- [33] 2026.03.10 08:00:05 (H4 boundary) ---
+  Log line: 25561
+  [D1] stg:512/513(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-4.9399999999999995 trend:1 MidLV:5099.3 Upp:5308.51 Low:4890.09 WLV:8.21  [upd:2026.03.10 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:423/523(SQZ) mid:3/3 BBUpDn:0/0 diffBBW:-1.13 trend:2 MidLV:5119.15 Upp:5178.61 Low:5059.7 WLV:2.32  [upd:2026.03.10 08:00:05]
+  [H1] stg:512/511(FLY) mid:1/1 BBUpDn:3/0 diffBBW:7.62 trend:1 MidLV:5124.33 Upp:5182.08 Low:5066.59 WLV:2.25  [upd:2026.03.10 08:00:04]
+  [M30] stg:513/512(FLY) mid:1/1 BBUpDn:2/0 diffBBW:-21.15 trend:1 MidLV:5148.9 Upp:5182.77 Low:5115.04 WLV:1.32  [upd:2026.03.10 08:00:03]
+  [M15] stg:512/512(FLY) mid:1/1 BBUpDn:0/3 diffBBW:-7.07 trend:1 MidLV:5160.65 Upp:5190.2 Low:5131.1 WLV:1.15 close:5163.84  [upd:2026.03.10 08:00:02]
+  Cascade: cas_shrinkTF=2 cas_sqzCount=1 shrink_tfs=['M30'] sqz_tfs=['H4']
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=60106-S_21 htf_drive=M5_1, M15_1, H1_1, H4_1 ltf_drive=M30_1, H4_1, W1_1 midCluster=1.46, 11.75, 36.32
+
+--- [34] 2026.03.10 12:00:05 (H4 boundary) ---
+  Log line: 25654
+  [D1] stg:512/513(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-4.9399999999999995 trend:1 MidLV:5099.3 Upp:5308.51 Low:4890.09 WLV:8.21  [upd:2026.03.10 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:423/423(SQZ) mid:3/3 BBUpDn:1/0 diffBBW:8.68 trend:2 MidLV:5120.41 Upp:5184.3 Low:5056.53 WLV:2.5  [upd:2026.03.10 12:00:05]
+  [H1] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:3.4 trend:1 MidLV:5140.46 Upp:5206.05 Low:5074.87 WLV:2.55  [upd:2026.03.10 12:00:04]
+  [M30] stg:411/411(SQZ) mid:1/1 BBUpDn:3/3 diffBBW:0.2 trend:1 MidLV:5166.15 Upp:5196.92 Low:5135.37 WLV:1.19  [upd:2026.03.10 12:00:03]
+  [M15] stg:512/512(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-2.96 trend:1 MidLV:5174.75 Upp:5189.16 Low:5160.33 WLV:0.56 close:5183.64  [upd:2026.03.10 12:00:02]
+  Cascade: cas_shrinkTF=-1 cas_sqzCount=2 shrink_tfs=[] sqz_tfs=['M30', 'H4']
+  TRADEINFO: gate=H4-SQZ | G4h-H4M30SQZ act=0 tradeact=0
+  BBTFImpact: sideway=60200 htf_drive=M15_1, H1_1, H4_1 ltf_drive=M15_1, M30_1, H4_1, W1_1 midCluster=5.91, 8.6, 34.29
+
+--- [35] 2026.03.10 16:00:05 (H4 boundary) ---
+  Log line: 25747
+  [D1] stg:512/513(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-4.9399999999999995 trend:1 MidLV:5099.3 Upp:5308.51 Low:4890.09 WLV:8.21  [upd:2026.03.10 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:511/423(FLY) mid:5/3 BBUpDn:1/1 diffBBW:20.68 trend:2 MidLV:5121.74 Upp:5189.16 Low:5054.31 WLV:2.63  [upd:2026.03.10 16:00:05]
+  [H1] stg:512/512(FLY) mid:1/1 BBUpDn:0/0 diffBBW:-13.63 trend:1 MidLV:5157.66 Upp:5207.87 Low:5107.45 WLV:1.95  [upd:2026.03.10 16:00:04]
+  [M30] stg:423/423(SQZ) mid:1/3 BBUpDn:0/0 diffBBW:1.74 trend:1 MidLV:5175.71 Upp:5192.6 Low:5158.83 WLV:0.65  [upd:2026.03.10 16:00:03]
+  [M15] stg:511/423(FLY) mid:5/5 BBUpDn:3/3 diffBBW:1.19 trend:8 MidLV:5180.89 Upp:5193.29 Low:5168.48 WLV:0.48 close:5187.02  [upd:2026.03.10 16:00:02]
+  Cascade: cas_shrinkTF=-1 cas_sqzCount=1 shrink_tfs=[] sqz_tfs=['M30']
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=40244-S_13 htf_drive=M5_1, M15_1, M30_1, H1_1, H4_1 ltf_drive=M15_1, M30_1, H4_1, D1_1, W1_1 midCluster=2.62, 5.18, 23.23
+
+--- [36] 2026.03.10 20:00:05 (H4 boundary) ---
+  Log line: 25840
+  [D1] stg:512/513(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-4.9399999999999995 trend:1 MidLV:5099.3 Upp:5308.51 Low:4890.09 WLV:8.21  [upd:2026.03.10 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:511/511(FLY) mid:1/5 BBUpDn:1/1 diffBBW:50.77 trend:7 MidLV:5128.02 Upp:5214.0 Low:5042.04 WLV:3.35  [upd:2026.03.10 20:00:05]
+  [H1] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:9.88 trend:1 MidLV:5178.57 Upp:5232.21 Low:5124.93 WLV:2.07  [upd:2026.03.10 20:00:04]
+  [M30] stg:511/511(FLY) mid:1/1 BBUpDn:0/1 diffBBW:2.94 trend:1 MidLV:5196.87 Upp:5238.7 Low:5155.03 WLV:1.6099999999999999  [upd:2026.03.10 20:00:03]
+  [M15] stg:512/512(FLY) mid:1/1 BBUpDn:0/3 diffBBW:-14.2 trend:1 MidLV:5211.72 Upp:5246.9 Low:5176.55 WLV:1.35 close:5227.67  [upd:2026.03.10 20:00:02]
+  Cascade: cas_shrinkTF=-1 cas_sqzCount=0 shrink_tfs=[] sqz_tfs=[]
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=00006 htf_drive=M5_1, H4_1 ltf_drive=M30_1, H1_1, H4_1, D1_1, W1_1 midCluster=17.97, 14.86, 33.15
+
+--- [37] 2026.03.11 04:00:05 (H4 boundary) ---
+  Log line: 26004
+  [D1] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:9.0 trend:1 MidLV:5107.05 Upp:5320.94 Low:4893.17 WLV:8.38  [upd:2026.03.11 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:512/511(FLY) mid:1/1 BBUpDn:3/0 diffBBW:11.05 trend:1 MidLV:5139.18 Upp:5226.74 Low:5051.62 WLV:3.41  [upd:2026.03.11 04:00:05]
+  [H1] stg:512/513(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-5.67 trend:1 MidLV:5194.46 Upp:5230.77 Low:5158.16 WLV:1.4  [upd:2026.03.11 04:00:04]
+  [M30] stg:421/413(SQZ) mid:1/3 BBUpDn:3/0 diffBBW:0.35 trend:1 MidLV:5207.16 Upp:5238.07 Low:5176.25 WLV:1.19  [upd:2026.03.11 04:00:03]
+  [M15] stg:511/511(FLY) mid:1/1 BBUpDn:1/1 diffBBW:9.29 trend:1 MidLV:5197.08 Upp:5212.63 Low:5181.53 WLV:0.6 close:5215.41  [upd:2026.03.11 04:00:02]
+  Cascade: cas_shrinkTF=-1 cas_sqzCount=1 shrink_tfs=[] sqz_tfs=['M30']
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=00200 htf_drive=M15_1, M30_1 ltf_drive=M15_1, M30_1, H4_1, D1_1, W1_1 midCluster=4.57, 10.08, 2.61
+
+--- [38] 2026.03.11 08:00:05 (H4 boundary) ---
+  Log line: 26097
+  [D1] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:9.0 trend:1 MidLV:5107.05 Upp:5320.94 Low:4893.17 WLV:8.38  [upd:2026.03.11 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:11.46 trend:1 MidLV:5143.76 Upp:5233.13 Low:5054.4 WLV:3.4699999999999998  [upd:2026.03.11 08:00:05]
+  [H1] stg:512/512(FLY) mid:1/1 BBUpDn:0/0 diffBBW:-2.54 trend:1 MidLV:5200.58 Upp:5231.91 Low:5169.26 WLV:1.2  [upd:2026.03.11 08:00:04]
+  [M30] stg:423/423(SQZ) mid:3/2 BBUpDn:0/2 diffBBW:-0.87 trend:2 MidLV:5201.61 Upp:5218.36 Low:5184.86 WLV:0.64  [upd:2026.03.11 08:00:03]
+  [M15] stg:513/513(FLY) mid:1/1 BBUpDn:2/2 diffBBW:-7.97 trend:1 MidLV:5208.97 Upp:5219.6 Low:5198.33 WLV:0.41 close:5204.57  [upd:2026.03.11 08:00:02]
+  Cascade: cas_shrinkTF=1 cas_sqzCount=1 shrink_tfs=['M15'] sqz_tfs=['M30']
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=00612 htf_drive=M5_1, M15_1, M30_1 ltf_drive=H4_1, D1_1, W1_1 midCluster=3.61, 7.36, 8.38
+
+--- [39] 2026.03.11 12:00:05 (H4 boundary) ---
+  Log line: 26190
+  [D1] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:9.0 trend:1 MidLV:5107.05 Upp:5320.94 Low:4893.17 WLV:8.38  [upd:2026.03.11 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:6.7 trend:1 MidLV:5146.21 Upp:5235.98 Low:5056.44 WLV:3.49  [upd:2026.03.11 12:00:05]
+  [H1] stg:513/513(FLY) mid:5/1 BBUpDn:2/2 diffBBW:-7.49 trend:1 MidLV:5203.17 Upp:5227.84 Low:5178.51 WLV:0.95  [upd:2026.03.11 12:00:04]
+  [M30] stg:423/423(SQZ) mid:3/3 BBUpDn:1/1 diffBBW:2.44 trend:1 MidLV:5201.62 Upp:5219.99 Low:5183.26 WLV:0.71  [upd:2026.03.11 12:00:03]
+  [M15] stg:521/521(FLY) mid:2/2 BBUpDn:0/1 diffBBW:1.95 trend:2 MidLV:5197.35 Upp:5212.17 Low:5182.54 WLV:0.57 close:5187.59  [upd:2026.03.11 12:00:02]
+  Cascade: cas_shrinkTF=3 cas_sqzCount=1 shrink_tfs=['H1'] sqz_tfs=['M30']
+  TRADEINFO: gate=H4-OPPOSE act=0 tradeact=0
+  BBTFImpact: sideway=05600 htf_drive=M15_1, M30_1 ltf_drive=M15_1, M30_1, D1_1, W1_1 midCluster=7.48, 4.27, 5.82
+
+--- [40] 2026.03.11 16:00:05 (H4 boundary) ---
+  Log line: 26283
+  [D1] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:9.0 trend:1 MidLV:5107.05 Upp:5320.94 Low:4893.17 WLV:8.38  [upd:2026.03.11 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-6.91 trend:1 MidLV:5149.21 Upp:5236.75 Low:5061.68 WLV:3.4  [upd:2026.03.11 16:00:05]
+  [H1] stg:425/425(SQZ) mid:2/2 BBUpDn:4/0 diffBBW:-1.74 trend:2 MidLV:5196.41 Upp:5222.35 Low:5170.47 WLV:1.0  [upd:2026.03.11 16:00:04]
+  [M30] stg:522/522(FLY) mid:2/2 BBUpDn:4/0 diffBBW:4.83 trend:2 MidLV:5192.01 Upp:5211.52 Low:5172.49 WLV:0.75  [upd:2026.03.11 16:00:03]
+  [M15] stg:521/521(FLY) mid:2/2 BBUpDn:1/4 diffBBW:9.72 trend:2 MidLV:5185.33 Upp:5197.11 Low:5173.56 WLV:0.45 close:5167.46  [upd:2026.03.11 16:00:02]
+  Cascade: cas_shrinkTF=-1 cas_sqzCount=1 shrink_tfs=[] sqz_tfs=['H1']
+  TRADEINFO: gate=H4-OPPOSE act=0 tradeact=0
+  BBTFImpact: sideway=02000 htf_drive=M15_1, M30_1 ltf_drive=M15_1, M30_1, H1_1, D1_1, W1_1 midCluster=2.35, 6.68, 11.08
+
+--- [41] 2026.03.11 20:00:05 (H4 boundary) ---
+  Log line: 26376
+  [D1] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:9.0 trend:1 MidLV:5107.05 Upp:5320.94 Low:4893.17 WLV:8.38  [upd:2026.03.11 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-10.92 trend:1 MidLV:5153.32 Upp:5238.3 Low:5068.34 WLV:3.3  [upd:2026.03.11 20:00:05]
+  [H1] stg:521/521(FLY) mid:2/2 BBUpDn:0/1 diffBBW:3.61 trend:2 MidLV:5190.96 Upp:5217.31 Low:5164.61 WLV:1.02  [upd:2026.03.11 20:00:04]
+  [M30] stg:522/522(FLY) mid:2/2 BBUpDn:0/4 diffBBW:-5.64 trend:2 MidLV:5181.3 Upp:5197.22 Low:5165.38 WLV:0.61  [upd:2026.03.11 20:00:03]
+  [M15] stg:522/522(FLY) mid:4/4 BBUpDn:4/4 diffBBW:-1.81 trend:2 MidLV:5176.66 Upp:5191.88 Low:5161.44 WLV:0.59 close:5175.72  [upd:2026.03.11 20:00:02]
+  Cascade: cas_shrinkTF=-1 cas_sqzCount=0 shrink_tfs=[] sqz_tfs=[]
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=00046-S_13 htf_drive=M5_1, H1_1 ltf_drive=M30_1, H1_1, H4_1, D1_1, W1_1 midCluster=5.77, 4.64, 14.3
+
+--- [42] 2026.03.12 04:00:05 (H4 boundary) ---
+  Log line: 26540
+  [D1] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-21.25 trend:1 MidLV:5116.51 Upp:5325.4 Low:4907.62 WLV:8.17  [upd:2026.03.12 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:512/512(FLY) mid:3/1 BBUpDn:0/3 diffBBW:0.0 trend:1 MidLV:5154.22 Upp:5238.03 Low:5070.41 WLV:3.25  [upd:2026.03.12 04:00:05]
+  [H1] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:-1.48 trend:2 MidLV:5175.82 Upp:5207.99 Low:5143.64 WLV:1.24  [upd:2026.03.12 04:00:04]
+  [M30] stg:521/521(FLY) mid:2/2 BBUpDn:0/1 diffBBW:-1.35 trend:2 MidLV:5166.84 Upp:5192.61 Low:5141.07 WLV:1.0  [upd:2026.03.12 04:00:03]
+  [M15] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:0.03 trend:2 MidLV:5161.93 Upp:5191.35 Low:5132.52 WLV:1.1400000000000001 close:5153.07  [upd:2026.03.12 04:00:02]
+  Cascade: cas_shrinkTF=-1 cas_sqzCount=0 shrink_tfs=[] sqz_tfs=[]
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=40005 htf_drive=M5_1, H1_1, H4_1 ltf_drive=M30_1, H1_1, H4_1, D1_1, W1_1 midCluster=14.26, 4.91, 13.88
+
+--- [43] 2026.03.12 06:30:03 *** CLOSE BUYSELL @5152.53 P&L:-191.29 *** ---
+  Log line: 26599
+  [D1] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-21.25 trend:1 MidLV:5116.51 Upp:5325.4 Low:4907.62 WLV:8.17  [upd:2026.03.12 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:512/512(FLY) mid:3/1 BBUpDn:0/3 diffBBW:0.0 trend:1 MidLV:5154.22 Upp:5238.03 Low:5070.41 WLV:3.25  [upd:2026.03.12 04:00:05]
+  [H1] stg:522/522(FLY) mid:2/2 BBUpDn:4/0 diffBBW:-3.43 trend:2 MidLV:5171.78 Upp:5200.68 Low:5142.88 WLV:1.12  [upd:2026.03.12 06:00:04]
+  [M30] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:1.15 trend:2 MidLV:5163.4 Upp:5187.88 Low:5138.91 WLV:0.95  [upd:2026.03.12 06:30:03]
+  [M15] stg:523/523(FLY) mid:4/2 BBUpDn:0/2 diffBBW:-0.84 trend:2 MidLV:5154.6 Upp:5173.34 Low:5135.87 WLV:0.73 close:5151.88  [upd:2026.03.12 06:30:02]
+  Cascade: cas_shrinkTF=1 cas_sqzCount=0 shrink_tfs=['M15'] sqz_tfs=[]
+  TRADEINFO: gate=G6-SHRINK | G5 | G5-ENTRY | G6-SELL act=2 tradeact=0
+  BBTFImpact: sideway=40010 htf_drive=M5_1, M30_1, H1_1, H4_1 ltf_drive=M15_1, H1_1, H4_1, D1_1, W1_1 midCluster=7.73, 9.1, 16.54
+
+--- [44] 2026.03.12 06:30:03 *** OPEN SELL @5152.53 *** ---
+  Log line: 26604
+  [D1] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-21.25 trend:1 MidLV:5116.51 Upp:5325.4 Low:4907.62 WLV:8.17  [upd:2026.03.12 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:512/512(FLY) mid:3/1 BBUpDn:0/3 diffBBW:0.0 trend:1 MidLV:5154.22 Upp:5238.03 Low:5070.41 WLV:3.25  [upd:2026.03.12 04:00:05]
+  [H1] stg:522/522(FLY) mid:2/2 BBUpDn:4/0 diffBBW:-3.43 trend:2 MidLV:5171.78 Upp:5200.68 Low:5142.88 WLV:1.12  [upd:2026.03.12 06:00:04]
+  [M30] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:1.15 trend:2 MidLV:5163.4 Upp:5187.88 Low:5138.91 WLV:0.95  [upd:2026.03.12 06:30:03]
+  [M15] stg:523/523(FLY) mid:4/2 BBUpDn:0/2 diffBBW:-0.84 trend:2 MidLV:5154.6 Upp:5173.34 Low:5135.87 WLV:0.73 close:5151.88  [upd:2026.03.12 06:30:02]
+  Cascade: cas_shrinkTF=1 cas_sqzCount=0 shrink_tfs=['M15'] sqz_tfs=[]
+  TRADEINFO: gate=G6-SHRINK | G5 | G5-ENTRY | G6-SELL act=2 tradeact=0
+  BBTFImpact: sideway=40010 htf_drive=M5_1, M30_1, H1_1, H4_1 ltf_drive=M15_1, H1_1, H4_1, D1_1, W1_1 midCluster=7.73, 9.1, 16.54
+
+--- [45] 2026.03.12 08:00:05 (H4 boundary) ---
+  Log line: 26644
+  [D1] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-21.25 trend:1 MidLV:5116.51 Upp:5325.4 Low:4907.62 WLV:8.17  [upd:2026.03.12 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:512/512(FLY) mid:4/3 BBUpDn:0/0 diffBBW:-7.55 trend:1 MidLV:5155.95 Upp:5237.84 Low:5074.05 WLV:3.18  [upd:2026.03.12 08:00:05]
+  [H1] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:4.22 trend:2 MidLV:5167.31 Upp:5197.21 Low:5137.41 WLV:1.16  [upd:2026.03.12 08:00:04]
+  [M30] stg:522/522(FLY) mid:2/2 BBUpDn:0/4 diffBBW:2.26 trend:2 MidLV:5159.76 Upp:5185.64 Low:5133.89 WLV:1.0  [upd:2026.03.12 08:00:03]
+  [M15] stg:523/523(FLY) mid:5/5 BBUpDn:2/0 diffBBW:-6.8100000000000005 trend:7 MidLV:5155.41 Upp:5171.54 Low:5139.28 WLV:0.63 close:5142.62  [upd:2026.03.12 08:00:02]
+  Cascade: cas_shrinkTF=1 cas_sqzCount=0 shrink_tfs=['M15'] sqz_tfs=[]
+  TRADEINFO: gate=G6-SHRINK | G5 | G5-NONE act=0 tradeact=0
+  BBTFImpact: sideway=40050 htf_drive=M5_1, M30_1, H1_1, H4_1 ltf_drive=M15_1, H1_1, H4_1, D1_1, W1_1 midCluster=5.74, 4.36, 11.91
+
+--- [46] 2026.03.12 12:00:05 (H4 boundary) ---
+  Log line: 26737
+  [D1] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-21.25 trend:1 MidLV:5116.51 Upp:5325.4 Low:4907.62 WLV:8.17  [upd:2026.03.12 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:512/512(FLY) mid:1/4 BBUpDn:0/0 diffBBW:-51.65 trend:1 MidLV:5162.97 Upp:5231.45 Low:5094.49 WLV:2.65  [upd:2026.03.12 12:00:05]
+  [H1] stg:423/523(SQZ) mid:3/3 BBUpDn:2/2 diffBBW:-1.54 trend:2 MidLV:5165.24 Upp:5191.09 Low:5139.39 WLV:1.0  [upd:2026.03.12 12:00:04]
+  [M30] stg:511/511(FLY) mid:1/1 BBUpDn:0/1 diffBBW:3.41 trend:1 MidLV:5159.57 Upp:5184.62 Low:5134.52 WLV:0.97  [upd:2026.03.12 12:00:03]
+  [M15] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:1.6 trend:1 MidLV:5163.36 Upp:5191.63 Low:5135.09 WLV:1.1 close:5178.2  [upd:2026.03.12 12:00:02]
+  Cascade: cas_shrinkTF=-1 cas_sqzCount=1 shrink_tfs=[] sqz_tfs=['H1']
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=06001 htf_drive=M30_1, H1_1, H4_1 ltf_drive=M30_1, H1_1, D1_1, W1_1 midCluster=15.36, 3.79, 1.88
+
+--- [47] 2026.03.12 15:15:02 *** CLOSE SELLBUY @5169.15 P&L:-16.53 *** ---
+  Log line: 26813
+  [D1] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-21.25 trend:1 MidLV:5116.51 Upp:5325.4 Low:4907.62 WLV:8.17  [upd:2026.03.12 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:512/512(FLY) mid:1/4 BBUpDn:0/0 diffBBW:-51.65 trend:1 MidLV:5162.97 Upp:5231.45 Low:5094.49 WLV:2.65  [upd:2026.03.12 12:00:05]
+  [H1] stg:421/421(SQZ) mid:3/3 BBUpDn:0/0 diffBBW:1.51 trend:7 MidLV:5166.23 Upp:5193.37 Low:5139.09 WLV:1.05  [upd:2026.03.12 15:00:04]
+  [M30] stg:512/512(FLY) mid:5/1 BBUpDn:0/3 diffBBW:1.9100000000000001 trend:1 MidLV:5167.08 Upp:5196.13 Low:5138.03 WLV:1.12  [upd:2026.03.12 15:00:03]
+  [M15] stg:423/513(SQZ) mid:3/1 BBUpDn:2/2 diffBBW:-0.61 trend:1 MidLV:5179.93 Upp:5189.01 Low:5170.86 WLV:0.35 close:5168.8  [upd:2026.03.12 15:15:02]
+  Cascade: cas_shrinkTF=-1 cas_sqzCount=2 shrink_tfs=[] sqz_tfs=['M15', 'H1']
+  TRADEINFO: gate=G0 act=7 tradeact=7
+  BBTFImpact: sideway=06416-S_21 htf_drive=M5_1, M30_1, H1_1, H4_1 ltf_drive=H1_1, D1_1, W1_1 midCluster=0.45, 13.1, 13.95
+
+--- [48] 2026.03.12 16:00:05 (H4 boundary) ---
+  Log line: 26835
+  [D1] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-21.25 trend:1 MidLV:5116.51 Upp:5325.4 Low:4907.62 WLV:8.17  [upd:2026.03.12 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:513/512(FLY) mid:1/1 BBUpDn:2/0 diffBBW:-15.65 trend:1 MidLV:5166.45 Upp:5230.92 Low:5101.99 WLV:2.5  [upd:2026.03.12 16:00:05]
+  [H1] stg:421/421(SQZ) mid:5/3 BBUpDn:0/0 diffBBW:2.76 trend:7 MidLV:5166.48 Upp:5193.92 Low:5139.04 WLV:1.06  [upd:2026.03.12 16:00:04]
+  [M30] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-1.73 trend:1 MidLV:5169.1 Upp:5197.35 Low:5140.86 WLV:1.09  [upd:2026.03.12 16:00:03]
+  [M15] stg:521/521(FLY) mid:4/4 BBUpDn:0/0 diffBBW:-1.27 trend:8 MidLV:5179.57 Upp:5188.68 Low:5170.46 WLV:0.35 close:5181.31  [upd:2026.03.12 16:00:02]
+  Cascade: cas_shrinkTF=4 cas_sqzCount=1 shrink_tfs=['H4'] sqz_tfs=['H1']
+  TRADEINFO: gate=G6-SHRINK | G5 | G5-WEAK act=0 tradeact=0
+  BBTFImpact: sideway=16044-S_22 htf_drive=M15_1, M30_1, H1_1, H4_1 ltf_drive=M15_1, M30_1, H1_1, W1_1 midCluster=3.73, 10.47, 13.09
+
+--- [49] 2026.03.12 20:00:05 (H4 boundary) ---
+  Log line: 26928
+  [D1] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-21.25 trend:1 MidLV:5116.51 Upp:5325.4 Low:4907.62 WLV:8.17  [upd:2026.03.12 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:513/513(FLY) mid:3/1 BBUpDn:2/2 diffBBW:-10.42 trend:1 MidLV:5165.65 Upp:5227.57 Low:5103.72 WLV:2.4  [upd:2026.03.12 20:00:05]
+  [H1] stg:521/521(FLY) mid:2/2 BBUpDn:0/0 diffBBW:9.41 trend:2 MidLV:5157.42 Upp:5193.73 Low:5121.1 WLV:1.41  [upd:2026.03.12 20:00:04]
+  [M30] stg:521/521(FLY) mid:2/2 BBUpDn:1/1 diffBBW:14.54 trend:2 MidLV:5162.29 Upp:5207.01 Low:5117.56 WLV:1.73  [upd:2026.03.12 20:00:03]
+  [M15] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:0.31 trend:2 MidLV:5147.56 Upp:5187.09 Low:5108.02 WLV:1.54 close:5123.17  [upd:2026.03.12 20:00:02]
+  Cascade: cas_shrinkTF=4 cas_sqzCount=0 shrink_tfs=['H4'] sqz_tfs=[]
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=50004 htf_drive=M5_1, H1_1, H4_1 ltf_drive=M15_1, M30_1, H1_1, H4_1, W1_1 midCluster=18.04, 14.73, 9.86
+
+--- [50] 2026.03.13 04:00:05 (H4 boundary) ---
+  Log line: 27092
+  [D1] stg:513/512(FLY) mid:1/1 BBUpDn:2/3 diffBBW:-42.66 trend:1 MidLV:5119.59 Upp:5315.94 Low:4923.24 WLV:7.67  [upd:2026.03.13 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:513/513(FLY) mid:3/3 BBUpDn:0/1 diffBBW:2.68 trend:1 MidLV:5164.15 Upp:5230.95 Low:5097.35 WLV:2.59  [upd:2026.03.13 04:00:05]
+  [H1] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:2.65 trend:2 MidLV:5136.84 Upp:5210.12 Low:5063.56 WLV:2.85  [upd:2026.03.13 04:00:04]
+  [M30] stg:523/523(FLY) mid:2/2 BBUpDn:2/2 diffBBW:-22.66 trend:2 MidLV:5105.83 Upp:5144.94 Low:5066.73 WLV:1.53  [upd:2026.03.13 04:00:03]
+  [M15] stg:511/511(FLY) mid:1/5 BBUpDn:1/1 diffBBW:7.78 trend:7 MidLV:5092.57 Upp:5116.54 Low:5068.61 WLV:0.94 close:5113.79  [upd:2026.03.13 04:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=0 shrink_tfs=['M30', 'H4', 'D1'] sqz_tfs=[]
+  TRADEINFO: gate=G7-H1OPP act=0 tradeact=0
+  BBTFImpact: sideway=50100 htf_drive=M15_1, H1_1, H4_1 ltf_drive=M15_1, M30_1, H4_1 midCluster=11.27, 13.26, 44.27
+
+--- [51] 2026.03.13 08:00:05 (H4 boundary) ---
+  Log line: 27185
+  [D1] stg:513/512(FLY) mid:1/1 BBUpDn:2/3 diffBBW:-42.66 trend:1 MidLV:5119.59 Upp:5315.94 Low:4923.24 WLV:7.67  [upd:2026.03.13 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:513/513(FLY) mid:4/3 BBUpDn:1/0 diffBBW:15.7 trend:1 MidLV:5162.63 Upp:5233.2 Low:5092.06 WLV:2.73  [upd:2026.03.13 08:00:05]
+  [H1] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:-13.54 trend:2 MidLV:5126.07 Upp:5193.81 Low:5058.34 WLV:2.64  [upd:2026.03.13 08:00:04]
+  [M30] stg:423/523(SQZ) mid:3/3 BBUpDn:4/2 diffBBW:-0.3 trend:2 MidLV:5100.96 Upp:5128.79 Low:5073.14 WLV:1.09  [upd:2026.03.13 08:00:03]
+  [M15] stg:513/513(FLY) mid:3/5 BBUpDn:2/2 diffBBW:-1.18 trend:1 MidLV:5112.88 Upp:5123.81 Low:5101.94 WLV:0.43 close:5104.8  [upd:2026.03.13 08:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=1 shrink_tfs=['M15', 'H4', 'D1'] sqz_tfs=['M30']
+  TRADEINFO: gate=G0-HOLD act=0 tradeact=0
+  BBTFImpact: sideway=50650 htf_drive=M5_1, M15_1, M30_1, H1_1, H4_1 ltf_drive=M15_1, H4_1 midCluster=3.22, 11.91, 13.2
+
+--- [52] 2026.03.13 12:00:05 (H4 boundary) ---
+  Log line: 27278
+  [D1] stg:513/512(FLY) mid:1/1 BBUpDn:2/3 diffBBW:-42.66 trend:1 MidLV:5119.59 Upp:5315.94 Low:4923.24 WLV:7.67  [upd:2026.03.13 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:521/513(FLY) mid:2/4 BBUpDn:1/1 diffBBW:26.89 trend:8 MidLV:5158.28 Upp:5239.09 Low:5077.46 WLV:3.13  [upd:2026.03.13 12:00:05]
+  [H1] stg:522/522(FLY) mid:2/2 BBUpDn:0/0 diffBBW:-28.88 trend:2 MidLV:5107.18 Upp:5154.16 Low:5060.21 WLV:1.8399999999999999  [upd:2026.03.13 12:00:04]
+  [M30] stg:424/424(SQZ) mid:3/3 BBUpDn:1/1 diffBBW:2.34 trend:1 MidLV:5101.67 Upp:5128.81 Low:5074.53 WLV:1.06  [upd:2026.03.13 12:00:03]
+  [M15] stg:522/522(FLY) mid:2/2 BBUpDn:0/4 diffBBW:-6.65 trend:2 MidLV:5093.2 Upp:5116.62 Low:5069.78 WLV:0.92 close:5087.4  [upd:2026.03.13 12:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=1 shrink_tfs=['D1'] sqz_tfs=['M30']
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=00605 htf_drive=M15_1, M30_1, H1_1, H4_1 ltf_drive=M30_1, H4_1, D1_1 midCluster=12.55, 8.47, 13.99
+
+--- [53] 2026.03.13 16:00:05 (H4 boundary) ---
+  Log line: 27371
+  [D1] stg:513/512(FLY) mid:1/1 BBUpDn:2/3 diffBBW:-42.66 trend:1 MidLV:5119.59 Upp:5315.94 Low:4923.24 WLV:7.67  [upd:2026.03.13 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:521/521(FLY) mid:2/2 BBUpDn:0/1 diffBBW:5.7 trend:2 MidLV:5156.07 Upp:5236.02 Low:5076.13 WLV:3.1  [upd:2026.03.13 16:00:05]
+  [H1] stg:523/523(FLY) mid:4/2 BBUpDn:2/2 diffBBW:-7.23 trend:2 MidLV:5099.54 Upp:5127.89 Low:5071.19 WLV:1.11  [upd:2026.03.13 16:00:04]
+  [M30] stg:521/424(FLY) mid:4/3 BBUpDn:0/2 diffBBW:3.8 trend:2 MidLV:5097.46 Upp:5122.08 Low:5072.84 WLV:0.97  [upd:2026.03.13 16:00:03]
+  [M15] stg:511/511(FLY) mid:1/1 BBUpDn:0/1 diffBBW:4.55 trend:1 MidLV:5094.82 Upp:5120.34 Low:5069.29 WLV:1.0 close:5118.37  [upd:2026.03.13 16:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=0 shrink_tfs=['H1', 'D1'] sqz_tfs=[]
+  TRADEINFO: gate=H4-OPPOSE act=0 tradeact=0
+  BBTFImpact: sideway=05400 htf_drive=M15_1, M30_1, H4_1 ltf_drive=M15_1, M30_1, H1_1, D1_1 midCluster=12.54, 2.64, 4.72
+
+--- [54] 2026.03.13 20:00:05 (H4 boundary) ---
+  Log line: 27464
+  [D1] stg:513/512(FLY) mid:1/1 BBUpDn:2/3 diffBBW:-42.66 trend:1 MidLV:5119.59 Upp:5315.94 Low:4923.24 WLV:7.67  [upd:2026.03.13 01:00:06]
+  [W1] stg:512/511(FLY) mid:1/1 BBUpDn:0/0 diffBBW:118.04 trend:0 MidLV:4560.13 Upp:5406.57 Low:3713.69 WLV:37.12  [upd:2026.03.09 01:00:07]
+  [H4] stg:521/521(FLY) mid:2/2 BBUpDn:1/0 diffBBW:43.85 trend:2 MidLV:5147.23 Upp:5245.39 Low:5049.06 WLV:3.81  [upd:2026.03.13 20:00:05]
+  [H1] stg:521/521(FLY) mid:2/2 BBUpDn:1/1 diffBBW:14.92 trend:2 MidLV:5090.38 Upp:5137.12 Low:5043.64 WLV:1.8399999999999999  [upd:2026.03.13 20:00:04]
+  [M30] stg:521/521(FLY) mid:2/2 BBUpDn:1/1 diffBBW:10.99 trend:2 MidLV:5081.33 Upp:5130.13 Low:5032.54 WLV:1.92  [upd:2026.03.13 20:00:03]
+  [M15] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:-0.99 trend:2 MidLV:5076.55 Upp:5137.01 Low:5016.1 WLV:2.38 close:5046.01  [upd:2026.03.13 20:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=0 shrink_tfs=['D1'] sqz_tfs=[]
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=00001 htf_drive=H4_1 ltf_drive=M30_1, H1_1, H4_1, D1_1 midCluster=31.8, 4.78, 13.82
+
+--- [55] 2026.03.16 04:00:05 (H4 boundary) ---
+  Log line: 27629
+  [D1] stg:513/513(FLY) mid:3/1 BBUpDn:0/2 diffBBW:2.21 trend:1 MidLV:5118.71 Upp:5316.18 Low:4921.23 WLV:7.72  [upd:2026.03.16 01:00:06]
+  [W1] stg:512/512(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-126.09 trend:0 MidLV:4607.72 Upp:5426.71 Low:3788.73 WLV:35.55  [upd:2026.03.16 01:00:07]
+  [H4] stg:521/521(FLY) mid:2/2 BBUpDn:0/1 diffBBW:23.34 trend:2 MidLV:5127.54 Upp:5247.71 Low:5007.36 WLV:4.6899999999999995  [upd:2026.03.16 04:00:05]
+  [H1] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:-4.68 trend:2 MidLV:5060.74 Upp:5132.11 Low:4989.38 WLV:2.82  [upd:2026.03.16 04:00:04]
+  [M30] stg:523/523(FLY) mid:2/2 BBUpDn:2/2 diffBBW:-34.43 trend:2 MidLV:5030.87 Upp:5071.39 Low:4990.34 WLV:1.6099999999999999  [upd:2026.03.16 04:00:03]
+  [M15] stg:523/523(FLY) mid:2/2 BBUpDn:2/2 diffBBW:-8.73 trend:2 MidLV:5014.72 Upp:5041.2 Low:4988.24 WLV:1.06 close:5025.76  [upd:2026.03.16 04:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=0 shrink_tfs=['M15', 'M30', 'D1'] sqz_tfs=[]
+  TRADEINFO: gate=H4-OPPOSE act=0 tradeact=0
+  BBTFImpact: sideway=00110 htf_drive=M5_1, M15_1, H4_1 ltf_drive=M15_1, H4_1, D1_1 midCluster=5.5600000000000005, 16.15, 46.02
+
+--- [56] 2026.03.16 08:00:05 (H4 boundary) ---
+  Log line: 27722
+  [D1] stg:513/513(FLY) mid:3/1 BBUpDn:0/2 diffBBW:2.21 trend:1 MidLV:5118.71 Upp:5316.18 Low:4921.23 WLV:7.72  [upd:2026.03.16 01:00:06]
+  [W1] stg:512/512(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-126.09 trend:0 MidLV:4607.72 Upp:5426.71 Low:3788.73 WLV:35.55  [upd:2026.03.16 01:00:07]
+  [H4] stg:521/521(FLY) mid:2/2 BBUpDn:0/0 diffBBW:18.02 trend:2 MidLV:5117.02 Upp:5245.49 Low:4988.55 WLV:5.02  [upd:2026.03.16 08:00:05]
+  [H1] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:1.52 trend:2 MidLV:5044.21 Upp:5118.25 Low:4970.17 WLV:2.94  [upd:2026.03.16 08:00:04]
+  [M30] stg:523/523(FLY) mid:2/2 BBUpDn:2/2 diffBBW:-11.33 trend:2 MidLV:5014.77 Upp:5041.38 Low:4988.17 WLV:1.06  [upd:2026.03.16 08:00:03]
+  [M15] stg:513/513(FLY) mid:3/1 BBUpDn:0/2 diffBBW:0.0 trend:1 MidLV:5012.29 Upp:5030.12 Low:4994.45 WLV:0.71 close:5012.85  [upd:2026.03.16 08:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=0 shrink_tfs=['M15', 'M30', 'D1'] sqz_tfs=[]
+  TRADEINFO: gate=G6-SHRINK | G5 | G5-FADE act=0 tradeact=0
+  BBTFImpact: sideway=00151 htf_drive=M5_1, M15_1, M30_1, H4_1 ltf_drive=H4_1, D1_1 midCluster=5.79, 2.49, 31.92
+
+--- [57] 2026.03.16 12:00:05 (H4 boundary) ---
+  Log line: 27815
+  [D1] stg:513/513(FLY) mid:3/1 BBUpDn:0/2 diffBBW:2.21 trend:1 MidLV:5118.71 Upp:5316.18 Low:4921.23 WLV:7.72  [upd:2026.03.16 01:00:06]
+  [W1] stg:512/512(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-126.09 trend:0 MidLV:4607.72 Upp:5426.71 Low:3788.73 WLV:35.55  [upd:2026.03.16 01:00:07]
+  [H4] stg:522/521(FLY) mid:2/2 BBUpDn:4/0 diffBBW:16.02 trend:2 MidLV:5106.04 Upp:5238.68 Low:4973.41 WLV:5.2  [upd:2026.03.16 12:00:05]
+  [H1] stg:522/522(FLY) mid:2/2 BBUpDn:0/4 diffBBW:-37.47 trend:2 MidLV:5025.2 Upp:5081.79 Low:4968.62 WLV:2.25  [upd:2026.03.16 12:00:04]
+  [M30] stg:522/522(FLY) mid:3/2 BBUpDn:0/4 diffBBW:2.9 trend:2 MidLV:5008.0 Upp:5030.06 Low:4985.94 WLV:0.88  [upd:2026.03.16 12:00:03]
+  [M15] stg:521/521(FLY) mid:2/2 BBUpDn:0/1 diffBBW:3.01 trend:2 MidLV:5008.98 Upp:5033.25 Low:4984.71 WLV:0.97 close:4991.18  [upd:2026.03.16 12:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=0 shrink_tfs=['D1'] sqz_tfs=[]
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=00401 htf_drive=M30_1, H4_1 ltf_drive=M30_1, H1_1, H4_1, D1_1 midCluster=13.74, 0.98, 16.22
+
+--- [58] 2026.03.16 16:00:05 (H4 boundary) ---
+  Log line: 27908
+  [D1] stg:513/513(FLY) mid:3/1 BBUpDn:0/2 diffBBW:2.21 trend:1 MidLV:5118.71 Upp:5316.18 Low:4921.23 WLV:7.72  [upd:2026.03.16 01:00:06]
+  [W1] stg:512/512(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-126.09 trend:0 MidLV:4607.72 Upp:5426.71 Low:3788.73 WLV:35.55  [upd:2026.03.16 01:00:07]
+  [H4] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:-4.09 trend:2 MidLV:5097.72 Upp:5228.02 Low:4967.42 WLV:5.11  [upd:2026.03.16 16:00:05]
+  [H1] stg:523/523(FLY) mid:2/2 BBUpDn:2/2 diffBBW:-5.53 trend:2 MidLV:5012.47 Upp:5046.17 Low:4978.76 WLV:1.34  [upd:2026.03.16 16:00:04]
+  [M30] stg:522/522(FLY) mid:3/3 BBUpDn:1/0 diffBBW:3.19 trend:2 MidLV:5006.0 Upp:5033.2 Low:4978.79 WLV:1.09  [upd:2026.03.16 16:00:03]
+  [M15] stg:511/511(FLY) mid:1/1 BBUpDn:1/1 diffBBW:7.23 trend:1 MidLV:4998.16 Upp:5026.9 Low:4969.42 WLV:1.15 close:5019.99  [upd:2026.03.16 16:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=0 shrink_tfs=['H1', 'D1'] sqz_tfs=[]
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=01404 htf_drive=M30_1, H4_1 ltf_drive=M15_1, M30_1, H1_1, D1_1 midCluster=15.5, 7.83, 14.3
+
+--- [59] 2026.03.16 20:00:05 (H4 boundary) ---
+  Log line: 28001
+  [D1] stg:513/513(FLY) mid:3/1 BBUpDn:0/2 diffBBW:2.21 trend:1 MidLV:5118.71 Upp:5316.18 Low:4921.23 WLV:7.72  [upd:2026.03.16 01:00:06]
+  [W1] stg:512/512(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-126.09 trend:0 MidLV:4607.72 Upp:5426.71 Low:3788.73 WLV:35.55  [upd:2026.03.16 01:00:07]
+  [H4] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:7.11 trend:2 MidLV:5087.48 Upp:5221.2 Low:4953.76 WLV:5.26  [upd:2026.03.16 20:00:05]
+  [H1] stg:422/523(SQZ) mid:2/2 BBUpDn:4/0 diffBBW:0.05 trend:2 MidLV:5004.63 Upp:5028.75 Low:4980.51 WLV:0.96  [upd:2026.03.16 20:00:04]
+  [M30] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:0.33 trend:2 MidLV:4999.93 Upp:5028.41 Low:4971.44 WLV:1.1400000000000001  [upd:2026.03.16 20:00:03]
+  [M15] stg:521/521(FLY) mid:4/2 BBUpDn:1/1 diffBBW:2.31 trend:2 MidLV:5006.55 Upp:5038.3 Low:4974.8 WLV:1.27 close:4992.18  [upd:2026.03.16 20:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=1 shrink_tfs=['D1'] sqz_tfs=['H1']
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=02041 htf_drive=M30_1, H1_1, H4_1 ltf_drive=M30_1, H1_1, D1_1 midCluster=15.98, 6.62, 1.92
+
+--- [60] 2026.03.17 04:00:05 (H4 boundary) ---
+  Log line: 28165
+  [D1] stg:513/513(FLY) mid:3/3 BBUpDn:0/0 diffBBW:-55.52 trend:1 MidLV:5122.91 Upp:5306.5 Low:4939.32 WLV:7.17  [upd:2026.03.17 01:00:06]
+  [W1] stg:512/512(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-126.09 trend:0 MidLV:4607.72 Upp:5426.71 Low:3788.73 WLV:35.55  [upd:2026.03.16 01:00:07]
+  [H4] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:-9.6 trend:2 MidLV:5071.41 Upp:5199.42 Low:4943.41 WLV:5.05  [upd:2026.03.17 04:00:05]
+  [H1] stg:422/422(SQZ) mid:2/3 BBUpDn:0/0 diffBBW:-3.69 trend:2 MidLV:5004.19 Upp:5026.76 Low:4981.63 WLV:0.9  [upd:2026.03.17 04:00:04]
+  [M30] stg:523/523(FLY) mid:2/2 BBUpDn:2/2 diffBBW:-11.35 trend:2 MidLV:5002.58 Upp:5020.12 Low:4985.04 WLV:0.7  [upd:2026.03.17 04:00:03]
+  [M15] stg:425/425(SQZ) mid:2/2 BBUpDn:4/0 diffBBW:-0.43 trend:2 MidLV:5007.94 Upp:5016.75 Low:4999.12 WLV:0.35 close:5002.92  [upd:2026.03.17 04:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=2 shrink_tfs=['M30', 'D1'] sqz_tfs=['M15', 'H1']
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=02124-S_12 htf_drive=M5_1, M15_1, M30_1, H1_1, H4_1, D1_1 ltf_drive=M15_1, D1_1 midCluster=1.03, 5.36, 3.75
+
+--- [61] 2026.03.17 08:00:05 (H4 boundary) ---
+  Log line: 28258
+  [D1] stg:513/513(FLY) mid:3/3 BBUpDn:0/0 diffBBW:-55.52 trend:1 MidLV:5122.91 Upp:5306.5 Low:4939.32 WLV:7.17  [upd:2026.03.17 01:00:06]
+  [W1] stg:512/512(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-126.09 trend:0 MidLV:4607.72 Upp:5426.71 Low:3788.73 WLV:35.55  [upd:2026.03.16 01:00:07]
+  [H4] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:-19.44 trend:2 MidLV:5066.38 Upp:5187.76 Low:4945.0 WLV:4.79  [upd:2026.03.17 08:00:05]
+  [H1] stg:511/511(FLY) mid:1/1 BBUpDn:1/1 diffBBW:9.31 trend:1 MidLV:5009.29 Upp:5039.7 Low:4978.87 WLV:1.21  [upd:2026.03.17 08:00:04]
+  [M30] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:3.8 trend:1 MidLV:5016.78 Upp:5038.81 Low:4994.76 WLV:0.88  [upd:2026.03.17 08:00:03]
+  [M15] stg:512/511(FLY) mid:1/1 BBUpDn:3/1 diffBBW:1.7 trend:1 MidLV:5022.21 Upp:5045.02 Low:4999.4 WLV:0.91 close:5038.02  [upd:2026.03.17 08:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=0 shrink_tfs=['D1'] sqz_tfs=[]
+  TRADEINFO: gate=H4-OPPOSE act=0 tradeact=0
+  BBTFImpact: sideway=00000 htf_drive=M15_1, H1_1, H4_1, D1_1 ltf_drive=M15_1, M30_1, H1_1, H4_1, D1_1 midCluster=9.64, 5.42, 12.92
+
+--- [62] 2026.03.17 12:00:05 (H4 boundary) ---
+  Log line: 28351
+  [D1] stg:513/513(FLY) mid:3/3 BBUpDn:0/0 diffBBW:-55.52 trend:1 MidLV:5122.91 Upp:5306.5 Low:4939.32 WLV:7.17  [upd:2026.03.17 01:00:06]
+  [W1] stg:512/512(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-126.09 trend:0 MidLV:4607.72 Upp:5426.71 Low:3788.73 WLV:35.55  [upd:2026.03.16 01:00:07]
+  [H4] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:-24.94 trend:2 MidLV:5059.07 Upp:5174.72 Low:4943.42 WLV:4.57  [upd:2026.03.17 12:00:05]
+  [H1] stg:421/513(SQZ) mid:1/5 BBUpDn:3/0 diffBBW:1.76 trend:1 MidLV:5013.86 Upp:5038.9 Low:4988.81 WLV:1.0  [upd:2026.03.17 12:00:04]
+  [M30] stg:513/512(FLY) mid:1/1 BBUpDn:2/0 diffBBW:-3.89 trend:1 MidLV:5021.05 Upp:5040.77 Low:5001.33 WLV:0.79  [upd:2026.03.17 12:00:03]
+  [M15] stg:522/522(FLY) mid:4/4 BBUpDn:4/4 diffBBW:-0.39 trend:2 MidLV:5024.03 Upp:5042.68 Low:5005.39 WLV:0.74 close:5024.78  [upd:2026.03.17 12:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=1 shrink_tfs=['M30', 'D1'] sqz_tfs=['H1']
+  TRADEINFO: gate=G6-SHRINK | G5 | G5-NONE act=0 tradeact=0
+  BBTFImpact: sideway=02141-S_11 htf_drive=M5_1, M15_1, M30_1, H1_1, H4_1, D1_1 ltf_drive=M30_1, D1_1 midCluster=1.6400000000000001, 2.99, 10.18
+
+--- [63] 2026.03.17 16:00:05 (H4 boundary) ---
+  Log line: 28444
+  [D1] stg:513/513(FLY) mid:3/3 BBUpDn:0/0 diffBBW:-55.52 trend:1 MidLV:5122.91 Upp:5306.5 Low:4939.32 WLV:7.17  [upd:2026.03.17 01:00:06]
+  [W1] stg:512/512(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-126.09 trend:0 MidLV:4607.72 Upp:5426.71 Low:3788.73 WLV:35.55  [upd:2026.03.16 01:00:07]
+  [H4] stg:522/522(FLY) mid:2/2 BBUpDn:0/4 diffBBW:-34.86 trend:2 MidLV:5050.72 Upp:5158.52 Low:4942.93 WLV:4.27  [upd:2026.03.17 16:00:05]
+  [H1] stg:421/421(SQZ) mid:1/4 BBUpDn:2/0 diffBBW:-13.49 trend:1 MidLV:5014.21 Upp:5034.25 Low:4994.17 WLV:0.8  [upd:2026.03.17 16:00:04]
+  [M30] stg:521/521(FLY) mid:3/3 BBUpDn:4/4 diffBBW:-0.37 trend:2 MidLV:5018.29 Upp:5039.11 Low:4997.46 WLV:0.83  [upd:2026.03.17 16:00:03]
+  [M15] stg:523/523(FLY) mid:2/4 BBUpDn:2/2 diffBBW:-2.98 trend:2 MidLV:5011.79 Upp:5026.34 Low:4997.23 WLV:0.58 close:5011.78  [upd:2026.03.17 16:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=1 shrink_tfs=['M15', 'D1'] sqz_tfs=['H1']
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=02414-S_12 htf_drive=M5_1, M30_1, H1_1, H4_1, D1_1 ltf_drive=M15_1, H1_1, D1_1 midCluster=0.75, 6.5, 2.42
+
+--- [64] 2026.03.17 16:30:03 *** OPEN SELL @5012.11 *** ---
+  Log line: 28457
+  [D1] stg:513/513(FLY) mid:3/3 BBUpDn:0/0 diffBBW:-55.52 trend:1 MidLV:5122.91 Upp:5306.5 Low:4939.32 WLV:7.17  [upd:2026.03.17 01:00:06]
+  [W1] stg:512/512(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-126.09 trend:0 MidLV:4607.72 Upp:5426.71 Low:3788.73 WLV:35.55  [upd:2026.03.16 01:00:07]
+  [H4] stg:522/522(FLY) mid:2/2 BBUpDn:0/4 diffBBW:-34.86 trend:2 MidLV:5050.72 Upp:5158.52 Low:4942.93 WLV:4.27  [upd:2026.03.17 16:00:05]
+  [H1] stg:421/421(SQZ) mid:1/4 BBUpDn:2/0 diffBBW:-13.49 trend:1 MidLV:5014.21 Upp:5034.25 Low:4994.17 WLV:0.8  [upd:2026.03.17 16:00:04]
+  [M30] stg:522/521(FLY) mid:2/3 BBUpDn:4/4 diffBBW:-2.13 trend:2 MidLV:5017.56 Upp:5037.71 Low:4997.41 WLV:0.8  [upd:2026.03.17 16:30:03]
+  [M15] stg:523/523(FLY) mid:4/4 BBUpDn:2/2 diffBBW:-3.62 trend:2 MidLV:5010.95 Upp:5023.55 Low:4998.35 WLV:0.5 close:5012.83  [upd:2026.03.17 16:30:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=1 shrink_tfs=['M15', 'D1'] sqz_tfs=['H1']
+  TRADEINFO: gate=G6-SHRINK | G5 | G5-ENTRY | G6-SELL act=2 tradeact=0
+  BBTFImpact: sideway=02450 htf_drive=M5_1, M30_1, H1_1, H4_1, D1_1 ltf_drive=M15_1, H1_1, D1_1 midCluster=0.95, 6.77, 2.7
+
+--- [65] 2026.03.17 19:30:03 *** CLOSE SELLBUY @5004.10 P&L:8.01 *** ---
+  Log line: 28532
+  [D1] stg:513/513(FLY) mid:3/3 BBUpDn:0/0 diffBBW:-55.52 trend:1 MidLV:5122.91 Upp:5306.5 Low:4939.32 WLV:7.17  [upd:2026.03.17 01:00:06]
+  [W1] stg:512/512(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-126.09 trend:0 MidLV:4607.72 Upp:5426.71 Low:3788.73 WLV:35.55  [upd:2026.03.16 01:00:07]
+  [H4] stg:522/522(FLY) mid:2/2 BBUpDn:0/4 diffBBW:-34.86 trend:2 MidLV:5050.72 Upp:5158.52 Low:4942.93 WLV:4.27  [upd:2026.03.17 16:00:05]
+  [H1] stg:423/421(SQZ) mid:3/3 BBUpDn:1/2 diffBBW:5.64 trend:1 MidLV:5014.18 Upp:5034.79 Low:4993.57 WLV:0.82  [upd:2026.03.17 19:00:04]
+  [M30] stg:521/521(FLY) mid:4/2 BBUpDn:0/1 diffBBW:1.01 trend:2 MidLV:5010.78 Upp:5028.71 Low:4992.85 WLV:0.72  [upd:2026.03.17 19:30:03]
+  [M15] stg:521/521(FLY) mid:4/2 BBUpDn:0/1 diffBBW:0.4 trend:2 MidLV:5008.52 Upp:5026.67 Low:4990.37 WLV:0.72 close:5004.11  [upd:2026.03.17 19:30:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=1 shrink_tfs=['D1'] sqz_tfs=['H1']
+  TRADEINFO: gate=G0 act=7 tradeact=7
+  BBTFImpact: sideway=06000 htf_drive=M30_1, H1_1, H4_1, D1_1 ltf_drive=M15_1, M30_1, H1_1, D1_1 midCluster=6.72, 2.75, 5.74
+
+--- [66] 2026.03.17 20:00:05 (H4 boundary) ---
+  Log line: 28548
+  [D1] stg:513/513(FLY) mid:3/3 BBUpDn:0/0 diffBBW:-55.52 trend:1 MidLV:5122.91 Upp:5306.5 Low:4939.32 WLV:7.17  [upd:2026.03.17 01:00:06]
+  [W1] stg:512/512(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-126.09 trend:0 MidLV:4607.72 Upp:5426.71 Low:3788.73 WLV:35.55  [upd:2026.03.16 01:00:07]
+  [H4] stg:523/522(FLY) mid:2/2 BBUpDn:2/0 diffBBW:-60.0 trend:2 MidLV:5041.45 Upp:5134.69 Low:4948.22 WLV:3.7  [upd:2026.03.17 20:00:05]
+  [H1] stg:423/423(SQZ) mid:4/3 BBUpDn:1/1 diffBBW:2.81 trend:1 MidLV:5013.66 Upp:5034.84 Low:4992.48 WLV:0.84  [upd:2026.03.17 20:00:04]
+  [M30] stg:522/521(FLY) mid:2/4 BBUpDn:4/0 diffBBW:1.34 trend:2 MidLV:5010.07 Upp:5028.53 Low:4991.61 WLV:0.74  [upd:2026.03.17 20:00:03]
+  [M15] stg:522/522(FLY) mid:4/4 BBUpDn:0/4 diffBBW:0.59 trend:2 MidLV:5008.01 Upp:5026.68 Low:4989.33 WLV:0.75 close:5002.0  [upd:2026.03.17 20:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=1 shrink_tfs=['H4', 'D1'] sqz_tfs=['H1']
+  TRADEINFO: gate=G6-SHRINK | G5 | G5-NONE act=0 tradeact=0
+  BBTFImpact: sideway=16041 htf_drive=M30_1, H1_1, H4_1, D1_1 ltf_drive=M30_1, H1_1 midCluster=10.66, 2.07, 5.65
+
+--- [67] 2026.03.18 04:00:05 (H4 boundary) ---
+  Log line: 28712
+  [D1] stg:513/513(FLY) mid:5/3 BBUpDn:2/0 diffBBW:-51.2 trend:1 MidLV:5126.72 Upp:5297.03 Low:4956.41 WLV:6.64  [upd:2026.03.18 01:00:06]
+  [W1] stg:512/512(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-126.09 trend:0 MidLV:4607.72 Upp:5426.71 Low:3788.73 WLV:35.55  [upd:2026.03.16 01:00:07]
+  [H4] stg:523/523(FLY) mid:2/2 BBUpDn:0/2 diffBBW:-14.27 trend:2 MidLV:5029.88 Upp:5106.87 Low:4952.88 WLV:3.06  [upd:2026.03.18 04:00:05]
+  [H1] stg:423/423(SQZ) mid:2/2 BBUpDn:2/4 diffBBW:-11.63 trend:2 MidLV:5008.75 Upp:5027.31 Low:4990.2 WLV:0.74  [upd:2026.03.18 04:00:04]
+  [M30] stg:422/422(SQZ) mid:4/2 BBUpDn:2/2 diffBBW:-4.93 trend:2 MidLV:5002.38 Upp:5011.4 Low:4993.37 WLV:0.36  [upd:2026.03.18 04:00:03]
+  [M15] stg:511/511(FLY) mid:3/3 BBUpDn:0/0 diffBBW:0.34 trend:7 MidLV:5002.47 Upp:5007.06 Low:4997.87 WLV:0.18 close:5004.35  [upd:2026.03.18 04:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=2 shrink_tfs=['H4', 'D1'] sqz_tfs=['M30', 'H1']
+  TRADEINFO: gate=G0-HOLD act=0 tradeact=0
+  BBTFImpact: sideway=12644-S_11 htf_drive=M15_1, M30_1, H1_1, H4_1, D1_1 ltf_drive=M15_1, M30_1 midCluster=1.6800000000000002, 0.08, 6.29
+
+--- [68] 2026.03.18 08:00:05 (H4 boundary) ---
+  Log line: 28805
+  [D1] stg:513/513(FLY) mid:5/3 BBUpDn:2/0 diffBBW:-51.2 trend:1 MidLV:5126.72 Upp:5297.03 Low:4956.41 WLV:6.64  [upd:2026.03.18 01:00:06]
+  [W1] stg:512/512(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-126.09 trend:0 MidLV:4607.72 Upp:5426.71 Low:3788.73 WLV:35.55  [upd:2026.03.16 01:00:07]
+  [H4] stg:522/523(FLY) mid:2/2 BBUpDn:4/0 diffBBW:-15.38 trend:2 MidLV:5024.24 Upp:5097.7 Low:4950.77 WLV:2.92  [upd:2026.03.18 08:00:05]
+  [H1] stg:422/422(SQZ) mid:2/2 BBUpDn:4/4 diffBBW:-3.86 trend:2 MidLV:5002.54 Upp:5018.83 Low:4986.24 WLV:0.65  [upd:2026.03.18 08:00:04]
+  [M30] stg:521/521(FLY) mid:2/2 BBUpDn:1/1 diffBBW:4.49 trend:2 MidLV:4999.21 Upp:5010.96 Low:4987.46 WLV:0.47  [upd:2026.03.18 08:00:03]
+  [M15] stg:521/521(FLY) mid:2/2 BBUpDn:0/1 diffBBW:1.3 trend:2 MidLV:4997.7 Upp:5012.62 Low:4982.79 WLV:0.6 close:4987.11  [upd:2026.03.18 08:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=1 shrink_tfs=['D1'] sqz_tfs=['H1']
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=02000 htf_drive=M30_1, H1_1, H4_1, D1_1 ltf_drive=M15_1, M30_1, H1_1, D1_1 midCluster=7.05, 1.51, 4.83
+
+--- [69] 2026.03.18 12:00:05 (H4 boundary) ---
+  Log line: 28898
+  [D1] stg:513/513(FLY) mid:5/3 BBUpDn:2/0 diffBBW:-51.2 trend:1 MidLV:5126.72 Upp:5297.03 Low:4956.41 WLV:6.64  [upd:2026.03.18 01:00:06]
+  [W1] stg:512/512(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-126.09 trend:0 MidLV:4607.72 Upp:5426.71 Low:3788.73 WLV:35.55  [upd:2026.03.16 01:00:07]
+  [H4] stg:522/522(FLY) mid:2/2 BBUpDn:0/4 diffBBW:-45.32 trend:2 MidLV:5018.3 Upp:5079.45 Low:4957.14 WLV:2.44  [upd:2026.03.18 12:00:05]
+  [H1] stg:424/424(SQZ) mid:2/4 BBUpDn:0/4 diffBBW:1.6600000000000001 trend:2 MidLV:5000.14 Upp:5015.74 Low:4984.54 WLV:0.62  [upd:2026.03.18 12:00:04]
+  [M30] stg:511/511(FLY) mid:2/4 BBUpDn:0/0 diffBBW:2.7199999999999998 trend:2 MidLV:4997.78 Upp:5013.96 Low:4981.6 WLV:0.65  [upd:2026.03.18 12:00:03]
+  [M15] stg:521/521(FLY) mid:4/4 BBUpDn:1/1 diffBBW:1.17 trend:7 MidLV:4996.69 Upp:5016.16 Low:4977.21 WLV:0.78 close:4987.62  [upd:2026.03.18 12:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=1 shrink_tfs=['D1'] sqz_tfs=['H1']
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=02040 htf_drive=M30_1, H1_1, H4_1, D1_1 ltf_drive=M15_1, M30_1, H1_1, D1_1 midCluster=3.03, 1.09, 3.45
+
+--- [70] 2026.03.18 16:00:05 (H4 boundary) ---
+  Log line: 28991
+  [D1] stg:513/513(FLY) mid:5/3 BBUpDn:2/0 diffBBW:-51.2 trend:1 MidLV:5126.72 Upp:5297.03 Low:4956.41 WLV:6.64  [upd:2026.03.18 01:00:06]
+  [W1] stg:512/512(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-126.09 trend:0 MidLV:4607.72 Upp:5426.71 Low:3788.73 WLV:35.55  [upd:2026.03.16 01:00:07]
+  [H4] stg:522/522(FLY) mid:2/2 BBUpDn:0/0 diffBBW:59.49 trend:2 MidLV:5005.24 Upp:5090.45 Low:4920.02 WLV:3.41  [upd:2026.03.18 16:00:05]
+  [H1] stg:521/521(FLY) mid:2/2 BBUpDn:1/1 diffBBW:79.45 trend:2 MidLV:4984.38 Upp:5052.33 Low:4916.43 WLV:2.73  [upd:2026.03.18 16:00:04]
+  [M30] stg:521/521(FLY) mid:2/2 BBUpDn:1/1 diffBBW:54.15 trend:2 MidLV:4974.22 Upp:5049.38 Low:4899.06 WLV:3.02  [upd:2026.03.18 16:00:03]
+  [M15] stg:521/521(FLY) mid:2/2 BBUpDn:1/1 diffBBW:27.13 trend:2 MidLV:4956.15 Upp:5034.93 Low:4877.36 WLV:3.18 close:4881.6  [upd:2026.03.18 16:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=0 shrink_tfs=['D1'] sqz_tfs=[]
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=00000 htf_drive=H1_1, H4_1, D1_1 ltf_drive=M15_1, M30_1, H1_1, H4_1, D1_1 midCluster=43.35, 18.08, 28.23
+
+--- [71] 2026.03.18 20:00:05 (H4 boundary) ---
+  Log line: 29084
+  [D1] stg:513/513(FLY) mid:5/3 BBUpDn:2/0 diffBBW:-51.2 trend:1 MidLV:5126.72 Upp:5297.03 Low:4956.41 WLV:6.64  [upd:2026.03.18 01:00:06]
+  [W1] stg:512/512(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-126.09 trend:0 MidLV:4607.72 Upp:5426.71 Low:3788.73 WLV:35.55  [upd:2026.03.16 01:00:07]
+  [H4] stg:522/522(FLY) mid:2/2 BBUpDn:0/0 diffBBW:10.01 trend:2 MidLV:4993.83 Upp:5085.79 Low:4901.86 WLV:3.68  [upd:2026.03.18 20:00:05]
+  [H1] stg:521/521(FLY) mid:2/2 BBUpDn:0/1 diffBBW:14.43 trend:2 MidLV:4958.28 Upp:5066.62 Low:4849.94 WLV:4.37  [upd:2026.03.18 20:00:04]
+  [M30] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:-19.75 trend:2 MidLV:4923.57 Upp:5030.68 Low:4816.46 WLV:4.35  [upd:2026.03.18 20:00:03]
+  [M15] stg:523/523(FLY) mid:2/2 BBUpDn:2/2 diffBBW:-27.59 trend:2 MidLV:4874.39 Upp:4897.33 Low:4851.45 WLV:0.94 close:4886.9  [upd:2026.03.18 20:00:02]
+  Cascade: cas_shrinkTF=5 cas_sqzCount=0 shrink_tfs=['M15', 'D1'] sqz_tfs=[]
+  TRADEINFO: gate=H4-OPPOSE act=0 tradeact=0
+  BBTFImpact: sideway=00010 htf_drive=M5_1, M15_1, H4_1, D1_1 ltf_drive=M15_1, H1_1, H4_1, D1_1 midCluster=0.56, 49.18, 83.89
+
+--- [72] 2026.03.19 04:00:05 (H4 boundary) ---
+  Log line: 29248
+  [D1] stg:521/513(FLY) mid:2/5 BBUpDn:1/2 diffBBW:127.53 trend:8 MidLV:5114.0 Upp:5334.12 Low:4893.88 WLV:8.61  [upd:2026.03.19 01:00:06]
+  [W1] stg:512/512(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-126.09 trend:0 MidLV:4607.72 Upp:5426.71 Low:3788.73 WLV:35.55  [upd:2026.03.16 01:00:07]
+  [H4] stg:521/522(FLY) mid:2/2 BBUpDn:1/0 diffBBW:47.14 trend:2 MidLV:4970.15 Upp:5099.15 Low:4841.14 WLV:5.19  [upd:2026.03.19 04:00:05]
+  [H1] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:-5.63 trend:2 MidLV:4903.78 Upp:5032.83 Low:4774.73 WLV:5.26  [upd:2026.03.19 04:00:04]
+  [M30] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:-2.08 trend:2 MidLV:4854.64 Upp:4902.06 Low:4807.22 WLV:1.95  [upd:2026.03.19 04:00:03]
+  [M15] stg:523/523(FLY) mid:2/2 BBUpDn:2/2 diffBBW:-4.8 trend:2 MidLV:4834.28 Upp:4857.33 Low:4811.23 WLV:0.95 close:4841.27  [upd:2026.03.19 04:00:02]
+  Cascade: cas_shrinkTF=1 cas_sqzCount=0 shrink_tfs=['M15'] sqz_tfs=[]
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=00011 htf_drive=M5_1, D1_1 ltf_drive=H1_1, H4_1, D1_1, W1_1 midCluster=5.7, 20.36, 69.5
+
+--- [73] 2026.03.19 08:00:05 (H4 boundary) ---
+  Log line: 29341
+  [D1] stg:521/513(FLY) mid:2/5 BBUpDn:1/2 diffBBW:127.53 trend:8 MidLV:5114.0 Upp:5334.12 Low:4893.88 WLV:8.61  [upd:2026.03.19 01:00:06]
+  [W1] stg:512/512(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-126.09 trend:0 MidLV:4607.72 Upp:5426.71 Low:3788.73 WLV:35.55  [upd:2026.03.16 01:00:07]
+  [H4] stg:521/521(FLY) mid:2/2 BBUpDn:1/1 diffBBW:39.41 trend:2 MidLV:4963.13 Upp:5099.95 Low:4826.32 WLV:5.51  [upd:2026.03.19 08:00:05]
+  [H1] stg:523/523(FLY) mid:2/2 BBUpDn:2/2 diffBBW:-46.01 trend:2 MidLV:4875.23 Upp:4965.93 Low:4784.53 WLV:3.7199999999999998  [upd:2026.03.19 08:00:04]
+  [M30] stg:523/523(FLY) mid:2/2 BBUpDn:2/2 diffBBW:-24.31 trend:2 MidLV:4844.61 Upp:4871.94 Low:4817.27 WLV:1.13  [upd:2026.03.19 08:00:03]
+  [M15] stg:513/513(FLY) mid:5/1 BBUpDn:2/2 diffBBW:-2.5300000000000002 trend:1 MidLV:4850.96 Upp:4864.02 Low:4837.9 WLV:0.54 close:4849.88  [upd:2026.03.19 08:00:02]
+  Cascade: cas_shrinkTF=3 cas_sqzCount=0 shrink_tfs=['M15', 'M30', 'H1'] sqz_tfs=[]
+  TRADEINFO: gate=G6-SHRINK | G5 | G5-NONE act=0 tradeact=0
+  BBTFImpact: sideway=01151 htf_drive=M5_1, M15_1, M30_1, D1_1 ltf_drive=D1_1, W1_1 midCluster=0.95, 6.35, 24.27
+
+--- [74] 2026.03.19 12:00:05 (H4 boundary) ---
+  Log line: 29434
+  [D1] stg:521/513(FLY) mid:2/5 BBUpDn:1/2 diffBBW:127.53 trend:8 MidLV:5114.0 Upp:5334.12 Low:4893.88 WLV:8.61  [upd:2026.03.19 01:00:06]
+  [W1] stg:512/512(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-126.09 trend:0 MidLV:4607.72 Upp:5426.71 Low:3788.73 WLV:35.55  [upd:2026.03.16 01:00:07]
+  [H4] stg:521/521(FLY) mid:2/2 BBUpDn:1/1 diffBBW:135.23 trend:2 MidLV:4944.4 Upp:5130.71 Low:4758.09 WLV:7.54  [upd:2026.03.19 12:00:05]
+  [H1] stg:521/402(FLY) mid:2/2 BBUpDn:0/4 diffBBW:54.98 trend:2 MidLV:4832.58 Upp:4932.8 Low:4732.37 WLV:4.15  [upd:2026.03.19 12:00:04]
+  [M30] stg:521/521(FLY) mid:2/2 BBUpDn:1/1 diffBBW:48.84 trend:2 MidLV:4814.83 Upp:4919.7 Low:4709.96 WLV:4.36  [upd:2026.03.19 12:00:03]
+  [M15] stg:522/521(FLY) mid:2/2 BBUpDn:4/1 diffBBW:13.14 trend:2 MidLV:4787.55 Upp:4897.87 Low:4677.23 WLV:4.61 close:4709.34  [upd:2026.03.19 12:00:02]
+  Cascade: cas_shrinkTF=-1 cas_sqzCount=0 shrink_tfs=[] sqz_tfs=[]
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=00000 htf_drive=M30_1, D1_1 ltf_drive=M15_1, M30_1, H1_1, H4_1, D1_1, W1_1 midCluster=58.25, 27.28, 45.03
+
+--- [75] 2026.03.19 16:00:05 (H4 boundary) ---
+  Log line: 29527
+  [D1] stg:521/513(FLY) mid:2/5 BBUpDn:1/2 diffBBW:127.53 trend:8 MidLV:5114.0 Upp:5334.12 Low:4893.88 WLV:8.61  [upd:2026.03.19 01:00:06]
+  [W1] stg:512/512(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-126.09 trend:0 MidLV:4607.72 Upp:5426.71 Low:3788.73 WLV:35.55  [upd:2026.03.16 01:00:07]
+  [H4] stg:521/521(FLY) mid:2/2 BBUpDn:1/1 diffBBW:213.86 trend:2 MidLV:4918.45 Upp:5178.73 Low:4658.17 WLV:10.58  [upd:2026.03.19 16:00:05]
+  [H1] stg:521/521(FLY) mid:2/2 BBUpDn:1/1 diffBBW:103.21 trend:2 MidLV:4785.06 Upp:4969.0 Low:4601.13 WLV:7.6899999999999995  [upd:2026.03.19 16:00:04]
+  [M30] stg:522/522(FLY) mid:2/2 BBUpDn:0/4 diffBBW:40.59 trend:2 MidLV:4736.59 Upp:4911.62 Low:4561.57 WLV:7.39  [upd:2026.03.19 16:00:03]
+  [M15] stg:521/521(FLY) mid:2/2 BBUpDn:1/1 diffBBW:37.47 trend:2 MidLV:4670.45 Upp:4767.18 Low:4573.72 WLV:4.14 close:4574.32  [upd:2026.03.19 16:00:02]
+  Cascade: cas_shrinkTF=-1 cas_sqzCount=0 shrink_tfs=[] sqz_tfs=[]
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=00000 htf_drive=D1_1 ltf_drive=M15_1, M30_1, H1_1, H4_1, D1_1, W1_1 midCluster=45.74, 66.15, 114.62
+
+--- [76] 2026.03.19 20:00:05 (H4 boundary) ---
+  Log line: 29620
+  [D1] stg:521/513(FLY) mid:2/5 BBUpDn:1/2 diffBBW:127.53 trend:8 MidLV:5114.0 Upp:5334.12 Low:4893.88 WLV:8.61  [upd:2026.03.19 01:00:06]
+  [W1] stg:512/512(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-126.09 trend:0 MidLV:4607.72 Upp:5426.71 Low:3788.73 WLV:35.55  [upd:2026.03.16 01:00:07]
+  [H4] stg:521/521(FLY) mid:2/2 BBUpDn:1/1 diffBBW:147.35 trend:2 MidLV:4898.0 Upp:5192.2 Low:4603.8 WLV:12.01  [upd:2026.03.19 20:00:05]
+  [H1] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:33.79 trend:2 MidLV:4732.39 Upp:4946.13 Low:4518.66 WLV:9.03  [upd:2026.03.19 20:00:04]
+  [M30] stg:522/523(FLY) mid:2/2 BBUpDn:4/2 diffBBW:-37.76 trend:2 MidLV:4643.46 Upp:4760.93 Low:4525.99 WLV:5.06  [upd:2026.03.19 20:00:03]
+  [M15] stg:523/523(FLY) mid:2/2 BBUpDn:2/2 diffBBW:-12.35 trend:2 MidLV:4592.36 Upp:4639.98 Low:4544.73 WLV:2.07 close:4584.91  [upd:2026.03.19 20:00:02]
+  Cascade: cas_shrinkTF=1 cas_sqzCount=0 shrink_tfs=['M15'] sqz_tfs=[]
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=00010 htf_drive=M5_1, M15_1, D1_1 ltf_drive=M15_1, H1_1, H4_1, D1_1, W1_1 midCluster=2.86, 51.11, 140.04
+
+--- [77] 2026.03.20 04:00:05 (H4 boundary) ---
+  Log line: 29784
+  [D1] stg:521/521(FLY) mid:2/2 BBUpDn:1/1 diffBBW:260.03 trend:2 MidLV:5087.18 Upp:5415.18 Low:4759.18 WLV:12.9  [upd:2026.03.20 01:00:06]
+  [W1] stg:512/512(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-126.09 trend:0 MidLV:4607.72 Upp:5426.71 Low:3788.73 WLV:35.55  [upd:2026.03.16 01:00:07]
+  [H4] stg:522/521(FLY) mid:2/2 BBUpDn:4/0 diffBBW:51.32 trend:2 MidLV:4864.33 Upp:5177.26 Low:4551.4 WLV:12.87  [upd:2026.03.20 04:00:05]
+  [H1] stg:523/523(FLY) mid:2/2 BBUpDn:2/2 diffBBW:-92.05 trend:2 MidLV:4662.94 Upp:4801.34 Low:4524.53 WLV:5.9399999999999995  [upd:2026.03.20 04:00:04]
+  [M30] stg:411/404(SQZ) mid:1/1 BBUpDn:3/0 diffBBW:1.78 trend:1 MidLV:4629.21 Upp:4676.89 Low:4581.53 WLV:2.06  [upd:2026.03.20 04:00:03]
+  [M15] stg:513/513(FLY) mid:5/1 BBUpDn:2/2 diffBBW:-1.16 trend:1 MidLV:4650.18 Upp:4665.44 Low:4634.91 WLV:0.66 close:4648.68  [upd:2026.03.20 04:00:02]
+  Cascade: cas_shrinkTF=3 cas_sqzCount=1 shrink_tfs=['M15', 'H1'] sqz_tfs=['M30']
+  TRADEINFO: gate=G6-SHRINK | G5 | G5-NONE act=0 tradeact=0
+  BBTFImpact: sideway=01254-S_22 htf_drive=M5_1, M15_1, M30_1, D1_1 ltf_drive=M15_1, D1_1, W1_1 midCluster=1.1, 20.97, 12.76
+
+--- [78] 2026.03.20 08:00:05 (H4 boundary) ---
+  Log line: 29877
+  [D1] stg:521/521(FLY) mid:2/2 BBUpDn:1/1 diffBBW:260.03 trend:2 MidLV:5087.18 Upp:5415.18 Low:4759.18 WLV:12.9  [upd:2026.03.20 01:00:06]
+  [W1] stg:512/512(FLY) mid:1/1 BBUpDn:3/0 diffBBW:-126.09 trend:0 MidLV:4607.72 Upp:5426.71 Low:3788.73 WLV:35.55  [upd:2026.03.16 01:00:07]
+  [H4] stg:522/522(FLY) mid:2/2 BBUpDn:4/4 diffBBW:-0.32 trend:2 MidLV:4852.16 Upp:5158.75 Low:4545.57 WLV:12.64  [upd:2026.03.20 08:00:05]
+  [H1] stg:403/523(SQZ) mid:3/2 BBUpDn:0/2 diffBBW:5.16 trend:2 MidLV:4651.12 Upp:4743.72 Low:4558.52 WLV:3.98  [upd:2026.03.20 08:00:04]
+  [M30] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-3.94 trend:1 MidLV:4671.38 Upp:4738.5 Low:4604.26 WLV:2.87  [upd:2026.03.20 08:00:03]
+  [M15] stg:512/512(FLY) mid:1/1 BBUpDn:3/3 diffBBW:-5.16 trend:1 MidLV:4693.94 Upp:4750.59 Low:4637.29 WLV:2.41 close:4721.86  [upd:2026.03.20 08:00:02]
+  Cascade: cas_shrinkTF=-1 cas_sqzCount=1 shrink_tfs=[] sqz_tfs=['H1']
+  TRADEINFO: gate= act=0 tradeact=0
+  BBTFImpact: sideway=06005 htf_drive=M5_1, M30_1, D1_1 ltf_drive=M30_1, H1_1, D1_1, W1_1 midCluster=30.55, 22.56, 42.82
+
+
+========================================================================================================================================================================================================
+CROSS-CHECK: BBW_stage vs diffMid + diffBBW conflicts
+========================================================================================================================================================================================================
+
+[22] 2026.03.06 04:00:05 
+  FLAG: M30: stage=413(SQZ) but diffBBW=38.5 + BBUpDn=1(expanding) -> EXIT SQZ signal (stage lags)
+
+[45] 2026.03.12 08:00:05 
+  FLAG: H4: stage=512(FLY) but diffBBW=-7.5 + mid=4 -> SHRINK signal (stage lags)
+
+[51] 2026.03.13 08:00:05 
+  FLAG: H4: stage=513(SHRINK) but diffBBW=15.7 + BBUpDn=1(expanding) -> EXPANSION signal (stage lags)
+
+
+========================================================================================================================
+TRADE EVENTS SUMMARY
+========================================================================================================================
+  2026.03.03 07:45:02 -- OPEN BUY @5343.82 ticket#28 
+  2026.03.12 06:30:03 -- CLOSE BUYSELL @5152.53 ticket#28 P&L: -191.29
+  2026.03.12 06:30:03 -- OPEN SELL @5152.53 ticket#30 
+  2026.03.12 15:15:02 -- CLOSE SELLBUY @5169.15 ticket#30 P&L: -16.53
+  2026.03.17 16:30:03 -- OPEN SELL @5012.11 ticket#32 
+  2026.03.17 19:30:03 -- CLOSE SELLBUY @5004.10 ticket#32 P&L: 8.01
