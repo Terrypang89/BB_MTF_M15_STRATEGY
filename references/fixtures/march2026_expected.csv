@@ -1,0 +1,79 @@
+row,timestamp,expected_scenario,expected_substate,expected_phase,expected_b1_block,expected_b2_pink,notes
+1,03.02 04:00,A2,sideway_D1,PH_1,FALSE,FALSE,H4=511 mid=1 D1 mid=3 (sideway) — A2 per analysis
+2,03.02 08:00,A2,sideway_D1,PH_1,TRUE,FALSE,M15 mid=3 blocks; M15 in SQZ but M30 not — no pink
+3,03.02 12:00,A2,sideway_D1,PH_1,FALSE,FALSE,
+4,03.02 16:00,A2,sideway_D1,PH_1,TRUE,FALSE,M15 mid=4 blocks; M15 in SQZ but M30 not
+5,03.02 20:00,B1,compression_onset,PH_2,FALSE,FALSE,H4 fly-+ mid=1 D1 sideway; M30 flips SELL
+6,03.03 04:00,E2,deep_compression,PH_2,FALSE,FALSE,cas_sqzCount=2 (H1=422+M30=413) but NOT pink (M15 not SQZ)
+7,03.03 07:45,E2,deep_compression,PH_2,FALSE,FALSE,BUY entry; M15 mid=5 (not >=3) no block
+8,03.03 08:00,E1,compression_late,PH_2,FALSE,FALSE,M30 mid=3 but M30 not SQZ — no pink
+9,03.03 12:00,E1,compression_late,PH_2,FALSE,FALSE,
+10,03.03 16:00,B3,h1_shrink,PH_3A,FALSE,FALSE,H4 mid=3 (sideway) phase 3a begins
+11,03.03 20:00,B3,h1_shrink,PH_3A,FALSE,FALSE,H4 mid=3 continued
+12,03.04 04:00,B3,h1_shrink,PH_3A,TRUE,FALSE,M15 mid=3 blocks; M30 SQZ but M15 not
+13,03.04 08:00,B3,h1_shrink,PH_3A,FALSE,FALSE,H4 mid=4 (side-dn weakening)
+14,03.04 12:00,B3,h1_shrink,PH_3A,TRUE,FALSE,M15 mid=3 blocks
+15,03.04 16:00,B3,h1_shrink,PH_3A,FALSE,FALSE,
+16,03.04 20:00,E1,compression_late,PH_3B_INTO,FALSE,FALSE,H4 mid=2 SELL lean
+17,03.05 04:00,E1,compression_late,PH_3B_INTO,FALSE,FALSE,H4=522 fly-+ bearish contracting
+18,03.05 08:00,E1,compression_late,PH_3B_INTO,TRUE,FALSE,M15 mid=3 blocks
+19,03.05 12:00,E1,compression_late,PH_3B_INTO,TRUE,FALSE,M15 mid=3 blocks; M30 SQZ but M15 not
+20,03.05 16:00,E4,h4_shrink_onset,PH_3B_INTO,FALSE,FALSE,H4 diffBBW=-48.9 strongly negative
+21,03.05 20:00,E4,h4_shrink_onset,PH_3B_INTO,FALSE,FALSE,
+22,03.06 04:00,E4,h4_shrink_onset,PH_3B_INTO,TRUE,FALSE,M15 mid=3 blocks; M30 SQZ but M15 not
+23,03.06 08:00,E4,h4_confirmed_shrink,PH_3B_INTO,FALSE,FALSE,H4=523 confirmed shrink diffBBW=-101
+24,03.06 12:00,E4,h4_confirmed_shrink,PH_3B_INTO,FALSE,FALSE,
+25,03.06 16:00,E4,h4_confirmed_shrink,PH_4,TRUE,FALSE,M15 mid=3 blocks; approaching SQZ floor
+26,03.06 20:00,E4,h4_confirmed_shrink,PH_4,FALSE,FALSE,H4 mid=4 (side-dn) SELL weakening
+27,03.09 04:00,G3,false_breakout,PH_4,FALSE,FALSE,H4=422 SQZ — BOTTOM reached direction pivot
+28,03.09 08:00,G2,bearish_attempt,PH_4,FALSE,FALSE,H4=521 briefly but BBUpDn=4 not sustained
+29,03.09 12:00,G3,false_breakout,PH_4,FALSE,FALSE,H4=522→523 back to shrink
+30,03.09 16:00,G3,false_breakout,PH_4,TRUE,FALSE,M15 mid=4 blocks
+31,03.09 20:00,G3,false_breakout,PH_4,FALSE,FALSE,H4=522→423 re-SQZ
+32,03.10 04:00,G3,false_breakout,PH_4,FALSE,FALSE,H4=523 mid=3 at SQZ floor
+33,03.10 08:00,G3,false_breakout,PH_4,FALSE,FALSE,H4=423 re-SQZ
+34,03.10 12:00,H1,bullish_resolution,PH_5,FALSE,FALSE,H4=423→511 breakout D1-aligned; cas_sqzCount=2 (H4+M30) not pink
+35,03.10 16:00,F1,compression_release,PH_5,FALSE,FALSE,H4=511 mid=5 strong recovery — H1 confirmed → F
+36,03.10 20:00,F2,compression_release,PH_5,FALSE,FALSE,H4=511→512 fly UP D1 mid=1
+37,03.11 04:00,F2,compression_release,PH_1,FALSE,FALSE,Recovery trend Phase 1
+38,03.11 08:00,F2,compression_release,PH_2,TRUE,FALSE,M15 mid=3 blocks; H1 in SQZ
+39,03.11 12:00,B3,h1_shrink,PH_2,TRUE,FALSE,M15 mid=3 blocks; H1=513 shrink
+40,03.11 16:00,E1,compression_late,PH_3,FALSE,FALSE,H1=425 SQZ
+41,03.11 20:00,E1,compression_late,PH_3,FALSE,FALSE,
+42,03.12 04:00,E1,compression_late,PH_3,FALSE,FALSE,
+43,03.12 06:30,E1,compression_late,PH_3,TRUE,FALSE,CLOSE BUY -191.29 / OPEN SELL; M15 mid=4 blocks
+44,03.12 06:30,E1,compression_late,PH_3,TRUE,FALSE,SELL entry counter-D1 (D1 mid=1 bullish)
+45,03.12 08:00,E1,compression_late,PH_3,FALSE,FALSE,
+46,03.12 12:00,E1,compression_late,PH_3,FALSE,FALSE,
+47,03.12 15:15,E1,compression_late,PH_3,TRUE,FALSE,CLOSE SELL -16.53; M15 mid=3 blocks
+48,03.12 16:00,E4,h4_shrink,PH_3B_INTO,FALSE,FALSE,H4=513 shrink cas_shrinkTF=4
+49,03.12 20:00,E4,h4_shrink,PH_3B_INTO,FALSE,FALSE,
+50,03.13 04:00,E4,h4_shrink,PH_3B_INTO,FALSE,FALSE,
+51,03.13 08:00,E4,h4_shrink,PH_3B_INTO,TRUE,FALSE,M15 mid=3 blocks
+52,03.13 12:00,B3,h1_shrink,PH_2,FALSE,FALSE,H4=521 bearish fly interlude
+53,03.13 16:00,B3,h1_shrink,PH_2,FALSE,FALSE,
+54,03.13 20:00,B3,h1_shrink,PH_2,FALSE,FALSE,
+55,03.16 04:00,B3,h1_shrink,PH_2,FALSE,FALSE,
+56,03.16 08:00,B3,h1_shrink,PH_2,TRUE,FALSE,M15 mid=3 blocks
+57,03.16 12:00,E1,compression_late,PH_3,FALSE,FALSE,H4=522 fly-+
+58,03.16 16:00,E1,compression_late,PH_3,FALSE,FALSE,
+59,03.16 20:00,E2,deep_compression,PH_3,FALSE,FALSE,H1=422 SQZ cas_sqzCount=1
+60,03.17 04:00,E2,deep_compression,PH_3,FALSE,FALSE,cas_sqzCount=2 (H1=422+M15=425) not pink (M30 not SQZ)
+61,03.17 08:00,E1,compression_late,PH_3,FALSE,FALSE,
+62,03.17 12:00,E1,compression_late,PH_3,TRUE,FALSE,M15 mid=4 blocks
+63,03.17 16:00,E1,compression_late,PH_3,FALSE,FALSE,
+64,03.17 16:30,E1,compression_late,PH_3,TRUE,FALSE,SELL entry; M15 mid=4 blocks
+65,03.17 19:30,E1,compression_late,PH_3,TRUE,FALSE,CLOSE SELL +8.01; M15 mid=4 blocks
+66,03.17 20:00,E4,h4_shrink,PH_3B_INTO,FALSE,FALSE,H4=523 shrink
+67,03.18 04:00,F1,compression_release,PH_5,TRUE,FALSE,M15 mid=3 blocks; cas_sqzCount=2 (H1+M30) not pink
+68,03.18 08:00,F2,compression_release,PH_5,FALSE,FALSE,
+69,03.18 12:00,F2,compression_release,PH_5,FALSE,FALSE,
+70,03.18 16:00,F3,compression_release,PH_5,FALSE,FALSE,
+71,03.18 20:00,F3,compression_release,PH_5,FALSE,FALSE,
+72,03.19 04:00,A1,bearish_fly,PH_1,FALSE,FALSE,D1 reverses to bearish (REVDN)
+73,03.19 08:00,A1,bearish_fly,PH_1,FALSE,FALSE,
+74,03.19 12:00,A1,bearish_fly,PH_1,FALSE,FALSE,H4 diffBBW=+135.2 expanding
+75,03.19 16:00,A1,bearish_fly,PH_1,FALSE,FALSE,H4 diffBBW=+213.9 massive expansion
+76,03.19 20:00,A1,bearish_fly,PH_1,FALSE,FALSE,
+77,03.20 04:00,B1,compression_onset,PH_2,FALSE,FALSE,M30=411 SQZ onset early B1 signal
+78,03.20 08:00,B1,compression_onset,PH_2,FALSE,FALSE,H1=403 SQZ deepening
