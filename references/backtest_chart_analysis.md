@@ -4396,31 +4396,121 @@ This is the master table. Read Part 3 scenario → Part 4 prediction → this ta
 
 ## Gate Decoder — EA Implementation Reference
 
-This section maps the plain-language conditions used above back to
-the EA's internal gate names. Used for EA log verification and
-debugging only. Not required for chart analysis or trade decisions.
+As of TofyTrade5 (v31), gates no longer exist as control flow. This decoder
+maps legacy TofyTrade4 gate names (still present in pre-v31 logs) to the
+v31 signal taxonomy, for cross-version log verification.
 
-| Condition ID | Plain language | EA gate name |
+### DELETED — intent absorbed by Layer 1 (scenario) or Layer 2 (confidence)
+
+| Old gate | Original intent | Where the intent now lives |
 |---|---|---|
-| E1 / E2 | M15 mid flips 3→1 or 3→2 | G6-BUY / G6-SELL |
-| E3 | Confinement boundary entry + 6 checks | G0b-TOUCH path |
-| E4 | M5 BBUpDn 0→1 (arm) | G6-LOAD |
-| E5 | M15 mid confirms expansion | G6-BUY / G6-SELL |
-| E6 | H4 BBUpDn=1 sustained | (no single gate — composite condition) |
-| X1 | Price reaches target band | G8-BNDTGT |
-| X2 | M15 mid flips to 3 | G5-FADE |
-| X3 | Quality < 60 | G5-WEAK |
-| X4 | M15+M30 both SQZ | G0b-PINK |
-| B1 | M15 diffMid ≥ 3 | G0 / G0-HOLD |
-| B2 | M15+M30 both SQZ simultaneously | G0b-PINK (also exits) |
-| B3 | H4 direction opposing trade | G4e-H4OPP / H4-OPPOSE |
-| B4 | All TFs SQZ | G0c-SQZLOCK |
-| Check 1 | H4 diffMid = 4/5 | G0b-H4OPP filter |
-| Check 2 | Not both M15+M30 SQZ | G0b-SQZLOCK filter |
-| Check 3 | M5 confirms direction | G0b-M5OPP filter |
-| Check 4 | M30 not opposing | G0b-M30OPP / G4f-M30OPP filter |
-| Check 5 | Not in pink zone | G0b-PINK filter |
-| Check 6 | Quality ≥ 60 | Quality score check |
+| G4-BLOCK | M30/M15 mid conflict | Conflicting mids = different scenario (Layer 1); low score (Layer 2) |
+| G4b-H1OPP | H1 committed fly opposes | H1 weighted ×2 in direction score → drags total below threshold |
+| G4c-M15OPP | M15 fly/shrink/SQZ opposes | M15 state is part of scenario ID; opposing M15 = C1/noise scenario |
+| G4d-M30SID | M30 flat + M15 opposing | Same — scenario, not veto |
+| G4e-H4OPP / H4-OPPOSE | H4 committed fly opposes | H4 ×3 in score + EDIT V1 scope limits; ASSERT-B3 only |
+| G4j-D1OPP | D1 opposes while H4 SQZ | D1 ×2 in score; G2 scenario = counter-D1 at 0.25× (allowed, sized) |
+| G4k-M15SHRKopp | M15 opposing shrink w/ M30 trigger | Scenario ID covers it |
+| G4k-TRIGDIR | Trigger TF stage contradicts direction | Cross-check rule (diffBBW/diffMid primary) makes this unreachable |
+| G5-WEAK | Quality < 60 floor | Confidence band "None" → size 0; log reason in info, no gate |
+| G5-NONE | No transition | No signal = no label needed |
+| G0 / G0-HOLD | All-TF mid≥3 exit/hold | THE 03.17 winner-killer. Replaced by qualified X2 (W1c) — delete outright |
+| G0b-WAIT | Cascade waiting | State [SC:*|PH:*] tag conveys this |
+| G7-NEUTRAL | Prediction neutral | [PRED] label already carries direction=NEUTRAL |
+| G1-FAIL / G1-OK | (verify purpose via grep) | Expected: info-only → fold into state tag |
+
+### RENAMED — same trigger, new condition-ID label
+
+| Old gate | New signal | Doc section |
+|---|---|---|
+| G5-ENTRY (flip path) | E1 / E2 / E5 (by scenario+phase) | Part 5 Entry |
+| G6-ENTRY (sqz_brk path) | E5 | Part 5 Entry |
+| G6-LOAD | E4-ARM | Part 5 Entry (arm only) |
+| G6-BUY / G6-SELL | ORD:BUY / ORD:SELL (order execution label) | Part 5 |
+| G0b-TOUCH | E3 (boundary fade entry) | Part 5 E3 |
+| G0b-M15OPP / G0b-M30OPP / G0b-H4OPP / G0b-SQZLOCK | E3-CHK:n fail reasons | Part 5 E3 checks |
+| G8-BNDTGT | X1 (target reached) | Part 5 Exit |
+| G5-FADE | X2 (QUALIFIED per W1c) | Part 5 Exit + W1c |
+| G6-REV | X2 + immediate new E-eval | Part 5 |
+| G0b-PINK | X4-PINK (forced exit invariant) | Part 5 B2/X4 |
+| G0e-MAXLOSS | EMERGENCY (invariant) | unconditional |
+| G0c-SQZLOCK | ASSERT-B4 (consistency check) | Part 5 B4 |
+
+### KEPT AS-IS
+
+| Item | Why |
+|---|---|
+| [PRED] label + drawing | Part 6 log verification uses it; now also consumed by Layer 3 |
+| GATE_CLR_* color scheme | Reuse for new labels (same semantic colors) |
+
+### v31 Signal Taxonomy
+
+```
+[SC:B2|PH:3A]                          state tag (on change only)
+[E3:SELL q:72 sz:0.50 chk:6/6]         entry signal with quality, size, checks
+[E3-CHK:4 FAIL M30opp]                 E3 attempted, check 4 failed
+[E4-ARM:BUY]                           loading state armed
+[ORD:BUY id:E5 lot:0.01 sl:5102.3]     order actually placed
+[X1:SELL tgt:H1up hit:5231.4]          target exit
+[X2:SELL reason:container-crack]       qualified fade exit (reason mandatory)
+[X4-PINK]                              forced flat — M15+M30 both SQZ
+[VETO-AT-TARGET dir:BUY loc:+2]        entry veto fired (W1 addendum)
+[EMERGENCY loss:-51.2]                 unconditional loss exit
+[ASSERT-B1] [ASSERT-B2] [ASSERT-B3] [ASSERT-B4]  consistency failures
+[PRED ...]                             unchanged format from TofyTrade4
+```
+
+### v31 Firing Matrix
+
+| Scenario | Phase(s) | Armed entries | Armed exits | Size ceiling | Notes |
+|---|---|---|---|---|---|
+| A1 | PH_1 | E1 | X2 primary, X1(D1 band) | 1.00 | Part 5 Tier 1 |
+| A2 | PH_1 | E2 | X2, X1(H4 band) | 0.75 | Part 5 Tier 1 |
+| A3 | PH_1 | none (HOLD) | none (ride noise SQZ) | hold | Part 5 A3 |
+| B1 | PH_2 | E3 both dir, E1 re-entry | X1(M30 band) primary, X2 qualified | 0.75 | Part 5 + V2 |
+| B2 | PH_2/3A | E3 both dir | X1(H1 band) primary, X2 qualified | 0.50 | Part 5 + V2/V3 |
+| B3 | PH_3A | E3 both dir | X1(H4 band) primary, X2 qualified | 0.25 | Part 5 + V1 |
+| B1-B3 | PH_3B_INTO | E3 trend-side; counter-side 0.25 | X1 (dropping targets) | 0.50 | §13 Phase 3b |
+| B* | PH_3B_OUT | E3 recovery-side | X1 = D1 boundary HARD | 0.50 | §13 3b-OUT |
+| E1 | PH_3A/4 | none (WAIT) | existing rides: X1, X2 qualified | — | M30 SQZ ≠ exit |
+| E2 | PH_4 | none | X4 forced | 0 | ASSERT-B2 |
+| E3(load) | PH_4→5 | E4-ARM → E5 on M15 confirm | — | 0.50 | Part 5 E3 loading |
+| E4 | PH_4 | none (WAIT) | — | 0 | ASSERT-B4 |
+| G1 | PH_5 | E5 (with-D1 break) | X1, X2 | 0.75 | Part 4 Rule 4 |
+| G2 | PH_5 | E5 (counter-D1) | X1, X2, tight stop | 0.25 | counter-trend |
+| G3 | PH_5 fail | none | X2 immediate | 0 | false breakout |
+| G4 | PH_6 | E3 at H4 bounds, both dir | X1 opposite H4 bound ONLY | 0.25 | §13 Phase 6 |
+| D1s | PH_5 | E4-ARM | — | — | arm only |
+| D2s | PH_5 | E5 | X1(H4 band), X2 qualified | 0.75 | |
+| D3s | PH_1 | add-on if conf≥90 | X1(D1 band), X2 | 1.00 | → A |
+| F1 | PH_5 | none (WAIT) | — | 0 | LTF only |
+| F2 | PH_5 | E5 | X1(H4 band) | 0.75 | |
+| F3 | PH_5→1 | E6 | X1(D1 band), X2 | 1.00 | → A |
+| C1 | PH_5 | E5 | X1(H4 band new dir), tight | 0.25 | until H4 confirms |
+| C2 | PH_5→1 | E6 | X1(D1 band new dir), X2 | 1.00 | → new A |
+| C3 | any | E5 | X1(H4 band), tight | 0.50 | W1/D1 opposing |
+
+Final size = MathMin(matrix ceiling, confidence size, §12d decoder size)  // EDIT V5
+
+Always armed (3 invariants, evaluated in order):
+1. EMERGENCY (MAX_FLOATING_LOSS_USD)
+2. X4-PINK (M15+M30 both BBW 400-499)
+3. VETO-AT-TARGET (screens any entry the matrix produces)
+
+### Unlisted Gate Labels (found in TofyTrade4.mqh, not in disposition table)
+
+These labels were found during gate inventory but were not listed in the
+original disposition table. Their intent is subsumed by the v31 architecture:
+
+| Label | Code context | v31 mapping |
+|---|---|---|
+| G4f-M30OPP | M30 opposing check | Same as G4c — scenario ID covers it |
+| G4g-H1H4SQZ | H1+H4 both SQZ check | ASSERT-B4 (cas_sqzCount ≥ 3) |
+| G4h-H4M30SQZ | H4+M30 SQZ check | ASSERT-B4 |
+| G4i-H4M30FLY | H4+M30 fly check | Scenario A identification |
+| G7-H1OPP | H1 opposing check | Same as G4b — direction score drags below threshold |
+| G7-TOOSOON | Cooldown check | MIN_HOLD_BARS / POST_EXIT_COOLDOWN |
+| G0e-MAXLOSS | Max floating loss exit | EMERGENCY invariant |
 
 ---
 
@@ -4654,26 +4744,30 @@ grep -r "CASCADE_PINK" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
 
 ```bash
 # Entry gate fires — confirm entry conditions E1-E6
+# v31 labels:
+grep -r "E3:\|E4-ARM\|ORD:BUY\|ORD:SELL" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -10
+# E3: boundary fade entry; E4-ARM: loading; ORD:BUY/SELL: order placed
+# legacy labels (pre-v31):
 grep -r "G6-BUY\|G6-SELL\|G6-LOAD" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -10
-# G6-BUY/SELL maps to: E1/E2/E5 (M15 mid flip entry)
-# G6-LOAD maps to: E4 (arm — M5 expansion initiated)
+# G6-BUY/SELL maps to: E1/E2/E5; G6-LOAD maps to: E4
 
 # Exit gate fires — confirm exit conditions X1-X4
+# v31 labels:
+grep -r "X1:\|X2:" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
+# X1: target reached; X2: qualified fade (carries reason string)
+# legacy labels (pre-v31):
 grep -r "G8-BNDTGT" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
-# Maps to: X1 (target reached — PriceLoc at target band)
-
 grep -r "G5-FADE" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
-# Maps to: X2 (M15 trend fading — diffMid 1→3 or 2→3)
-
 grep -r "G5-WEAK" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
-# Maps to: X3 (quality degraded — score < 60)
 
 # Block gate fires — confirm block conditions B1-B4
+# v31 labels:
+grep -r "X4-PINK\|VETO-AT-TARGET\|EMERGENCY\|ASSERT" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
+# X4-PINK: pink zone; VETO-AT-TARGET: entry veto; EMERGENCY: max loss
+# ASSERT-B1..B4: consistency failures (should be zero)
+# legacy labels (pre-v31):
 grep -r "G0b-PINK\|PINK_ZONE" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
-# Maps to: B2/X4 (pink zone — M15+M30 both SQZ → exit all)
-
 grep -r "G0c-SQZLOCK\|SQZLOCK" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
-# Maps to: B4 (full SQZ — all TFs squeezed)
 
 # ATRSL stop levels — confirm stop placement
 grep -r "ATRSL" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
