@@ -4201,6 +4201,18 @@ fired in the entire 03.02–03.20 window; only 4 G6 transition entries occurred 
 the exact flip bar, leaving legs permanently missed (e.g., 03.05: M15 mid already 2
 all day — no fresh flip, no entry, full SELL leg missed).
 
+**Entry-at-target veto (applies to ALL entry conditions E1–E6):**
+
+No entry in the direction of a container/target boundary that price is
+already touching. If PriceLoc is at/above the container TF upper band, BUY
+is forbidden (the X1 target equals the entry price — the trade has no room);
+mirror for SELL at the lower band. At a boundary the only valid setups are
+the E3 fade (opposite direction, with lean + 6 checks) or WAIT.
+
+Failure this prevents (March 2026 verification): 03.03 07:45 BUY @5343.82
+with price AT the D1 upper band (5336) — entered exactly at its own target,
+then held −191.29 for 9 days.
+
 ---
 
 ## Exit Conditions
@@ -4221,7 +4233,7 @@ transition-window entry problem — permanent loss of the leg.
 | Phase | Primary exit | X2 role | Rule |
 |---|---|---|---|
 | Phase 1 | X2 (trend fade) | Primary | Trend exits on genuine fade |
-| Phase 2 / 3a / 3b / 6 | X1 (opposite boundary target) | Failsafe ONLY | Ignore M15 mid=3 wobble unless price has stalled ≥3 bars short of target OR target TF band invalidated |
+| Phase 2 / 3a / 3b / 6 | X1 (opposite boundary target) | Failsafe ONLY | Ignore M15 mid=3 wobble unless ANY of: (a) the rung above is cracking — container TF diffBBW ≤ 0 or its mid drifting to 5/4/3; (b) price stalled ≥3 bars short of the X1 target; (c) the target TF band is invalidated. An M15 reversal with the container still committed (diffBBW > 0, mid=1/2, price mid-band) is a pullback (D-rest), not an exit signal. |
 | Phase 4 | X4 (pink zone) | — | Forced exit |
 | Phase 5 | X1 at escalating targets | Secondary | Hold while diffBBW sharply positive |
 
@@ -4444,6 +4456,25 @@ Read H4 and D1 state BEFORE interpreting any lower TF.
 | D1 BBW_stage | Is D1 fly, shrink, or SQZ? | Macro context |
 | D1 diffMid_Trend | What direction is D1? | Macro bias for Scenario H resolution |
 | H4 shrink BEFORE or AFTER M15? | Which TF entered shrink first? | Rest vs confinement vs reversal warning |
+
+---
+
+## Step 2b — MTF Container Check (H1, M30)
+
+Step 2 selects the playbook (strategic). Step 2b identifies the tactical
+container for the current leg — required BEFORE depth or entry reads.
+
+| Read | How | Why |
+|---|---|---|
+| Container TF | Highest TF currently in committed fly (diffMid=1/2 AND diffBBW not negative) | Its outer bands are the X1 target and the leg's hard boundaries |
+| Container direction | Container TF diffMid | The leg's direction — M15 entries trade WITH or fade AT its boundaries |
+| Container health | Container TF diffBBW | Positive = room left in the leg; ≤ 0 = leg aging, boundary rejection likely |
+| PriceLoc vs container | Price vs container TF upper/mid/lower bands | Mid-band = room to trade; AT boundary = target zone — see veto below |
+
+**Depth (Step 1/cas_shrinkTF) and container are independent reads:** depth can be
+zero (no compression) while price sits at the container boundary — the leg is
+finished even though nothing is compressed. The 2026.03.03 entry failed on
+exactly this: shallow depth, but price AT the D1 upper band.
 
 ---
 
