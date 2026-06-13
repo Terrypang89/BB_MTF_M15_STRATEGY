@@ -1,0 +1,135 @@
+GATE 1: identify_scenario
+================================================================================
+
+Running identify_scenario...
+
+Time         Got    Exp    Phase  ExpPh    Status Reason
+----------------------------------------------------------------------------------------------------
+03.02 04:00  A2     A2     PH_1   PH_1     OK     exact
+03.02 08:00  A2     A2     PH_2   PH_1     OK     exact
+03.02 12:00  A2     A2     PH_1   PH_1     OK     exact
+03.02 16:00  A2     A2     PH_1   PH_1     OK     exact
+03.02 20:00  B3     B1     PH_1   PH_2     APX    same parent B
+03.03 04:00  E1     E2     PH_1   PH_2     APX    same parent E
+03.03 07:45  E1     E2     PH_1   PH_2     APX    same parent E ***OPEN BUY
+03.03 08:00  E1     E1     PH_3B_INTO PH_2     OK     exact
+03.03 12:00  B3     E1     PH_3B_INTO PH_2     NO     B3 vs E1 (parents B vs E)
+03.03 16:00  B3     B3     PH_2   PH_3A    OK     exact
+03.03 20:00  B1     B3     PH_3A  PH_3A    APX    same parent B
+03.04 04:00  E1     B3     PH_1   PH_3A    NO     E1 vs B3 (parents E vs B)
+03.04 08:00  A2     B3     PH_1   PH_3A    NO     A2 vs B3 (parents A vs B)
+03.04 12:00  B3     B3     PH_1   PH_3A    OK     exact
+03.04 16:00  E1     B3     PH_1   PH_3A    NO     E1 vs B3 (parents E vs B)
+03.04 20:00  A2     E1     PH_1   PH_3B_INTO NO     A2 vs E1 (parents A vs E)
+03.05 04:00  B3     E1     PH_1   PH_3B_INTO NO     B3 vs E1 (parents B vs E)
+03.05 08:00  B2     E1     PH_3B_INTO PH_3B_INTO NO     B2 vs E1 (parents B vs E)
+03.05 12:00  A2     E1     PH_3B_INTO PH_3B_INTO NO     A2 vs E1 (parents A vs E)
+03.05 16:00  E4     E4     PH_3B_INTO PH_3B_INTO OK     exact
+03.05 20:00  E4     E4     PH_3B_INTO PH_3B_INTO OK     exact
+03.06 04:00  E4     E4     PH_3B_INTO PH_3B_INTO OK     exact
+03.06 08:00  E4     E4     PH_3B_INTO PH_3B_INTO OK     exact
+03.06 12:00  E4     E4     PH_3B_INTO PH_3B_INTO OK     exact
+03.06 16:00  E4     E4     PH_3B_INTO PH_4     OK     exact
+03.06 20:00  E4     E4     PH_3B_INTO PH_4     OK     exact
+03.09 04:00  G3     G3     PH_4   PH_4     OK     exact
+03.09 08:00  A2     G2     PH_2   PH_4     NO     A2 vs G2 (parents A vs H)
+03.09 12:00  B3     G3     PH_1   PH_4     NO     B3 vs G3 (parents B vs H)
+03.09 16:00  E1     G3     PH_1   PH_4     NO     E1 vs G3 (parents E vs H)
+03.09 20:00  E4     G3     PH_3B_INTO PH_4     NO     E4 vs G3 (parents E vs H)
+03.10 04:00  E4     G3     PH_2   PH_4     NO     E4 vs G3 (parents E vs H)
+03.10 08:00  G2     G3     PH_4   PH_4     APX    same parent H
+03.10 12:00  G2     G1     PH_4   PH_5     APX    same parent H
+03.10 16:00  A2     F1     PH_2   PH_5     NO     A2 vs F1 (parents A vs F)
+03.10 20:00  A1     F2     PH_1   PH_5     NO     A1 vs F2 (parents A vs F)
+03.11 04:00  A2     F2     PH_1   PH_1     NO     A2 vs F2 (parents A vs F)
+03.11 08:00  E1     F2     PH_1   PH_2     NO     E1 vs F2 (parents E vs F)
+03.11 12:00  E1     B3     PH_1   PH_2     NO     E1 vs B3 (parents E vs B)
+03.11 16:00  B3     E1     PH_3B_INTO PH_3     NO     B3 vs E1 (parents B vs E)
+03.11 20:00  A1     E1     PH_3B_INTO PH_3     NO     A1 vs E1 (parents A vs E)
+03.12 04:00  B3     E1     PH_3A  PH_3     NO     B3 vs E1 (parents B vs E)
+03.12 06:30  B1     E1     PH_3A  PH_3     NO     B1 vs E1 (parents B vs E) ***CLOSE BUY P&L:-191.29
+03.12 06:30  B1     E1     PH_3A  PH_3     NO     B1 vs E1 (parents B vs E) ***OPEN SELL
+03.12 08:00  A2     E1     PH_3B_INTO PH_3     NO     A2 vs E1 (parents A vs E)
+03.12 12:00  E4     E1     PH_3B_INTO PH_3     APX    same parent E
+03.12 15:15  E4     E1     PH_3B_INTO PH_3     APX    same parent E ***CLOSE SELL P&L:-16.53
+03.12 16:00  E4     E4     PH_3B_INTO PH_3B_INTO OK     exact
+03.12 20:00  E4     E4     PH_3A  PH_3B_INTO OK     exact
+03.13 04:00  E4     E4     PH_2   PH_3B_INTO OK     exact
+03.13 08:00  E4     E4     PH_5   PH_3B_INTO OK     exact
+03.13 12:00  A2     B3     PH_1   PH_2     NO     A2 vs B3 (parents A vs B)
+03.13 16:00  B3     B3     PH_1   PH_2     OK     exact
+03.13 20:00  A2     B3     PH_1   PH_2     NO     A2 vs B3 (parents A vs B)
+03.16 04:00  B2     B3     PH_1   PH_2     APX    same parent B
+03.16 08:00  B2     B3     PH_1   PH_2     APX    same parent B
+03.16 12:00  A2     E1     PH_1   PH_3     NO     A2 vs E1 (parents A vs E)
+03.16 16:00  B3     E1     PH_1   PH_3     NO     B3 vs E1 (parents B vs E)
+03.16 20:00  A2     E2     PH_2   PH_3     NO     A2 vs E2 (parents A vs E)
+03.17 04:00  E1     E2     PH_6   PH_3     APX    same parent E
+03.17 08:00  A2     E1     PH_3B_INTO PH_3     NO     A2 vs E1 (parents A vs E)
+03.17 12:00  E4     E1     PH_3B_INTO PH_3     APX    same parent E
+03.17 16:00  E4     E1     PH_3B_INTO PH_3     APX    same parent E
+03.17 16:30  E4     E1     PH_3B_INTO PH_3     APX    same parent E ***OPEN SELL
+03.17 19:30  E4     E1     PH_3B_INTO PH_3     APX    same parent E ***CLOSE SELL P&L:8.01
+03.17 20:00  E4     E4     PH_3B_INTO PH_3B_INTO OK     exact
+03.18 04:00  E4     F1     PH_3B_INTO PH_5     NO     E4 vs F1 (parents E vs F)
+03.18 08:00  A2     F2     PH_3B_INTO PH_5     NO     A2 vs F2 (parents A vs F)
+03.18 12:00  E4     F2     PH_3B_INTO PH_5     NO     E4 vs F2 (parents E vs F)
+03.18 16:00  A2     F3     PH_2   PH_5     NO     A2 vs F3 (parents A vs F)
+03.18 20:00  B1     F3     PH_2   PH_5     NO     B1 vs F3 (parents B vs F)
+03.19 04:00  A2     A1     PH_1   PH_1     APX    same parent A
+03.19 08:00  A2     A1     PH_1   PH_1     APX    same parent A
+03.19 12:00  A1     A1     PH_1   PH_1     OK     exact
+03.19 16:00  A1     A1     PH_1   PH_1     OK     exact
+03.19 20:00  A2     A1     PH_1   PH_1     APX    same parent A
+03.20 04:00  A2     B1     PH_1   PH_2     NO     A2 vs B1 (parents A vs B)
+03.20 08:00  B3     B1     PH_1   PH_2     APX    same parent B
+
+--- Match Summary ---
+  Exact matches:    23/78 (29.5%)
+  Same parent:      19/78 (24.4%)
+  Misses:           36/78 (46.2%)
+  Parent-level match: 42/78 (53.8%)
+
+--- GATE 1 ---
+  FAIL — parent-level match 53.8% < 95%
+  Need to iterate rules until >= 95%
+
+--- Mismatches ---
+  03.03 12:00: got=B3 exp=E1 reason=B3 vs E1 (parents B vs E) info=B3 — LTF opposition
+  03.04 04:00: got=E1 exp=B3 reason=E1 vs B3 (parents E vs B) info=B3 -> E1
+  03.04 08:00: got=A2 exp=B3 reason=A2 vs B3 (parents A vs B) info=default — conservative
+  03.04 16:00: got=E1 exp=B3 reason=E1 vs B3 (parents E vs B) info=B1 late -> E1
+  03.04 20:00: got=A2 exp=E1 reason=A2 vs E1 (parents A vs E) info=A2 — H4 fly, D1 not aligned
+  03.05 04:00: got=B3 exp=E1 reason=B3 vs E1 (parents B vs E) info=B3 — LTF opposition
+  03.05 08:00: got=B2 exp=E1 reason=B2 vs E1 (parents B vs E) info=B2 early — M30 shrink
+  03.05 12:00: got=A2 exp=E1 reason=A2 vs E1 (parents A vs E) info=default — conservative
+  03.09 08:00: got=A2 exp=G2 reason=A2 vs G2 (parents A vs H) info=A2 — H4 fly, D1 not aligned
+  03.09 12:00: got=B3 exp=G3 reason=B3 vs G3 (parents B vs H) info=B3 — H1 shrink
+  03.09 16:00: got=E1 exp=G3 reason=E1 vs G3 (parents E vs H) info=B1 late -> E1
+  03.09 20:00: got=E4 exp=G3 reason=E4 vs G3 (parents E vs H) info=E4 — HTF compressing
+  03.10 04:00: got=E4 exp=G3 reason=E4 vs G3 (parents E vs H) info=E4 — HTF compressing
+  03.10 16:00: got=A2 exp=F1 reason=A2 vs F1 (parents A vs F) info=default — conservative
+  03.10 20:00: got=A1 exp=F2 reason=A1 vs F2 (parents A vs F) info=A1 — H4+D1 fly aligned
+  03.11 04:00: got=A2 exp=F2 reason=A2 vs F2 (parents A vs F) info=A2 — H4 fly, D1 not aligned
+  03.11 08:00: got=E1 exp=F2 reason=E1 vs F2 (parents E vs F) info=B1 late -> E1
+  03.11 12:00: got=E1 exp=B3 reason=E1 vs B3 (parents E vs B) info=B3 -> E1
+  03.11 16:00: got=B3 exp=E1 reason=B3 vs E1 (parents B vs E) info=B3 — LTF opposition
+  03.11 20:00: got=A1 exp=E1 reason=A1 vs E1 (parents A vs E) info=A1 — H4+D1 fly aligned
+  03.12 04:00: got=B3 exp=E1 reason=B3 vs E1 (parents B vs E) info=B3 — LTF opposition
+  03.12 06:30: got=B1 exp=E1 reason=B1 vs E1 (parents B vs E) info=B1 — M15 shrink ***CLOSE BUY P&L:-191.29
+  03.12 06:30: got=B1 exp=E1 reason=B1 vs E1 (parents B vs E) info=B1 — M15 shrink ***OPEN SELL
+  03.12 08:00: got=A2 exp=E1 reason=A2 vs E1 (parents A vs E) info=default — conservative
+  03.13 12:00: got=A2 exp=B3 reason=A2 vs B3 (parents A vs B) info=A2 — H4 fly, D1 not aligned
+  03.13 20:00: got=A2 exp=B3 reason=A2 vs B3 (parents A vs B) info=A2 — H4 fly, D1 not aligned
+  03.16 12:00: got=A2 exp=E1 reason=A2 vs E1 (parents A vs E) info=A2 — H4 fly, D1 not aligned
+  03.16 16:00: got=B3 exp=E1 reason=B3 vs E1 (parents B vs E) info=B3 — H1 shrink
+  03.16 20:00: got=A2 exp=E2 reason=A2 vs E2 (parents A vs E) info=A2 — H4 fly, D1 not aligned
+  03.17 08:00: got=A2 exp=E1 reason=A2 vs E1 (parents A vs E) info=default — conservative
+  03.18 04:00: got=E4 exp=F1 reason=E4 vs F1 (parents E vs F) info=E4 — HTF compressing
+  03.18 08:00: got=A2 exp=F2 reason=A2 vs F2 (parents A vs F) info=default — conservative
+  03.18 12:00: got=E4 exp=F2 reason=E4 vs F2 (parents E vs F) info=E4 — HTF compressing
+  03.18 16:00: got=A2 exp=F3 reason=A2 vs F3 (parents A vs F) info=A2 — H4 fly, D1 not aligned
+  03.18 20:00: got=B1 exp=F3 reason=B1 vs F3 (parents B vs F) info=B1 — M15 shrink
+  03.20 04:00: got=A2 exp=B1 reason=A2 vs B1 (parents A vs B) info=A2 — H4 fly, D1 not aligned
+
+================================================================================

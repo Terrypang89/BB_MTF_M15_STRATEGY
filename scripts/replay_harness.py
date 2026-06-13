@@ -555,13 +555,16 @@ def detect_flip(tf_states):
     # the transition between consecutive snapshots.
     return (0, 0)
 
+ASSERT_COUNT = 0
+
 def decide_action(tf_states, s, confidence=50, prev_snap=None):
     """Decide trade action — mirrors TofyTrade5.mqh Layer 3.
 
     Args:
         tf_states: dict of TF states (from log)
         s: scenario state dict with keys: scenario, phase, cas_shrinkTF,
-           cas_sqzCount, b1_block, b2_pink, container_tf, container_dir, priceloc
+           cas_sqzCount, b1_block, b2_pink, container_tf, container_dir, priceloc,
+           trade_event (for detecting EA entry attempts between snapshots)
         confidence: prediction confidence 0-100
         prev_snap: previous snapshot for flip detection
 
@@ -569,6 +572,7 @@ def decide_action(tf_states, s, confidence=50, prev_snap=None):
         dict with act (0=hold, 1=BUY, 2=SELL, 7=exit),
                 condition_id, size_mult, info
     """
+    global ASSERT_COUNT
     zigzag_phases = ('PH_2', 'PH_3A', 'PH_3B_INTO', 'PH_3B_OUT', 'PH_6')
 
     # --- B2 pink forced exit ---
@@ -579,19 +583,46 @@ def decide_action(tf_states, s, confidence=50, prev_snap=None):
     if s['cas_sqzCount'] >= 3:
         return {'act': 0, 'condition_id': 'B4', 'size_mult': 0, 'info': 'cas_sqzCount>=3'}
 
+    # --- Pre-check VETO flags (invariant, regardless of scenario) ---
+    # Use veto_priceloc (D1 + container combined) for VETO
+    veto_pl = s.get('veto_priceloc', s.get('priceloc', 0))
+    veto_buy = veto_pl >= +1
+    veto_sell = veto_pl <= -1
+
     # --- Matrix ceiling ---
     ceiling = matrix_ceiling(s['scenario'])
-    if ceiling <= 0.0:
-        return {'act': 0, 'condition_id': 'WAIT', 'size_mult': 0, 'info': f'ceiling=0 {s["scenario"]}' }
 
     # --- E3: boundary fade in zigzag phases (EDIT V2) ---
-    if s['phase'] in zigzag_phases and s.get('container_tf', -1) > 0:
-        priceloc = s.get('priceloc', 0)
-        if priceloc in (+1, -1):
-            # fade away from touched band: +1 (at upper) → SELL, -1 (at lower) → BUY
-            direction = 2 if priceloc == +1 else 1
+    # E3 is NOT subject to VETO-AT-TARGET — it's a fade at the boundary by design
+    if ceiling <= 0.0:
+        # VETO overrides ceiling when an entry was attempted at the target
+        # Detect attempted entry: trade_event signal OR flip between snapshots
+        attempted_buy = False
+        attempted_sell = False
+        te = s.get('trade_event', '')
+        if 'BUY' in te:
+            attempted_buy = True
+        if 'SELL' in te:
+            attempted_sell = True
+        if prev_snap:
+            cur_m15_mid = tf_states.get('M15', {}).get('mid', 0)
+            prev_m15_mid = prev_snap.get('m15_mid', 0)
+            if prev_m15_mid >= 3 and cur_m15_mid == 1:
+                attempted_buy = True
+            if prev_m15_mid >= 3 and cur_m15_mid == 2:
+                attempted_sell = True
+        if attempted_buy and veto_buy:
+            return {'act': 0, 'condition_id': 'VETO-AT-TARGET', 'size_mult': 0,
+                    'info': f'BUY-at-upper-band veto veto_pl={veto_pl}'}
+        if attempted_sell and veto_sell:
+            return {'act': 0, 'condition_id': 'VETO-AT-TARGET', 'size_mult': 0,
+                    'info': f'SELL-at-lower-band veto veto_pl={veto_pl}'}
+        return {'act': 0, 'condition_id': 'WAIT', 'size_mult': 0, 'info': f'ceiling=0 {s["scenario"]}' }
 
-            # 3B-INTO: counter side allowed at 0.25
+    priceloc = s.get('priceloc', 0)
+    if s['phase'] in zigzag_phases and s.get('container_tf', -1) > 0:
+        if priceloc in (+1, -1):
+            direction = 2 if priceloc == +1 else 1
             side_ceil = ceiling
             if s['phase'] == 'PH_3B_INTO' and s.get('container_dir', 0) != 0 and direction != s['container_dir']:
                 side_ceil = min(side_ceil, 0.25)
@@ -601,8 +632,7 @@ def decide_action(tf_states, s, confidence=50, prev_snap=None):
                 sz = min(min(side_ceil, conf_size(max(confidence, quality))),
                          decoder_size(s['cas_sqzCount'], s['cas_shrinkTF'], s['b2_pink']))
                 return {
-                    'act': direction,
-                    'condition_id': 'E3',
+                    'act': direction, 'condition_id': 'E3',
                     'size_mult': sz,
                     'info': f'E3 dir={direction} q={quality} sz={sz:.2f} loc={priceloc}'
                 }
@@ -612,7 +642,6 @@ def decide_action(tf_states, s, confidence=50, prev_snap=None):
         if prev_snap:
             prev_m15_mid = prev_snap.get('m15_mid', 0)
             cur_m15_mid = tf_states.get('M15', {}).get('mid', 0)
-            # FLAT→UP or FLAT→DN
             if (prev_m15_mid >= 3 and cur_m15_mid == 1):
                 direction = 1
                 quality = 70
@@ -625,11 +654,43 @@ def decide_action(tf_states, s, confidence=50, prev_snap=None):
                 direction = 0
 
             if direction != 0:
+                # --- VETO-AT-TARGET (invariant, regardless of scenario) ---
+                if (direction == 1 and veto_buy) or (direction == 2 and veto_sell):
+                    return {'act': 0, 'condition_id': 'VETO-AT-TARGET', 'size_mult': 0,
+                            'info': f'{"BUY" if direction==1 else "SELL"}-at-target veto veto_pl={veto_pl}'}
+
                 sz = min(min(ceiling, conf_size(max(confidence, quality))),
                          decoder_size(s['cas_sqzCount'], s['cas_shrinkTF'], s['b2_pink']))
+
+                # --- ASSERT-B1: flip-entry while m15_mid>=3 (b1 should have blocked) ---
+                m15_mid = tf_states.get('M15', {}).get('mid', 0)
+                if m15_mid >= 3:
+                    ASSERT_COUNT += 1
+                    print(f"  ASSERT-B1 at {s.get('ts','?')}: flip-entry with m15_mid={m15_mid}")
+                    return {'act': 0, 'condition_id': 'ASSERT-B1', 'size_mult': 0,
+                            'info': 'flip-entry with m15_mid>=3 suppressed'}
+
+                # --- ASSERT-B3: H4 committed opposing fly (outside V1 exemptions) ---
+                h4_stg = tf_states.get('H4', {}).get('stage', 0)
+                h4_mid = tf_states.get('H4', {}).get('mid', 0)
+                if ((h4_stg in (511, 512) and direction == 2) or
+                        (h4_stg in (521, 522) and direction == 1)):
+                    v1_exempt = (h4_mid == 3 or s['phase'] in ('PH_3A', 'PH_6'))
+                    if not v1_exempt:
+                        ASSERT_COUNT += 1
+                        print(f"  ASSERT-B3 at {s.get('ts','?')}: flip-entry vs H4 committed fly")
+                        return {'act': 0, 'condition_id': 'ASSERT-B3', 'size_mult': 0,
+                                'info': 'H4-oppose entry suppressed'}
+
+                # --- ASSERT-B4: cas_sqzCount>=3 outside E3-load ---
+                if s['cas_sqzCount'] >= 3:
+                    ASSERT_COUNT += 1
+                    print(f"  ASSERT-B4 at {s.get('ts','?')}: entry with cas_sqzCount={s['cas_sqzCount']}")
+                    return {'act': 0, 'condition_id': 'ASSERT-B4', 'size_mult': 0,
+                            'info': 'entry with cas_sqzCount>=3 suppressed'}
+
                 return {
-                    'act': direction,
-                    'condition_id': id_,
+                    'act': direction, 'condition_id': id_,
                     'size_mult': sz,
                     'info': f'{id_} dir={direction} q={quality} sz={sz:.2f}'
                 }
@@ -690,31 +751,47 @@ def simulate_trades(snapshots, expected_rows):
                 break
 
         # Compute priceloc vs container
+        def calc_priceloc(tf_name):
+            """Compute priceloc of M15 close vs given TF's bands."""
+            st = tf_st.get(tf_name, {})
+            up = st.get('upplv', None)
+            lo = st.get('lowlv', None)
+            close = tf_st.get('M15', {}).get('close', None)
+            if not (up and lo and close):
+                return 0
+            w = up - lo
+            if w <= 0:
+                return 0
+            band = 0.15 * w
+            if close > up:
+                return +2
+            elif close > up - band:
+                return +1
+            elif close < lo:
+                return -2
+            elif close < lo + band:
+                return -1
+            return 0
+
         if container_tf > 0:
             container_name = {0: 'M5', 1: 'M15', 2: 'M30', 3: 'H1', 4: 'H4', 5: 'D1', 6: 'W1'}.get(container_tf, 'H4')
-            up = tf_st.get(container_name, {}).get('upplv', None)
-            lo = tf_st.get(container_name, {}).get('lowlv', None)
-            close = tf_st.get('M15', {}).get('close', None)
-            if up and lo and close:
-                w = up - lo
-                band = 0.15 * w
-                if close > up:
-                    priceloc = +2
-                elif close > up - band:
-                    priceloc = +1
-                elif close < lo:
-                    priceloc = -2
-                elif close < lo + band:
-                    priceloc = -1
-                else:
-                    priceloc = 0
+            priceloc = calc_priceloc(container_name)
+        else:
+            priceloc = 0
+
+        # VETO priceloc: check D1 bands in addition to container
+        # (D1 may be in SQZ and not selected as container, but VETO must
+        #  still fire if price is at D1 target — W1 addendum)
+        d1_priceloc = calc_priceloc('D1')
+        veto_priceloc = max(priceloc, d1_priceloc) if priceloc >= 0 and d1_priceloc >= 0 else min(priceloc, d1_priceloc) if priceloc <= 0 and d1_priceloc <= 0 else (priceloc if abs(priceloc) >= abs(d1_priceloc) else d1_priceloc)
 
         s_state = {
             'scenario': scenario, 'phase': phase,
             'cas_shrinkTF': cas_shrink, 'cas_sqzCount': cas_sqz,
             'b1_block': b1_block, 'b2_pink': b2_pink,
             'container_tf': container_tf, 'container_dir': container_dir,
-            'priceloc': priceloc,
+            'priceloc': priceloc, 'veto_priceloc': veto_priceloc, 'ts': ts,
+            'trade_event': snap.get('trade_event', ''),
         }
 
         # X1: boundary target exit (only if holding)
@@ -804,15 +881,16 @@ def simulate_trades(snapshots, expected_rows):
 
 # ── Benchmark scoring ─────────────────────────────────────────────────
 
-def score_benchmark(trades, results):
-    """Score trade list against march2026_benchmark.md items 1-4.
+def score_benchmark(trades, results, decisions=None):
+    """Score trade list against march2026_benchmark.md items 1-5.
 
     Args:
         trades: list of trade dicts from simulate_trades
         results: list of result dicts from scenario matching (GATE 1)
+        decisions: list of per-snapshot decision dicts from simulate_trades
 
     Returns:
-        dict with item1..item4 results
+        dict with item1..item5 results
     """
     # Item 1: scenario match >= 95%
     exact = sum(1 for r in results if r['status'] == 'OK')
@@ -873,7 +951,23 @@ def score_benchmark(trades, results):
         'detail': f'max hold = {max_days:.1f} days' if over3 else 'all within 3 days'
     }
 
-    return {'item1': item1, 'item2': item2, 'item3': item3, 'item4': item4}
+    # Item 5: 03.03 07:45 must produce VETO-AT-TARGET (not merely WAIT)
+    item5_pass = False
+    item5_detail = 'no decision at 03.03 07:45'
+    if decisions:
+        for d in decisions:
+            if '03.03 07:45' in d['time']:
+                cid = d.get('action', '')
+                item5_detail = f"condition_id = '{cid}'"
+                item5_pass = (cid == 'VETO-AT-TARGET')
+                break
+    item5 = {
+        'pass': item5_pass,
+        'value': 'VETO-AT-TARGET at 03.03 07:45' if item5_pass else f'NOT VETO-AT-TARGET',
+        'detail': item5_detail
+    }
+
+    return {'item1': item1, 'item2': item2, 'item3': item3, 'item4': item4, 'item5': item5}
 
 # ── Log parser ────────────────────────────────────────────────────────
 
@@ -1130,15 +1224,16 @@ def main():
 
     # Score benchmark
     print("\n--- Benchmark Scorecard ---")
-    score = score_benchmark(trades, results)
-    for item_key in ('item1', 'item2', 'item3', 'item4'):
+    score = score_benchmark(trades, results, decisions)
+    for item_key in ('item1', 'item2', 'item3', 'item4', 'item5'):
         item = score[item_key]
         status_str = 'PASS' if item['pass'] else 'FAIL'
         print(f"  {item_key}: {status_str} — {item['value']} ({item['detail']})")
 
-    overall_pass = all(score[k]['pass'] for k in ('item1', 'item2', 'item3', 'item4'))
+    overall_pass = all(score[k]['pass'] for k in ('item1', 'item2', 'item3', 'item4', 'item5'))
+    print(f"\n  Total ASSERT-* count: {ASSERT_COUNT}")
     print(f"\n--- OVERALL ---")
-    print(f"  {'PASS' if overall_pass else 'FAIL'} — all 4 benchmark items {'PASS' if overall_pass else 'NOT all PASS'}")
+    print(f"  {'PASS' if overall_pass else 'FAIL'} — all 5 benchmark items {'PASS' if overall_pass else 'NOT all PASS'}")
 
     return results
 
@@ -1260,6 +1355,66 @@ def run_rc_regression():
     print(f"\n--- RC Summary ---")
     print(f"  Covered by architecture: {covered}/{len(RC_INCIDENTS)}")
     print(f"  Uncovered: {uncovered}/{len(RC_INCIDENTS)}")
+
+    # ── Mar-11 RC re-examination (RC17/20b/21/24) ──────────────────
+    print("\n" + "=" * 80)
+    print("MAR-11 RC RE-EXAMINATION: RC17, RC20b, RC21, RC24")
+    print("=" * 80)
+
+    mar11_rcs = {
+        "RC17": "H4+H1 both SQZ — macro doubly uncertain",
+        "RC20b": "H4 SQZ + M30 also SQZ — macro+mid compressed",
+        "RC21": "H4 SQZ + M30 opposing fly",
+        "RC24": "D1 opposing macro filter in H4-SQZ shrink path",
+    }
+
+    mar11_snaps = parse_snapshots_for_date("2026.03.11")
+    if not mar11_snaps:
+        print("  NO DATA for 2026.03.11 — unverifiable (correct exclusion)")
+    else:
+        print(f"  Found {len(mar11_snaps)} snapshots for 03.11")
+        for snap in mar11_snaps:
+            tf_st = snap['tf_states']
+            dbbw_hist = snap['diffbbw_h4_history']
+            scenario, info, cas_shr, cas_sqz = identify_scenario(tf_st, dbbw_hist)
+            phase = identify_phase(tf_st.get('H4', {}), dbbw_hist)
+
+            h4_stg = tf_st.get('H4', {}).get('stage', 0)
+            h1_stg = tf_st.get('H1', {}).get('stage', 0)
+            m30_stg = tf_st.get('M30', {}).get('stage', 0)
+            d1_stg = tf_st.get('D1', {}).get('stage', 0)
+            d1_mid = tf_st.get('D1', {}).get('mid', 0)
+            h4_mid = tf_st.get('H4', {}).get('mid', 0)
+            m30_mid = tf_st.get('M30', {}).get('mid', 0)
+
+            h4_sqz = 400 <= h4_stg <= 499
+            h1_sqz = 400 <= h1_stg <= 499
+            m30_sqz = 400 <= m30_stg <= 499
+            m30_opp_fly = (h4_sqz and m30_stg in (511, 512, 521, 522) and m30_mid in (1, 2))
+            d1_opp = (h4_sqz and d1_stg in (511, 512, 521, 522) and d1_mid in (1, 2))
+
+            short_ts = snap['time'][5:7] + '.' + snap['time'][8:10] + ' ' + snap['time'][11:16]
+            ceiling = matrix_ceiling(scenario)
+
+            print(f"\n  {short_ts}: {scenario}/{phase} ceiling={ceiling:.2f} cas_sqz={cas_sqz}")
+            print(f"    H4={h4_stg}(sqz={h4_sqz}) H1={h1_stg}(sqz={h1_sqz}) "
+                  f"M30={m30_stg}(sqz={m30_sqz},opp={m30_opp_fly}) "
+                  f"D1={d1_stg}(opp={d1_opp})")
+
+            # Check each Mar-11 RC condition
+            if h4_sqz and h1_sqz:
+                print(f"    -> RC17 TRIGGERED: H4+H1 both SQZ. ceiling={ceiling:.2f} "
+                      f"{'BLOCKS' if ceiling <= 0 else 'ALLOWS'} entry")
+            if h4_sqz and m30_sqz:
+                print(f"    -> RC20b TRIGGERED: H4+M30 both SQZ. ceiling={ceiling:.2f} "
+                      f"{'BLOCKS' if ceiling <= 0 else 'ALLOWS'} entry")
+            if m30_opp_fly:
+                print(f"    -> RC21 TRIGGERED: H4 SQZ + M30 opposing fly. "
+                      f"scenario={scenario}, ceiling={ceiling:.2f}")
+            if d1_opp:
+                print(f"    -> RC24 TRIGGERED: H4 SQZ + D1 opposing. "
+                      f"scenario={scenario}, ceiling={ceiling:.2f}")
+
     return covered, uncovered
 
 if __name__ == '__main__':

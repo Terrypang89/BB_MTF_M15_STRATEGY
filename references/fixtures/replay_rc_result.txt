@@ -1,0 +1,63 @@
+PHASE 5: RC Regression Suite
+================================================================================
+
+--- RC16: G5-EARLY BUY M15 SQZ bearish (loss: -62.63) ---
+  Old gate: G4c-M15OPP
+  Expected: E1/E2 — decoder size=0 blocks
+  03.02 04:00: A2/PH_1 ceiling=0.75 decoder=1.00 b1=False b2=False cas_shr=5 cas_sqz=0
+  03.02 08:00: A2/PH_2 ceiling=0.75 decoder=0.25 b1=True b2=False cas_shr=5 cas_sqz=1
+  03.02 12:00: A2/PH_1 ceiling=0.75 decoder=1.00 b1=False b2=False cas_shr=5 cas_sqz=0
+  03.02 16:00: A2/PH_1 ceiling=0.75 decoder=0.25 b1=True b2=False cas_shr=5 cas_sqz=1
+  03.02 20:00: B3/PH_1 ceiling=0.25 decoder=1.00 b1=False b2=False cas_shr=5 cas_sqz=0
+    -> AVOIDED: size limited to 0% — loss would be much smaller
+
+--- RC18a: G6-BUY H4=523/3 (loss: -11.49) ---
+  Old gate: G4e-H4OPP
+  Expected: B3/E4 — H4 mid=3 disables B3; ceiling limits
+  02.09 04:00: A2/PH_1 ceiling=0.75 decoder=0.25 b1=False b2=False cas_shr=5 cas_sqz=1
+  02.09 08:00: A2/PH_2 ceiling=0.75 decoder=0.25 b1=False b2=False cas_shr=5 cas_sqz=1
+  02.09 12:00: E4/PH_3A ceiling=0.00 decoder=0.25 b1=True b2=False cas_shr=5 cas_sqz=1
+    -> AVOIDED: entries blocked by ceiling/decoder
+
+--- RC18b: G6-SELL H4=513/3 (loss: -15.72) ---
+  Old gate: G4e-H4OPP
+  Expected: B3/E4 — H4 mid=3 disables B3; ceiling limits
+  02.27 04:00: E4/PH_1 ceiling=0.00 decoder=1.00 b1=True b2=False cas_shr=5 cas_sqz=0
+    -> AVOIDED: entries blocked by ceiling/decoder
+
+--- RC31: SELL tTF=2 M30=512 bullish (loss: -16.01) ---
+  Old gate: G4k-TRIGDIR
+  Expected: B-tier — ltf_oppose blocks or decoder limits
+  04.24 04:00: A2/PH_1 ceiling=0.75 decoder=0.25 b1=True b2=False cas_shr=2 cas_sqz=1
+  04.24 08:00: E4/PH_3B_INTO ceiling=0.00 decoder=1.00 b1=False b2=False cas_shr=-1 cas_sqz=0
+    -> AVOIDED: entries blocked by ceiling/decoder
+
+--- RC35: SELL H1=511/mid=3 (loss: -32.41) ---
+  Old gate: G4c-H1OPP
+  Expected: B3 — H1 shrink; B3 scope limits allow 0.25
+  04.27 04:00: E4/PH_1 ceiling=0.00 decoder=1.00 b1=False b2=False cas_shr=4 cas_sqz=0
+    -> AVOIDED: entries blocked by ceiling/decoder
+
+--- RC Summary ---
+  Covered by architecture: 5/5
+  Uncovered: 0/5
+
+================================================================================
+MAR-11 RC RE-EXAMINATION: RC17, RC20b, RC21, RC24
+================================================================================
+  Found 5 snapshots for 03.11
+
+  03.11 04:00: A2/PH_1 ceiling=0.75 cas_sqz=1
+    H4=512(sqz=False) H1=512(sqz=False) M30=421(sqz=True,opp=False) D1=512(opp=False)
+
+  03.11 08:00: E1/PH_2 ceiling=0.00 cas_sqz=1
+    H4=512(sqz=False) H1=512(sqz=False) M30=423(sqz=True,opp=False) D1=512(opp=False)
+
+  03.11 12:00: E1/PH_1 ceiling=0.00 cas_sqz=1
+    H4=512(sqz=False) H1=513(sqz=False) M30=423(sqz=True,opp=False) D1=512(opp=False)
+
+  03.11 16:00: B3/PH_3B_INTO ceiling=0.25 cas_sqz=1
+    H4=512(sqz=False) H1=425(sqz=True) M30=522(sqz=False,opp=False) D1=512(opp=False)
+
+  03.11 20:00: A1/PH_3B_INTO ceiling=1.00 cas_sqz=0
+    H4=512(sqz=False) H1=521(sqz=False) M30=522(sqz=False,opp=False) D1=512(opp=False)

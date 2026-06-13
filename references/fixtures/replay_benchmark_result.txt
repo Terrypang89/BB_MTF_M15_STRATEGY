@@ -1,0 +1,25 @@
+GATE 4: Trade simulation + benchmark scoring
+================================================================================
+
+Simulating trades...
+  ASSERT-B3 at 2026.03.02 20:00:05: flip-entry vs H4 committed fly
+  ASSERT-B3 at 2026.03.20 08:00:05: flip-entry vs H4 committed fly
+  Produced 1 trades
+
+#    Entry            Exit             Dir    EntryId  ExitId   Bars   Size
+------------------------------------------------------------------------------------------
+1    03.04 20:00      03.05 08:00      SELL   E2       X1       1      0.25
+
+--- Benchmark Scorecard ---
+  item1: FAIL — 53.8% (23 exact + 19 same-parent / 78)
+  item2: FAIL — 1/6 legs (SELL on 03.04 entry=03.04 20:00)
+  item3: PASS — max 0.2 days (1 bars) (stop at entry + $50 emergency enforced by architecture)
+  item4: PASS — 0 trades > 3 days (all within 3 days)
+  item5: PASS — VETO-AT-TARGET at 03.03 07:45 (condition_id = 'VETO-AT-TARGET')
+
+  Total ASSERT-* count: 2
+
+--- OVERALL ---
+  FAIL — all 5 benchmark items NOT all PASS
+
+================================================================================
