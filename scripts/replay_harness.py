@@ -1142,5 +1142,126 @@ def main():
 
     return results
 
+# ── RC Regression Runner (Phase 5) ────────────────────────────────────
+
+RC_INCIDENTS = [
+    {"rc": "RC16", "date": "2026.03.02", "desc": "G5-EARLY BUY M15 SQZ bearish", "loss": -62.63,
+     "old_gate": "G4c-M15OPP", "expected": "E1/E2 — decoder size=0 blocks"},
+    {"rc": "RC18a", "date": "2026.02.09", "desc": "G6-BUY H4=523/3", "loss": -11.49,
+     "old_gate": "G4e-H4OPP", "expected": "B3/E4 — H4 mid=3 disables B3; ceiling limits"},
+    {"rc": "RC18b", "date": "2026.02.27", "desc": "G6-SELL H4=513/3", "loss": -15.72,
+     "old_gate": "G4e-H4OPP", "expected": "B3/E4 — H4 mid=3 disables B3; ceiling limits"},
+    {"rc": "RC31", "date": "2026.04.24", "desc": "SELL tTF=2 M30=512 bullish", "loss": -16.01,
+     "old_gate": "G4k-TRIGDIR", "expected": "B-tier — ltf_oppose blocks or decoder limits"},
+    {"rc": "RC35", "date": "2026.04.27", "desc": "SELL H1=511/mid=3", "loss": -32.41,
+     "old_gate": "G4c-H1OPP", "expected": "B3 — H1 shrink; B3 scope limits allow 0.25"},
+]
+
+def parse_snapshots_for_date(date_str):
+    """Parse log for a specific date, return snapshots at H4 boundaries."""
+    tf_states = {tf: {} for tf in ['M15', 'M30', 'H1', 'H4', 'D1', 'W1']}
+    snapshots = []
+    diffbbw_h4_history = []
+    H4_HOURS = {"00", "04", "08", "12", "16", "20"}
+    captured = set()
+
+    with open(LOG_PATH, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        m = re.match(r'(\d{4}\.\d{2}\.\d{2}) (\d{2}:\d{2}:\d{2})', line)
+        if not m:
+            continue
+        if m.group(1) != date_str:
+            continue
+        hour = m.group(2)[:2]
+        minute = m.group(2)[3:5]
+        for tf in ['M15', 'M30', 'H1', 'H4', 'D1', 'W1']:
+            if f'[{tf}]' in line:
+                tf_states[tf] = parse_tf_line(line, tf)
+        if '[ORDERINFO]' in line and hour in H4_HOURS and minute == "00":
+            key = f"{date_str}_{hour}"
+            if key not in captured:
+                captured.add(key)
+                h4_dbbw = tf_states.get('H4', {}).get('diffBBW')
+                if h4_dbbw is not None:
+                    diffbbw_h4_history.append(h4_dbbw)
+                snapshots.append({
+                    'time': f"{date_str} {m.group(2)}",
+                    'tf_states': {tf: dict(tf_states[tf]) for tf in CASCADE_TFS + ['W1']},
+                    'diffbbw_h4_history': list(diffbbw_h4_history),
+                })
+
+    return snapshots
+
+def run_rc_regression():
+    """Run RC regression — check each incident date against TofyTrade5 rules."""
+    print("\n" + "=" * 80)
+    print("PHASE 5: RC Regression Suite")
+    print("=" * 80)
+
+    covered = 0
+    uncovered = 0
+
+    for inc in RC_INCIDENTS:
+        print(f"\n--- {inc['rc']}: {inc['desc']} (loss: {inc['loss']}) ---")
+        print(f"  Old gate: {inc['old_gate']}")
+        print(f"  Expected: {inc['expected']}")
+
+        snaps = parse_snapshots_for_date(inc['date'])
+        if not snaps:
+            print(f"  NO DATA for {inc['date']}")
+            uncovered += 1
+            continue
+
+        for snap in snaps:
+            tf_st = snap['tf_states']
+            dbbw_hist = snap['diffbbw_h4_history']
+            scenario, info, cas_shr, cas_sqz = identify_scenario(tf_st, dbbw_hist)
+            phase = identify_phase(tf_st.get('H4', {}), dbbw_hist)
+
+            # Compute blocks
+            m15_mid = tf_st.get('M15', {}).get('mid', 0)
+            b1 = m15_mid >= 3
+            m15sqz = 400 <= tf_st.get('M15', {}).get('stage', 0) <= 499
+            m30sqz = 400 <= tf_st.get('M30', {}).get('stage', 0) <= 499
+            b2 = m15sqz and m30sqz
+
+            ceiling = matrix_ceiling(scenario)
+            dec_size = decoder_size(cas_sqz, cas_shr, b2)
+
+            short_ts = snap['time'][5:7] + '.' + snap['time'][8:10] + ' ' + snap['time'][11:16]
+            print(f"  {short_ts}: {scenario}/{phase} ceiling={ceiling:.2f} decoder={dec_size:.2f} "
+                  f"b1={b1} b2={b2} cas_shr={cas_shr} cas_sqz={cas_sqz}")
+
+            # Check if new architecture avoids loss
+            if ceiling <= 0 or dec_size <= 0:
+                print(f"    -> AVOIDED: entries blocked by ceiling/decoder")
+                covered += 1
+                break
+            elif ceiling <= 0.25:
+                print(f"    -> AVOIDED: size limited to {ceiling:.0f}% — loss would be much smaller")
+                covered += 1
+                break
+            else:
+                covered_flag = False
+        else:
+            # No snapshot blocked the entry
+            if not covered_flag:
+                print(f"    -> UNCOVERED: ceiling and decoder allow entry")
+                uncovered += 1
+                continue
+            covered += 1
+            break
+
+    print(f"\n--- RC Summary ---")
+    print(f"  Covered by architecture: {covered}/{len(RC_INCIDENTS)}")
+    print(f"  Uncovered: {uncovered}/{len(RC_INCIDENTS)}")
+    return covered, uncovered
+
 if __name__ == '__main__':
     main()
+    run_rc_regression()

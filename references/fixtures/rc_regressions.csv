@@ -1,0 +1,10 @@
+rc,date,description,old_gate,loss,tf_states,old_failure,expected_new_behavior,verifiable_in_log
+RC16,Mar-02,G5-EARLY BUY with M15 SQZ bearish (M15s=415/mid=4),G4c-M15OPP,-62.63,H4-fly-up M15-SQZ,M15 SQZ not blocked by G4c in shrink path,E1 scenario — cas_sqzCount>=1 blocks new entries via B2/decoder size=0,YES
+RC17,Mar-11,H4 SQZ + H1 also SQZ — macro doubly uncertain,G4g-H1H4SQZ,?,H4-SQZ H1-SQZ,LTF fly signals treated as noise — no G4g veto,G3/G4 scenario — matrix ceiling=0.0 blocks entries,NO
+RC18,Feb-09,Feb-27,Apr-20,H4 shrink mid=3 opposing — no reversal signal yet,G4e-H4OPP,-11.49/-15.72/-20.19,H4-523/3 or 513/3,B3/E4 scenario — H4 mid=3 disables B3 block; matrix ceiling limits size,NO
+RC20b,Mar-11,H4 SQZ + M30 also SQZ — macro+mid compressed,G4h-H4M30SQZ,?,H4-SQZ M30-SQZ,M30 compression not blocked — noise entry,G3/G4 scenario — matrix ceiling=0.0,NO
+RC21,Mar-11,H4 SQZ + M30 opposing fly,G4i-H4M30FLY,?,H4-SQZ M30-fly-opp,M30 opposing fly not blocked — counter entry,G3/G4 scenario — matrix ceiling=0.0,NO
+RC24,Mar-11,D1 opposing macro filter in H4-SQZ shrink path,G4j-D1OPP,?,H4-SQZ D1-fly-opp,D1 opposition not vetoed in shrink path,G3/G4 scenario — matrix ceiling=0.0,NO
+RC31,Apr-24,M30 bullish fly (512) but midtrend fires SELL (3->2),G4k-TRIGDIR,-16.01,M30-512 mid-3->2,Buy direction contradicted by M30 stage — no G4k veto,B-tier/E-tier — ltf_oppose or decoder limits size,NO
+RC35,Apr-27,H1 fly (511) mid=3 opposing SELL — structural bias ignored,G4c-H1OPP,-32.41,H1-511 mid-3,H1 mid=3 not blocked by G4c — counter entry,B3 scenario — H1 shrink blocks; B3 scope limits allow at 0.25,NO
+RC39,Apr-24,confirmTF in flat mid=3 — noise not filtered,G4k-confirmTF,?,confirmTF-mid-3,SQZ breakout confirmed by flat TF — no G39 veto,E1/E4 scenario — decoder size=0 on SQZ,NO
