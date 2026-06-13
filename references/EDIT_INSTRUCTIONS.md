@@ -15,6 +15,9 @@
 6. After ALL edits complete: git add references/backtest_chart_analysis.md
    then git commit -m "message" then git push origin tofy5
    then report the commit hash
+7. Any edit touching a normative table MUST regenerate the corresponding
+   QUICK_RULES.md section in the same commit. Post-edit checklist:
+   [ ] QUICK_RULES.md synced + master hash updated.
 
 ---
 
