@@ -701,7 +701,7 @@ in the compression cascade the market currently sits.
 
 | cas_sqzCount | Meaning | Scenario sub-state | Gate status |
 |-------------|---------|-------------------|------------|
-| 0 | No TFs in SQZ | B (shallow compression) — shrink only | Normal gates |
+| 0 | No TFs in SQZ | A-tier (no confirmed compression) — LTF opposition or lagging shrink labels alone do not route to B | Normal gates |
 | 1 | One TF squeezed (typically M5 first) | E1 — LTF partial SQZ | G0c-SQZLOCK may activate |
 | 2 | Two TFs squeezed (M5+M15) | E2 — LTF full SQZ | G0b-PINK fires — EXIT all |
 | 3 | Three TFs squeezed (M5+M15+M30) | E3/E4 — Deep cascade | G0b-PINK + G0c-SQZLOCK |
@@ -1644,6 +1644,25 @@ flowchart TD
 
 **Discriminator A1 vs A2:** Check W1 and D1 BBW_stage — both 511/512 = A1, either opposing = A2
 **Discriminator A2 vs A3:** A3 is a sub-state within A1 or A2 — M5/M15 brief squeeze only, M30 still 511/512
+
+**A-tier priority rule:** When cas_sqzCount=0 AND no diffBBW-confirmed shrink
+(i.e., the highest shrink TF has stage 513/523 but its diffBBW is positive or
+None — stage label lags), the state is A-tier regardless of LTF opposition or
+lagging shrink stage-labels. B-tier requires confirmed compression: either
+cas_sqzCount>=1 (any TF in SQZ) OR diffBBW-confirmed shrink at an LTF
+(diffBBW negative at that TF). LTF opposition alone — with cas_sqzCount=0 and
+no confirmed shrink — does not route to B-tier; it remains A2.
+
+**A-tier with mid-TF SQZ note:** H4 flying, cas_sqzCount>=1 from a single
+mid-TF (H1/M30), M15 AND M5 still flying → A-tier. Becomes E1 only
+when M15 enters SQZ. Mid-TF SQZ flags E may be approaching.
+
+**TODO — mid-TF SQZ boundary:** Revisit if Jan-Apr out-of-sample shows mid-TF
+SQZ is a frequent, reliable precursor to E — then promote to substate.
+
+**Discriminator A vs B:** B-tier requires confirmed compression
+(cas_sqzCount>=1 OR diffBBW-confirmed shrink). Without confirmed compression,
+all h4_fly states with no LTF compression are A-tier.
 
 **HTF context:** W1 fly + D1 fly + H4 fly — all in same direction. Full macro tailwind.
 

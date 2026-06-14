@@ -219,17 +219,26 @@ def is_fly(stage):
 def is_shrink(stage):
     return stage in (513, 523) if stage else False
 
-def identify_scenario(tf_states, diffbbw_h4_history=None):
+def identify_scenario(tf_states, diffbbw_h4_history=None, prev_h1_sqz=False):
     """Identify scenario from TF states.
 
-    Mirrors MQL5 IdentifyScenario cascade:
+    Restructured cascade (Cluster 1 fix — compression routing before h4_fly):
       1. Compute cas_sqzCount (M5..H1) and cas_shrinkTF (M15..D1)  // §12d
       2. h4_fly / h4_shrink / h4_sqz booleans                     // §12
-      3. A1 if h4_fly && cas_shrinkTF==-1 && cas_sqzCount==0     // Part 3
-      4. B-tier if h4_fly && ltf_shrinkTF>=1 && cas_sqzCount<=1  // Part 3 + §12d
-      5. E-tier if h4_fly && cas_sqzCount>=2                     // Part 3
-      6. E4 if h4_shrink                                         // Part 3 E4
-      7. G-tier if h4_sqz                                        // Part 3 G
+      3. H4 shrink → E4                                           // Part 3 E4
+      4. H4 SQZ → G-tier                                          // Part 3 G
+      5. Compression routing (NEW — before h4_fly)                // Cluster 1 fix
+         a. Decision 5: H1-SQZ prior-bar → E/B-tier               // Decision 5
+         b. Decision 2: mid-TF SQZ, H4 still flying → A-tier
+         c. E-tier: cas_sqzCount>=2
+         d. B-tier: ltf_shrinkTF>=1, keyed by max(shrink, sqz) depth
+         e. A2: SQZ without LTF shrink
+      6. H4 flying → A-tier (no-compression cases only)           // Decision 1 intact
+      7. Default → A2
+
+    Decision 5 — prior-bar H1-SQZ tracking:
+      H1 in SQZ this bar AND H1 in SQZ prior bar  → E-tier (established)
+      H1 in SQZ this bar but NOT prior bar         → B3 (onset)
     """
     h4 = tf_states.get('H4', {})
     d1 = tf_states.get('D1', {})
@@ -248,8 +257,6 @@ def identify_scenario(tf_states, diffbbw_h4_history=None):
     cas_shrinkTF, cas_sqzCount = derive_cascade(tf_states)
 
     # ── h4_fly / h4_shrink / h4_sqz booleans (§12) ───────────────
-    # NOTE: -0.3 threshold from MQL5 is too tight for replay.
-    # -15 means "H4 still expanding" vs "H4 compressing".
     H4_FLY_DBW_THRESHOLD = -15
     h4_fly = is_fly(h4stg) and h4mid in (1, 2, 3) and h4_dbbw > H4_FLY_DBW_THRESHOLD
     h4_shrink = (is_shrink(h4stg) and not is_sqz(h4stg)) or (h4_dbbw < -20 and not is_sqz(h4stg))
@@ -263,7 +270,6 @@ def identify_scenario(tf_states, diffbbw_h4_history=None):
             ltf_shrinkTF = max(ltf_shrinkTF, TF_INDEX[tf])
 
     # ── LTF opposition check ──
-    # H4 direction from stage: bullish fly (511/512) → 1, bearish fly (521/522) → 2
     h4_bull = h4stg in (511, 512)
     h4_bear = h4stg in (521, 522)
     ltf_oppose = False
@@ -307,55 +313,6 @@ def identify_scenario(tf_states, diffbbw_h4_history=None):
                     return ('F2', 'F2 — MTF confirmed expansion', cas_shrinkTF, cas_sqzCount)
                 return ('F1', 'F1 — LTF expansion', cas_shrinkTF, cas_sqzCount)
 
-    # ── H4 flying → A / B / E scenarios (Part 3 Tier 1/2/3) ──
-    if h4_fly:
-        # ── A1: h4_fly && no LTF shrink && no SQZ && D1 aligned (Part 3 Tier 1) ──
-        if cas_shrinkTF == -1 and cas_sqzCount == 0 and d1stg >= 500 and d1_dir != 'neutral':
-            h4_up = (h4_dir == 1)
-            d1_up = (d1_dir == 'bullish')
-            if h4_up == d1_up:
-                return ('A1', 'A1 — H4+D1 fly aligned', cas_shrinkTF, cas_sqzCount)
-
-    # ── B-tier: h4_fly && (ltf_shrink or ltf_oppose) && cas_sqzCount<=1 ──
-        # LTF shrink only counts when H4 not strongly expanding (diffBBW < 30)
-        # LTF opposition always counts regardless of diffBBW
-        b_tier_shrink = (ltf_shrinkTF >= 1 and h4_dbbw < 30)
-        b_tier = ((b_tier_shrink or ltf_oppose) and cas_sqzCount <= 1)
-        if b_tier:
-            if ltf_shrinkTF >= 1:
-                b_decoder = {
-                    (1, 0): ('B1', 'B1 — M15 shrink'),
-                    (1, 1): ('E1', 'B1 late -> E1'),
-                    (2, 0): ('B2', 'B2 early — M30 shrink'),
-                    (2, 1): ('E1', 'B2 late -> E1'),
-                    (3, 0): ('B3', 'B3 — H1 shrink'),
-                    (3, 1): ('E1', 'B3 -> E1'),
-                    (3, 2): ('E2', 'E2 — H1 shrink + SQZ'),
-                }
-                b_key = (ltf_shrinkTF, cas_sqzCount)
-                if b_key in b_decoder:
-                    return b_decoder[b_key] + (cas_shrinkTF, cas_sqzCount)
-                return ('B3', 'B3 — LTF shrink', cas_shrinkTF, cas_sqzCount)
-            # LTF opposition without shrink → B3
-            return ('B3', 'B3 — LTF opposition', cas_shrinkTF, cas_sqzCount)
-
-        # ── E-tier: h4_fly && cas_sqzCount>=2 ──
-        if cas_sqzCount >= 2:
-            m15sqz = is_sqz(tf_states.get('M15', {}).get('stage', 0))
-            m30sqz = is_sqz(tf_states.get('M30', {}).get('stage', 0))
-            b2_pink = m15sqz and m30sqz
-            if b2_pink:
-                return ('E2', 'E2 — M15+M30 both SQZ', cas_shrinkTF, cas_sqzCount)
-            return ('E1', 'E1 — LTF SQZ', cas_shrinkTF, cas_sqzCount)
-
-        # ── E-tier override: H4 contracting + LTF compression (lag rule §12) ──
-        # When diffBBW is negative, H4 label may lag — LTF compression signals E-tier
-        if h4_dbbw < 0 and (ltf_shrinkTF >= 1 or cas_sqzCount >= 1):
-            return ('E1', 'E1 — H4 lag, LTF compression', cas_shrinkTF, cas_sqzCount)
-
-        # ── A2: h4_fly, no LTF compression, D1 not aligned ──
-        return ('A2', 'A2 — H4 fly, D1 not aligned', cas_shrinkTF, cas_sqzCount)
-
     # ── H4 shrink → E4 ────────────────────────────────────────────
     if h4_shrink:
         return ('E4', 'E4 — HTF compressing', cas_shrinkTF, cas_sqzCount)
@@ -378,6 +335,86 @@ def identify_scenario(tf_states, diffbbw_h4_history=None):
                 return ('G1', 'G1 — H1 same as D1', cas_shrinkTF, cas_sqzCount)
             return ('G2', 'G2 — H2 opposite D1', cas_shrinkTF, cas_sqzCount)
         return ('G3', 'G3 — H3 false breakout', cas_shrinkTF, cas_sqzCount)
+
+    # ── Step 3: Compression routing (before h4_fly — Cluster 1 fix) ──
+    # Confirmed compression = cas_sqzCount>=1 OR diffBBW-confirmed LTF shrink
+    confirmed_compression = (cas_sqzCount >= 1 or
+                            (ltf_shrinkTF >= 1 and h4_dbbw < 30))
+    if confirmed_compression:
+        # ── Decision 5: H1-SQZ prior-bar → E/B-tier ─────────────
+        h1_sqz_now = is_sqz(h1.get('stage', 0))
+        if h1_sqz_now and prev_h1_sqz:
+            # H1-SQZ established — prior bar also in SQZ
+            m15sqz = is_sqz(m15.get('stage', 0))
+            m30sqz = is_sqz(m30.get('stage', 0))
+            if m15sqz and m30sqz:
+                return ('E2', 'E2 — H1-SQZ established, M15+M30 SQZ',
+                        cas_shrinkTF, cas_sqzCount)
+            return ('E1', 'E1 — H1-SQZ established', cas_shrinkTF, cas_sqzCount)
+        if h1_sqz_now and not prev_h1_sqz:
+            # H1-SQZ onset — just entered SQZ
+            return ('B3', 'B3 — H1-SQZ onset', cas_shrinkTF, cas_sqzCount)
+
+        # ── Decision 2: mid-TF SQZ, H4 still flying → A-tier ──
+        if h4_fly and h4_dbbw > 5 and ltf_shrinkTF == -1:
+            m15_stg = m15.get('stage', 0)
+            m5_stg = tf_states.get('M5', {}).get('stage', 0)
+            if (cas_sqzCount == 1 and not is_sqz(m15_stg) and not is_sqz(m5_stg)):
+                d1_aligned = (d1stg >= 500 and d1_dir != 'neutral')
+                if d1_aligned:
+                    h4_up = (h4_dir == 1)
+                    d1_up = (d1_dir == 'bullish')
+                    if h4_up == d1_up:
+                        return ('A1', 'A1 — mid-TF SQZ, M15+M5 flying, D1 aligned',
+                                cas_shrinkTF, cas_sqzCount)
+                return ('A2', 'A2 — mid-TF SQZ, M15+M5 flying, D1 not aligned',
+                        cas_shrinkTF, cas_sqzCount)
+
+        # ── E-tier: cas_sqzCount>=2 ──
+        if cas_sqzCount >= 2:
+            m15sqz = is_sqz(tf_states.get('M15', {}).get('stage', 0))
+            m30sqz = is_sqz(tf_states.get('M30', {}).get('stage', 0))
+            b2_pink = m15sqz and m30sqz
+            if b2_pink:
+                return ('E2', 'E2 — M15+M30 both SQZ', cas_shrinkTF, cas_sqzCount)
+            return ('E1', 'E1 — LTF SQZ', cas_shrinkTF, cas_sqzCount)
+
+        # ── B-tier: ltf_shrinkTF>=1, keyed by max(shrink, sqz) depth ──
+        # Decision 4: B-substate depth = deepest compressed TF (shrink OR SQZ)
+        if ltf_shrinkTF >= 1:
+            deepest_sqz_TF = -1
+            for tf in ["M5", "M15", "M30", "H1"]:
+                st = tf_states.get(tf, {})
+                if st.get('stage') is not None and 400 <= st['stage'] <= 499:
+                    deepest_sqz_TF = max(deepest_sqz_TF, TF_INDEX[tf])
+            max_depth = max(ltf_shrinkTF, deepest_sqz_TF)
+            b_decoder = {
+                (1, 0): ('B1', 'B1 — M15 shrink'),
+                (1, 1): ('B1', 'B1 — M15 shrink + 1 SQZ'),
+                (2, 0): ('B2', 'B2 early — M30 shrink'),
+                (2, 1): ('B2', 'B2 — M30 shrink + 1 SQZ'),
+                (3, 0): ('B3', 'B3 — H1 shrink'),
+                (3, 1): ('B3', 'B3 — H1 shrink + 1 SQZ'),
+            }
+            b_key = (max_depth, cas_sqzCount)
+            if b_key in b_decoder:
+                return b_decoder[b_key] + (cas_shrinkTF, cas_sqzCount)
+            return ('B3', 'B3 — LTF shrink', cas_shrinkTF, cas_sqzCount)
+
+        # ── A2: SQZ without LTF shrink (safety net) ──
+        return ('A2', 'A2 — SQZ without LTF shrink', cas_shrinkTF, cas_sqzCount)
+
+    # ── H4 flying → A-tier (no-compression cases only) ──
+    if h4_fly:
+        # ── A1: h4_fly && no confirmed shrink && no SQZ && D1 aligned ──
+        if d1stg >= 500 and d1_dir != 'neutral':
+            h4_up = (h4_dir == 1)
+            d1_up = (d1_dir == 'bullish')
+            if h4_up == d1_up:
+                return ('A1', 'A1 — H4+D1 fly aligned', cas_shrinkTF, cas_sqzCount)
+
+        # ── A2: h4_fly, no confirmed compression, D1 not aligned ──
+        return ('A2', 'A2 — H4 fly, D1 not aligned', cas_shrinkTF, cas_sqzCount)
 
     # ── Default fallback ──────────────────────────────────────────
     return ('A2', 'default — conservative', cas_shrinkTF, cas_sqzCount)
@@ -724,7 +761,8 @@ def simulate_trades(snapshots, expected_rows):
         dbbw_hist = snap['diffbbw_h4_history']
 
         # Identify scenario
-        scenario, info, cas_shrink, cas_sqz = identify_scenario(tf_st, dbbw_hist)
+        scenario, info, cas_shrink, cas_sqz = identify_scenario(
+            tf_st, dbbw_hist, snap.get('prev_h1_sqz', False))
         phase = identify_phase(tf_st.get('H4', {}), dbbw_hist)
 
         # Compute block states
@@ -973,9 +1011,10 @@ def score_benchmark(trades, results, decisions=None):
 
 def parse_log():
     """Parse the clean log file and return list of snapshot dicts for March window."""
-    tf_states = {tf: {} for tf in ['M15', 'M30', 'H1', 'H4', 'D1', 'W1']}
+    tf_states = {tf: {} for tf in ['M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1']}
     snapshots = []
     diffbbw_h4_history = []
+    prev_h1_sqz = False  # Decision 5: prior-bar H1-SQZ state
 
     H4_HOURS = {"00", "04", "08", "12", "16", "20"}
     captured_h4 = set()
@@ -1006,7 +1045,7 @@ def parse_log():
         minute = time_str[3:5]
 
         # Parse TF blocks
-        for tf in ['M15', 'M30', 'H1', 'H4', 'D1', 'W1']:
+        for tf in ['M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1']:
             if f'[{tf}]' in line:
                 tf_states[tf] = parse_tf_line(line, tf)
 
@@ -1027,11 +1066,16 @@ def parse_log():
 
                 snap = {
                     'time': current_time,
-                    'tf_states': {tf: dict(tf_states[tf]) for tf in CASCADE_TFS + ['W1']},
+                    'tf_states': {tf: dict(tf_states[tf]) for tf in ['M5'] + CASCADE_TFS + ['W1']},
                     'diffbbw_h4_history': list(diffbbw_h4_history),
                     'trade_event': '',
+                    'prev_h1_sqz': prev_h1_sqz,
                 }
                 snapshots.append(snap)
+
+                # Update prior-bar H1-SQZ state for next snapshot
+                h1_stg = tf_states.get('H1', {}).get('stage', 0)
+                prev_h1_sqz = (400 <= h1_stg <= 499) if h1_stg else False
 
         # Capture at trade events
         if '[NEW_ORDER_OPEN]' in line or '[NEW_ORDER_CLOSE]' in line:
@@ -1051,9 +1095,10 @@ def parse_log():
 
             snap = {
                 'time': current_time,
-                'tf_states': {tf: dict(tf_states[tf]) for tf in CASCADE_TFS + ['W1']},
+                'tf_states': {tf: dict(tf_states[tf]) for tf in ['M5'] + CASCADE_TFS + ['W1']},
                 'diffbbw_h4_history': list(diffbbw_h4_history),
                 'trade_event': te,
+                'prev_h1_sqz': prev_h1_sqz,
             }
             snapshots.append(snap)
 
@@ -1142,7 +1187,9 @@ def main():
 
         tf_st = snap['tf_states']
         dbbw_hist = snap['diffbbw_h4_history']
-        scenario, info, cas_shrink, cas_sqz = identify_scenario(tf_st, dbbw_hist)
+        prev_h1 = snap.get('prev_h1_sqz', False)
+        scenario, info, cas_shrink, cas_sqz = identify_scenario(
+            tf_st, dbbw_hist, prev_h1)
         phase = identify_phase(tf_st.get('H4', {}), dbbw_hist)
 
         matched, reason = scenario_match(scenario, expected_scenario)
@@ -1157,6 +1204,9 @@ def main():
             misses += 1
             status = 'NO'
 
+        h1_debug = f"H1={tf_st.get('H1', {}).get('stage', '?')}" \
+                  f" sqz={is_sqz(tf_st.get('H1', {}).get('stage', 0))}" \
+                  f" prev_sqz={prev_h1}"
         results.append({
             'time': short_ts,
             'got_scenario': scenario,
@@ -1167,6 +1217,7 @@ def main():
             'reason': reason,
             'info': info,
             'trade_event': snap.get('trade_event', ''),
+            'h1_debug': h1_debug,
         })
 
     total = matches + half_misses + misses
@@ -1202,7 +1253,7 @@ def main():
             if r['status'] == 'NO':
                 ev = f" ***{r['trade_event']}" if r['trade_event'] else ""
                 print(f"  {r['time']}: got={r['got_scenario']} exp={r['expected_scenario']} "
-                      f"reason={r['reason']} info={r['info']}{ev}")
+                      f"reason={r['reason']} info={r['info']} {r['h1_debug']}{ev}")
 
     # ── GATE 4: Trade simulation + benchmark scoring ───────────────
     print("\n" + "=" * 80)
@@ -1254,7 +1305,7 @@ RC_INCIDENTS = [
 
 def parse_snapshots_for_date(date_str):
     """Parse log for a specific date, return snapshots at H4 boundaries."""
-    tf_states = {tf: {} for tf in ['M15', 'M30', 'H1', 'H4', 'D1', 'W1']}
+    tf_states = {tf: {} for tf in ['M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1']}
     snapshots = []
     diffbbw_h4_history = []
     H4_HOURS = {"00", "04", "08", "12", "16", "20"}
@@ -1274,7 +1325,7 @@ def parse_snapshots_for_date(date_str):
             continue
         hour = m.group(2)[:2]
         minute = m.group(2)[3:5]
-        for tf in ['M15', 'M30', 'H1', 'H4', 'D1', 'W1']:
+        for tf in ['M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1']:
             if f'[{tf}]' in line:
                 tf_states[tf] = parse_tf_line(line, tf)
         if '[ORDERINFO]' in line and hour in H4_HOURS and minute == "00":
@@ -1286,7 +1337,7 @@ def parse_snapshots_for_date(date_str):
                     diffbbw_h4_history.append(h4_dbbw)
                 snapshots.append({
                     'time': f"{date_str} {m.group(2)}",
-                    'tf_states': {tf: dict(tf_states[tf]) for tf in CASCADE_TFS + ['W1']},
+                    'tf_states': {tf: dict(tf_states[tf]) for tf in ['M5'] + CASCADE_TFS + ['W1']},
                     'diffbbw_h4_history': list(diffbbw_h4_history),
                 })
 
@@ -1315,7 +1366,8 @@ def run_rc_regression():
         for snap in snaps:
             tf_st = snap['tf_states']
             dbbw_hist = snap['diffbbw_h4_history']
-            scenario, info, cas_shr, cas_sqz = identify_scenario(tf_st, dbbw_hist)
+            scenario, info, cas_shr, cas_sqz = identify_scenario(
+                tf_st, dbbw_hist, snap.get('prev_h1_sqz', False))
             phase = identify_phase(tf_st.get('H4', {}), dbbw_hist)
 
             # Compute blocks
@@ -1376,7 +1428,8 @@ def run_rc_regression():
         for snap in mar11_snaps:
             tf_st = snap['tf_states']
             dbbw_hist = snap['diffbbw_h4_history']
-            scenario, info, cas_shr, cas_sqz = identify_scenario(tf_st, dbbw_hist)
+            scenario, info, cas_shr, cas_sqz = identify_scenario(
+                tf_st, dbbw_hist, snap.get('prev_h1_sqz', False))
             phase = identify_phase(tf_st.get('H4', {}), dbbw_hist)
 
             h4_stg = tf_st.get('H4', {}).get('stage', 0)
