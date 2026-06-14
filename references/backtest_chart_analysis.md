@@ -1653,12 +1653,21 @@ cas_sqzCount>=1 (any TF in SQZ) OR diffBBW-confirmed shrink at an LTF
 (diffBBW negative at that TF). LTF opposition alone — with cas_sqzCount=0 and
 no confirmed shrink — does not route to B-tier; it remains A2.
 
-**A-tier with mid-TF SQZ note:** H4 flying, cas_sqzCount>=1 from a single
-mid-TF (H1/M30), M15 AND M5 still flying → A-tier. Becomes E1 only
-when M15 enters SQZ. Mid-TF SQZ flags E may be approaching.
+**Decision 6 — D2-vs-D5 conflict resolution (H1 only):** When H1 is in SQZ
+for 2+ bars (established — prior bar also in SQZ), E-tier wins over Decision 2's
+transient exemption. Decision 2's "transient" exemption applies ONLY to
+single-bar mid-TF SQZ. Note: M30/M15 SQZ during H4-fly is transient noise
+— Decision 6 applies only to H1 (reliable mid-TF for established compression).
+Per-TF tracking via prev_h1_sqz only.
 
-**TODO — mid-TF SQZ boundary:** Revisit if Jan-Apr out-of-sample shows mid-TF
-SQZ is a frequent, reliable precursor to E — then promote to substate.
+**H1-SQZ recovery rule:** When H1 just exited SQZ (prev_h1_sqz=True but
+h1_sqz_now=False) AND compression persists (ltf_shrinkTF>=1), route to E1.
+This catches the release phase of established H1-SQZ compression.
+
+**A-tier with mid-TF SQZ note (transient only):** H4 flying, cas_sqzCount>=1
+from a single mid-TF (H1/M30), M15 AND M5 still flying, AND no prior-bar SQZ
+on that mid-TF → A-tier. If the mid-TF SQZ persists 2+ bars → E-tier (D6).
+Mid-TF SQZ flags E may be approaching.
 
 **Discriminator A vs B:** B-tier requires confirmed compression
 (cas_sqzCount>=1 OR diffBBW-confirmed shrink). Without confirmed compression,

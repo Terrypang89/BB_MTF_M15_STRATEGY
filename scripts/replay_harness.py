@@ -225,20 +225,28 @@ def identify_scenario(tf_states, diffbbw_h4_history=None, prev_h1_sqz=False):
     Restructured cascade (Cluster 1 fix — compression routing before h4_fly):
       1. Compute cas_sqzCount (M5..H1) and cas_shrinkTF (M15..D1)  // §12d
       2. h4_fly / h4_shrink / h4_sqz booleans                     // §12
-      3. H4 shrink → E4                                           // Part 3 E4
-      4. H4 SQZ → G-tier                                          // Part 3 G
-      5. Compression routing (NEW — before h4_fly)                // Cluster 1 fix
+      3. F-tier early: H4 exiting compression (diffBBW recovering) // Early F
+      4. H4 SQZ → G-tier                                          // Part 3 G (before shrink)
+      5. H4 shrink → E4                                           // Part 3 E4
+      6. Compression routing (NEW — before h4_fly)                // Cluster 1 fix
          a. Decision 5: H1-SQZ prior-bar → E/B-tier               // Decision 5
-         b. Decision 2: mid-TF SQZ, H4 still flying → A-tier
-         c. E-tier: cas_sqzCount>=2
-         d. B-tier: ltf_shrinkTF>=1, keyed by max(shrink, sqz) depth
-         e. A2: SQZ without LTF shrink
-      6. H4 flying → A-tier (no-compression cases only)           // Decision 1 intact
-      7. Default → A2
+         b. Decision 6: H1-SQZ recovery → E1
+         c. Decision 2: transient mid-TF SQZ, H4 flying → A-tier
+         d. E-tier: cas_sqzCount>=2
+         e. B-tier: ltf_shrinkTF>=1, keyed by max(shrink, sqz) depth
+         f. A2: SQZ without LTF shrink
+      7. H4 flying → A-tier (no-compression cases only)           // Decision 1 intact
+      8. Default → A2
 
     Decision 5 — prior-bar H1-SQZ tracking:
       H1 in SQZ this bar AND H1 in SQZ prior bar  → E-tier (established)
       H1 in SQZ this bar but NOT prior bar         → B3 (onset)
+
+    Decision 6 — D2-vs-D5 conflict resolution:
+      Decision 2's "transient" exemption applies ONLY to single-bar mid-TF SQZ.
+      Once H1-SQZ is established (prior bar also SQZ), E-tier wins.
+      Note: M30/M15 SQZ during H4-fly is transient noise — Decision 6
+      applies only to H1 (the reliable mid-TF for established compression).
     """
     h4 = tf_states.get('H4', {})
     d1 = tf_states.get('D1', {})
@@ -297,7 +305,9 @@ def identify_scenario(tf_states, diffbbw_h4_history=None, prev_h1_sqz=False):
     else:
         h4_dir = 0
 
-    # ── F scenarios: H4 exiting shrink/SQZ, expanding (Part 3 Tier 3) ──
+    # ── Early F-tier: H4 exiting compression (diffBBW recovering) ──
+    # Fires before G/E4 because H4 may still be in SQZ/shrink stage
+    # but bands are expanding — compression resolving to continuation
     if diffbbw_h4_history and len(diffbbw_h4_history) >= 2:
         recent_dbbw = diffbbw_h4_history[-1]
         prev_dbbw = diffbbw_h4_history[-2]
@@ -308,16 +318,15 @@ def identify_scenario(tf_states, diffbbw_h4_history=None, prev_h1_sqz=False):
                 if len(diffbbw_h4_history) >= 3:
                     recent3 = diffbbw_h4_history[-3:]
                     if all(v > 0 for v in recent3):
-                        return ('F3', 'F3 — HTF confirmed expansion', cas_shrinkTF, cas_sqzCount)
+                        return ('F3', 'F3 — HTF confirmed expansion',
+                                cas_shrinkTF, cas_sqzCount)
                 if m30.get('bbupdn') == 1:
-                    return ('F2', 'F2 — MTF confirmed expansion', cas_shrinkTF, cas_sqzCount)
+                    return ('F2', 'F2 — MTF confirmed expansion',
+                            cas_shrinkTF, cas_sqzCount)
                 return ('F1', 'F1 — LTF expansion', cas_shrinkTF, cas_sqzCount)
 
-    # ── H4 shrink → E4 ────────────────────────────────────────────
-    if h4_shrink:
-        return ('E4', 'E4 — HTF compressing', cas_shrinkTF, cas_sqzCount)
-
-    # ── H4 SQZ → G-tier (Direction pivot) ─────────────────────────
+    # ── H4 SQZ → G-tier (Direction pivot) — before h4_shrink
+    # because H4 in SQZ with diffBBW<-20 triggers both; G-tier wins ──
     if h4_sqz:
         m5_dbbw = tf_states.get('M5', {}).get('diffBBW', 0)
         m5_ud_break = (m5_dbbw > 0.3) if m5_dbbw is not None else False
@@ -336,30 +345,43 @@ def identify_scenario(tf_states, diffbbw_h4_history=None, prev_h1_sqz=False):
             return ('G2', 'G2 — H2 opposite D1', cas_shrinkTF, cas_sqzCount)
         return ('G3', 'G3 — H3 false breakout', cas_shrinkTF, cas_sqzCount)
 
+    # ── H4 shrink → E4 (after G-tier, since SQZ takes priority) ──
+    if h4_shrink:
+        return ('E4', 'E4 — HTF compressing', cas_shrinkTF, cas_sqzCount)
+
     # ── Step 3: Compression routing (before h4_fly — Cluster 1 fix) ──
     # Confirmed compression = cas_sqzCount>=1 OR diffBBW-confirmed LTF shrink
     confirmed_compression = (cas_sqzCount >= 1 or
                             (ltf_shrinkTF >= 1 and h4_dbbw < 30))
     if confirmed_compression:
-        # ── Decision 5: H1-SQZ prior-bar → E/B-tier ─────────────
+        # ── Decision 5: H1-SQZ prior-bar → E/B-tier ──────────────
+        # Established (2+ bars H1-SQZ) → E-tier
+        # Onset (first bar H1-SQZ) → B3
         h1_sqz_now = is_sqz(h1.get('stage', 0))
+
         if h1_sqz_now and prev_h1_sqz:
-            # H1-SQZ established — prior bar also in SQZ
             m15sqz = is_sqz(m15.get('stage', 0))
             m30sqz = is_sqz(m30.get('stage', 0))
             if m15sqz and m30sqz:
                 return ('E2', 'E2 — H1-SQZ established, M15+M30 SQZ',
                         cas_shrinkTF, cas_sqzCount)
             return ('E1', 'E1 — H1-SQZ established', cas_shrinkTF, cas_sqzCount)
-        if h1_sqz_now and not prev_h1_sqz:
-            # H1-SQZ onset — just entered SQZ
+
+        # ── H1-SQZ recovery: H1 just exited SQZ but prior bar was SQZ,
+        # and compression persists (M30 shrink or SQZ) → E1 ──
+        if prev_h1_sqz and not h1_sqz_now and ltf_shrinkTF >= 1:
+            return ('E1', 'E1 — H1-SQZ recovery, compression persists',
+                    cas_shrinkTF, cas_sqzCount)
+
+        # Onset — H1 first-bar SQZ → B3
+        if h1_sqz_now:
             return ('B3', 'B3 — H1-SQZ onset', cas_shrinkTF, cas_sqzCount)
 
-        # ── Decision 2: mid-TF SQZ, H4 still flying → A-tier ──
-        if h4_fly and h4_dbbw > 5 and ltf_shrinkTF == -1:
-            m15_stg = m15.get('stage', 0)
+        # ── Decision 2: transient mid-TF SQZ, H4 flying → A-tier ──
+        # Only applies when no H1-SQZ on prior bar (truly transient)
+        if h4_fly and h4_dbbw > 5 and ltf_shrinkTF == -1 and not prev_h1_sqz:
             m5_stg = tf_states.get('M5', {}).get('stage', 0)
-            if (cas_sqzCount == 1 and not is_sqz(m15_stg) and not is_sqz(m5_stg)):
+            if (cas_sqzCount == 1 and not is_sqz(m15.get('stage', 0)) and not is_sqz(m5_stg)):
                 d1_aligned = (d1stg >= 500 and d1_dir != 'neutral')
                 if d1_aligned:
                     h4_up = (h4_dir == 1)
@@ -1014,7 +1036,7 @@ def parse_log():
     tf_states = {tf: {} for tf in ['M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1']}
     snapshots = []
     diffbbw_h4_history = []
-    prev_h1_sqz = False  # Decision 5: prior-bar H1-SQZ state
+    prev_h1_sqz = False   # Decision 5/6: prior-bar H1-SQZ state
 
     H4_HOURS = {"00", "04", "08", "12", "16", "20"}
     captured_h4 = set()
@@ -1073,7 +1095,7 @@ def parse_log():
                 }
                 snapshots.append(snap)
 
-                # Update prior-bar H1-SQZ state for next snapshot
+                # Update prior-bar H1-SQZ state for next snapshot (Decision 5/6)
                 h1_stg = tf_states.get('H1', {}).get('stage', 0)
                 prev_h1_sqz = (400 <= h1_stg <= 499) if h1_stg else False
 
