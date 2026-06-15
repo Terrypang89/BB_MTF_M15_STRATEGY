@@ -46,9 +46,9 @@ double ADiffBBW(BB_MTF_Data_struct &bb[], int tf, int sh=0)
 // TODO(ClaudeCode): wire to the real upper/lower band arrays
 // (check names like BB_Upper/BB_Lower/BBUppLV/BBLowLV).
 double ABBUpper(BB_MTF_Data_struct &bb[], int tf, int sh=0)
-{  return bb[tf].BB_Upper[sh]; }      // ← VERIFY field name
+{  return bb[tf].BBUppLV[sh]; }      // ← VERIFY field name
 double ABBLower(BB_MTF_Data_struct &bb[], int tf, int sh=0)
-{  return bb[tf].BB_Lower[sh]; }      // ← VERIFY field name
+{  return bb[tf].BBLowLV[sh]; }      // ← VERIFY field name
 
 // --- floating P/L of our positions (INVARIANT 1) ------------------
 // Magic-number filter required: EA uses MAGIC_NUMBER=898989 (tester.ini)
@@ -122,6 +122,7 @@ struct ScenarioState {
    double   container_diffbbw;  // health: >0 room, <=0 aging
    int      priceloc;           // vs container: -2 below_lower -1 at_lower 0 inside +1 at_upper +2 above_upper
    int      pivot_substate;     // G-tier display: 0=N/A 1=PIVOT-PENDING(m5 not broken) 2=G-REVERSAL(m5 broken)
+   string   info;
 };
 
 struct Prediction {
@@ -255,7 +256,7 @@ PHASE ClassifyPhase(BB_MTF_Data_struct &bb[])                      // §13 phase
 
    int h4mid = bb[4].BB_diffMid_Trend[LA];
    int h4stg = bb[4].BBW_stage[LA];
-   int h4ud  = bb[4].BBUpDn[LA];
+   int h4ud  = bb[4].BBUpDn_state[LA];
 
    // PH_1: directional trend — 3+ recent bars positive, stage>=500      // §13 Phase 1
    if(n >= 3 && h4stg >= 500) {
@@ -371,7 +372,7 @@ ScenarioState IdentifyScenario(BB_MTF_Data_struct &bb[], double &close_prices[])
    // ── CHECK HTF: H4 × D1 (§12) — diffBBW PRIMARY (EDIT V4) ─────────
    int  h4stg  = bb[4].BBW_stage[LA];
    int  h4mid  = bb[4].BB_diffMid_Trend[LA];
-   int  h4ud   = bb[4].BBUpDn[LA];
+   int  h4ud   = bb[4].BBUpDn_state[LA];
    int  d1stg  = bb[5].BBW_stage[LA];
    int  d1mid  = bb[5].BB_diffMid_Trend[LA];
    string d1dir = D1Dir(bb);
@@ -402,7 +403,7 @@ ScenarioState IdentifyScenario(BB_MTF_Data_struct &bb[], double &close_prices[])
                return s;
             }
             // F2 if M30 confirms
-            if(bb[2].BBUpDn[LA] == 1) {
+            if(bb[2].BBUpDn_state[LA] == 1) {
                s.scenario = SC_F2; s.info = "F2 — MTF confirmed expansion";
                return s;
             }
