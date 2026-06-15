@@ -1130,6 +1130,11 @@ def parse_log():
             }
             snapshots.append(snap)
 
+            # Update prior-bar H1-SQZ state for next snapshot (Decision 5/6)
+            # FIX: update at EVERY snapshot (matches MQL5 s_prevH1Sqz every-bar rule)
+            h1_stg = tf_states.get('H1', {}).get('stage', 0)
+            prev_h1_sqz = (400 <= h1_stg <= 499) if h1_stg else False
+
     snapshots.sort(key=lambda x: x['time'])
     return snapshots
 

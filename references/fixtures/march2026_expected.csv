@@ -41,9 +41,9 @@ row,timestamp,expected_scenario,expected_substate,expected_phase,expected_b1_blo
 40,03.11 16:00,B3,h1_onset,PH_3,FALSE,FALSE,H1=425 SQZ onset → B3 per Decision 5
 41,03.11 20:00,A2,sideway_D1,PH_3,FALSE,FALSE,corrected: all fly, no compression, H1/M30/M15 opposing H4
 42,03.12 04:00,A2,sideway_D1,PH_3,FALSE,FALSE,All fly, no compression — D1 counter only (corrected)
-43,03.12 06:30,E1,compression_late,PH_3,TRUE,FALSE,CLOSE BUY -191.29 / OPEN SELL; M15 mid=4 blocks
-44,03.12 06:30,E1,compression_late,PH_3,TRUE,FALSE,SELL entry counter-D1 (D1 mid=1 bullish)
-45,03.12 08:00,A2,sideway_D1,PH_3,FALSE,FALSE,corrected: all fly, no compression
+43,03.12 06:30,B1,compression_onset,PH_3,TRUE,FALSE,CLOSE BUY -191.29 / OPEN SELL; M15 mid=4 blocks; H1 never SQZ since 03.11 16:00, prev_h1_sqz=False, B-tier decoder (1,0)=B1
+44,03.12 06:30,B1,compression_onset,PH_3,TRUE,FALSE,SELL entry counter-D1 (D1 mid=1 bullish); same as above
+45,03.12 08:00,B1,compression_onset,PH_3,TRUE,FALSE,H1=522 not SQZ, prev_h1_sqz=False, B-tier decoder (1,0)=B1
 46,03.12 12:00,E1,compression_late,PH_3,FALSE,FALSE,
 47,03.12 15:15,E1,compression_late,PH_3,TRUE,FALSE,CLOSE SELL -16.53; M15 mid=3 blocks
 48,03.12 16:00,E4,h4_shrink,PH_3B_INTO,FALSE,FALSE,H4=513 shrink cas_shrinkTF=4
