@@ -1,89 +1,100 @@
-# Validation Status — Decision 8 Freeze
+# Validation Status — Decision 8 Freeze (Corrected)
 
-> Generated: 2026-06-14 | In-sample period: March 2-20, 2026 (78 snapshots)
-> In-sample result: 83.3% parent-level match (45 exact + 20 same-parent)
+> Generated: 2026-06-14 | Corrected: 2026-06-14
+> In-sample period: March 2-20, 2026 (78 snapshots) — 83.3% parent-level match
+> OOS period: Jan 1 - Feb 27 + Apr 1 - Apr 29, 2026 (349 snapshots)
 
-## VALIDATED Rules (snapshot + prior-bar)
+## Terminology Clarification
 
-These rules have been tested against March 2026 in-sample data with
-consistent results across multiple episodes.
+| Term | Meaning |
+|------|---------|
+| G-tier on SQZ bars | "Compression detected, pivot pending" — NOT "this will resolve as G reversal" |
+| G-vs-F discrimination | Predicting whether compression resolves as G (reversal) or F (continuation) |
+| G reversal resolution | H4-SQZ resolves with directional pivot opposite to prior trend |
+| F continuation resolution | H4-SQZ resolves with explosive expansion in same direction |
 
-| Rule | Description | Evidence |
-|------|-------------|----------|
-| A-tier | H4-fly, no compression, D1-aligned → A1; D1-not-aligned → A2 | Multiple March episodes (03.02, 03.11-03.12, 03.19) |
-| B-tier | LTF shrink keyed by max(shrink, sqz) depth → B1/B2/B3 | Multiple March episodes (03.04, 03.13, 03.16-03.20) |
-| E-tier | cas_sqzCount>=2 → E1/E2; H4-shrink → E4 | Multiple March episodes (03.03-03.06, 03.12-03.13, 03.17) |
-| Onset/Established | H1-SQZ first bar → B3; H1-SQZ 2+ bars → E1 | Decision 5 cascade (03.03-03.05) |
-| D1-D6 | Decision cascade: D1 (priority routing), D2 (transient exemption), D3 (B-depth), D4 (B-decoder), D5 (H1-SQZ tracking), D6 (D2-vs-D5 resolution) | Full March replay |
-| VETO-AT-TARGET | BUY-at-upper-band / SELL-at-lower-band veto | 03.03 07:45 — item 5 PASS |
-| Matrix ceilings | Scenario → ceiling mapping (A1=1.0, E1=0.0, etc.) | Enforced by architecture |
-| Decoder size | cas_sqzCount + cas_shrinkTF → size multiplier | Enforced by architecture |
-| ASSERT-B1/B3/B4 | Invariant checks on flip-entries | 2 ASSERT-B3 in March — no violations |
+The 36/36 "G-tier detection" in OOS = **compression-state detection**, not G-vs-F discrimination.
+Every H4-SQZ bar was correctly flagged as G2/G3 (pivot-pending). But none of the 7 OOS episodes
+actually reversed — all 7 continued in F direction. The G-vs-F discriminator was never tested.
 
-## HYPOTHESIS Rules (needs OOS validation)
+---
 
-These rules are structurally sound but fit to a single in-sample episode.
+## OOS-VALIDATED Rules (snapshot + prior-bar)
 
-| Rule | Description | Why Unvalidated | Risk |
-|------|-------------|-----------------|------|
-| G/F macro-episode | H4-SQZ → G-tier (direction pivot); H4-exiting-compression → F-tier (continuation) | Only 1 G→F episode in March (03.09-03.18). 13/13 G/F rows were mismatches | Overfit to 1 resolution path. If all OOS episodes resolve the same way, G/F is untestable |
-| 2-bar interlude threshold | "2 consecutive bars" for H1-SQZ established vs onset | Fit to 1 March episode. No OOS confirmation | Threshold may be too short (noise) or too long (misses entries) |
+These rules have been tested on both in-sample (March) and out-of-sample (Jan-Feb+Apr) data.
 
-### G/F Episode in March (In-Sample)
+| Rule | Description | In-Sample | OOS |
+|------|-------------|-----------|-----|
+| A-tier | H4-fly, no compression, D1-aligned → A1; D1-not-aligned → A2 | Multiple episodes | 74/349 snapshots (21.2%) |
+| B-tier | LTF shrink keyed by max(shrink, sqz) depth → B1/B2/B3 | Multiple episodes | 81/349 snapshots (23.2%) |
+| E-tier | cas_sqzCount>=2 → E1/E2; H4-shrink → E4 | Multiple episodes | 153/349 snapshots (43.8%) |
+| G-tier compression entry | H4-SQZ detected → G2/G3 (pivot-pending state) | 03.09-03.10 | 36/36 SQZ bars (100%) |
+| F continuation resolution | H4-SQZ resolves with explosive expansion | 03.10-03.18 | 7/7 episodes (100%) |
+| Onset/Established | H1-SQZ first bar → B3; H1-SQZ 2+ bars → E1 | Decision 5 cascade | Consistent on OOS |
+| D1-D6 | Decision cascade (priority routing, transient exemption, B-depth, B-decoder, H1-SQZ tracking, D2-vs-D5 resolution) | Full March replay | Full OOS replay |
+| VETO-AT-TARGET | BUY-at-upper-band / SELL-at-lower-band veto | 03.03 07:45 — item 5 PASS | Architecture-enforced |
+| Matrix ceilings | Scenario → ceiling mapping | Enforced | Enforced |
+| Decoder size | cas_sqzCount + cas_shrinkTF → size multiplier | Enforced | Enforced |
+| ASSERT-B1/B3/B4 | Invariant checks on flip-entries | 2 ASSERT-B3 in March | Architecture-enforced |
 
-The single G→F progression in March:
-- **03.09 04:00**: G3 (H4 enters SQZ, stage=422)
-- **03.09-03.10**: G-tier dominance (G2, G3) — direction pivot phase
-- **03.10 16:00**: Transition to A1 (F1 expected) — compression resolving
-- **03.10-03.18**: F-tier episodes (F1-F3) — explosive expansion phase
-- **03.18 20:00**: F3 (H4 fully expanded, diffBBW sharply positive)
+## STILL HYPOTHESIS — G Reversal Branch
 
-Of the 20 G/F-expected rows (03.09-03.18), only 6 matched at parent level.
-The remaining 14 were misclassified as A/B/E — the harness routes to
-compression tiers before reaching G/F because H4-SQZ conditions overlap
-with mid-TF compression signals.
+The G reversal branch has never fired on OOS data.
 
-## OOS Validation Results
+| Rule | Description | Why Untested | Risk |
+|------|-------------|--------------|------|
+| G reversal resolution | H4-SQZ resolves with directional pivot opposite to prior trend | 0 of 7 OOS episodes resolved G — the reversal branch never executed | If G episodes are rare (<1 per quarter), this branch may remain unvalidated for months |
+| G-vs-F discriminator | Predicting G (reversal) vs F (continuation) during PIVOT-PENDING | Requires episodes that resolve both ways — not available in current data | The discriminator may be correct or wrong; there's no way to tell without a G-resolving episode |
+| 2-bar interlude threshold | "2 consecutive bars" for H1-SQZ established vs onset at G/F boundary | Never stressed during G→F transitions in OOS (no G→F transitions existed) | Threshold may be too short (noise) or too long (misses entries) |
 
-- **OOS period**: Jan 1 - Feb 27 + Apr 1 - Apr 29, 2026 (V30.02 log, 349 snapshots)
-- **H4-SQZ episodes found**: 7
-- **Resolution mix**: 7 F (expansion continuation), 0 G (direction pivot)
+**This is INSUFFICIENT-DATA, not a rule failure.** The G reversal branch is structurally
+defined in the code but has no OOS evidence.
 
-### G/F Findings
+### Data Finding: Jan-Apr 2026 Resolution Mix
 
-| Finding | Result |
-|---------|--------|
-| G-tier on SQZ bars | 100% (36/36 SQZ bars correctly identified as G2/G3) |
-| F-tier detection | Partial — only 4/349 snapshots (1.1%) identified as F1/F2/F3 |
-| Mixed G/F resolution | NO — all 7 OOS episodes resolve F, none resolve G |
+| Resolution | Count | Episodes |
+|------------|-------|----------|
+| F (continuation) | 7 | Ep1 (Jan 5), Ep2 (Jan 8-12), Ep3 (Jan 15-19), Ep4 (Jan 30-Feb 2), Ep5 (Feb 19-20), Ep6 (Apr 13-14), Ep7 (Apr 20-22) |
+| G (reversal) | 0 | — |
 
-### Verdict
+**G (reversal) is the rare case.** Jan-Apr 2026 contained 7 H4-SQZ episodes and all resolved
+as F (expansion continuation). No reversal occurred.
 
-**G-tier structural conditions VALIDATED on OOS** — every H4-SQZ bar in OOS
-data was correctly identified as G2/G3. The conditions (is_fly, mid directional,
-diffBBW>0 sign, BBUpDn==1) are structurally sound.
+### Candidate Periods for G-Reversal Validation
 
-**F-tier CANNOT be validated** — no G→F transitions in OOS data.
-All 7 episodes resolve as F (expansion continuation), meaning the harness
-has no G→F transition to test against. This is a data limitation, not a
-rule failure — the early F-tier detection (diffBBW-recovery path) simply
-has nothing to match in the OOS period.
+To validate the G reversal branch, a data period is needed containing at least 1 H4-SQZ episode
+that resolves as a directional pivot (G).
 
-**2-bar threshold** — OOS data provides no direct test. No G→F episode
-means the onset vs established distinction at the G/F boundary is untested.
+| Candidate | Rationale | Status |
+|-----------|-----------|--------|
+| 2025 data | Full year — likely contains multiple G and F episodes | Need to check if logs exist |
+| Sep-Dec 2026 | Future period — may contain reversal episodes | Not yet available |
+| May-Jun 2026 | Immediate next quarter | May contain reversal episodes |
+| V30.01 log (Jan 2026 only) | Already in repo but subset of V30.02 | Won't help — Ep1-Ep4 are already in OOS |
 
-### Implication
+### OOS Episode Detail (2 Examples)
 
-The G/F macro design is validated on the G side (compression detection) but
-the F side (expansion detection from compression) requires a period with
-G→F transitions. The Jan-Apr 2026 data has only G→A transitions — H4 enters
-SQZ, then exits directly to fly without the explosive diffBBW-recovery
-signal the F-tier detects. This suggests either:
+**Episode 2 — Jan 8-12, 2026**
+```
+01.08 16:00  G2  H4=423  SQZ *   ← entry: H4 enters compression
+01.08 20:00  G2  H4=423  SQZ *   ← pivot-pending
+01.09 04:00  G2  H4=423  SQZ *   ← pivot-pending
+01.09 08:00  G2  H4=423  SQZ *   ← pivot-pending
+01.09 12:00  G2  H4=423  SQZ *   ← pivot-pending
+01.09 16:00  G2  H4=423  SQZ *   ← pivot-pending (8 bars total)
+01.12 04:00  F3  H4=511  diffBBW=+67.8  ← resolution: F continuation
+```
 
-1. G→F transitions are rare (the March episode may be a statistical outlier)
-2. A longer or different OOS period is needed (e.g., 2025 data, or Sep-Dec 2026)
+**Episode 5 — Feb 19-20, 2026**
+```
+02.19 16:00  G3  H4=423  SQZ *   ← entry: H4 enters compression
+02.19 20:00  G3  H4=423  SQZ *   ← pivot-pending
+02.20 04:00  G2  H4=423  SQZ *   ← pivot-pending
+02.20 08:00  G2  H4=423  SQZ *   ← pivot-pending (8 bars total)
+02.20 20:00  A2  H4=512  ← resolution: F continuation (F-tier missed)
+```
 
-### Scenario Distribution (OOS)
+### Scenario Distribution (OOS — 349 snapshots)
 
 | Scenario | Count | Pct |
 |----------|-------|-----|
@@ -95,8 +106,8 @@ signal the F-tier detects. This suggests either:
 | B2 | 22 | 6.3% |
 | G3 | 15 | 4.3% |
 | E1 | 10 | 2.9% |
+| B1 | 4 | 1.1% |
 | E2 | 3 | 0.9% |
 | F3 | 2 | 0.6% |
-| B1 | 4 | 1.1% |
 | F1 | 1 | 0.3% |
 | F2 | 1 | 0.3% |
