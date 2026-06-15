@@ -1,0 +1,514 @@
+================================================================================
+OOS VALIDATION — Locked Harness on Jan-Feb + April 2026
+NO TUNING — pure test
+================================================================================
+
+Parsing OOS log...
+  Captured 349 snapshots
+  First: 2026.01.02 04:00:05
+  Last:  2026.04.29 20:00:05
+
+Running identify_scenario on all snapshots...
+
+  Scenario distribution (349 snapshots):
+    A1: 29 (8.3%)
+    A2: 45 (12.9%)
+    B1: 4 (1.1%)
+    B2: 22 (6.3%)
+    B3: 55 (15.8%)
+    E1: 10 (2.9%)
+    E2: 3 (0.9%)
+    E4: 140 (40.1%)
+    F1: 1 (0.3%)
+    F2: 1 (0.3%)
+    F3: 2 (0.6%)
+    G2: 22 (6.3%)
+    G3: 15 (4.3%)
+
+================================================================================
+G/F MACRO DESIGN — OOS Episode Analysis
+================================================================================
+
+  H4-SQZ episodes in OOS: 7
+
+  Episode 1:
+    Onset: 2026.01.05 04:00:05 (H4 stage=423)
+    SQZ bars: 1
+    Resolution: F — explosive expansion
+    End: 2026.01.05 16:00:05 (H4 stage=511)
+    Scenarios during episode:
+      01.05 04:00: G3 (H4=423, sqz=True) *
+      01.05 08:00: A2 (H4=511, sqz=False)
+      01.05 12:00: A2 (H4=511, sqz=False)
+      01.05 16:00: A2 (H4=511, sqz=False)
+    G/F identified on SQZ bars: 1/1 (100%)
+
+  Episode 2:
+    Onset: 2026.01.08 16:00:05 (H4 stage=423)
+    SQZ bars: 8
+    Resolution: F — fly with positive diffBBW
+    End: 2026.01.12 08:00:05 (H4 stage=511)
+    Scenarios during episode:
+      01.08 16:00: G2 (H4=423, sqz=True) *
+      01.08 20:00: G2 (H4=423, sqz=True) *
+      01.08 22:45: G2 (H4=423, sqz=True) *
+      01.09 04:00: G2 (H4=423, sqz=True) *
+      01.09 08:00: G2 (H4=423, sqz=True) *
+      01.09 12:00: G2 (H4=423, sqz=True) *
+      01.09 15:00: G2 (H4=423, sqz=True) *
+      01.09 16:00: G2 (H4=423, sqz=True) *
+      01.12 04:00: F3 (H4=511, sqz=False)
+    G/F identified on SQZ bars: 8/8 (100%)
+
+  Episode 3:
+    Onset: 2026.01.15 16:00:05 (H4 stage=423)
+    SQZ bars: 7
+    Resolution: F — explosive expansion
+    End: 2026.01.19 08:45:02 (H4 stage=511)
+    Scenarios during episode:
+      01.15 16:00: G2 (H4=423, sqz=True) *
+      01.15 20:00: G2 (H4=423, sqz=True) *
+      01.16 04:00: G2 (H4=423, sqz=True) *
+      01.16 08:00: G2 (H4=423, sqz=True) *
+      01.16 12:00: G2 (H4=423, sqz=True) *
+      01.16 16:00: G2 (H4=423, sqz=True) *
+      01.16 20:00: G2 (H4=423, sqz=True) *
+      01.19 04:00: F1 (H4=511, sqz=False)
+      01.19 08:00: A2 (H4=511, sqz=False)
+      01.19 08:45: B2 (H4=511, sqz=False)
+    G/F identified on SQZ bars: 7/7 (100%)
+
+  Episode 4:
+    Onset: 2026.01.30 12:00:05 (H4 stage=403)
+    SQZ bars: 2
+    Resolution: F — explosive expansion
+    End: 2026.02.02 08:00:05 (H4 stage=521)
+    Scenarios during episode:
+      01.30 12:00: G2 (H4=403, sqz=True) *
+      01.30 16:00: G2 (H4=422, sqz=True) *
+      01.30 20:00: A2 (H4=521, sqz=False)
+      02.02 04:00: A2 (H4=521, sqz=False)
+      02.02 08:00: A2 (H4=521, sqz=False)
+    G/F identified on SQZ bars: 2/2 (100%)
+
+  Episode 5:
+    Onset: 2026.02.19 16:00:05 (H4 stage=423)
+    SQZ bars: 8
+    Resolution: F — fly with positive diffBBW
+    End: 2026.02.20 20:00:05 (H4 stage=512)
+    Scenarios during episode:
+      02.19 16:00: G3 (H4=423, sqz=True) *
+      02.19 20:00: G3 (H4=423, sqz=True) *
+      02.19 23:15: G3 (H4=423, sqz=True) *
+      02.20 02:00: G2 (H4=423, sqz=True) *
+      02.20 03:15: G2 (H4=423, sqz=True) *
+      02.20 04:00: G2 (H4=423, sqz=True) *
+      02.20 05:00: G2 (H4=423, sqz=True) *
+      02.20 08:00: G2 (H4=423, sqz=True) *
+    G/F identified on SQZ bars: 8/8 (100%)
+
+  Episode 6:
+    Onset: 2026.04.13 04:00:05 (H4 stage=423)
+    SQZ bars: 5
+    Resolution: F — fly with positive diffBBW
+    End: 2026.04.14 12:00:05 (H4 stage=512)
+    Scenarios during episode:
+      04.13 04:00: G3 (H4=423, sqz=True) *
+      04.13 08:00: G3 (H4=423, sqz=True) *
+      04.13 12:00: G3 (H4=423, sqz=True) *
+      04.13 16:00: G3 (H4=423, sqz=True) *
+      04.13 20:00: G3 (H4=423, sqz=True) *
+      04.14 04:00: A2 (H4=521, sqz=False)
+      04.14 08:00: A2 (H4=512, sqz=False)
+      04.14 12:00: A2 (H4=512, sqz=False)
+    G/F identified on SQZ bars: 5/5 (100%)
+
+  Episode 7:
+    Onset: 2026.04.20 20:00:05 (H4 stage=423)
+    SQZ bars: 5
+    Resolution: F — explosive expansion
+    End: 2026.04.22 08:00:05 (H4 stage=521)
+    Scenarios during episode:
+      04.20 20:00: G3 (H4=423, sqz=True) *
+      04.21 04:00: G3 (H4=423, sqz=True) *
+      04.21 08:00: G3 (H4=423, sqz=True) *
+      04.21 12:00: G3 (H4=423, sqz=True) *
+      04.21 16:00: G3 (H4=423, sqz=True) *
+      04.21 20:00: A2 (H4=521, sqz=False)
+      04.22 04:00: B2 (H4=521, sqz=False)
+      04.22 08:00: B3 (H4=521, sqz=False)
+    G/F identified on SQZ bars: 5/5 (100%)
+
+  G/F Resolution Mix:
+    G (direction pivot): 0
+    F (expansion continuation): 7
+    => Single-direction resolution — OOS cannot fully validate G/F
+
+================================================================================
+G/F IDENTIFICATION RATE — Does the harness see G/F when it should?
+================================================================================
+
+  During H4-SQZ bars (36 snapshots):
+    G2: 22 (61.1%)
+    G3: 14 (38.9%)
+
+  G/F scenarios during H4-SQZ: 36/36 (100.0%)
+
+================================================================================
+FULL OOS RESULTS
+================================================================================
+
+Time         Scenario Phase        H4 Stg   H4 dBBW    H4 SQZ   Info
+----------------------------------------------------------------------------------------------------
+01.02 04:00  B3       PH_1         0        +0.0       False    B3 — H1-SQZ onset
+01.02 08:00  E4       PH_1         0        -79.9      False    E4 — HTF compressing
+01.02 12:00  E4       PH_3B_INTO   0        -101.0     False    E4 — HTF compressing
+01.02 16:00  E4       PH_3B_INTO   0        -93.0      False    E4 — HTF compressing
+01.02 20:00  E4       PH_3B_INTO   0        -61.1      False    E4 — HTF compressing
+01.05 04:00  G3       PH_4         423      +19.9      True     G3 — H4 SQZ waiting
+01.05 08:00  A2       PH_2         511      +25.1      False    A2 — SQZ without LTF shrink
+01.05 12:00  A2       PH_1         511      +40.0      False    A2 — H4 fly, D1 not aligned
+01.05 16:00  A2       PH_1         511      +20.4      False    A2 — mid-TF SQZ, M15+M5 flying, D1 not aligned
+01.05 20:00  A2       PH_1         511      +33.6      False    A2 — H4 fly, D1 not aligned
+01.05 23:00  B3       PH_1         511      +33.6      False    B3 — H1 shrink + 1 SQZ ***OPEN BUY
+01.06 04:00  B3       PH_1         511      +29.4      False    B3 — H1 shrink + 1 SQZ
+01.06 08:00  B1       PH_1         511      +21.5      False    B1 — M15 shrink
+01.06 12:00  B3       PH_1         511      +0.2       False    B3 — H1 shrink
+01.06 16:00  B3       PH_3B_INTO   512      -7.3       False    B3 — H1-SQZ onset
+01.06 20:00  A2       PH_2         512      +9.7       False    A2 — H4 fly, D1 not aligned
+01.07 04:00  E4       PH_6         512      -31.2      False    E4 — HTF compressing
+01.07 08:00  E4       PH_3B_INTO   512      -26.7      False    E4 — HTF compressing
+01.07 12:00  B2       PH_3B_INTO   512      -14.0      False    B2 — M30 shrink + 1 SQZ
+01.07 16:00  A2       PH_3B_INTO   512      -8.4       False    A2 — SQZ without LTF shrink
+01.07 20:00  B3       PH_3B_INTO   512      -12.4      False    B3 — H1 shrink + 1 SQZ
+01.08 01:30  E4       PH_3B_INTO   512      -48.1      False    E4 — HTF compressing ***CLOSE BUY P&L:16.88
+01.08 04:00  E4       PH_3B_INTO   513      -107.9     False    E4 — HTF compressing
+01.08 08:00  E4       PH_3B_INTO   513      -36.3      False    E4 — HTF compressing
+01.08 12:00  E4       PH_3B_INTO   513      -23.1      False    E4 — HTF compressing
+01.08 16:00  G2       PH_4         423      +0.8       True     G2 — H2 opposite D1
+01.08 20:00  G2       PH_4         423      -12.9      True     G2 — H2 opposite D1
+01.08 22:45  G2       PH_4         423      -12.9      True     G2 — H2 opposite D1 ***OPEN SELL
+01.09 04:00  G2       PH_4         423      +0.5       True     G2 — H2 opposite D1
+01.09 08:00  G2       PH_4         423      -0.1       True     G2 — H2 opposite D1
+01.09 12:00  G2       PH_4         423      +2.3       True     G2 — H2 opposite D1
+01.09 15:00  G2       PH_4         423      +2.3       True     G2 — H2 opposite D1 ***CLOSE BUY P&L:-6.26
+01.09 16:00  G2       PH_4         423      +7.4       True     G2 — H2 opposite D1
+01.09 20:00  E1       PH_1         511      +6.3       False    E1 — H1-SQZ recovery, compression persists
+01.12 04:00  F3       PH_1         511      +67.8      False    F3 — HTF confirmed expansion
+01.12 08:00  A1       PH_1         511      +63.2      False    A1 — H4+D1 fly aligned
+01.12 12:00  A1       PH_1         511      +55.6      False    A1 — H4+D1 fly aligned
+01.12 16:00  A1       PH_1         511      +63.8      False    A1 — H4+D1 fly aligned
+01.12 20:00  A1       PH_1         511      +45.7      False    A1 — H4+D1 fly aligned
+01.13 04:00  B3       PH_1         512      +5.8       False    B3 — H1 shrink
+01.13 08:00  B3       PH_1         512      +6.7       False    B3 — H1-SQZ onset
+01.13 12:00  E2       PH_3B_INTO   512      -13.5      False    E2 — M15+M30 both SQZ
+01.13 16:00  B3       PH_3B_INTO   512      -14.9      False    B3 — H1 shrink
+01.13 20:00  E4       PH_3B_INTO   512      -40.8      False    E4 — HTF compressing
+01.14 04:00  A2       PH_3B_INTO   512      -19.2      False    A2 — SQZ without LTF shrink
+01.14 08:00  E4       PH_3B_INTO   512      -24.4      False    E4 — HTF compressing
+01.14 12:00  E4       PH_3B_INTO   512      -33.0      False    E4 — HTF compressing
+01.14 16:00  E4       PH_3B_INTO   512      -42.1      False    E4 — HTF compressing
+01.14 20:00  E4       PH_3B_INTO   513      -65.6      False    E4 — HTF compressing
+01.15 04:00  E4       PH_3B_INTO   513      -92.9      False    E4 — HTF compressing
+01.15 08:00  E4       PH_3B_INTO   513      -25.0      False    E4 — HTF compressing
+01.15 12:00  E4       PH_3B_INTO   513      -13.2      False    E4 — HTF compressing
+01.15 16:00  G2       PH_4         423      -2.4       True     G2 — H2 opposite D1
+01.15 20:00  G2       PH_4         423      +0.6       True     G2 — H2 opposite D1
+01.16 04:00  G2       PH_4         423      +0.6       True     G2 — H2 opposite D1
+01.16 08:00  G2       PH_4         423      -3.6       True     G2 — H2 opposite D1
+01.16 12:00  G2       PH_4         423      -4.8       True     G2 — H2 opposite D1
+01.16 16:00  G2       PH_4         423      -8.8       True     G2 — H2 opposite D1
+01.16 20:00  G2       PH_4         423      +9.9       True     G2 — H2 opposite D1
+01.19 04:00  F1       PH_2         511      +17.9      False    F1 — LTF expansion
+01.19 08:00  A2       PH_1         511      +28.9      False    A2 — SQZ without LTF shrink
+01.19 08:45  B2       PH_1         511      +28.9      False    B2 early — M30 shrink ***OPEN SELL
+01.19 12:00  B2       PH_1         511      +21.6      False    B2 — M30 shrink + 1 SQZ
+01.19 16:00  B3       PH_1         511      +16.5      False    B3 — H1 shrink + 1 SQZ
+01.19 20:00  B3       PH_1         511      +20.8      False    B3 — H1 shrink + 1 SQZ
+01.20 01:15  B3       PH_1         511      +15.3      False    B3 — H1-SQZ onset ***CLOSE BUY P&L:-1.6099999999999999
+01.20 04:00  B3       PH_1         511      +12.2      False    B3 — H1-SQZ onset
+01.20 08:00  A1       PH_1         511      +37.2      False    A1 — H4+D1 fly aligned
+01.20 12:00  A1       PH_1         511      +37.5      False    A1 — H4+D1 fly aligned
+01.20 16:00  B2       PH_1         511      +32.4      False    B2 — M30 shrink + 1 SQZ
+01.20 16:15  A1       PH_1         511      +32.4      False    A1 — H4+D1 fly aligned ***OPEN BUY
+01.20 20:00  A1       PH_1         511      +38.5      False    A1 — H4+D1 fly aligned
+01.21 04:00  A1       PH_1         511      +76.5      False    A1 — H4+D1 fly aligned
+01.21 08:00  A1       PH_1         511      +80.1      False    A1 — H4+D1 fly aligned
+01.21 12:00  B2       PH_1         511      +46.2      False    B2 — M30 shrink + 1 SQZ
+01.21 16:00  A1       PH_1         512      +40.5      False    A1 — H4+D1 fly aligned
+01.21 20:00  B3       PH_3B_INTO   512      -10.3      False    B3 — H1 shrink
+01.22 04:00  E4       PH_3B_INTO   512      -56.2      False    E4 — HTF compressing
+01.22 08:00  B2       PH_3B_INTO   512      -13.8      False    B2 early — M30 shrink
+01.22 12:00  B3       PH_3B_INTO   512      -15.7      False    B3 — H1 shrink
+01.22 16:00  B3       PH_3B_INTO   512      -19.9      False    B3 — H1-SQZ onset
+01.22 20:00  A1       PH_2         512      +8.1       False    A1 — H4+D1 fly aligned
+01.23 04:00  A1       PH_2         512      +8.9       False    A1 — H4+D1 fly aligned
+01.23 08:00  A1       PH_3B_INTO   512      -12.1      False    A1 — H4+D1 fly aligned
+01.23 12:00  E4       PH_3B_INTO   512      -37.5      False    E4 — HTF compressing
+01.23 16:00  B3       PH_3B_INTO   512      -19.1      False    B3 — H1 shrink + 1 SQZ
+01.23 20:00  A2       PH_3B_INTO   512      -15.8      False    default — conservative
+01.26 04:00  A1       PH_2         512      +45.5      False    A1 — H4+D1 fly aligned
+01.26 08:00  A1       PH_2         512      +48.4      False    A1 — H4+D1 fly aligned
+01.26 12:00  A1       PH_1         511      +54.5      False    A1 — H4+D1 fly aligned
+01.26 16:00  B3       PH_1         511      +34.1      False    B3 — H1 shrink + 1 SQZ
+01.26 20:00  A1       PH_1         512      +43.4      False    A1 — H4+D1 fly aligned
+01.27 04:00  E4       PH_3B_INTO   512      -26.2      False    E4 — HTF compressing
+01.27 08:00  E4       PH_3B_INTO   512      -33.5      False    E4 — HTF compressing
+01.27 12:00  E4       PH_3B_INTO   512      -49.8      False    E4 — HTF compressing
+01.27 16:00  E4       PH_3B_INTO   512      -56.1      False    E4 — HTF compressing
+01.27 18:00  E4       PH_3B_INTO   512      -56.1      False    E4 — HTF compressing ***CLOSE BUY P&L:351.03
+01.27 20:00  E4       PH_3B_INTO   513      -80.2      False    E4 — HTF compressing
+01.28 04:00  B1       PH_2         512      +28.2      False    B1 — M15 shrink
+01.28 08:00  A1       PH_2         512      +64.7      False    A1 — H4+D1 fly aligned
+01.28 12:00  A1       PH_1         512      +51.1      False    A1 — H4+D1 fly aligned
+01.28 16:00  B2       PH_1         512      +8.2       False    B2 early — M30 shrink
+01.28 20:00  B3       PH_1         512      +4.4       False    B3 — H1 shrink
+01.29 04:00  F3       PH_1         511      +150.7     False    F3 — HTF confirmed expansion
+01.29 08:00  A2       PH_1         511      +139.3     False    A2 — SQZ without LTF shrink
+01.29 12:00  A1       PH_1         511      +76.8      False    A1 — mid-TF SQZ, M15+M5 flying, D1 aligned
+01.29 16:00  B3       PH_1         512      +55.0      False    B3 — H1 shrink + 1 SQZ
+01.29 20:00  E4       PH_3B_INTO   512      -24.1      False    E4 — HTF compressing
+01.30 04:00  E4       PH_3B_INTO   512      -59.8      False    E4 — HTF compressing
+01.30 08:00  E4       PH_3B_INTO   513      -55.9      False    E4 — HTF compressing
+01.30 09:45  E4       PH_3B_INTO   513      -55.9      False    E4 — HTF compressing ***OPEN SELL
+01.30 12:00  G2       PH_4         403      +30.9      True     G2 — H2 opposite D1
+01.30 16:00  G2       PH_4         422      +36.2      True     G2 — H2 opposite D1
+01.30 20:00  A2       PH_1         521      +150.9     False    A2 — H4 fly, D1 not aligned
+02.02 04:00  A2       PH_1         521      +199.3     False    A2 — H4 fly, D1 not aligned
+02.02 08:00  A2       PH_1         521      +307.0     False    A2 — H4 fly, D1 not aligned
+02.02 12:00  A2       PH_1         521      +140.6     False    A2 — H4 fly, D1 not aligned
+02.02 16:00  A2       PH_1         521      +118.8     False    A2 — H4 fly, D1 not aligned
+02.02 20:00  A2       PH_1         522      +115.9     False    A2 — H4 fly, D1 not aligned
+02.03 04:00  B3       PH_3B_INTO   522      -7.3       False    B3 — H1 shrink
+02.03 08:00  E4       PH_3B_INTO   522      -99.0      False    E4 — HTF compressing
+02.03 12:00  E4       PH_3B_INTO   523      -167.6     False    E4 — HTF compressing
+02.03 16:00  E4       PH_3B_INTO   523      -214.8     False    E4 — HTF compressing
+02.03 20:00  E4       PH_3B_INTO   523      -247.2     False    E4 — HTF compressing
+02.03 22:45  E4       PH_3B_INTO   523      -247.2     False    E4 — HTF compressing ***CLOSE SELL P&L:194.4
+02.03 22:45  E4       PH_3B_INTO   523      -247.2     False    E4 — HTF compressing ***OPEN BUY
+02.04 04:00  E4       PH_3B_INTO   523      -177.2     False    E4 — HTF compressing
+02.04 08:00  E4       PH_3B_INTO   523      -216.6     False    E4 — HTF compressing
+02.04 12:00  E4       PH_3B_INTO   523      -99.1      False    E4 — HTF compressing
+02.04 16:00  E4       PH_3A        523      -9.2       False    E4 — HTF compressing
+02.04 20:00  E4       PH_3A        523      -59.0      False    E4 — HTF compressing
+02.05 04:00  E4       PH_2         523      +10.7      False    E4 — HTF compressing
+02.05 08:00  E4       PH_3B_INTO   513      -23.1      False    E4 — HTF compressing
+02.05 11:15  E4       PH_3B_INTO   513      -23.1      False    E4 — HTF compressing ***CLOSE BUY P&L:-88.64
+02.05 11:15  E4       PH_3B_INTO   513      -23.1      False    E4 — HTF compressing ***OPEN SELL
+02.05 12:00  E4       PH_3B_INTO   513      -84.5      False    E4 — HTF compressing
+02.05 16:00  E4       PH_3B_INTO   513      -165.0     False    E4 — HTF compressing
+02.05 20:00  E4       PH_3B_INTO   513      -47.0      False    E4 — HTF compressing
+02.06 04:00  E4       PH_3B_INTO   513      -78.7      False    E4 — HTF compressing
+02.06 08:00  E4       PH_3B_INTO   513      -49.6      False    E4 — HTF compressing
+02.06 12:00  E4       PH_3B_INTO   513      -28.4      False    E4 — HTF compressing
+02.06 16:00  E4       PH_1         513      -2.4       False    E4 — HTF compressing
+02.06 20:00  A1       PH_2         512      +4.3       False    A1 — H4+D1 fly aligned
+02.09 04:00  B3       PH_2         512      +8.0       False    B3 — H1-SQZ onset
+02.09 08:00  E1       PH_1         512      +20.3      False    E1 — H1-SQZ established
+02.09 12:00  E4       PH_3A        512      -27.6      False    E4 — HTF compressing
+02.09 16:00  E4       PH_3B_INTO   523      -33.7      False    E4 — HTF compressing
+02.09 20:00  E4       PH_2         523      +4.1       False    E4 — HTF compressing
+02.10 04:00  F2       PH_5         511      +22.2      False    F2 — MTF confirmed expansion
+02.10 08:00  B2       PH_1         511      +19.0      False    B2 — M30 shrink + 1 SQZ
+02.10 12:00  B3       PH_1         511      +13.1      False    B3 — H1 shrink + 1 SQZ
+02.10 14:45  B3       PH_1         511      +13.1      False    B3 — H1-SQZ onset ***CLOSE SELL P&L:-166.45
+02.10 16:00  B3       PH_1         512      +14.5      False    B3 — H1-SQZ onset
+02.10 20:00  E1       PH_3B_INTO   512      -16.0      False    E1 — H1-SQZ established
+02.11 04:00  E4       PH_3B_INTO   512      -44.9      False    E4 — HTF compressing
+02.11 08:00  E4       PH_3B_INTO   512      -176.1     False    E4 — HTF compressing
+02.11 12:00  E4       PH_3B_INTO   513      -91.5      False    E4 — HTF compressing
+02.11 16:00  E4       PH_3B_INTO   513      -83.0      False    E4 — HTF compressing
+02.11 20:00  E4       PH_3B_INTO   513      -63.3      False    E4 — HTF compressing
+02.12 04:00  E4       PH_3B_INTO   513      -52.2      False    E4 — HTF compressing
+02.12 08:00  E4       PH_1         513      -4.5       False    E4 — HTF compressing
+02.12 12:00  E1       PH_3B_INTO   512      -10.5      False    E1 — H1-SQZ established
+02.12 16:00  E1       PH_1         512      -1.4       False    E1 — H1-SQZ established
+02.12 20:00  A2       PH_5         512      +63.1      False    A2 — H4 fly, D1 not aligned
+02.13 03:15  A2       PH_2         521      +66.4      False    A2 — H4 fly, D1 not aligned ***OPEN SELL
+02.13 04:00  B2       PH_1         521      +10.2      False    B2 early — M30 shrink
+02.13 08:00  A2       PH_1         521      +31.9      False    A2 — H4 fly, D1 not aligned
+02.13 12:00  B3       PH_1         521      +14.5      False    B3 — H1 shrink
+02.13 16:00  B3       PH_1         521      +5.2       False    B3 — H1-SQZ onset ***CLOSE SELL P&L:-21.11
+02.13 16:00  B3       PH_1         521      +5.2       False    B3 — H1-SQZ onset
+02.13 20:00  E1       PH_3A        521      -0.9       False    E1 — H1-SQZ established
+02.16 04:00  E1       PH_2         521      +0.1       False    E1 — H1-SQZ recovery, compression persists
+02.16 08:00  B3       PH_2         522      +2.5       False    B3 — H1 shrink
+02.16 12:00  E2       PH_1         522      -3.3       False    E2 — M15+M30 both SQZ
+02.16 16:00  B3       PH_3B_INTO   522      -6.0       False    B3 — H1-SQZ onset
+02.16 20:00  E1       PH_3B_INTO   522      -11.9      False    E1 — H1-SQZ established
+02.17 04:00  A2       PH_3B_INTO   522      -19.4      False    default — conservative
+02.17 08:00  A2       PH_2         522      +19.2      False    A2 — H4 fly, D1 not aligned
+02.17 12:00  B2       PH_3B_INTO   522      -12.2      False    B2 early — M30 shrink
+02.17 16:00  A2       PH_6         522      +14.1      False    A2 — H4 fly, D1 not aligned
+02.17 20:00  B1       PH_2         522      +1.3       False    B1 — M15 shrink
+02.18 04:00  B3       PH_1         521      +15.6      False    B3 — H1 shrink + 1 SQZ
+02.18 08:00  A2       PH_1         521      +0.6       False    A2 — H4 fly, D1 not aligned
+02.18 12:00  B2       PH_1         521      +4.7       False    B2 early — M30 shrink
+02.18 16:00  A2       PH_3A        521      -0.8       False    A2 — H4 fly, D1 not aligned
+02.18 20:00  B1       PH_2         521      +7.1       False    B1 — M15 shrink
+02.19 04:00  E4       PH_6         523      -23.7      False    E4 — HTF compressing
+02.19 08:00  E4       PH_3B_INTO   523      -15.3      False    E4 — HTF compressing
+02.19 12:00  E4       PH_3A        523      -1.0       False    E4 — HTF compressing
+02.19 16:00  G3       PH_4         423      -1.8       True     G3 — H4 SQZ waiting
+02.19 20:00  G3       PH_4         423      -7.6       True     G3 — H4 SQZ waiting
+02.19 23:15  G3       PH_4         423      -7.6       True     G3 — H4 SQZ waiting ***OPEN BUY
+02.20 02:00  G2       PH_4         423      +5.2       True     G2 — H2 opposite D1 ***CLOSE BUY P&L:-13.44
+02.20 03:15  G2       PH_4         423      +5.2       True     G2 — H2 opposite D1 ***OPEN BUY
+02.20 04:00  G2       PH_4         423      +1.9       True     G2 — H2 opposite D1
+02.20 05:00  G2       PH_4         423      +1.9       True     G2 — H2 opposite D1 ***CLOSE BUY P&L:-17.09
+02.20 08:00  G2       PH_4         423      +15.7      True     G2 — H2 opposite D1
+02.20 12:00  A1       PH_1         511      +14.2      False    A1 — H4+D1 fly aligned
+02.20 16:00  A1       PH_1         512      +14.9      False    A1 — H4+D1 fly aligned
+02.20 20:00  A1       PH_1         512      +26.3      False    A1 — H4+D1 fly aligned
+02.23 04:00  A1       PH_1         512      +47.3      False    A1 — H4+D1 fly aligned
+02.23 08:00  B2       PH_1         512      +11.8      False    B2 early — M30 shrink
+02.23 12:00  B2       PH_1         512      +14.4      False    B2 early — M30 shrink
+02.23 16:00  B3       PH_1         512      +5.5       False    B3 — H1 shrink + 1 SQZ
+02.23 20:00  A1       PH_1         512      +36.8      False    A1 — H4+D1 fly aligned
+02.24 04:00  A1       PH_1         512      +11.0      False    A1 — H4+D1 fly aligned
+02.24 08:00  B3       PH_1         512      -1.2       False    B3 — H1 shrink
+02.24 12:00  B3       PH_3B_INTO   512      -11.1      False    B3 — H1 shrink + 1 SQZ
+02.24 16:00  A2       PH_3B_INTO   512      -17.9      False    default — conservative
+02.24 20:00  E4       PH_3B_INTO   512      -25.8      False    E4 — HTF compressing
+02.25 04:00  E4       PH_3B_INTO   512      -38.0      False    E4 — HTF compressing
+02.25 08:00  E4       PH_3B_INTO   512      -34.4      False    E4 — HTF compressing
+02.25 12:00  E4       PH_3B_INTO   513      -56.2      False    E4 — HTF compressing
+02.25 12:15  E4       PH_3B_INTO   513      -56.2      False    E4 — HTF compressing ***OPEN SELL
+02.25 16:00  E4       PH_3B_INTO   513      -50.7      False    E4 — HTF compressing
+02.25 20:00  E4       PH_3B_INTO   513      -57.9      False    E4 — HTF compressing
+02.26 04:00  E4       PH_3B_INTO   513      -52.7      False    E4 — HTF compressing ***CLOSE BUY P&L:6.73
+02.26 04:00  E4       PH_3B_INTO   513      -52.7      False    E4 — HTF compressing
+02.26 08:00  E4       PH_3B_INTO   513      -6.2       False    E4 — HTF compressing
+02.26 12:00  E4       PH_2         513      +0.7       False    E4 — HTF compressing
+02.26 15:30  E4       PH_2         513      +0.7       False    E4 — HTF compressing ***OPEN SELL
+02.26 16:00  E4       PH_3B_INTO   513      -9.3       False    E4 — HTF compressing
+02.26 20:00  E4       PH_3A        513      -3.6       False    E4 — HTF compressing
+02.26 20:30  E4       PH_3A        513      -3.6       False    E4 — HTF compressing ***CLOSE SELL P&L:-1.9300000000000002
+02.27 02:45  E4       PH_2         513      +1.0       False    E4 — HTF compressing ***OPEN BUY
+02.27 04:00  E4       PH_3B_INTO   513      -17.1      False    E4 — HTF compressing
+02.27 05:15  E4       PH_3B_INTO   513      -17.1      False    E4 — HTF compressing ***CLOSE BUY P&L:7.22
+02.27 08:00  E4       PH_2         513      +0.3       False    E4 — HTF compressing
+02.27 12:00  G3       PH_3A        513      -0.0       False    G3 — H4 SQZ waiting
+02.27 16:00  B3       PH_5         511      +22.3      False    B3 — H1-SQZ onset
+02.27 20:00  E1       PH_2         511      +14.3      False    E1 — H1-SQZ recovery, compression persists
+04.01 04:00  A2       PH_1         511      +37.9      False    A2 — H4 fly, D1 not aligned
+04.01 08:00  B2       PH_3B_INTO   512      -6.1       False    B2 early — M30 shrink
+04.01 12:00  A2       PH_2         512      +22.0      False    A2 — H4 fly, D1 not aligned
+04.01 16:00  B3       PH_2         512      +19.5      False    B3 — H1 shrink
+04.01 20:00  A2       PH_1         512      +25.7      False    A2 — H4 fly, D1 not aligned
+04.02 04:00  A2       PH_1         512      +30.9      False    A2 — mid-TF SQZ, M15+M5 flying, D1 not aligned
+04.02 08:00  E4       PH_3B_INTO   512      -53.1      False    E4 — HTF compressing
+04.02 12:00  E4       PH_3B_INTO   513      -60.0      False    E4 — HTF compressing
+04.02 15:15  E4       PH_3B_INTO   513      -60.0      False    E4 — HTF compressing ***CLOSE BUY P&L:67.25
+04.02 15:15  E4       PH_3B_INTO   513      -60.0      False    E4 — HTF compressing ***OPEN SELL
+04.02 16:00  E4       PH_3B_INTO   513      -29.7      False    E4 — HTF compressing
+04.02 20:00  E4       PH_3B_INTO   513      -22.3      False    E4 — HTF compressing
+04.06 04:00  E4       PH_3B_INTO   513      -51.2      False    E4 — HTF compressing
+04.06 05:30  E4       PH_3B_INTO   513      -51.2      False    E4 — HTF compressing ***CLOSE SELL P&L:-48.87
+04.06 06:30  E4       PH_3B_INTO   513      -51.2      False    E4 — HTF compressing ***OPEN SELL
+04.06 08:00  E4       PH_3B_INTO   513      -68.7      False    E4 — HTF compressing
+04.06 12:00  E4       PH_3B_INTO   513      -27.7      False    E4 — HTF compressing
+04.06 16:00  E4       PH_3B_INTO   513      -46.5      False    E4 — HTF compressing
+04.06 20:00  E4       PH_3B_INTO   513      -54.0      False    E4 — HTF compressing
+04.07 04:00  E4       PH_2         513      +2.4       False    E4 — HTF compressing
+04.07 08:00  E4       PH_2         513      +1.5       False    E4 — HTF compressing
+04.07 12:00  E4       PH_3A        513      -0.9       False    E4 — HTF compressing
+04.07 16:00  E4       PH_1         513      -2.0       False    E4 — HTF compressing ***CLOSE SELL P&L:-22.68
+04.07 16:00  E4       PH_1         513      -2.0       False    E4 — HTF compressing
+04.07 20:00  E4       PH_3B_INTO   523      -17.6      False    E4 — HTF compressing
+04.07 21:00  E4       PH_3B_INTO   523      -17.6      False    E4 — HTF compressing ***OPEN BUY
+04.08 04:00  A2       PH_5         521      +51.4      False    default — conservative
+04.08 08:00  A2       PH_2         511      +24.3      False    A2 — SQZ without LTF shrink
+04.08 12:00  B2       PH_1         511      +40.3      False    B2 — M30 shrink + 1 SQZ
+04.08 16:00  B3       PH_1         511      +25.8      False    B3 — H1 shrink
+04.08 20:00  B3       PH_3B_INTO   512      -6.8       False    B3 — H1 shrink
+04.09 04:00  B2       PH_1         512      -4.9       False    B2 — M30 shrink + 1 SQZ
+04.09 08:00  B2       PH_3B_INTO   512      -17.0      False    B2 early — M30 shrink
+04.09 12:00  B3       PH_3B_INTO   512      -13.7      False    B3 — H1 shrink
+04.09 16:00  B3       PH_3B_OUT    512      -2.8       False    B3 — H1-SQZ onset
+04.09 20:00  A2       PH_2         512      +13.3      False    A2 — H4 fly, D1 not aligned
+04.10 04:00  B3       PH_3B_INTO   512      -15.4      False    B3 — H1 shrink + 1 SQZ
+04.10 08:00  B3       PH_3B_INTO   512      -19.2      False    B3 — H1 shrink
+04.10 12:00  E4       PH_3B_INTO   513      -39.4      False    E4 — HTF compressing
+04.10 13:00  E4       PH_3B_INTO   513      -39.4      False    E4 — HTF compressing ***CLOSE BUY P&L:75.54
+04.10 16:00  E4       PH_3B_INTO   513      -30.7      False    E4 — HTF compressing
+04.10 20:00  E4       PH_3B_INTO   513      -36.8      False    E4 — HTF compressing
+04.13 04:00  G3       PH_4         423      -6.2       True     G3 — H4 SQZ waiting
+04.13 08:00  G3       PH_4         423      -1.0       True     G3 — H4 SQZ waiting
+04.13 12:00  G3       PH_4         423      -16.2      True     G3 — H4 SQZ waiting
+04.13 16:00  G3       PH_4         423      -32.9      True     G3 — H4 SQZ waiting
+04.13 20:00  G3       PH_4         423      -16.0      True     G3 — H4 SQZ waiting
+04.14 04:00  A2       PH_2         521      +6.4       False    default — conservative
+04.14 08:00  A2       PH_2         512      +1.9       False    A2 — SQZ without LTF shrink
+04.14 12:00  A2       PH_1         512      +5.6       False    A2 — H4 fly, D1 not aligned
+04.14 16:00  B3       PH_1         512      -3.2       False    B3 — H1 shrink + 1 SQZ
+04.14 20:00  A2       PH_2         512      +22.6      False    A2 — H4 fly, D1 not aligned
+04.15 04:00  B2       PH_2         511      +28.1      False    B2 early — M30 shrink
+04.15 08:00  A2       PH_1         511      +18.4      False    A2 — H4 fly, D1 not aligned
+04.15 12:00  B3       PH_1         511      +12.7      False    B3 — H1 shrink
+04.15 16:00  B3       PH_1         512      +7.0       False    B3 — H1-SQZ onset
+04.15 20:00  E2       PH_1         512      +4.4       False    E2 — H1-SQZ established, M15+M30 SQZ
+04.16 04:00  A1       PH_1         512      +13.1      False    A1 — H4+D1 fly aligned
+04.16 07:45  B3       PH_1         512      +13.1      False    B3 — H1 shrink ***OPEN BUY
+04.16 08:00  E4       PH_3B_INTO   512      -39.5      False    E4 — HTF compressing
+04.16 12:00  E4       PH_3B_INTO   513      -26.6      False    E4 — HTF compressing
+04.16 14:30  E4       PH_3B_INTO   513      -26.6      False    E4 — HTF compressing ***CLOSE BUY P&L:-14.11
+04.16 16:00  E4       PH_3B_INTO   513      -19.4      False    E4 — HTF compressing
+04.16 17:00  E4       PH_3B_INTO   513      -19.4      False    E4 — HTF compressing ***OPEN SELL
+04.16 20:00  E4       PH_3B_INTO   513      -38.4      False    E4 — HTF compressing
+04.17 04:00  E4       PH_3B_INTO   513      -35.6      False    E4 — HTF compressing
+04.17 08:00  E4       PH_3B_INTO   513      -18.6      False    E4 — HTF compressing ***CLOSE SELL P&L:-8.97
+04.17 08:00  E4       PH_3B_INTO   513      -18.6      False    E4 — HTF compressing ***OPEN BUY
+04.17 08:00  E4       PH_3B_INTO   513      -18.6      False    E4 — HTF compressing
+04.17 11:00  E4       PH_3B_INTO   513      -18.6      False    E4 — HTF compressing ***CLOSE BUY P&L:-18.58
+04.17 11:00  E4       PH_3B_INTO   513      -18.6      False    E4 — HTF compressing ***OPEN SELL
+04.17 12:00  E4       PH_3B_INTO   513      -12.2      False    E4 — HTF compressing
+04.17 14:00  E4       PH_3B_INTO   513      -12.2      False    E4 — HTF compressing ***CLOSE SELL P&L:-4.38
+04.17 16:00  E4       PH_2         513      +5.2       False    E4 — HTF compressing
+04.17 20:00  E4       PH_2         513      +10.7      False    E4 — HTF compressing
+04.20 04:00  E4       PH_1         513      +11.7      False    E4 — HTF compressing
+04.20 08:00  E4       PH_1         513      -3.2       False    E4 — HTF compressing
+04.20 12:00  E4       PH_3B_INTO   523      -10.9      False    E4 — HTF compressing
+04.20 16:00  E4       PH_3A        523      -1.0       False    E4 — HTF compressing
+04.20 20:00  G3       PH_4         423      -0.1       True     G3 — H4 SQZ waiting
+04.21 04:00  G3       PH_4         423      +1.1       True     G3 — H4 SQZ waiting
+04.21 08:00  G3       PH_4         423      +3.1       True     G3 — H4 SQZ waiting
+04.21 12:00  G3       PH_4         423      +1.0       True     G3 — H4 SQZ waiting
+04.21 16:00  G3       PH_4         423      +2.7       True     G3 — H4 SQZ waiting
+04.21 20:00  A2       PH_1         521      +55.6      False    A2 — H4 fly, D1 not aligned
+04.22 04:00  B2       PH_1         521      +15.1      False    B2 early — M30 shrink
+04.22 08:00  B3       PH_1         521      +6.6       False    B3 — H1 shrink
+04.22 12:00  B3       PH_1         522      +5.2       False    B3 — H1 shrink
+04.22 16:00  B3       PH_1         522      +8.6       False    B3 — H1-SQZ onset
+04.22 20:00  E1       PH_1         522      +9.6       False    E1 — H1-SQZ established
+04.23 04:00  E4       PH_3B_INTO   522      -33.1      False    E4 — HTF compressing
+04.23 08:00  A2       PH_2         522      +22.4      False    A2 — H4 fly, D1 not aligned
+04.23 12:00  A2       PH_2         522      +14.4      False    A2 — H4 fly, D1 not aligned
+04.23 16:00  A2       PH_1         522      -3.9       False    A2 — H4 fly, D1 not aligned
+04.23 20:00  B3       PH_3B_INTO   522      -9.5       False    B3 — H1 shrink + 1 SQZ
+04.24 04:00  B2       PH_3B_INTO   522      -18.6      False    B2 — M30 shrink + 1 SQZ
+04.24 04:15  B2       PH_3B_INTO   522      -18.6      False    B2 early — M30 shrink ***OPEN SELL
+04.24 08:00  E4       PH_3B_INTO   522      -23.5      False    E4 — HTF compressing
+04.24 11:00  E4       PH_3B_INTO   522      -23.5      False    E4 — HTF compressing ***CLOSE SELL P&L:14.77
+04.24 12:00  E4       PH_3B_INTO   522      -28.6      False    E4 — HTF compressing
+04.24 16:00  E4       PH_3B_INTO   523      -21.6      False    E4 — HTF compressing
+04.24 20:00  E4       PH_3B_INTO   523      -29.1      False    E4 — HTF compressing
+04.27 04:00  E4       PH_3A        523      -0.6       False    E4 — HTF compressing
+04.27 08:00  E4       PH_3A        523      -1.2       False    E4 — HTF compressing
+04.27 12:00  E4       PH_3B_INTO   523      -10.1      False    E4 — HTF compressing
+04.27 16:00  E4       PH_3B_INTO   523      -22.3      False    E4 — HTF compressing
+04.27 20:00  E4       PH_3B_INTO   523      -8.5       False    E4 — HTF compressing
+04.28 04:00  E4       PH_3B_INTO   523      -14.2      False    E4 — HTF compressing
+04.28 08:00  B3       PH_2         522      +7.5       False    B3 — H1-SQZ onset
+04.28 12:00  A2       PH_2         521      +35.0      False    A2 — H4 fly, D1 not aligned
+04.28 16:00  A2       PH_1         521      +56.1      False    A2 — H4 fly, D1 not aligned
+04.28 20:00  A2       PH_1         521      +37.6      False    A2 — H4 fly, D1 not aligned
+04.29 04:00  B3       PH_1         522      +19.2      False    B3 — H1 shrink + 1 SQZ
+04.29 08:00  B3       PH_1         522      +11.6      False    B3 — H1 shrink
+04.29 09:30  B3       PH_1         522      +11.6      False    B3 — H1 shrink + 1 SQZ ***OPEN SELL
+04.29 12:00  B3       PH_1         522      +27.9      False    B3 — H1-SQZ onset
+04.29 16:00  A2       PH_1         521      +40.3      False    A2 — H4 fly, D1 not aligned
+04.29 20:00  B2       PH_1         521      +25.7      False    B2 early — M30 shrink
+
+Full results written to C:\Users\Tofy5\Project\BB_MTF_M15_STRATEGY\references\fixtures\oos_results.json
+CSV written to C:\Users\Tofy5\Project\BB_MTF_M15_STRATEGY\references\fixtures\oos_results.csv

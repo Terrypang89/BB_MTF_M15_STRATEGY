@@ -1,0 +1,350 @@
+time,scenario,phase,info,cas_shrinkTF,cas_sqzCount,h4_stage,h4_diffBBW,h4_mid,h4_bbupdn,trade_event,h4_sqz,h4_fly,h4_shrink
+01.02 04:00,B3,PH_1,B3 — H1-SQZ onset,-1,1,0,0,0,0,,False,False,False
+01.02 08:00,E4,PH_1,E4 — HTF compressing,-1,0,0,-79.94,2,2,,False,False,False
+01.02 12:00,E4,PH_3B_INTO,E4 — HTF compressing,-1,0,0,-101.01,2,2,,False,False,False
+01.02 16:00,E4,PH_3B_INTO,E4 — HTF compressing,-1,1,0,-92.98,2,2,,False,False,False
+01.02 20:00,E4,PH_3B_INTO,E4 — HTF compressing,3,0,0,-61.12,2,2,,False,False,False
+01.05 04:00,G3,PH_4,G3 — H4 SQZ waiting,-1,0,423,19.89,3,1,,True,False,False
+01.05 08:00,A2,PH_2,A2 — SQZ without LTF shrink,-1,1,511,25.07,1,1,,False,True,False
+01.05 12:00,A2,PH_1,"A2 — H4 fly, D1 not aligned",2,0,511,40.05,1,1,,False,True,False
+01.05 16:00,A2,PH_1,"A2 — mid-TF SQZ, M15+M5 flying, D1 not aligned",-1,1,511,20.44,1,1,,False,True,False
+01.05 20:00,A2,PH_1,"A2 — H4 fly, D1 not aligned",3,0,511,33.63,1,1,,False,True,False
+01.05 23:00,B3,PH_1,B3 — H1 shrink + 1 SQZ,3,1,511,33.63,1,1,OPEN BUY,False,True,False
+01.06 04:00,B3,PH_1,B3 — H1 shrink + 1 SQZ,3,1,511,29.36,1,1,,False,True,False
+01.06 08:00,B1,PH_1,B1 — M15 shrink,1,0,511,21.54,1,0,,False,True,False
+01.06 12:00,B3,PH_1,B3 — H1 shrink,3,0,511,0.18,1,0,,False,True,False
+01.06 16:00,B3,PH_3B_INTO,B3 — H1-SQZ onset,-1,2,512,-7.27,1,3,,False,True,False
+01.06 20:00,A2,PH_2,"A2 — H4 fly, D1 not aligned",-1,0,512,9.74,1,3,,False,True,False
+01.07 04:00,E4,PH_6,E4 — HTF compressing,5,1,512,-31.22,1,3,,False,True,False
+01.07 08:00,E4,PH_3B_INTO,E4 — HTF compressing,5,0,512,-26.69,1,0,,False,True,False
+01.07 12:00,B2,PH_3B_INTO,B2 — M30 shrink + 1 SQZ,5,1,512,-13.98,1,3,,False,True,False
+01.07 16:00,A2,PH_3B_INTO,A2 — SQZ without LTF shrink,5,1,512,-8.44,1,3,,False,True,False
+01.07 20:00,B3,PH_3B_INTO,B3 — H1 shrink + 1 SQZ,5,1,512,-12.36,1,3,,False,True,False
+01.08 01:30,E4,PH_3B_INTO,E4 — HTF compressing,3,0,512,-48.1,1,0,CLOSE BUY P&L:16.88,False,True,False
+01.08 04:00,E4,PH_3B_INTO,E4 — HTF compressing,4,1,513,-107.86,1,2,,False,False,True
+01.08 08:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,513,-36.31,1,2,,False,False,True
+01.08 12:00,E4,PH_3B_INTO,E4 — HTF compressing,4,1,513,-23.1,5,2,,False,False,True
+01.08 16:00,G2,PH_4,G2 — H2 opposite D1,-1,1,423,0.77,3,0,,True,False,False
+01.08 20:00,G2,PH_4,G2 — H2 opposite D1,-1,0,423,-12.92,1,2,,True,False,False
+01.08 22:45,G2,PH_4,G2 — H2 opposite D1,3,0,423,-12.92,1,2,OPEN SELL,True,False,False
+01.09 04:00,G2,PH_4,G2 — H2 opposite D1,2,0,423,0.49,5,3,,True,False,False
+01.09 08:00,G2,PH_4,G2 — H2 opposite D1,2,1,423,-0.15,5,3,,True,False,False
+01.09 12:00,G2,PH_4,G2 — H2 opposite D1,3,1,423,2.34,3,0,,True,False,False
+01.09 15:00,G2,PH_4,G2 — H2 opposite D1,3,1,423,2.34,3,0,CLOSE BUY P&L:-6.26,True,False,False
+01.09 16:00,G2,PH_4,G2 — H2 opposite D1,-1,1,423,7.44,5,1,,True,False,False
+01.09 20:00,E1,PH_1,"E1 — H1-SQZ recovery, compression persists",1,0,511,6.33,5,1,,False,True,False
+01.12 04:00,F3,PH_1,F3 — HTF confirmed expansion,-1,0,511,67.75,1,1,,False,True,False
+01.12 08:00,A1,PH_1,A1 — H4+D1 fly aligned,1,0,511,63.24,1,1,,False,True,False
+01.12 12:00,A1,PH_1,A1 — H4+D1 fly aligned,2,0,511,55.6,1,1,,False,True,False
+01.12 16:00,A1,PH_1,A1 — H4+D1 fly aligned,-1,0,511,63.77,1,1,,False,True,False
+01.12 20:00,A1,PH_1,A1 — H4+D1 fly aligned,3,0,511,45.66,1,1,,False,True,False
+01.13 04:00,B3,PH_1,B3 — H1 shrink,3,0,512,5.8100000000000005,1,3,,False,True,False
+01.13 08:00,B3,PH_1,B3 — H1-SQZ onset,2,1,512,6.73,1,3,,False,True,False
+01.13 12:00,E2,PH_3B_INTO,E2 — M15+M30 both SQZ,-1,2,512,-13.52,1,3,,False,True,False
+01.13 16:00,B3,PH_3B_INTO,B3 — H1 shrink,3,0,512,-14.88,1,3,,False,True,False
+01.13 20:00,E4,PH_3B_INTO,E4 — HTF compressing,-1,1,512,-40.83,1,0,,False,True,False
+01.14 04:00,A2,PH_3B_INTO,A2 — SQZ without LTF shrink,-1,1,512,-19.17,1,3,,False,True,False
+01.14 08:00,E4,PH_3B_INTO,E4 — HTF compressing,1,0,512,-24.41,1,3,,False,True,False
+01.14 12:00,E4,PH_3B_INTO,E4 — HTF compressing,2,1,512,-32.96,1,3,,False,True,False
+01.14 16:00,E4,PH_3B_INTO,E4 — HTF compressing,2,1,512,-42.07,1,0,,False,True,False
+01.14 20:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,513,-65.6,1,2,,False,False,True
+01.15 04:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,513,-92.86,1,2,,False,False,True
+01.15 08:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,513,-24.99,5,2,,False,False,True
+01.15 12:00,E4,PH_3B_INTO,E4 — HTF compressing,4,1,513,-13.21,5,2,,False,False,True
+01.15 16:00,G2,PH_4,G2 — H2 opposite D1,-1,0,423,-2.43,3,2,,True,False,False
+01.15 20:00,G2,PH_4,G2 — H2 opposite D1,3,1,423,0.55,3,0,,True,False,False
+01.16 04:00,G2,PH_4,G2 — H2 opposite D1,-1,2,423,0.55,3,4,,True,False,False
+01.16 08:00,G2,PH_4,G2 — H2 opposite D1,2,0,423,-3.58,3,0,,True,False,False
+01.16 12:00,G2,PH_4,G2 — H2 opposite D1,3,2,423,-4.79,3,2,,True,False,False
+01.16 16:00,G2,PH_4,G2 — H2 opposite D1,-1,1,423,-8.8,3,2,,True,False,False
+01.16 20:00,G2,PH_4,G2 — H2 opposite D1,-1,0,423,9.91,3,1,,True,False,False
+01.19 04:00,F1,PH_2,F1 — LTF expansion,-1,0,511,17.89,1,1,,False,True,False
+01.19 08:00,A2,PH_1,A2 — SQZ without LTF shrink,-1,1,511,28.87,1,1,,False,True,False
+01.19 08:45,B2,PH_1,B2 early — M30 shrink,2,0,511,28.87,1,1,OPEN SELL,False,True,False
+01.19 12:00,B2,PH_1,B2 — M30 shrink + 1 SQZ,1,1,511,21.63,1,1,,False,True,False
+01.19 16:00,B3,PH_1,B3 — H1 shrink + 1 SQZ,3,1,511,16.49,5,1,,False,True,False
+01.19 20:00,B3,PH_1,B3 — H1 shrink + 1 SQZ,3,1,511,20.75,1,1,,False,True,False
+01.20 01:15,B3,PH_1,B3 — H1-SQZ onset,1,1,511,15.28,1,1,CLOSE BUY P&L:-1.6099999999999999,False,True,False
+01.20 04:00,B3,PH_1,B3 — H1-SQZ onset,-1,1,511,12.25,1,1,,False,True,False
+01.20 08:00,A1,PH_1,A1 — H4+D1 fly aligned,-1,0,511,37.2,1,1,,False,True,False
+01.20 12:00,A1,PH_1,A1 — H4+D1 fly aligned,-1,0,511,37.55,1,1,,False,True,False
+01.20 16:00,B2,PH_1,B2 — M30 shrink + 1 SQZ,2,1,511,32.35,1,1,,False,True,False
+01.20 16:15,A1,PH_1,A1 — H4+D1 fly aligned,2,0,511,32.35,1,1,OPEN BUY,False,True,False
+01.20 20:00,A1,PH_1,A1 — H4+D1 fly aligned,-1,0,511,38.46,1,1,,False,True,False
+01.21 04:00,A1,PH_1,A1 — H4+D1 fly aligned,-1,0,511,76.53,1,1,,False,True,False
+01.21 08:00,A1,PH_1,A1 — H4+D1 fly aligned,1,0,511,80.13,1,1,,False,True,False
+01.21 12:00,B2,PH_1,B2 — M30 shrink + 1 SQZ,2,1,511,46.18,1,0,,False,True,False
+01.21 16:00,A1,PH_1,A1 — H4+D1 fly aligned,2,0,512,40.5,1,3,,False,True,False
+01.21 20:00,B3,PH_3B_INTO,B3 — H1 shrink,3,0,512,-10.29,1,3,,False,True,False
+01.22 04:00,E4,PH_3B_INTO,E4 — HTF compressing,1,0,512,-56.19,1,0,,False,True,False
+01.22 08:00,B2,PH_3B_INTO,B2 early — M30 shrink,2,0,512,-13.77,1,0,,False,True,False
+01.22 12:00,B3,PH_3B_INTO,B3 — H1 shrink,3,0,512,-15.67,1,3,,False,True,False
+01.22 16:00,B3,PH_3B_INTO,B3 — H1-SQZ onset,2,1,512,-19.93,1,3,,False,True,False
+01.22 20:00,A1,PH_2,A1 — H4+D1 fly aligned,-1,0,512,8.08,1,3,,False,True,False
+01.23 04:00,A1,PH_2,A1 — H4+D1 fly aligned,-1,0,512,8.89,1,3,,False,True,False
+01.23 08:00,A1,PH_3B_INTO,A1 — H4+D1 fly aligned,-1,0,512,-12.12,1,3,,False,True,False
+01.23 12:00,E4,PH_3B_INTO,E4 — HTF compressing,3,0,512,-37.48,1,3,,False,True,False
+01.23 16:00,B3,PH_3B_INTO,B3 — H1 shrink + 1 SQZ,3,1,512,-19.13,1,3,,False,True,False
+01.23 20:00,A2,PH_3B_INTO,default — conservative,-1,0,512,-15.77,1,3,,False,True,False
+01.26 04:00,A1,PH_2,A1 — H4+D1 fly aligned,-1,0,512,45.46,1,3,,False,True,False
+01.26 08:00,A1,PH_2,A1 — H4+D1 fly aligned,1,0,512,48.42,1,3,,False,True,False
+01.26 12:00,A1,PH_1,A1 — H4+D1 fly aligned,2,0,511,54.52,1,1,,False,True,False
+01.26 16:00,B3,PH_1,B3 — H1 shrink + 1 SQZ,3,1,511,34.14,1,0,,False,True,False
+01.26 20:00,A1,PH_1,A1 — H4+D1 fly aligned,3,0,512,43.36,1,3,,False,True,False
+01.27 04:00,E4,PH_3B_INTO,E4 — HTF compressing,2,0,512,-26.18,1,3,,False,True,False
+01.27 08:00,E4,PH_3B_INTO,E4 — HTF compressing,3,1,512,-33.45,1,3,,False,True,False
+01.27 12:00,E4,PH_3B_INTO,E4 — HTF compressing,-1,0,512,-49.84,1,3,,False,True,False
+01.27 16:00,E4,PH_3B_INTO,E4 — HTF compressing,3,2,512,-56.07,1,0,,False,True,False
+01.27 18:00,E4,PH_3B_INTO,E4 — HTF compressing,3,0,512,-56.07,1,0,CLOSE BUY P&L:351.03,False,True,False
+01.27 20:00,E4,PH_3B_INTO,E4 — HTF compressing,4,1,513,-80.24,1,2,,False,False,True
+01.28 04:00,B1,PH_2,B1 — M15 shrink,1,0,512,28.17,1,3,,False,True,False
+01.28 08:00,A1,PH_2,A1 — H4+D1 fly aligned,-1,0,512,64.72,1,0,,False,True,False
+01.28 12:00,A1,PH_1,A1 — H4+D1 fly aligned,1,0,512,51.13,1,0,,False,True,False
+01.28 16:00,B2,PH_1,B2 early — M30 shrink,2,0,512,8.18,1,3,,False,True,False
+01.28 20:00,B3,PH_1,B3 — H1 shrink,3,0,512,4.41,1,3,,False,True,False
+01.29 04:00,F3,PH_1,F3 — HTF confirmed expansion,-1,0,511,150.73,1,1,,False,True,False
+01.29 08:00,A2,PH_1,A2 — SQZ without LTF shrink,-1,1,511,139.32,1,1,,False,True,False
+01.29 12:00,A1,PH_1,"A1 — mid-TF SQZ, M15+M5 flying, D1 aligned",-1,1,511,76.76,1,0,,False,True,False
+01.29 16:00,B3,PH_1,B3 — H1 shrink + 1 SQZ,3,1,512,54.98,1,3,,False,True,False
+01.29 20:00,E4,PH_3B_INTO,E4 — HTF compressing,-1,0,512,-24.1,1,3,,False,True,False
+01.30 04:00,E4,PH_3B_INTO,E4 — HTF compressing,1,1,512,-59.79,1,0,,False,True,False
+01.30 08:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,513,-55.86,1,2,,False,False,True
+01.30 09:45,E4,PH_3B_INTO,E4 — HTF compressing,4,0,513,-55.86,1,2,OPEN SELL,False,False,True
+01.30 12:00,G2,PH_4,G2 — H2 opposite D1,-1,0,403,30.87,3,0,,True,False,False
+01.30 16:00,G2,PH_4,G2 — H2 opposite D1,-1,0,422,36.24,2,0,,True,False,False
+01.30 20:00,A2,PH_1,"A2 — H4 fly, D1 not aligned",-1,0,521,150.89,2,1,,False,True,False
+02.02 04:00,A2,PH_1,"A2 — H4 fly, D1 not aligned",5,0,521,199.27,2,1,,False,True,False
+02.02 08:00,A2,PH_1,"A2 — H4 fly, D1 not aligned",5,0,521,307.01,2,1,,False,True,False
+02.02 12:00,A2,PH_1,"A2 — H4 fly, D1 not aligned",5,0,521,140.56,2,1,,False,True,False
+02.02 16:00,A2,PH_1,"A2 — H4 fly, D1 not aligned",5,0,521,118.78,2,0,,False,True,False
+02.02 20:00,A2,PH_1,"A2 — H4 fly, D1 not aligned",5,0,522,115.86,2,4,,False,True,False
+02.03 04:00,B3,PH_3B_INTO,B3 — H1 shrink,5,0,522,-7.33,2,4,,False,True,False
+02.03 08:00,E4,PH_3B_INTO,E4 — HTF compressing,5,0,522,-99.0,2,4,,False,True,False
+02.03 12:00,E4,PH_3B_INTO,E4 — HTF compressing,5,0,523,-167.58,2,2,,False,False,True
+02.03 16:00,E4,PH_3B_INTO,E4 — HTF compressing,5,0,523,-214.85,2,2,,False,False,True
+02.03 20:00,E4,PH_3B_INTO,E4 — HTF compressing,5,0,523,-247.17,2,2,,False,False,True
+02.03 22:45,E4,PH_3B_INTO,E4 — HTF compressing,5,0,523,-247.17,2,2,CLOSE SELL P&L:194.4,False,False,True
+02.03 22:45,E4,PH_3B_INTO,E4 — HTF compressing,5,0,523,-247.17,2,2,OPEN BUY,False,False,True
+02.04 04:00,E4,PH_3B_INTO,E4 — HTF compressing,4,1,523,-177.25,2,2,,False,False,True
+02.04 08:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,523,-216.57,2,2,,False,False,True
+02.04 12:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,523,-99.14,2,2,,False,False,True
+02.04 16:00,E4,PH_3A,E4 — HTF compressing,4,0,523,-9.19,3,2,,False,False,True
+02.04 20:00,E4,PH_3A,E4 — HTF compressing,4,1,523,-58.95,3,2,,False,False,True
+02.05 04:00,E4,PH_2,E4 — HTF compressing,4,0,523,10.73,1,0,,False,False,True
+02.05 08:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,513,-23.11,1,3,,False,False,True
+02.05 11:15,E4,PH_3B_INTO,E4 — HTF compressing,4,1,513,-23.11,1,3,CLOSE BUY P&L:-88.64,False,False,True
+02.05 11:15,E4,PH_3B_INTO,E4 — HTF compressing,4,1,513,-23.11,1,3,OPEN SELL,False,False,True
+02.05 12:00,E4,PH_3B_INTO,E4 — HTF compressing,4,1,513,-84.46,1,0,,False,False,True
+02.05 16:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,513,-164.97,1,2,,False,False,True
+02.05 20:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,513,-46.99,1,2,,False,False,True
+02.06 04:00,E4,PH_3B_INTO,E4 — HTF compressing,5,0,513,-78.65,1,2,,False,False,True
+02.06 08:00,E4,PH_3B_INTO,E4 — HTF compressing,5,2,513,-49.6,1,2,,False,False,True
+02.06 12:00,E4,PH_3B_INTO,E4 — HTF compressing,5,3,513,-28.37,1,2,,False,False,True
+02.06 16:00,E4,PH_1,E4 — HTF compressing,5,0,513,-2.4,1,0,,False,False,True
+02.06 20:00,A1,PH_2,A1 — H4+D1 fly aligned,5,0,512,4.33,1,3,,False,True,False
+02.09 04:00,B3,PH_2,B3 — H1-SQZ onset,5,1,512,8.01,1,0,,False,True,False
+02.09 08:00,E1,PH_1,E1 — H1-SQZ established,5,1,512,20.32,1,0,,False,True,False
+02.09 12:00,E4,PH_3A,E4 — HTF compressing,5,1,512,-27.58,3,0,,False,True,False
+02.09 16:00,E4,PH_3B_INTO,E4 — HTF compressing,5,2,523,-33.72,2,2,,False,False,True
+02.09 20:00,E4,PH_2,E4 — HTF compressing,5,1,523,4.11,3,0,,False,False,True
+02.10 04:00,F2,PH_5,F2 — MTF confirmed expansion,-1,1,511,22.19,1,1,,False,True,False
+02.10 08:00,B2,PH_1,B2 — M30 shrink + 1 SQZ,1,1,511,18.98,1,1,,False,True,False
+02.10 12:00,B3,PH_1,B3 — H1 shrink + 1 SQZ,3,1,511,13.12,1,0,,False,True,False
+02.10 14:45,B3,PH_1,B3 — H1-SQZ onset,-1,2,511,13.12,1,0,CLOSE SELL P&L:-166.45,False,True,False
+02.10 16:00,B3,PH_1,B3 — H1-SQZ onset,-1,1,512,14.5,1,3,,False,True,False
+02.10 20:00,E1,PH_3B_INTO,E1 — H1-SQZ established,2,1,512,-15.97,1,3,,False,True,False
+02.11 04:00,E4,PH_3B_INTO,E4 — HTF compressing,-1,1,512,-44.86,1,3,,False,True,False
+02.11 08:00,E4,PH_3B_INTO,E4 — HTF compressing,2,1,512,-176.08,1,0,,False,True,False
+02.11 12:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,513,-91.46,1,2,,False,False,True
+02.11 16:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,513,-83.02,1,2,,False,False,True
+02.11 20:00,E4,PH_3B_INTO,E4 — HTF compressing,4,2,513,-63.27,1,2,,False,False,True
+02.12 04:00,E4,PH_3B_INTO,E4 — HTF compressing,4,1,513,-52.23,1,2,,False,False,True
+02.12 08:00,E4,PH_1,E4 — HTF compressing,4,2,513,-4.51,1,0,,False,False,True
+02.12 12:00,E1,PH_3B_INTO,E1 — H1-SQZ established,-1,1,512,-10.54,1,3,,False,True,False
+02.12 16:00,E1,PH_1,E1 — H1-SQZ established,-1,1,512,-1.43,1,0,,False,True,False
+02.12 20:00,A2,PH_5,"A2 — H4 fly, D1 not aligned",-1,0,512,63.06,3,1,,False,True,False
+02.13 03:15,A2,PH_2,"A2 — H4 fly, D1 not aligned",5,0,521,66.39,2,1,OPEN SELL,False,True,False
+02.13 04:00,B2,PH_1,B2 early — M30 shrink,5,0,521,10.16,2,0,,False,True,False
+02.13 08:00,A2,PH_1,"A2 — H4 fly, D1 not aligned",5,0,521,31.93,2,0,,False,True,False
+02.13 12:00,B3,PH_1,B3 — H1 shrink,5,0,521,14.5,2,1,,False,True,False
+02.13 16:00,B3,PH_1,B3 — H1-SQZ onset,5,1,521,5.22,2,0,CLOSE SELL P&L:-21.11,False,True,False
+02.13 16:00,B3,PH_1,B3 — H1-SQZ onset,5,1,521,5.22,2,0,,False,True,False
+02.13 20:00,E1,PH_3A,E1 — H1-SQZ established,5,1,521,-0.88,3,4,,False,True,False
+02.16 04:00,E1,PH_2,"E1 — H1-SQZ recovery, compression persists",5,0,521,0.11,3,0,,False,True,False
+02.16 08:00,B3,PH_2,B3 — H1 shrink,5,0,522,2.5,2,4,,False,True,False
+02.16 12:00,E2,PH_1,E2 — M15+M30 both SQZ,5,2,522,-3.31,4,4,,False,True,False
+02.16 16:00,B3,PH_3B_INTO,B3 — H1-SQZ onset,5,2,522,-6.02,2,4,,False,True,False
+02.16 20:00,E1,PH_3B_INTO,E1 — H1-SQZ established,5,1,522,-11.92,2,4,,False,True,False
+02.17 04:00,A2,PH_3B_INTO,default — conservative,5,0,522,-19.45,2,4,,False,True,False
+02.17 08:00,A2,PH_2,"A2 — H4 fly, D1 not aligned",5,0,522,19.23,2,4,,False,True,False
+02.17 12:00,B2,PH_3B_INTO,B2 early — M30 shrink,5,0,522,-12.25,2,4,,False,True,False
+02.17 16:00,A2,PH_6,"A2 — H4 fly, D1 not aligned",5,0,522,14.06,2,4,,False,True,False
+02.17 20:00,B1,PH_2,B1 — M15 shrink,5,0,522,1.28,2,4,,False,True,False
+02.18 04:00,B3,PH_1,B3 — H1 shrink + 1 SQZ,5,1,521,15.59,2,1,,False,True,False
+02.18 08:00,A2,PH_1,"A2 — H4 fly, D1 not aligned",5,0,521,0.63,3,0,,False,True,False
+02.18 12:00,B2,PH_1,B2 early — M30 shrink,5,0,521,4.65,3,4,,False,True,False
+02.18 16:00,A2,PH_3A,"A2 — H4 fly, D1 not aligned",5,0,521,-0.78,3,4,,False,True,False
+02.18 20:00,B1,PH_2,B1 — M15 shrink,5,0,521,7.14,4,0,,False,True,False
+02.19 04:00,E4,PH_6,E4 — HTF compressing,5,1,523,-23.71,2,2,,False,False,True
+02.19 08:00,E4,PH_3B_INTO,E4 — HTF compressing,5,1,523,-15.33,4,2,,False,False,True
+02.19 12:00,E4,PH_3A,E4 — HTF compressing,5,0,523,-1.03,3,2,,False,False,True
+02.19 16:00,G3,PH_4,G3 — H4 SQZ waiting,5,1,423,-1.83,3,2,,True,False,False
+02.19 20:00,G3,PH_4,G3 — H4 SQZ waiting,5,0,423,-7.59,3,2,,True,False,False
+02.19 23:15,G3,PH_4,G3 — H4 SQZ waiting,5,1,423,-7.59,3,2,OPEN BUY,True,False,False
+02.20 02:00,G2,PH_4,G2 — H2 opposite D1,3,1,423,5.18,3,0,CLOSE BUY P&L:-13.44,True,False,False
+02.20 03:15,G2,PH_4,G2 — H2 opposite D1,3,0,423,5.18,3,0,OPEN BUY,True,False,False
+02.20 04:00,G2,PH_4,G2 — H2 opposite D1,1,0,423,1.85,3,1,,True,False,False
+02.20 05:00,G2,PH_4,G2 — H2 opposite D1,-1,1,423,1.85,3,1,CLOSE BUY P&L:-17.09,True,False,False
+02.20 08:00,G2,PH_4,G2 — H2 opposite D1,-1,1,423,15.69,1,1,,True,False,False
+02.20 12:00,A1,PH_1,A1 — H4+D1 fly aligned,-1,0,511,14.18,1,0,,False,True,False
+02.20 16:00,A1,PH_1,A1 — H4+D1 fly aligned,-1,0,512,14.87,1,3,,False,True,False
+02.20 20:00,A1,PH_1,A1 — H4+D1 fly aligned,-1,0,512,26.27,1,3,,False,True,False
+02.23 04:00,A1,PH_1,A1 — H4+D1 fly aligned,-1,0,512,47.31,1,3,,False,True,False
+02.23 08:00,B2,PH_1,B2 early — M30 shrink,2,0,512,11.76,1,3,,False,True,False
+02.23 12:00,B2,PH_1,B2 early — M30 shrink,2,0,512,14.44,1,3,,False,True,False
+02.23 16:00,B3,PH_1,B3 — H1 shrink + 1 SQZ,3,1,512,5.47,1,3,,False,True,False
+02.23 20:00,A1,PH_1,A1 — H4+D1 fly aligned,-1,0,512,36.82,1,3,,False,True,False
+02.24 04:00,A1,PH_1,A1 — H4+D1 fly aligned,-1,0,512,11.03,1,3,,False,True,False
+02.24 08:00,B3,PH_1,B3 — H1 shrink,3,0,512,-1.17,1,3,,False,True,False
+02.24 12:00,B3,PH_3B_INTO,B3 — H1 shrink + 1 SQZ,3,1,512,-11.07,1,3,,False,True,False
+02.24 16:00,A2,PH_3B_INTO,default — conservative,-1,0,512,-17.92,1,3,,False,True,False
+02.24 20:00,E4,PH_3B_INTO,E4 — HTF compressing,2,0,512,-25.81,1,3,,False,True,False
+02.25 04:00,E4,PH_3B_INTO,E4 — HTF compressing,-1,0,512,-37.96,1,0,,False,True,False
+02.25 08:00,E4,PH_3B_INTO,E4 — HTF compressing,1,0,512,-34.36,1,3,,False,True,False
+02.25 12:00,E4,PH_3B_INTO,E4 — HTF compressing,4,1,513,-56.23,1,2,,False,False,True
+02.25 12:15,E4,PH_3B_INTO,E4 — HTF compressing,4,0,513,-56.23,1,2,OPEN SELL,False,False,True
+02.25 16:00,E4,PH_3B_INTO,E4 — HTF compressing,4,1,513,-50.7,1,2,,False,False,True
+02.25 20:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,513,-57.89,1,2,,False,False,True
+02.26 04:00,E4,PH_3B_INTO,E4 — HTF compressing,5,0,513,-52.69,1,2,CLOSE BUY P&L:6.73,False,False,True
+02.26 04:00,E4,PH_3B_INTO,E4 — HTF compressing,5,0,513,-52.69,1,2,,False,False,True
+02.26 08:00,E4,PH_3B_INTO,E4 — HTF compressing,5,0,513,-6.2,1,0,,False,False,True
+02.26 12:00,E4,PH_2,E4 — HTF compressing,5,0,513,0.73,5,0,,False,False,True
+02.26 15:30,E4,PH_2,E4 — HTF compressing,5,1,513,0.73,5,0,OPEN SELL,False,False,True
+02.26 16:00,E4,PH_3B_INTO,E4 — HTF compressing,5,1,513,-9.33,5,0,,False,False,True
+02.26 20:00,E4,PH_3A,E4 — HTF compressing,5,1,513,-3.56,3,2,,False,False,True
+02.26 20:30,E4,PH_3A,E4 — HTF compressing,5,1,513,-3.56,3,2,CLOSE SELL P&L:-1.9300000000000002,False,False,True
+02.27 02:45,E4,PH_2,E4 — HTF compressing,5,1,513,0.97,3,3,OPEN BUY,False,False,True
+02.27 04:00,E4,PH_3B_INTO,E4 — HTF compressing,5,0,513,-17.11,5,0,,False,False,True
+02.27 05:15,E4,PH_3B_INTO,E4 — HTF compressing,5,1,513,-17.11,5,0,CLOSE BUY P&L:7.22,False,False,True
+02.27 08:00,E4,PH_2,E4 — HTF compressing,5,0,513,0.3,3,0,,False,False,True
+02.27 12:00,G3,PH_3A,G3 — H4 SQZ waiting,5,0,513,-0.02,3,0,,False,False,True
+02.27 16:00,B3,PH_5,B3 — H1-SQZ onset,5,1,511,22.32,1,1,,False,True,False
+02.27 20:00,E1,PH_2,"E1 — H1-SQZ recovery, compression persists",5,0,511,14.34,1,0,,False,True,False
+04.01 04:00,A2,PH_1,"A2 — H4 fly, D1 not aligned",-1,0,511,37.85,1,0,,False,True,False
+04.01 08:00,B2,PH_3B_INTO,B2 early — M30 shrink,2,0,512,-6.06,1,3,,False,True,False
+04.01 12:00,A2,PH_2,"A2 — H4 fly, D1 not aligned",-1,0,512,21.97,1,3,,False,True,False
+04.01 16:00,B3,PH_2,B3 — H1 shrink,3,0,512,19.48,1,3,,False,True,False
+04.01 20:00,A2,PH_1,"A2 — H4 fly, D1 not aligned",-1,0,512,25.69,1,3,,False,True,False
+04.02 04:00,A2,PH_1,"A2 — mid-TF SQZ, M15+M5 flying, D1 not aligned",5,1,512,30.89,1,3,,False,True,False
+04.02 08:00,E4,PH_3B_INTO,E4 — HTF compressing,5,0,512,-53.09,1,0,,False,True,False
+04.02 12:00,E4,PH_3B_INTO,E4 — HTF compressing,5,0,513,-59.96,1,2,,False,False,True
+04.02 15:15,E4,PH_3B_INTO,E4 — HTF compressing,5,0,513,-59.96,1,2,CLOSE BUY P&L:67.25,False,False,True
+04.02 15:15,E4,PH_3B_INTO,E4 — HTF compressing,5,0,513,-59.96,1,2,OPEN SELL,False,False,True
+04.02 16:00,E4,PH_3B_INTO,E4 — HTF compressing,5,0,513,-29.68,1,2,,False,False,True
+04.02 20:00,E4,PH_3B_INTO,E4 — HTF compressing,5,0,513,-22.3,1,0,,False,False,True
+04.06 04:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,513,-51.25,1,2,,False,False,True
+04.06 05:30,E4,PH_3B_INTO,E4 — HTF compressing,4,0,513,-51.25,1,2,CLOSE SELL P&L:-48.87,False,False,True
+04.06 06:30,E4,PH_3B_INTO,E4 — HTF compressing,4,1,513,-51.25,1,2,OPEN SELL,False,False,True
+04.06 08:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,513,-68.67,1,2,,False,False,True
+04.06 12:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,513,-27.72,1,2,,False,False,True
+04.06 16:00,E4,PH_3B_INTO,E4 — HTF compressing,4,1,513,-46.48,1,2,,False,False,True
+04.06 20:00,E4,PH_3B_INTO,E4 — HTF compressing,4,1,513,-54.01,1,2,,False,False,True
+04.07 04:00,E4,PH_2,E4 — HTF compressing,4,1,513,2.44,3,0,,False,False,True
+04.07 08:00,E4,PH_2,E4 — HTF compressing,4,0,513,1.52,4,0,,False,False,True
+04.07 12:00,E4,PH_3A,E4 — HTF compressing,4,1,513,-0.95,3,4,,False,False,True
+04.07 16:00,E4,PH_1,E4 — HTF compressing,4,2,513,-1.97,2,4,CLOSE SELL P&L:-22.68,False,False,True
+04.07 16:00,E4,PH_1,E4 — HTF compressing,4,2,513,-1.97,2,4,,False,False,True
+04.07 20:00,E4,PH_3B_INTO,E4 — HTF compressing,4,1,523,-17.6,2,0,,False,False,True
+04.07 21:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,523,-17.6,2,0,OPEN BUY,False,False,True
+04.08 04:00,A2,PH_5,default — conservative,5,0,521,51.38,4,1,,False,True,False
+04.08 08:00,A2,PH_2,A2 — SQZ without LTF shrink,5,1,511,24.31,5,1,,False,True,False
+04.08 12:00,B2,PH_1,B2 — M30 shrink + 1 SQZ,5,1,511,40.32,1,1,,False,True,False
+04.08 16:00,B3,PH_1,B3 — H1 shrink,5,0,511,25.79,1,0,,False,True,False
+04.08 20:00,B3,PH_3B_INTO,B3 — H1 shrink,5,0,512,-6.79,1,3,,False,True,False
+04.09 04:00,B2,PH_1,B2 — M30 shrink + 1 SQZ,5,1,512,-4.88,1,3,,False,True,False
+04.09 08:00,B2,PH_3B_INTO,B2 early — M30 shrink,5,0,512,-16.97,1,3,,False,True,False
+04.09 12:00,B3,PH_3B_INTO,B3 — H1 shrink,5,0,512,-13.67,1,3,,False,True,False
+04.09 16:00,B3,PH_3B_OUT,B3 — H1-SQZ onset,5,1,512,-2.75,1,3,,False,True,False
+04.09 20:00,A2,PH_2,"A2 — H4 fly, D1 not aligned",5,0,512,13.31,1,3,,False,True,False
+04.10 04:00,B3,PH_3B_INTO,B3 — H1 shrink + 1 SQZ,5,1,512,-15.38,1,3,,False,True,False
+04.10 08:00,B3,PH_3B_INTO,B3 — H1 shrink,5,0,512,-19.24,1,3,,False,True,False
+04.10 12:00,E4,PH_3B_INTO,E4 — HTF compressing,5,2,513,-39.42,1,2,,False,False,True
+04.10 13:00,E4,PH_3B_INTO,E4 — HTF compressing,5,2,513,-39.42,1,2,CLOSE BUY P&L:75.54,False,False,True
+04.10 16:00,E4,PH_3B_INTO,E4 — HTF compressing,5,1,513,-30.74,1,2,,False,False,True
+04.10 20:00,E4,PH_3B_INTO,E4 — HTF compressing,5,1,513,-36.76,1,2,,False,False,True
+04.13 04:00,G3,PH_4,G3 — H4 SQZ waiting,5,0,423,-6.15,3,2,,True,False,False
+04.13 08:00,G3,PH_4,G3 — H4 SQZ waiting,5,1,423,-0.97,3,0,,True,False,False
+04.13 12:00,G3,PH_4,G3 — H4 SQZ waiting,5,0,423,-16.24,2,4,,True,False,False
+04.13 16:00,G3,PH_4,G3 — H4 SQZ waiting,5,0,423,-32.88,2,0,,True,False,False
+04.13 20:00,G3,PH_4,G3 — H4 SQZ waiting,5,0,423,-16.0,2,2,,True,False,False
+04.14 04:00,A2,PH_2,default — conservative,5,0,521,6.37,4,0,,False,True,False
+04.14 08:00,A2,PH_2,A2 — SQZ without LTF shrink,5,1,512,1.87,1,3,,False,True,False
+04.14 12:00,A2,PH_1,"A2 — H4 fly, D1 not aligned",5,0,512,5.62,1,3,,False,True,False
+04.14 16:00,B3,PH_1,B3 — H1 shrink + 1 SQZ,5,1,512,-3.24,1,3,,False,True,False
+04.14 20:00,A2,PH_2,"A2 — H4 fly, D1 not aligned",5,0,512,22.6,1,0,,False,True,False
+04.15 04:00,B2,PH_2,B2 early — M30 shrink,5,0,511,28.11,1,1,,False,True,False
+04.15 08:00,A2,PH_1,"A2 — H4 fly, D1 not aligned",5,0,511,18.43,1,1,,False,True,False
+04.15 12:00,B3,PH_1,B3 — H1 shrink,5,0,511,12.67,1,1,,False,True,False
+04.15 16:00,B3,PH_1,B3 — H1-SQZ onset,5,1,512,6.99,1,3,,False,True,False
+04.15 20:00,E2,PH_1,"E2 — H1-SQZ established, M15+M30 SQZ",5,3,512,4.41,1,3,,False,True,False
+04.16 04:00,A1,PH_1,A1 — H4+D1 fly aligned,5,0,512,13.07,3,3,,False,True,False
+04.16 07:45,B3,PH_1,B3 — H1 shrink,5,0,512,13.07,3,3,OPEN BUY,False,True,False
+04.16 08:00,E4,PH_3B_INTO,E4 — HTF compressing,5,0,512,-39.54,1,0,,False,True,False
+04.16 12:00,E4,PH_3B_INTO,E4 — HTF compressing,5,1,513,-26.63,1,2,,False,False,True
+04.16 14:30,E4,PH_3B_INTO,E4 — HTF compressing,5,0,513,-26.63,1,2,CLOSE BUY P&L:-14.11,False,False,True
+04.16 16:00,E4,PH_3B_INTO,E4 — HTF compressing,5,1,513,-19.35,1,2,,False,False,True
+04.16 17:00,E4,PH_3B_INTO,E4 — HTF compressing,5,0,513,-19.35,1,2,OPEN SELL,False,False,True
+04.16 20:00,E4,PH_3B_INTO,E4 — HTF compressing,5,0,513,-38.35,1,2,,False,False,True
+04.17 04:00,E4,PH_3B_INTO,E4 — HTF compressing,4,1,513,-35.62,1,2,,False,False,True
+04.17 08:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,513,-18.55,1,2,CLOSE SELL P&L:-8.97,False,False,True
+04.17 08:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,513,-18.55,1,2,OPEN BUY,False,False,True
+04.17 08:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,513,-18.55,1,2,,False,False,True
+04.17 11:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,513,-18.55,1,2,CLOSE BUY P&L:-18.58,False,False,True
+04.17 11:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,513,-18.55,1,2,OPEN SELL,False,False,True
+04.17 12:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,513,-12.17,5,2,,False,False,True
+04.17 14:00,E4,PH_3B_INTO,E4 — HTF compressing,4,2,513,-12.17,5,2,CLOSE SELL P&L:-4.38,False,False,True
+04.17 16:00,E4,PH_2,E4 — HTF compressing,4,0,513,5.2,1,0,,False,False,True
+04.17 20:00,E4,PH_2,E4 — HTF compressing,4,0,513,10.66,1,0,,False,False,True
+04.20 04:00,E4,PH_1,E4 — HTF compressing,4,0,513,11.7,3,0,,False,False,True
+04.20 08:00,E4,PH_1,E4 — HTF compressing,4,1,513,-3.23,2,4,,False,False,True
+04.20 12:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,523,-10.91,2,0,,False,False,True
+04.20 16:00,E4,PH_3A,E4 — HTF compressing,4,0,523,-0.96,3,0,,False,False,True
+04.20 20:00,G3,PH_4,G3 — H4 SQZ waiting,3,1,423,-0.14,3,0,,True,False,False
+04.21 04:00,G3,PH_4,G3 — H4 SQZ waiting,-1,0,423,1.1400000000000001,5,3,,True,False,False
+04.21 08:00,G3,PH_4,G3 — H4 SQZ waiting,-1,1,423,3.09,5,0,,True,False,False
+04.21 12:00,G3,PH_4,G3 — H4 SQZ waiting,1,0,423,0.97,4,4,,True,False,False
+04.21 16:00,G3,PH_4,G3 — H4 SQZ waiting,2,0,423,2.7199999999999998,2,4,,True,False,False
+04.21 20:00,A2,PH_1,"A2 — H4 fly, D1 not aligned",-1,0,521,55.59,2,1,,False,True,False
+04.22 04:00,B2,PH_1,B2 early — M30 shrink,2,0,521,15.09,2,1,,False,True,False
+04.22 08:00,B3,PH_1,B3 — H1 shrink,3,0,521,6.61,4,0,,False,True,False
+04.22 12:00,B3,PH_1,B3 — H1 shrink,3,0,522,5.25,4,4,,False,True,False
+04.22 16:00,B3,PH_1,B3 — H1-SQZ onset,-1,1,522,8.57,2,4,,False,True,False
+04.22 20:00,E1,PH_1,E1 — H1-SQZ established,-1,1,522,9.59,2,4,,False,True,False
+04.23 04:00,E4,PH_3B_INTO,E4 — HTF compressing,2,0,522,-33.08,2,0,,False,True,False
+04.23 08:00,A2,PH_2,"A2 — H4 fly, D1 not aligned",-1,0,522,22.38,2,0,,False,True,False
+04.23 12:00,A2,PH_2,"A2 — H4 fly, D1 not aligned",-1,0,522,14.4,2,0,,False,True,False
+04.23 16:00,A2,PH_1,"A2 — H4 fly, D1 not aligned",-1,0,522,-3.93,2,4,,False,True,False
+04.23 20:00,B3,PH_3B_INTO,B3 — H1 shrink + 1 SQZ,3,1,522,-9.47,2,4,,False,True,False
+04.24 04:00,B2,PH_3B_INTO,B2 — M30 shrink + 1 SQZ,2,1,522,-18.6,2,4,,False,True,False
+04.24 04:15,B2,PH_3B_INTO,B2 early — M30 shrink,2,0,522,-18.6,2,4,OPEN SELL,False,True,False
+04.24 08:00,E4,PH_3B_INTO,E4 — HTF compressing,-1,0,522,-23.48,2,4,,False,True,False
+04.24 11:00,E4,PH_3B_INTO,E4 — HTF compressing,-1,0,522,-23.48,2,4,CLOSE SELL P&L:14.77,False,True,False
+04.24 12:00,E4,PH_3B_INTO,E4 — HTF compressing,-1,1,522,-28.57,2,0,,False,True,False
+04.24 16:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,523,-21.62,2,2,,False,False,True
+04.24 20:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,523,-29.08,2,2,,False,False,True
+04.27 04:00,E4,PH_3A,E4 — HTF compressing,4,0,523,-0.6,3,0,,False,False,True
+04.27 08:00,E4,PH_3A,E4 — HTF compressing,4,1,523,-1.17,3,0,,False,False,True
+04.27 12:00,E4,PH_3B_INTO,E4 — HTF compressing,4,2,523,-10.1,2,0,,False,False,True
+04.27 16:00,E4,PH_3B_INTO,E4 — HTF compressing,4,3,523,-22.31,2,2,,False,False,True
+04.27 20:00,E4,PH_3B_INTO,E4 — HTF compressing,4,0,523,-8.5,2,0,,False,False,True
+04.28 04:00,E4,PH_3B_INTO,E4 — HTF compressing,4,1,523,-14.17,2,2,,False,False,True
+04.28 08:00,B3,PH_2,B3 — H1-SQZ onset,-1,1,522,7.55,2,4,,False,True,False
+04.28 12:00,A2,PH_2,"A2 — H4 fly, D1 not aligned",-1,0,521,34.96,2,1,,False,True,False
+04.28 16:00,A2,PH_1,"A2 — H4 fly, D1 not aligned",-1,0,521,56.12,2,1,,False,True,False
+04.28 20:00,A2,PH_1,"A2 — H4 fly, D1 not aligned",1,0,521,37.61,2,1,,False,True,False
+04.29 04:00,B3,PH_1,B3 — H1 shrink + 1 SQZ,3,1,522,19.22,2,4,,False,True,False
+04.29 08:00,B3,PH_1,B3 — H1 shrink,3,0,522,11.61,2,0,,False,True,False
+04.29 09:30,B3,PH_1,B3 — H1 shrink + 1 SQZ,3,1,522,11.61,2,0,OPEN SELL,False,True,False
+04.29 12:00,B3,PH_1,B3 — H1-SQZ onset,-1,1,522,27.94,2,0,,False,True,False
+04.29 16:00,A2,PH_1,"A2 — H4 fly, D1 not aligned",-1,0,521,40.27,2,1,,False,True,False
+04.29 20:00,B2,PH_1,B2 early — M30 shrink,2,0,521,25.71,2,0,,False,True,False

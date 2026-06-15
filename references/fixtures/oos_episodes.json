@@ -1,0 +1,72 @@
+[
+  {
+    "episode": 1,
+    "onset_time": "2026.01.05 04:00",
+    "onset_stage": 423,
+    "sqz_bars": 1,
+    "resolution": "F",
+    "resolution_reason": "explosive expansion",
+    "resolution_time": "2026.01.05 16:00",
+    "resolution_stage": 511
+  },
+  {
+    "episode": 2,
+    "onset_time": "2026.01.08 16:00",
+    "onset_stage": 423,
+    "sqz_bars": 8,
+    "resolution": "F",
+    "resolution_reason": "fly with positive diffBBW",
+    "resolution_time": "2026.01.12 08:00",
+    "resolution_stage": 511
+  },
+  {
+    "episode": 3,
+    "onset_time": "2026.01.15 16:00",
+    "onset_stage": 423,
+    "sqz_bars": 7,
+    "resolution": "F",
+    "resolution_reason": "explosive expansion",
+    "resolution_time": "2026.01.19 08:45",
+    "resolution_stage": 511
+  },
+  {
+    "episode": 4,
+    "onset_time": "2026.01.30 12:00",
+    "onset_stage": 403,
+    "sqz_bars": 2,
+    "resolution": "F",
+    "resolution_reason": "explosive expansion",
+    "resolution_time": "2026.02.02 08:00",
+    "resolution_stage": 521
+  },
+  {
+    "episode": 5,
+    "onset_time": "2026.02.19 16:00",
+    "onset_stage": 423,
+    "sqz_bars": 8,
+    "resolution": "F",
+    "resolution_reason": "fly with positive diffBBW",
+    "resolution_time": "2026.02.20 20:00",
+    "resolution_stage": 512
+  },
+  {
+    "episode": 6,
+    "onset_time": "2026.04.13 04:00",
+    "onset_stage": 423,
+    "sqz_bars": 5,
+    "resolution": "F",
+    "resolution_reason": "fly with positive diffBBW",
+    "resolution_time": "2026.04.14 12:00",
+    "resolution_stage": 512
+  },
+  {
+    "episode": 7,
+    "onset_time": "2026.04.20 20:00",
+    "onset_stage": 423,
+    "sqz_bars": 5,
+    "resolution": "F",
+    "resolution_reason": "explosive expansion",
+    "resolution_time": "2026.04.22 08:00",
+    "resolution_stage": 521
+  }
+]
