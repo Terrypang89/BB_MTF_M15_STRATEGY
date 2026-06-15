@@ -310,6 +310,8 @@ def identify_scenario(tf_states, diffbbw_h4_history=None, prev_h1_sqz=False):
     else:
         h4_dir = 0
 
+    pivot_ss = 0  # 0=N/A 1=PIVOT-PENDING 2=G-REVERSAL (set by G-tier, 0 otherwise)
+
     # ── Early F-tier: H4 exiting compression (diffBBW recovering) ──
     # Fires before G/E4 because H4 may still be in SQZ/shrink stage
     # but bands are expanding — compression resolving to continuation
@@ -324,35 +326,36 @@ def identify_scenario(tf_states, diffbbw_h4_history=None, prev_h1_sqz=False):
                     recent3 = diffbbw_h4_history[-3:]
                     if all(v > 0 for v in recent3):
                         return ('F3', 'F3 — HTF confirmed expansion',
-                                cas_shrinkTF, cas_sqzCount)
+                                cas_shrinkTF, cas_sqzCount, pivot_ss)
                 if m30.get('bbupdn') == 1:
                     return ('F2', 'F2 — MTF confirmed expansion',
-                            cas_shrinkTF, cas_sqzCount)
-                return ('F1', 'F1 — LTF expansion', cas_shrinkTF, cas_sqzCount)
+                            cas_shrinkTF, cas_sqzCount, pivot_ss)
+                return ('F1', 'F1 — LTF expansion', cas_shrinkTF, cas_sqzCount, pivot_ss)
 
     # ── H4 SQZ → G-tier (Direction pivot) — before h4_shrink
     # because H4 in SQZ with diffBBW<-20 triggers both; G-tier wins ──
     if h4_sqz:
         m5_dbbw = tf_states.get('M5', {}).get('diffBBW', 0)
         m5_ud_break = (m5_dbbw > 0.3) if m5_dbbw is not None else False
+        pivot_ss = 2 if m5_ud_break else 1  # one-place computation — label reads this
         if not m5_ud_break:
             if d1_fly and d1_dir == 'bearish' and h4mid in (2, 4):
-                return ('G1', 'G1 — H1 bearish resolution', cas_shrinkTF, cas_sqzCount)
+                return ('G1', 'G1 — H1 bearish resolution', cas_shrinkTF, cas_sqzCount, pivot_ss)
             if d1_fly:
-                return ('G2', 'G2 — H2 opposite D1', cas_shrinkTF, cas_sqzCount)
-            return ('G3', 'G3 — H4 SQZ waiting', cas_shrinkTF, cas_sqzCount)
+                return ('G2', 'G2 — H2 opposite D1', cas_shrinkTF, cas_sqzCount, pivot_ss)
+            return ('G3', 'G3 — H4 SQZ waiting', cas_shrinkTF, cas_sqzCount, pivot_ss)
         m5mid = tf_states.get('M5', {}).get('mid', 0)
         if d1_fly:
             same_as_d1 = ((d1mid in (1, 5)) and (m5mid in (1, 5))) or \
                          ((d1mid in (2, 4)) and (m5mid in (2, 4)))
             if same_as_d1:
-                return ('G1', 'G1 — H1 same as D1', cas_shrinkTF, cas_sqzCount)
-            return ('G2', 'G2 — H2 opposite D1', cas_shrinkTF, cas_sqzCount)
-        return ('G3', 'G3 — H3 false breakout', cas_shrinkTF, cas_sqzCount)
+                return ('G1', 'G1 — H1 same as D1', cas_shrinkTF, cas_sqzCount, pivot_ss)
+            return ('G2', 'G2 — H2 opposite D1', cas_shrinkTF, cas_sqzCount, pivot_ss)
+        return ('G3', 'G3 — H3 false breakout', cas_shrinkTF, cas_sqzCount, pivot_ss)
 
     # ── H4 shrink → E4 (after G-tier, since SQZ takes priority) ──
     if h4_shrink:
-        return ('E4', 'E4 — HTF compressing', cas_shrinkTF, cas_sqzCount)
+        return ('E4', 'E4 — HTF compressing', cas_shrinkTF, cas_sqzCount, pivot_ss)
 
     # ── Step 3: Compression routing (before h4_fly — Cluster 1 fix) ──
     # Confirmed compression = cas_sqzCount>=1 OR diffBBW-confirmed LTF shrink
@@ -370,18 +373,18 @@ def identify_scenario(tf_states, diffbbw_h4_history=None, prev_h1_sqz=False):
             m30sqz = is_sqz(m30.get('stage', 0))
             if m15sqz and m30sqz:
                 return ('E2', 'E2 — H1-SQZ established, M15+M30 SQZ',
-                        cas_shrinkTF, cas_sqzCount)
-            return ('E1', 'E1 — H1-SQZ established', cas_shrinkTF, cas_sqzCount)
+                        cas_shrinkTF, cas_sqzCount, pivot_ss)
+            return ('E1', 'E1 — H1-SQZ established', cas_shrinkTF, cas_sqzCount, pivot_ss)
 
         # ── H1-SQZ recovery: H1 just exited SQZ but prior bar was SQZ,
         # and compression persists (M30 shrink or SQZ) → E1 ──
         if prev_h1_sqz and not h1_sqz_now and ltf_shrinkTF >= 1:
             return ('E1', 'E1 — H1-SQZ recovery, compression persists',
-                    cas_shrinkTF, cas_sqzCount)
+                    cas_shrinkTF, cas_sqzCount, pivot_ss)
 
         # Onset — H1 first-bar SQZ → B3
         if h1_sqz_now:
-            return ('B3', 'B3 — H1-SQZ onset', cas_shrinkTF, cas_sqzCount)
+            return ('B3', 'B3 — H1-SQZ onset', cas_shrinkTF, cas_sqzCount, pivot_ss)
 
         # ── Decision 2: transient mid-TF SQZ, H4 flying → A-tier ──
         # Only applies when no H1-SQZ on prior bar (truly transient)
@@ -394,9 +397,9 @@ def identify_scenario(tf_states, diffbbw_h4_history=None, prev_h1_sqz=False):
                     d1_up = (d1_dir == 'bullish')
                     if h4_up == d1_up:
                         return ('A1', 'A1 — mid-TF SQZ, M15+M5 flying, D1 aligned',
-                                cas_shrinkTF, cas_sqzCount)
+                                cas_shrinkTF, cas_sqzCount, pivot_ss)
                 return ('A2', 'A2 — mid-TF SQZ, M15+M5 flying, D1 not aligned',
-                        cas_shrinkTF, cas_sqzCount)
+                        cas_shrinkTF, cas_sqzCount, pivot_ss)
 
         # ── E-tier: cas_sqzCount>=2 ──
         if cas_sqzCount >= 2:
@@ -404,8 +407,8 @@ def identify_scenario(tf_states, diffbbw_h4_history=None, prev_h1_sqz=False):
             m30sqz = is_sqz(tf_states.get('M30', {}).get('stage', 0))
             b2_pink = m15sqz and m30sqz
             if b2_pink:
-                return ('E2', 'E2 — M15+M30 both SQZ', cas_shrinkTF, cas_sqzCount)
-            return ('E1', 'E1 — LTF SQZ', cas_shrinkTF, cas_sqzCount)
+                return ('E2', 'E2 — M15+M30 both SQZ', cas_shrinkTF, cas_sqzCount, pivot_ss)
+            return ('E1', 'E1 — LTF SQZ', cas_shrinkTF, cas_sqzCount, pivot_ss)
 
         # ── B-tier: ltf_shrinkTF>=1, keyed by max(shrink, sqz) depth ──
         # Decision 4: B-substate depth = deepest compressed TF (shrink OR SQZ)
@@ -426,11 +429,11 @@ def identify_scenario(tf_states, diffbbw_h4_history=None, prev_h1_sqz=False):
             }
             b_key = (max_depth, cas_sqzCount)
             if b_key in b_decoder:
-                return b_decoder[b_key] + (cas_shrinkTF, cas_sqzCount)
-            return ('B3', 'B3 — LTF shrink', cas_shrinkTF, cas_sqzCount)
+                return b_decoder[b_key] + (cas_shrinkTF, cas_sqzCount, pivot_ss)
+            return ('B3', 'B3 — LTF shrink', cas_shrinkTF, cas_sqzCount, pivot_ss)
 
         # ── A2: SQZ without LTF shrink (safety net) ──
-        return ('A2', 'A2 — SQZ without LTF shrink', cas_shrinkTF, cas_sqzCount)
+        return ('A2', 'A2 — SQZ without LTF shrink', cas_shrinkTF, cas_sqzCount, pivot_ss)
 
     # ── H4 flying → A-tier (no-compression cases only) ──
     if h4_fly:
@@ -439,13 +442,77 @@ def identify_scenario(tf_states, diffbbw_h4_history=None, prev_h1_sqz=False):
             h4_up = (h4_dir == 1)
             d1_up = (d1_dir == 'bullish')
             if h4_up == d1_up:
-                return ('A1', 'A1 — H4+D1 fly aligned', cas_shrinkTF, cas_sqzCount)
+                return ('A1', 'A1 — H4+D1 fly aligned', cas_shrinkTF, cas_sqzCount, pivot_ss)
 
         # ── A2: h4_fly, no confirmed compression, D1 not aligned ──
-        return ('A2', 'A2 — H4 fly, D1 not aligned', cas_shrinkTF, cas_sqzCount)
+        return ('A2', 'A2 — H4 fly, D1 not aligned', cas_shrinkTF, cas_sqzCount, pivot_ss)
 
     # ── Default fallback ──────────────────────────────────────────
-    return ('A2', 'default — conservative', cas_shrinkTF, cas_sqzCount)
+    return ('A2', 'default — conservative', cas_shrinkTF, cas_sqzCount, pivot_ss)
+
+# ── Display label helper (mirrors MQL5 Tier 1 label logic) ────────────
+
+TIER_MAP = {
+    'A1': 'A', 'A2': 'A', 'A3': 'A',
+    'B1': 'B', 'B2': 'B', 'B3': 'B',
+    'E1': 'E', 'E2': 'E', 'E3': 'E', 'E4': 'E',
+    'G1': 'G', 'G2': 'G', 'G3': 'G', 'G4': 'G',
+    'D1': 'B', 'D2': 'B', 'D3': 'B',  # D-tier displayed as B-tier color
+    'F1': 'F', 'F2': 'F', 'F3': 'F',
+    'C1': 'C', 'C2': 'C', 'C3': 'C',
+}
+G_TIER = {'G1', 'G2', 'G3', 'G4'}
+
+def scenario_display_label(scenario, phase, pivot_substate, prev_pivot_pending=False):
+    """Compute display label for a scenario — read-only, no recompute.
+
+    Reads pivot_substate from identify_scenario result (one-place computation).
+    Does NOT access tf_states — that's the classification boundary.
+
+    Mirrors MQL5 Tier 1 label logic:
+    - PIVOT-PENDING during H4 SQZ until scenario exits G-tier
+    - G? with ? suffix when G-reversal branch fires (M5 break)
+    - Normal "SC ph:PH" for all others
+
+    Args:
+        scenario: scenario string from identify_scenario (e.g. "G1", "B3")
+        phase: phase string from identify_phase (e.g. "PH_4")
+        pivot_substate: from identify_scenario 5th return (0=N/A 1=PIVOT-PENDING 2=G-REVERSAL)
+        prev_pivot_pending: bool, state from previous call
+
+    Returns:
+        (display_label, display_color, new_pivot_pending)
+        display_label: str, e.g. "B3  ph:3A", "PIVOT-PENDING  ph:4", "G1?  ph:4"
+        display_color: str, e.g. "yellow", "white", "red"
+        new_pivot_pending: bool, state for next call
+    """
+    g_tier = scenario in G_TIER
+    pivot_now = (pivot_substate == 1)   # read from struct, no recompute
+    g_reversal = (pivot_substate == 2) # read from struct, no recompute
+
+    tier_colors = {
+        'A': 'darkgray', 'B': 'yellow', 'E': 'darkorange',
+        'G': 'red', 'F': 'limegreen', 'C': 'magenta',
+    }
+
+    if pivot_now and not prev_pivot_pending:
+        # Just entered PIVOT-PENDING
+        return (f"PIVOT-PENDING  ph:{phase}", 'white', True)
+    elif prev_pivot_pending and not pivot_now:
+        # PIVOT-PENDING cleared
+        if g_tier and g_reversal:
+            return (f"{scenario}?  ph:{phase}", 'red', False)
+        else:
+            tier = TIER_MAP.get(scenario, 'A')
+            clr = tier_colors.get(tier, 'white')
+            return (f"{scenario}  ph:{phase}", clr, False)
+    elif not prev_pivot_pending:
+        tier = TIER_MAP.get(scenario, 'A')
+        clr = tier_colors.get(tier, 'white')
+        return (f"{scenario}  ph:{phase}", clr, False)
+    else:
+        # Still in PIVOT-PENDING (no change)
+        return (None, 'white', True)
 
 # ── Phase identification (Section 13) ────────────────────────────────
 
@@ -789,7 +856,7 @@ def simulate_trades(snapshots, expected_rows):
         dbbw_hist = snap['diffbbw_h4_history']
 
         # Identify scenario
-        scenario, info, cas_shrink, cas_sqz = identify_scenario(
+        scenario, info, cas_shrink, cas_sqz, _ = identify_scenario(
             tf_st, dbbw_hist, snap.get('prev_h1_sqz', False))
         phase = identify_phase(tf_st.get('H4', {}), dbbw_hist)
 
@@ -1221,7 +1288,7 @@ def main():
         tf_st = snap['tf_states']
         dbbw_hist = snap['diffbbw_h4_history']
         prev_h1 = snap.get('prev_h1_sqz', False)
-        scenario, info, cas_shrink, cas_sqz = identify_scenario(
+        scenario, info, cas_shrink, cas_sqz, _ = identify_scenario(
             tf_st, dbbw_hist, prev_h1)
         phase = identify_phase(tf_st.get('H4', {}), dbbw_hist)
 
@@ -1399,7 +1466,7 @@ def run_rc_regression():
         for snap in snaps:
             tf_st = snap['tf_states']
             dbbw_hist = snap['diffbbw_h4_history']
-            scenario, info, cas_shr, cas_sqz = identify_scenario(
+            scenario, info, cas_shr, cas_sqz, _ = identify_scenario(
                 tf_st, dbbw_hist, snap.get('prev_h1_sqz', False))
             phase = identify_phase(tf_st.get('H4', {}), dbbw_hist)
 
@@ -1461,7 +1528,7 @@ def run_rc_regression():
         for snap in mar11_snaps:
             tf_st = snap['tf_states']
             dbbw_hist = snap['diffbbw_h4_history']
-            scenario, info, cas_shr, cas_sqz = identify_scenario(
+            scenario, info, cas_shr, cas_sqz, _ = identify_scenario(
                 tf_st, dbbw_hist, snap.get('prev_h1_sqz', False))
             phase = identify_phase(tf_st.get('H4', {}), dbbw_hist)
 

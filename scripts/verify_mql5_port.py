@@ -157,37 +157,40 @@ def identify_scenario_mql5(tf):
 
     phase = classify_phase(tf)
 
+    pivot_ss = 0  # 0=N/A 1=PIVOT-PENDING 2=G-REVERSAL (set by G-tier only)
+
     # Early F-tier
     if G['hist_n'] >= 2:
         recent, prev_h = G['hist'][0], G['hist'][1]
         if (h4_fly and h4ud == 1 and recent > 15 and prev_h < 10
                 and d1dir == "bullish" and h4mid in (1,5)):
             if G['ring_n'] >= 3 and all(G['ring'][i] > 0 for i in range(3)):
-                return "F3", phase, cas_shrinkTF, cas_sqzCount
+                return "F3", phase, cas_shrinkTF, cas_sqzCount, pivot_ss
             if (tf.get('M30', {}).get('bbupdn', 0) or 0) == 1:
-                return "F2", phase, cas_shrinkTF, cas_sqzCount
-            return "F1", phase, cas_shrinkTF, cas_sqzCount
+                return "F2", phase, cas_shrinkTF, cas_sqzCount, pivot_ss
+            return "F1", phase, cas_shrinkTF, cas_sqzCount, pivot_ss
 
     # G-tier (OOS-UNVALIDATED)
     if h4_sqz:
         m5db = tf.get('M5', {}).get('diffBBW', 0) or 0
         m5_break = m5db > 0.3
+        pivot_ss = 2 if m5_break else 1  # one-place computation
         if not m5_break:
             if d1_fly and d1dir == "bearish" and h4mid in (2,4):
-                return "G1", phase, cas_shrinkTF, cas_sqzCount
+                return "G1", phase, cas_shrinkTF, cas_sqzCount, pivot_ss
             if d1_fly:
-                return "G2", phase, cas_shrinkTF, cas_sqzCount
-            return "G3", phase, cas_shrinkTF, cas_sqzCount
+                return "G2", phase, cas_shrinkTF, cas_sqzCount, pivot_ss
+            return "G3", phase, cas_shrinkTF, cas_sqzCount, pivot_ss
         m5mid = tf.get('M5', {}).get('mid', 0) or 0
         sameD1 = ((d1mid in (1,5)) and (m5mid in (1,5))) or \
                  ((d1mid in (2,4)) and (m5mid in (2,4)))
         if d1_fly:
-            return ("G1" if sameD1 else "G2"), phase, cas_shrinkTF, cas_sqzCount
-        return "G3", phase, cas_shrinkTF, cas_sqzCount
+            return ("G1" if sameD1 else "G2"), phase, cas_shrinkTF, cas_sqzCount, pivot_ss
+        return "G3", phase, cas_shrinkTF, cas_sqzCount, pivot_ss
 
     # E4
     if h4_shrink:
-        return "E4", phase, cas_shrinkTF, cas_sqzCount
+        return "E4", phase, cas_shrinkTF, cas_sqzCount, pivot_ss
 
     # Compression routing
     confirmed = (cas_sqzCount >= 1 or (ltf_shrinkTF >= 1 and dbbw_h4 < 30))
@@ -196,47 +199,47 @@ def identify_scenario_mql5(tf):
 
         if h1_sqz and G['prevH1Sqz']:
             if m15sqz and m30sqz:
-                return "E2", phase, cas_shrinkTF, cas_sqzCount
-            return "E1", phase, cas_shrinkTF, cas_sqzCount
+                return "E2", phase, cas_shrinkTF, cas_sqzCount, pivot_ss
+            return "E1", phase, cas_shrinkTF, cas_sqzCount, pivot_ss
 
         if G['prevH1Sqz'] and not h1_sqz and ltf_shrinkTF >= 1:
-            return "E1", phase, cas_shrinkTF, cas_sqzCount
+            return "E1", phase, cas_shrinkTF, cas_sqzCount, pivot_ss
 
         if h1_sqz:
-            return "B3", phase, cas_shrinkTF, cas_sqzCount
+            return "B3", phase, cas_shrinkTF, cas_sqzCount, pivot_ss
 
         if h4_fly and dbbw_h4 > 5 and ltf_shrinkTF == -1 and not G['prevH1Sqz']:
             m5stg = tf.get('M5', {}).get('stage', 0) or 0
             if cas_sqzCount == 1 and not m15sqz and not is_sqz(m5stg):
                 d1_ok = d1stg >= 500 and d1dir != "neutral"
                 if d1_ok and (h4_dir == 1) == (d1dir == "bullish"):
-                    return "A1", phase, cas_shrinkTF, cas_sqzCount
-                return "A2", phase, cas_shrinkTF, cas_sqzCount
+                    return "A1", phase, cas_shrinkTF, cas_sqzCount, pivot_ss
+                return "A2", phase, cas_shrinkTF, cas_sqzCount, pivot_ss
 
         if cas_sqzCount >= 2:
             if m15sqz and m30sqz:
-                return "E2", phase, cas_shrinkTF, cas_sqzCount
-            return "E1", phase, cas_shrinkTF, cas_sqzCount
+                return "E2", phase, cas_shrinkTF, cas_sqzCount, pivot_ss
+            return "E1", phase, cas_shrinkTF, cas_sqzCount, pivot_ss
 
         if ltf_shrinkTF >= 1:
             d_sqz = max((TF_INDEX[t] for t in ["M5","M15","M30","H1"]
                         if is_sqz(tf.get(t, {}).get('stage', 0) or 0)), default=-1)
             md = max(ltf_shrinkTF, d_sqz)
-            if md == 1 and cas_sqzCount <= 1: return "B1", phase, cas_shrinkTF, cas_sqzCount
-            if md == 2 and cas_sqzCount <= 1: return "B2", phase, cas_shrinkTF, cas_sqzCount
-            return "B3", phase, cas_shrinkTF, cas_sqzCount
+            if md == 1 and cas_sqzCount <= 1: return "B1", phase, cas_shrinkTF, cas_sqzCount, pivot_ss
+            if md == 2 and cas_sqzCount <= 1: return "B2", phase, cas_shrinkTF, cas_sqzCount, pivot_ss
+            return "B3", phase, cas_shrinkTF, cas_sqzCount, pivot_ss
 
-        return "A2", phase, cas_shrinkTF, cas_sqzCount
+        return "A2", phase, cas_shrinkTF, cas_sqzCount, pivot_ss
 
     # A-tier no-compression
     if h4_fly:
         if d1stg >= 500 and d1dir != "neutral":
             if (h4_dir == 1) == (d1dir == "bullish"):
-                return "A1", phase, cas_shrinkTF, cas_sqzCount
-        return "A2", phase, cas_shrinkTF, cas_sqzCount
+                return "A1", phase, cas_shrinkTF, cas_sqzCount, pivot_ss
+        return "A2", phase, cas_shrinkTF, cas_sqzCount, pivot_ss
 
     # Default
-    return "A2", phase, cas_shrinkTF, cas_sqzCount
+    return "A2", phase, cas_shrinkTF, cas_sqzCount, pivot_ss
 
 # ── Parse log (same as replay_harness.py) ───────────────────────────
 
@@ -328,10 +331,10 @@ def main():
         prev_h1 = snap['prev_h1_sqz']
 
         # Python harness
-        py_sc, _, _, _ = rh.identify_scenario(tf, hist, prev_h1)
+        py_sc, _, _, _, py_pivot = rh.identify_scenario(tf, hist, prev_h1)
 
         # MQL5-sim
-        m5_sc, m5_ph, _, _ = identify_scenario_mql5(tf)
+        m5_sc, m5_ph, _, _, m5_pivot = identify_scenario_mql5(tf)
         G['prevH1Sqz'] = is_sqz(tf.get('H1', {}).get('stage', 0) or 0)
 
         py_p, m5_p = PARENT_MAP.get(py_sc, py_sc), PARENT_MAP.get(m5_sc, m5_sc)
@@ -344,7 +347,8 @@ def main():
             st, mismatch = "NO", mismatch + 1
 
         exp_sc = exp_map.get(short, {}).get('expected_scenario', '?')
-        rows.append((short, py_sc, m5_sc, py_p, m5_p, st, exp_sc))
+        pivot_ok = "Y" if py_pivot == m5_pivot else "N"
+        rows.append((short, py_sc, m5_sc, py_p, m5_p, st, exp_sc, py_pivot, m5_pivot, pivot_ok))
 
     total = len(rows)
     print(f"{'Time':<12} {'Python':<7} {'MQL5-sim':<8} {'PyP':<4} {'M5P':<4} {'St':<4} {'Exp':<6}")
@@ -362,6 +366,17 @@ def main():
         for r in rows:
             if r[5] == "NO":
                 print(f"  {r[0]}: Python={r[1]}({r[3]}) MQL5={r[2]}({r[4]}) Exp={r[6]}")
+
+    # Pivot_substate agreement
+    pivot_mismatch = sum(1 for r in rows if r[9] == "N")
+    pivot_agree = total - pivot_mismatch
+    print(f"\n--- Pivot Substate Agreement ---")
+    print(f"  Pivot match: {pivot_agree}/{total} ({pivot_agree/total*100:.1f}%)")
+    if pivot_mismatch > 0:
+        print(f"  Pivot divergences:")
+        for r in rows:
+            if r[9] == "N":
+                print(f"    {r[0]}: Python_pivot={r[7]} MQL5_pivot={r[8]} sc={r[1]}/{r[2]}")
 
     # Full 3-way comparison
     print(f"\n--- 3-Way: Python | MQL5-sim | Expected ---")

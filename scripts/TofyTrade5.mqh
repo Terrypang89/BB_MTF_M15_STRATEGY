@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "31.00"
+#property version   "31.01"
 //+------------------------------------------------------------------+
 //| TofyTrade5 — three-layer architecture, 1:1 with                  |
 //| references/backtest_chart_analysis.md                            |
@@ -18,6 +18,7 @@
 #define POST_EXIT_COOLDOWN     5     // M5 bars blocking re-entry after act=7
 #define MAX_FLOATING_LOSS_USD  50.0  // INVARIANT 1 — checked first, ungateable
 #define MAGIC_NUMBER           898989 // EA magic number (verified in tester.ini)
+#define LOG_VERBOSE            false // second-line driver diagnostics (display only)
 
 #include <TofyIncludeSimple.mqh>
 
@@ -120,6 +121,7 @@ struct ScenarioState {
    int      container_dir;      // its diffMid (1/2), 0 if none
    double   container_diffbbw;  // health: >0 room, <=0 aging
    int      priceloc;           // vs container: -2 below_lower -1 at_lower 0 inside +1 at_upper +2 above_upper
+   int      pivot_substate;     // G-tier display: 0=N/A 1=PIVOT-PENDING(m5 not broken) 2=G-REVERSAL(m5 broken)
 };
 
 struct Prediction {
@@ -175,6 +177,15 @@ double GetATRSLStop(ATRSLBUF_struct &ATRSL1BUF, int direction) {  // kept verbat
 #define GATE_CLR_NOISE clrDimGray
 #define GATE_CLR_AQUA  clrAqua
 
+//── Tier colors for scenario labels (display only) ───────────────────
+#define TIER_CLR_A        clrDarkGray
+#define TIER_CLR_B        clrYellow
+#define TIER_CLR_E        clrDarkOrange
+#define TIER_CLR_G        clrRed            // provisional — OOS-UNVALIDATED
+#define TIER_CLR_F        clrLimeGreen
+#define TIER_CLR_C        clrMagenta
+#define TIER_CLR_PIVOT    clrWhite
+
 void DrawGateLabel(string tag, double price, BB_MTF_Data_struct &BB_datas[],
                    color labelColor, int tf_idx=1)               // kept verbatim
 {
@@ -195,6 +206,18 @@ bool IsFlyUp(int stg)  { return (stg==511||stg==512); }
 bool IsFlyDn(int stg)  { return (stg==521||stg==522); }
 bool IsFly(int stg)    { return IsFlyUp(stg)||IsFlyDn(stg); }
 bool IsShrink(int stg) { return (stg==513||stg==523); }
+
+//── Scenario label helpers (display only — read IdentifyScenario output) ──
+color ScenarioLabelColor(SCENARIO sc) {
+   switch(sc){
+      case SC_A1:case SC_A2:case SC_A3: return TIER_CLR_A;
+      case SC_B1:case SC_B2:case SC_B3: return TIER_CLR_B;
+      case SC_E1:case SC_E2:case SC_E3L:case SC_E4: return TIER_CLR_E;
+      case SC_G1:case SC_G2:case SC_G3:case SC_G4: return TIER_CLR_G;
+      case SC_F1:case SC_F2:case SC_F3: return TIER_CLR_F;
+      case SC_C1:case SC_C2:case SC_C3: return TIER_CLR_C;
+      case SC_D1s:case SC_D2s:case SC_D3s: return TIER_CLR_B;
+      default: return clrWhite; } }
 
 //═══════════════════════════════════════════════════════════════════
 // LAYER 1 — IdentifyScenario                       (doc Part 3 etc.)
@@ -298,6 +321,7 @@ ScenarioState IdentifyScenario(BB_MTF_Data_struct &bb[], double &close_prices[])
    s.cas_shrinkTF=-1;  s.cas_sqzCount=0;
    s.b1_block=false;   s.b2_pink=false;
    s.container_tf=-1;  s.container_dir=0; s.container_diffbbw=0; s.priceloc=0;
+   s.pivot_substate=0; // 0=N/A 1=PIVOT-PENDING 2=G-REVERSAL
 
    // ── diffBBW_H4: push to ring + history ────────────────────────────
    double dbbw_h4 = ADiffBBW(bb, 4);
@@ -414,6 +438,8 @@ ScenarioState IdentifyScenario(BB_MTF_Data_struct &bb[], double &close_prices[])
             s.scenario = SC_G3;                                       // OOS-UNVALIDATED
       }
       if(s.phase==PH_6) s.scenario = SC_G4;                           // OOS-UNVALIDATED, extended whipsaw
+      // G-tier sub-state for display (one-place computation — label reads this)
+      s.pivot_substate = m5_ud_break ? 2 : 1;                         // 1=PIVOT-PENDING 2=G-REVERSAL
       // Update prev H1-SQZ for next call
       s.cas_shrinkTF = s.cas_shrinkTF; s.cas_sqzCount = s.cas_sqzCount;
       return s;
@@ -899,6 +925,12 @@ void Trade_Strategy(
    static int      s_barsInTrade=0;
    static int      s_lastTrigTF=1;
    static SCENARIO s_prevSc=SC_NONE;  static PHASE s_prevPh=PH_NONE;
+   static bool     s_pivotPending=false; // display-only: PIVOT-PENDING tracker
+   static bool     s_initialized=false;
+   if(!s_initialized) {
+      SigEvt("INIT", KV("ver","31.01")+KV("ruleset","TofyTrade5-v31"));
+      s_initialized=true;
+   }
 
    //── INVARIANT 1: EMERGENCY — every call, before anything ────────
    //  (TofyTrade4 defined MAX_FLOATING_LOSS_USD but the 03.03 trade
@@ -924,13 +956,81 @@ void Trade_Strategy(
    //── Layer 1 ─────────────────────────────────────────────────────
    ScenarioState s = IdentifyScenario(BB_datas, close_prices);        // RingPush is internal now
 
-   if(s.scenario!=s_prevSc || s.phase!=s_prevPh) {
-      SigEvt("SC", KV("sc",ScenarioName(s.scenario))+KV("ph",PhaseName(s.phase))
-                  +KVi("casShr",s.cas_shrinkTF)+KVi("casSqz",s.cas_sqzCount)
-                  +KV("cont",TFName(s.container_tf))+KVi("loc",s.priceloc)
-                  +KVd("dbbwH4",ADiffBBW(BB_datas,4),1));
-      DrawGateLabel("[SC:"+ScenarioName(s.scenario)+"|"+PhaseName(s.phase)+"]",
-                    BB_datas[2].BB_Mid[LA], BB_datas, GATE_CLR_WAIT, 2);
+   //── Scenario change detection (display-only labels) ─────────────
+   // PIVOT-PENDING tracker: during H4 SQZ, show PIVOT-PENDING until
+   // the scenario exits G-tier (resolved to F or C).
+   // G-reversal (G? with M5 break) shown distinctly in red.
+   // Reads s.pivot_substate — computed ONCE inside IdentifyScenario.
+   {
+      bool gTier = (s.scenario==SC_G1||s.scenario==SC_G2||
+                    s.scenario==SC_G3||s.scenario==SC_G4);
+      bool pivotNow = (s.pivot_substate == 1); // read from struct, no recompute
+      bool gReversal = (s.pivot_substate == 2); // read from struct, no recompute
+
+      if(pivotNow && !s_pivotPending) {
+         // Just entered PIVOT-PENDING — draw label
+         s_pivotPending = true;
+         SigEvt("SC", KV("sc","PIVOT-PENDING")+KV("ph",PhaseName(s.phase))
+                     +KVi("pivot",s.pivot_substate)+KVi("casShr",s.cas_shrinkTF)+KVi("casSqz",s.cas_sqzCount)
+                     +KV("cont",TFName(s.container_tf))+KVi("loc",s.priceloc)
+                     +KVd("dbbwH4",ADiffBBW(BB_datas,4),1));
+         DrawGateLabel("PIVOT-PENDING  ph:"+PhaseName(s.phase),
+                       BB_datas[2].BB_Mid[LA], BB_datas, TIER_CLR_PIVOT, 2);
+         if(LOG_VERBOSE)
+            DrawGateLabel("casShr:"+IntegerToString(s.cas_shrinkTF)
+                          +" casSqz:"+IntegerToString(s.cas_sqzCount)
+                          +" cont:"+TFName(s.container_tf)
+                          +" dbbwH4:"+DoubleToString(ADiffBBW(BB_datas,4),1),
+                          BB_datas[2].BB_Mid[LA]-20, BB_datas, TIER_CLR_PIVOT, 2);
+      } else if(s_pivotPending && !pivotNow) {
+         // PIVOT-PENDING cleared — resolve to G? or new scenario
+         s_pivotPending = false;
+         if(gTier && gReversal) {
+            // G-reversal branch — OOS-UNVALIDATED, shown distinctly
+            SigEvt("SC", KV("sc",ScenarioName(s.scenario)+"?")+KV("ph",PhaseName(s.phase))
+                        +KVi("pivot",s.pivot_substate)+KVi("casShr",s.cas_shrinkTF)+KVi("casSqz",s.cas_sqzCount)
+                        +KV("cont",TFName(s.container_tf))+KVi("loc",s.priceloc)
+                        +KVd("dbbwH4",ADiffBBW(BB_datas,4),1));
+            DrawGateLabel(ScenarioName(s.scenario)+"?  ph:"+PhaseName(s.phase),
+                          BB_datas[2].BB_Mid[LA], BB_datas, TIER_CLR_G, 2);
+            if(LOG_VERBOSE)
+               DrawGateLabel("casShr:"+IntegerToString(s.cas_shrinkTF)
+                             +" casSqz:"+IntegerToString(s.cas_sqzCount)
+                             +" cont:"+TFName(s.container_tf)
+                             +" dbbwH4:"+DoubleToString(ADiffBBW(BB_datas,4),1),
+                             BB_datas[2].BB_Mid[LA]-20, BB_datas, TIER_CLR_G, 2);
+         } else if(s.scenario!=s_prevSc || s.phase!=s_prevPh) {
+            // Resolved to non-G scenario (F/C/etc) — draw new label
+            SigEvt("SC", KV("sc",ScenarioName(s.scenario))+KV("ph",PhaseName(s.phase))
+                        +KVi("pivot",s.pivot_substate)+KVi("casShr",s.cas_shrinkTF)+KVi("casSqz",s.cas_sqzCount)
+                        +KV("cont",TFName(s.container_tf))+KVi("loc",s.priceloc)
+                        +KVd("dbbwH4",ADiffBBW(BB_datas,4),1));
+            color clr = ScenarioLabelColor(s.scenario);
+            DrawGateLabel(ScenarioName(s.scenario)+"  ph:"+PhaseName(s.phase),
+                          BB_datas[2].BB_Mid[LA], BB_datas, clr, 2);
+            if(LOG_VERBOSE)
+               DrawGateLabel("casShr:"+IntegerToString(s.cas_shrinkTF)
+                             +" casSqz:"+IntegerToString(s.cas_sqzCount)
+                             +" cont:"+TFName(s.container_tf)
+                             +" dbbwH4:"+DoubleToString(ADiffBBW(BB_datas,4),1),
+                             BB_datas[2].BB_Mid[LA]-20, BB_datas, clr, 2);
+         }
+      } else if(!s_pivotPending && (s.scenario!=s_prevSc || s.phase!=s_prevPh)) {
+         // Normal scenario change (not PIVOT-PENDING)
+         SigEvt("SC", KV("sc",ScenarioName(s.scenario))+KV("ph",PhaseName(s.phase))
+                     +KVi("pivot",s.pivot_substate)+KVi("casShr",s.cas_shrinkTF)+KVi("casSqz",s.cas_sqzCount)
+                     +KV("cont",TFName(s.container_tf))+KVi("loc",s.priceloc)
+                     +KVd("dbbwH4",ADiffBBW(BB_datas,4),1));
+         color clr = ScenarioLabelColor(s.scenario);
+         DrawGateLabel(ScenarioName(s.scenario)+"  ph:"+PhaseName(s.phase),
+                       BB_datas[2].BB_Mid[LA], BB_datas, clr, 2);
+         if(LOG_VERBOSE)
+            DrawGateLabel("casShr:"+IntegerToString(s.cas_shrinkTF)
+                          +" casSqz:"+IntegerToString(s.cas_sqzCount)
+                          +" cont:"+TFName(s.container_tf)
+                          +" dbbwH4:"+DoubleToString(ADiffBBW(BB_datas,4),1),
+                          BB_datas[2].BB_Mid[LA]-20, BB_datas, clr, 2);
+      }
       s_prevSc=s.scenario; s_prevPh=s.phase;
    }
 
