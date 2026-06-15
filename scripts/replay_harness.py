@@ -242,6 +242,11 @@ def identify_scenario(tf_states, diffbbw_h4_history=None, prev_h1_sqz=False):
       H1 in SQZ this bar AND H1 in SQZ prior bar  → E-tier (established)
       H1 in SQZ this bar but NOT prior bar         → B3 (onset)
 
+    >>> OOS-UNVALIDATED: The "2 consecutive bars" threshold below is fit to
+    >>> a single March 2026 in-sample episode. It has NOT been validated on
+    >>> out-of-sample data. If OOS validation fails, this threshold is the
+    >>> first parameter to revisit — not the structural conditions above.
+
     Decision 6 — D2-vs-D5 conflict resolution:
       Decision 2's "transient" exemption applies ONLY to single-bar mid-TF SQZ.
       Once H1-SQZ is established (prior bar also SQZ), E-tier wins.
@@ -357,6 +362,7 @@ def identify_scenario(tf_states, diffbbw_h4_history=None, prev_h1_sqz=False):
         # ── Decision 5: H1-SQZ prior-bar → E/B-tier ──────────────
         # Established (2+ bars H1-SQZ) → E-tier
         # Onset (first bar H1-SQZ) → B3
+        # NOTE: "2 consecutive bars" threshold is OOS-unvalidated (fit to 1 episode)
         h1_sqz_now = is_sqz(h1.get('stage', 0))
 
         if h1_sqz_now and prev_h1_sqz:
