@@ -17,6 +17,7 @@
 #define MIN_HOLD_BARS          3     // minimum M5 bars between entries (kept from v30)
 #define POST_EXIT_COOLDOWN     5     // M5 bars blocking re-entry after act=7
 #define MAX_FLOATING_LOSS_USD  50.0  // INVARIANT 1 — checked first, ungateable
+#define MAGIC_NUMBER           898989 // EA magic number (verified in tester.ini)
 
 #include <TofyIncludeSimple.mqh>
 
@@ -27,18 +28,17 @@
 // BB_Mid, BB_diffMid, ATRSL1BUF.*) plus these adapters.
 //═══════════════════════════════════════════════════════════════════
 
-// --- diffBBW (band width velocity, doc §4b; log scaling ×100) -----
-// TODO(ClaudeCode): if BB_MTF_Data_struct has a diffBBW field
-// (check names like BB_diffBBW / BBW_diff / diffBBW), replace the
-// fallback computation with a direct read.
-// FALLBACK computes width change from band levels via BB_UPPER/BB_LOWER.
+// --- diffBBW (band width velocity, doc §4b; log formula: (WLV[n]-WLV[n+1])*100) ---
+// CRITICAL: log uses ABSOLUTE formula (w_now - w_prev)*100, NOT percentage.
+// Verified against V30.02 log: WLV cur=4.66, prev=5.46 → log value -79.94
+//   Absolute:  (4.66-5.46)*100 = -80.0 ≈ -79.94 ✓
+//   Percentage: (4.66-5.46)/5.46*100 = -14.65 ✗
+// The previous percentage formula was wrong — every threshold was mis-scaled.
 double ADiffBBW(BB_MTF_Data_struct &bb[], int tf, int sh=0)
 {
-   // return bb[tf].BB_diffBBW[sh];                    // ← preferred if exists
    double w_now  = ABBUpper(bb,tf,sh)   - ABBLower(bb,tf,sh);
    double w_prev = ABBUpper(bb,tf,sh+1) - ABBLower(bb,tf,sh+1);
-   if(w_prev<=0.0) return 0.0;
-   return (w_now - w_prev)/w_prev*100.0;               // §4b: scaled ×100
+   return (w_now - w_prev)*100.0;                      // §4b: absolute ×100 (matches log)
 }
 
 // --- band levels (doc PriceLoc needs BBUppLV/BBLowLV) -------------
@@ -50,15 +50,16 @@ double ABBLower(BB_MTF_Data_struct &bb[], int tf, int sh=0)
 {  return bb[tf].BB_Lower[sh]; }      // ← VERIFY field name
 
 // --- floating P/L of our positions (INVARIANT 1) ------------------
-// TODO(ClaudeCode): add magic-number filter if the EA uses one.
-// Style mirrors the MQL4-style order calls already used by the
-// TofyTrade4 CSV logger (OrderSelect/OP_BUY).
+// Magic-number filter required: EA uses MAGIC_NUMBER=898989 (tester.ini)
+// Without this filter, P/L from other EAs/manual trades on the same symbol
+// corrupts the EMERGENCY invariant, causing false triggers or missed exits.
 double AFloatingPL()
 {
    double pl=0.0;
    for(int i=OrdersTotal()-1; i>=0; i--) {
       if(!OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) continue;
       if(OrderSymbol()!=_Symbol) continue;
+      if(OrderMagicNumber()!=MAGIC_NUMBER) continue;     // filter to EA's own trades
       pl += OrderProfit()+OrderSwap()+OrderCommission();
    }
    return pl;
@@ -203,45 +204,91 @@ bool IsShrink(int stg) { return (stg==513||stg==523); }
 double  g_dbbw_ring[PH_LOOKBACK];
 int     g_dbbw_n = 0;
 
+// Decision 5/6: prior-bar H1-SQZ state (persisted across calls)
+static bool s_prevH1Sqz = false;
+
+// Early F-tier: 2 recent diffBBW_H4 values (current + prev)
+static double s_dbbwH4_hist[2];
+static int    s_dbbwH4_hist_n = 0;
+
 void RingPush(double v) {
    for(int i=PH_LOOKBACK-1;i>0;i--) g_dbbw_ring[i]=g_dbbw_ring[i-1];
    g_dbbw_ring[0]=v;
    if(g_dbbw_n<PH_LOOKBACK) g_dbbw_n++;
 }
 
-PHASE ClassifyPhase(BB_MTF_Data_struct &bb[], double dbbw_h4)    // §13 phase table
+void DbbwH4HistPush(double v) {
+   s_dbbwH4_hist[1] = s_dbbwH4_hist[0];
+   s_dbbwH4_hist[0] = v;
+   if(s_dbbwH4_hist_n < 2) s_dbbwH4_hist_n++;
+}
+
+PHASE ClassifyPhase(BB_MTF_Data_struct &bb[])                      // §13 phase table (Python thresholds)
 {
    int n = MathMin(g_dbbw_n, PH_LOOKBACK);
-   if(n < 4) return PH_NONE;
-   int pos=0, neg=0, flips=0;
-   for(int i=0;i<n;i++){
-      if(g_dbbw_ring[i] >  0.3) pos++;
-      if(g_dbbw_ring[i] < -0.3) neg++;
-      if(i>0 && g_dbbw_ring[i]*g_dbbw_ring[i-1] < 0) flips++;
-   }
-   int    h4mid  = bb[4].BB_diffMid_Trend[LA];
-   int    h4stg  = bb[4].BBW_stage[LA];
-   bool   h4sqz  = IsSQZ(h4stg);
-   double cur    = dbbw_h4;
+   if(n < 2) return PH_NONE;
+   double cur = g_dbbw_ring[0];
+   double prev = (n >= 2) ? g_dbbw_ring[1] : cur;
 
-   // PH_6: alternating sign over lookback = H4 cycling fly→shrink→SQZ→fly   // §13 Phase 6
-   if(flips >= 3 && pos>=2 && neg>=2)                       return PH_6;
-   // PH_5: zero-cross to sharply positive after compression                  // §13 Phase 5
-   if(cur > 1.0 && neg >= 3)                                return PH_5;
-   // PH_4: near-zero at minimum + SQZ depth                                  // §13 Phase 4
-   if(MathAbs(cur) <= 0.3 && (h4sqz || IsSQZ(bb[2].BBW_stage[LA])))           return PH_4;
-   // PH_3B_OUT: H4 exiting SQZ (was SQZ recently) + expanding, counter D1    // §13 3b-OUT
-   if(cur > 0.3 && IsSQZ(bb[4].BBW_stage[LA_2]) && !h4sqz)  return PH_3B_OUT;
-   // PH_3*: sustained negative = compression deepening                       // §13 Phase 3
-   if(neg >= 3 && cur < 0) {
-      if(h4mid==3)                                          return PH_3A;     // symmetric
-      return PH_3B_INTO;                                                       // trending shrink
+   int h4mid = bb[4].BB_diffMid_Trend[LA];
+   int h4stg = bb[4].BBW_stage[LA];
+   int h4ud  = bb[4].BBUpDn[LA];
+
+   // PH_1: directional trend — 3+ recent bars positive, stage>=500      // §13 Phase 1
+   if(n >= 3 && h4stg >= 500) {
+      bool allPos = (g_dbbw_ring[0] > 0) && (g_dbbw_ring[1] > 0) && (g_dbbw_ring[2] > 0);
+      if(allPos) return PH_1;
    }
-   // PH_2: positive fading toward zero with first counter-legs               // §13 Phase 2
-   if(pos >= 2 && cur <= 0.6 && cur >= -0.3)                return PH_2;
-   // PH_1: sustained positive                                                 // §13 Phase 1
-   if(pos >= 3 && cur > 0)                                  return PH_1;
-   return PH_2;                                                                // default mild
+
+   // H4 in SQZ → Phase 4                                                // §13 Phase 4
+   if(IsSQZ(h4stg)) return PH_4;
+
+   // PH_5: explosive breakout — diffBBW sharply positive after near-zero // §13 Phase 5
+   if(MathAbs(prev) < 5 && cur > 15 && h4ud == 1)                     return PH_5;
+   if(prev < 0 && cur > 20 && h4ud == 1)                              return PH_5;
+
+   // PH_6: alternating diffBBW over lookback                            // §13 Phase 6
+   if(n >= 4) {
+      int alternations = 0;
+      for(int i=0; i<3 && i+1<n; i++) {
+         bool iPos = g_dbbw_ring[i] > 0;
+         bool iP1Pos = g_dbbw_ring[i+1] > 0;
+         if(iPos != iP1Pos) alternations++;
+      }
+      if(alternations >= 3) return PH_6;
+   }
+
+   // PH_3*: negative diffBBW (compression)                               // §13 Phase 3
+   if(cur < -5) {
+      if(h4mid == 3) return PH_3A;                                     // symmetric
+      return PH_3B_INTO;                                               // asymmetric — trending INTO
+   }
+
+   // PH_3B_OUT: diffBBW near zero → positive, H4 exiting shrink          // §13 3b-OUT
+   if(-5 <= cur && cur <= 5 && (h4ud == 1 || h4ud == 3)) {
+      if(prev < -10) return PH_3B_OUT;
+   }
+
+   // PH_2: diffBBW transitioning pos→zero (pre-SQZ zigzag)               // §13 Phase 2
+   if(cur > 0 && cur < 15 && h4stg >= 500) return PH_2;
+
+   // PH_3A default: H4 mid=3 with fly stage
+   if(h4mid == 3 && h4stg >= 500) return PH_3A;
+
+   // Fallback
+   if(cur > 0) return PH_2;
+   return PH_1;
+}
+
+// ── D1 helpers (mirrors Python classify_d1_state) ────────────────────
+string D1Dir(BB_MTF_Data_struct &bb[]) {
+   int m = bb[5].BB_diffMid_Trend[LA];
+   if(m==1||m==5) return "bullish";
+   if(m==2||m==4) return "bearish";
+   int stg = bb[5].BBW_stage[LA];
+   if(stg==511||stg==512) return "bullish";
+   if(stg==521||stg==522) return "bearish";
+   return "neutral";
 }
 
 ScenarioState IdentifyScenario(BB_MTF_Data_struct &bb[], double &close_prices[])
@@ -252,31 +299,41 @@ ScenarioState IdentifyScenario(BB_MTF_Data_struct &bb[], double &close_prices[])
    s.b1_block=false;   s.b2_pink=false;
    s.container_tf=-1;  s.container_dir=0; s.container_diffbbw=0; s.priceloc=0;
 
-   // ── §12d decoders ───────────────────────────────────────────────
-   for(int tf=1; tf<=5; tf++)                                   // §12d cas_shrinkTF
-      if(IsShrink(bb[tf].BBW_stage[LA])) s.cas_shrinkTF = tf;   // highest wins
-   for(int tf=0; tf<=3; tf++)                                   // §12d cas_sqzCount (M5..H1)
+   // ── diffBBW_H4: push to ring + history ────────────────────────────
+   double dbbw_h4 = ADiffBBW(bb, 4);
+   RingPush(dbbw_h4);
+   DbbwH4HistPush(dbbw_h4);
+
+   // ── §12d decoders ────────────────────────────────────────────────
+   for(int tf=1; tf<=5; tf++)                                          // §12d cas_shrinkTF (M15..D1)
+      if(IsShrink(bb[tf].BBW_stage[LA])) s.cas_shrinkTF = tf;         // highest wins
+   for(int tf=0; tf<=3; tf++)                                          // §12d cas_sqzCount (M5..H1)
       if(IsSQZ(bb[tf].BBW_stage[LA])) s.cas_sqzCount++;
 
    bool m15sqz = IsSQZ(bb[1].BBW_stage[LA]);
    bool m30sqz = IsSQZ(bb[2].BBW_stage[LA]);
-   s.b2_pink  = (m15sqz && m30sqz);                             // Part 5 B2 — ONLY this pair
-   s.b1_block = (bb[1].BB_diffMid_Trend[LA] >= 3);              // Part 5 B1
+   s.b2_pink  = (m15sqz && m30sqz);                                    // Part 5 B2
+   s.b1_block = (bb[1].BB_diffMid_Trend[LA] >= 3);                     // Part 5 B1
 
-   // ── Part 6 Step 2b container (W1 addendum) ──────────────────────
-   for(int tf=5; tf>=1; tf--) {                                 // highest committed fly
+   // ── LTF shrink (M15..H1 only — Python Decision 5/6 scope) ────────
+   int ltf_shrinkTF = -1;
+   for(int tf=1; tf<=3; tf++)
+      if(IsShrink(bb[tf].BBW_stage[LA])) ltf_shrinkTF = tf;
+
+   // ── Part 6 Step 2b container (W1 addendum) ────────────────────────
+   for(int tf=5; tf>=1; tf--) {                                       // highest committed fly
       int stg = bb[tf].BBW_stage[LA];
       int mid = bb[tf].BB_diffMid_Trend[LA];
       double db = ADiffBBW(bb, tf);
-      bool committed = IsFly(stg) && (mid==1||mid==2) && (db >= -0.3);  // diffBBW-primary // V4
+      bool committed = IsFly(stg) && (mid==1||mid==2) && (db >= -0.3);  // diffBBW-primary V4, abs formula
       if(committed) { s.container_tf=tf; s.container_dir=mid; s.container_diffbbw=db; break; }
    }
-   if(s.container_tf > 0) {                                     // PriceLoc vs container
+   if(s.container_tf > 0) {                                           // PriceLoc vs container
       double up = ABBUpper(bb, s.container_tf);
       double lo = ABBLower(bb, s.container_tf);
       double w  = up - lo;
       double px = close_prices[LA];
-      double band = 0.15*w;                                     // "at" threshold — tune in replay
+      double band = 0.15*w;                                           // "at" threshold
       if(px > up)              s.priceloc = +2;
       else if(px > up-band)    s.priceloc = +1;
       else if(px < lo)         s.priceloc = -2;
@@ -284,93 +341,192 @@ ScenarioState IdentifyScenario(BB_MTF_Data_struct &bb[], double &close_prices[])
       else                     s.priceloc = 0;
    }
 
-   // ── §13 phase ───────────────────────────────────────────────────
-   double dbbw_h4 = ADiffBBW(bb, 4);
-   s.phase = ClassifyPhase(bb, dbbw_h4);
+   // ── §13 phase ────────────────────────────────────────────────────
+   s.phase = ClassifyPhase(bb);
 
-   // ── CHECK HTF FIRST: H4 × D1 cell (§12) — diffMid+diffBBW primary,
-   //    BBW_stage confirmation only (EDIT V4; 7 March lag conflicts) ──
-   int  h4stg = bb[4].BBW_stage[LA],  h4mid = bb[4].BB_diffMid_Trend[LA];
-   int  d1stg = bb[5].BBW_stage[LA],  d1mid = bb[5].BB_diffMid_Trend[LA];
-   double d1db = ADiffBBW(bb,5);
-   bool h4_fly    = IsFly(h4stg)    && (h4mid==1||h4mid==2) && dbbw_h4 > -0.3;  // label overridden if diffBBW contradicts
-   bool h4_shrink = (IsShrink(h4stg) || dbbw_h4 < -0.3) && !IsSQZ(h4stg);
-   bool h4_sqz    = IsSQZ(h4stg) || (MathAbs(dbbw_h4)<=0.2 && h4mid==3 && !h4_fly);
-   bool d1_fly    = IsFly(d1stg) && (d1mid==1||d1mid==2||d1mid==5||d1mid==4);
+   // ── CHECK HTF: H4 × D1 (§12) — diffBBW PRIMARY (EDIT V4) ─────────
+   int  h4stg  = bb[4].BBW_stage[LA];
+   int  h4mid  = bb[4].BB_diffMid_Trend[LA];
+   int  h4ud   = bb[4].BBUpDn[LA];
+   int  d1stg  = bb[5].BBW_stage[LA];
+   int  d1mid  = bb[5].BB_diffMid_Trend[LA];
+   string d1dir = D1Dir(bb);
 
-   // ── scenario mapping (Part 3 tier tables + §12d rows) ───────────
-   int agreeUp = CountTFAgreement(bb, 1, 4);
-   int agreeDn = CountTFAgreement(bb, 2, 4);
+   // H4 direction
+   int h4_dir = 0;
+   if(h4mid==1||h4mid==5) h4_dir=1;
+   else if(h4mid==2||h4mid==4) h4_dir=2;
 
-   if(h4_fly && s.cas_shrinkTF==-1 && s.cas_sqzCount==0) {
-      // Tier 1: full fly                                            // Part 3 A
-      int w1mid = bb[6].BB_diffMid_Trend[LA];
-      bool macroAligned = (h4mid==1 && (d1mid==1||d1mid==5) && (w1mid==1||w1mid==5)) ||
-                          (h4mid==2 && (d1mid==2||d1mid==4) && (w1mid==2||w1mid==4));
-      s.scenario = macroAligned ? SC_A1 : SC_A2;
-      if(IsSQZ(bb[0].BBW_stage[LA]) || m15sqz) s.scenario = SC_A3;   // noise SQZ in full fly
-   }
-   else if(h4_fly && s.cas_shrinkTF>=1 && s.cas_sqzCount<=1) {
-      // Tier 2 shallow: B by depth                                   // Part 3 B / §12d
-      if(s.cas_shrinkTF==1)      s.scenario = SC_B1;
-      else if(s.cas_shrinkTF==2) s.scenario = SC_B2;
-      else                       s.scenario = SC_B3;
-      if(s.cas_sqzCount==1)      s.scenario = SC_E1;                  // §12d sqz=1 → E1
-   }
-   else if(h4_fly && s.cas_sqzCount>=2) {
-      s.scenario = s.b2_pink ? SC_E2 : SC_E1;                         // Part 3 E
-      // E3 loading: M15 SQZ + M30 shrink + M30 sideway               // Part 5 E3 loading / TT4 G6-LOAD
-      if(m15sqz && IsShrink(bb[2].BBW_stage[LA]) && bb[2].BB_diffMid_Trend[LA]>=3)
-         s.scenario = SC_E3L;
-   }
-   else if(h4_shrink) {
-      // H4 itself compressing → E4 territory                          // Part 3 E4
-      s.scenario = SC_E4;
-      if(s.cas_shrinkTF<=2 && s.cas_sqzCount==0 && d1_fly) {
-         // shallow LTF + H4 shrinking + D1 backing = release path forming
-         s.scenario = (s.phase==PH_3B_OUT) ? SC_F1 : SC_E4;
-      }
-   }
-   else if(h4_sqz) {
-      // Tier 2 direction pivot                                        // Part 3 G
-      double m5db = ADiffBBW(bb,0);
-      int    m5ud_break = (m5db > 0.3) ? 1 : 0;                       // M5 expansion proxy
-      if(!m5ud_break)                       s.scenario = d1_fly ? SC_G2 : SC_G3;
-      else {
-         int m5mid = bb[0].BB_diffMid_Trend[LA];
-         bool sameAsD1 = (d1mid==1||d1mid==5) ? (m5mid==1||m5mid==5)
-                       : (d1mid==2||d1mid==4) ? (m5mid==2||m5mid==4) : false;
-         s.scenario = d1_fly ? (sameAsD1 ? SC_G1 : SC_G2) : SC_G3;
-      }
-      if(s.phase==PH_6)                     s.scenario = SC_G4;        // extended whipsaw // §13 PH6
-   }
+   // §12 classification — thresholds from Python (absolute diffBBW)
+   bool h4_fly    = IsFly(h4stg) && (h4mid==1||h4mid==2||h4mid==3) && dbbw_h4 > -15;
+   bool h4_shrink = (IsShrink(h4stg) && !IsSQZ(h4stg)) || (dbbw_h4 < -20 && !IsSQZ(h4stg));
+   bool h4_sqz    = IsSQZ(h4stg) || (MathAbs(dbbw_h4) <= 0.2 && h4mid==3 && !h4_fly);
+   bool d1_fly    = IsFly(d1stg) && (d1mid==1||d1mid==2||d1mid==4||d1mid==5);
 
-   // Tier 3 overlays: expansion in progress refines the above        // Part 3 D/F/C
-   double m5db2 = ADiffBBW(bb,0);
-   int    m15mid = bb[1].BB_diffMid_Trend[LA];
-   int    m30mid = bb[2].BB_diffMid_Trend[LA];
-   if(s.phase==PH_5) {
-      bool m30conf = IsFly(bb[2].BBW_stage[LA]) && (m30mid==1||m30mid==2);
-      bool h4conf  = h4_fly;
-      bool fromDeep = (s.cas_sqzCount>=1) || IsSQZ(bb[4].BBW_stage[LA_2]);
-      bool sameAsH4 = (h4mid==1&&(m15mid==1||m15mid==5))||(h4mid==2&&(m15mid==2||m15mid==4));
-      if(h4_fly && !fromDeep) {                                       // rest recovery D
-         if(!m30conf)                        s.scenario = SC_D1s;
-         else if(m30conf && !h4conf)         s.scenario = SC_D2s;
-         else                                s.scenario = SC_D3s;
-      } else if(fromDeep) {
-         bool counterD1 = d1_fly && !((d1mid<=1||d1mid==5)?(m15mid==1||m15mid==5):(m15mid==2||m15mid==4));
-         if(counterD1) {                                              // reversal C ladder
-            if(!h4conf)                      s.scenario = SC_C1;
-            else                             s.scenario = SC_C2;
-         } else {                                                     // release F ladder
-            if(!m30conf)                     s.scenario = SC_F1;
-            else if(m30conf && !h4conf)      s.scenario = SC_F2;
-            else                             s.scenario = SC_F3;
+   // ── Step 3: Early F-tier — H4 exiting compression ─────────────────
+   // Fires before G/E4 — H4 may still be in SQZ/shrink stage but bands
+   // are expanding. OOS-validated: 7/7 episodes in Jan-Apr OOS.
+   if(s_dbbwH4_hist_n >= 2) {
+      double recent_dbbw = s_dbbwH4_hist[0];
+      double prev_dbbw   = s_dbbwH4_hist[1];
+      if(h4_fly && h4ud == 1 && recent_dbbw > 15 && prev_dbbw < 10) {
+         bool h4_bull = (h4mid==1||h4mid==5);
+         if(d1dir=="bullish" && h4_bull) {
+            // F3 if 3+ consecutive bars positive diffBBW
+            if(g_dbbw_n >= 3 && g_dbbw_ring[0]>0 && g_dbbw_ring[1]>0 && g_dbbw_ring[2]>0) {
+               s.scenario = SC_F3; s.info = "F3 — HTF confirmed expansion";
+               return s;
+            }
+            // F2 if M30 confirms
+            if(bb[2].BBUpDn[LA] == 1) {
+               s.scenario = SC_F2; s.info = "F2 — MTF confirmed expansion";
+               return s;
+            }
+            // F1 — LTF expansion only
+            s.scenario = SC_F1; s.info = "F1 — LTF expansion";
+            return s;
          }
       }
    }
-   if(s.scenario==SC_NONE) s.scenario = SC_A2;                        // conservative default
+
+   // ── Step 4: H4 SQZ → G-tier (Direction pivot) ─────────────────────
+   // OOS-UNVALIDATED: G-reversal — fired 0 times on Jan-Apr OOS
+   // (7 F, 0 G episodes). Provisional until a reversal-episode dataset
+   // validates it. Do not trust the G-resolution branch live.
+   if(h4_sqz) {
+      // OOS-UNVALIDATED: G-reversal/discriminator
+      double m5db = ADiffBBW(bb,0);
+      bool m5_ud_break = (m5db > 0.3);                                // M5 expansion proxy (Python: > 0.3, abs formula)
+      if(!m5_ud_break) {
+         if(d1_fly && d1dir=="bearish" && (h4mid==2||h4mid==4))
+            s.scenario = SC_G1;                                       // OOS-UNVALIDATED
+         else if(d1_fly)
+            s.scenario = SC_G2;                                       // OOS-UNVALIDATED
+         else
+            s.scenario = SC_G3;                                       // OOS-UNVALIDATED
+      } else {
+         int m5mid = bb[0].BB_diffMid_Trend[LA];
+         bool sameAsD1 = ((d1mid==1||d1mid==5) && (m5mid==1||m5mid==5)) ||
+                         ((d1mid==2||d1mid==4) && (m5mid==2||m5mid==4));
+         if(d1_fly) {
+            s.scenario = sameAsD1 ? SC_G1 : SC_G2;                    // OOS-UNVALIDATED
+         } else
+            s.scenario = SC_G3;                                       // OOS-UNVALIDATED
+      }
+      if(s.phase==PH_6) s.scenario = SC_G4;                           // OOS-UNVALIDATED, extended whipsaw
+      // Update prev H1-SQZ for next call
+      s.cas_shrinkTF = s.cas_shrinkTF; s.cas_sqzCount = s.cas_sqzCount;
+      return s;
+   }
+
+   // ── Step 5: H4 shrink → E4 (after G-tier, since SQZ takes priority) ──
+   if(h4_shrink) {
+      s.scenario = SC_E4;
+      s.info = "E4 — HTF compressing";
+      return s;
+   }
+
+   // ── Step 6: Compression routing (before h4_fly — Cluster 1 fix) ──
+   // confirmed_compression = cas_sqzCount>=1 OR diffBBW-confirmed LTF shrink
+   bool confirmed_compression = (s.cas_sqzCount >= 1 ||
+                                (ltf_shrinkTF >= 1 && dbbw_h4 < 30));
+   if(confirmed_compression) {
+      // ── Decision 5: H1-SQZ prior-bar → E/B-tier ────────────────────
+      bool h1_sqz_now = IsSQZ(bb[3].BBW_stage[LA]);
+
+      // Established (2+ bars H1-SQZ) → E-tier
+      if(h1_sqz_now && s_prevH1Sqz) {
+         if(m15sqz && m30sqz) {
+            s.scenario = SC_E2; s.info = "E2 — H1-SQZ established, M15+M30 SQZ";
+            return s;
+         }
+         s.scenario = SC_E1; s.info = "E1 — H1-SQZ established";
+         return s;
+      }
+
+      // ── Decision 6: H1-SQZ recovery → E1 ───────────────────────────
+      // H1 just exited SQZ but prior bar was SQZ, compression persists
+      if(s_prevH1Sqz && !h1_sqz_now && ltf_shrinkTF >= 1) {
+         s.scenario = SC_E1; s.info = "E1 — H1-SQZ recovery, compression persists";
+         return s;
+      }
+
+      // Onset — H1 first-bar SQZ → B3
+      if(h1_sqz_now) {
+         s.scenario = SC_B3; s.info = "B3 — H1-SQZ onset";
+         return s;
+      }
+
+      // ── Decision 2: transient mid-TF SQZ, H4 flying → A-tier ───────
+      if(h4_fly && dbbw_h4 > 5 && ltf_shrinkTF == -1 && !s_prevH1Sqz) {
+         int m5stg = bb[0].BBW_stage[LA];
+         if(s.cas_sqzCount == 1 && !m15sqz && !IsSQZ(m5stg)) {
+            bool d1_aligned = (d1stg >= 500 && d1dir != "neutral");
+            if(d1_aligned) {
+               bool h4_up = (h4_dir == 1);
+               bool d1_up = (d1dir == "bullish");
+               if(h4_up == d1_up) {
+                  s.scenario = SC_A1; s.info = "A1 — mid-TF SQZ, M15+M5 flying, D1 aligned";
+                  return s;
+               }
+            }
+            s.scenario = SC_A2; s.info = "A2 — mid-TF SQZ, M15+M5 flying, D1 not aligned";
+            return s;
+         }
+      }
+
+      // ── E-tier: cas_sqzCount>=2 ────────────────────────────────────
+      if(s.cas_sqzCount >= 2) {
+         if(s.b2_pink) {
+            s.scenario = SC_E2; s.info = "E2 — M15+M30 both SQZ";
+            return s;
+         }
+         s.scenario = SC_E1; s.info = "E1 — LTF SQZ";
+         return s;
+      }
+
+      // ── B-tier: ltf_shrinkTF>=1, keyed by max(shrink, sqz) depth ───
+      if(ltf_shrinkTF >= 1) {
+         int deepest_sqz_TF = -1;
+         for(int tf=0; tf<=3; tf++)
+            if(IsSQZ(bb[tf].BBW_stage[LA])) deepest_sqz_TF = tf;
+         int max_depth = (ltf_shrinkTF > deepest_sqz_TF) ? ltf_shrinkTF : deepest_sqz_TF;
+
+         // B-tier decoder lookup table
+         if(max_depth==1 && s.cas_sqzCount<=1) { s.scenario=SC_B1; return s; }
+         if(max_depth==2 && s.cas_sqzCount<=1) { s.scenario=SC_B2; return s; }
+         if(max_depth==3 && s.cas_sqzCount<=1) { s.scenario=SC_B3; return s; }
+         s.scenario = SC_B3; s.info = "B3 — LTF shrink";
+         return s;
+      }
+
+      // ── A2: SQZ without LTF shrink (safety net) ────────────────────
+      s.scenario = SC_A2; s.info = "A2 — SQZ without LTF shrink";
+      return s;
+   }
+
+   // ── Step 7: H4 flying → A-tier (no-compression cases only) ────────
+   if(h4_fly) {
+      // A1: D1 aligned
+      if(d1stg >= 500 && d1dir != "neutral") {
+         bool h4_up = (h4_dir == 1);
+         bool d1_up = (d1dir == "bullish");
+         if(h4_up == d1_up) {
+            s.scenario = SC_A1; s.info = "A1 — H4+D1 fly aligned";
+            return s;
+         }
+      }
+      // A2: D1 not aligned
+      s.scenario = SC_A2; s.info = "A2 — H4 fly, D1 not aligned";
+      return s;
+   }
+
+   // ── Step 8: Default fallback ─────────────────────────────────────
+   s.scenario = SC_A2; s.info = "default — conservative";
+
+   // ── Update prev H1-SQZ for next call (Decision 5/6) ───────────────
+   s_prevH1Sqz = IsSQZ(bb[3].BBW_stage[LA]);
+
    return s;
 }
 
@@ -766,8 +922,7 @@ void Trade_Strategy(
    if(s_exitCooldown>0) s_exitCooldown--;
 
    //── Layer 1 ─────────────────────────────────────────────────────
-   RingPush(ADiffBBW(BB_datas,4));
-   ScenarioState s = IdentifyScenario(BB_datas, close_prices);
+   ScenarioState s = IdentifyScenario(BB_datas, close_prices);        // RingPush is internal now
 
    if(s.scenario!=s_prevSc || s.phase!=s_prevPh) {
       SigEvt("SC", KV("sc",ScenarioName(s.scenario))+KV("ph",PhaseName(s.phase))
@@ -855,15 +1010,18 @@ void Trade_Strategy(
 }
 //+------------------------------------------------------------------+
 // INTEGRATION NOTES for Claude Code (delete after wiring):
-// 1. ADAPTER: verify/replace ABBUpper/ABBLower field names and check
-//    whether a native diffBBW field exists (then delete the fallback).
-//    Add magic-number filter to AFloatingPL() if the EA uses one.
-// 2. Caller must: print Trade_info only when non-empty; apply Trade_sl
+// 1. ADAPTER: ADiffBBW now uses ABSOLUTE formula (w_now-w_prev)*100
+//    to match the V30.02 log. Verified against log values.
+//    ABBUpper/ABBLower field names still need verification.
+// 2. AFloatingPL: magic-number filter added (MAGIC_NUMBER=898989).
+// 3. Caller must: print Trade_info only when non-empty; apply Trade_sl
 //    tighten-only vs the live position SL; treat act semantics
 //    identically to TofyTrade4.
-// 3. Replay gates before any MT5 backtest (scaffold Phases 0-5):
-//    Layer-1 ≥95% vs march2026_expected.csv; benchmark items 1-5 incl.
-//    item 5: 03.03 07:45 must log VETO-AT-TARGET, never BUY.
-// 4. E3Check chk1 carries a doc conflict resolution (lean vs PH_3A
+// 4. Replay gates before any MT5 backtest:
+//    Layer-1 ≥95% vs march2026_expected.csv (GATE 2).
+// 5. E3Check chk1 carries a doc conflict resolution (lean vs PH_3A
 //    both-direction) — flagged for replay validation, see comment.
+// 6. PredictNext diffBBW damping thresholds (-0.5, 1.0) were written
+//    for the percentage formula — they are WRONG with the absolute
+//    formula. Fix before trusting PredictNext confidence scores.
 //+------------------------------------------------------------------+
