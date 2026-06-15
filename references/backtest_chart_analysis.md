@@ -530,6 +530,17 @@ Confinement (HTF→LTF range restriction) is the consequence of HTF shrink, not 
 The CHECK at each step determines whether LTF shrink is rest vs confinement vs reversal warning.
 ```
 
+[![B→E→G Compression Progression](Backtest_data/extras/backtested_EA_b_to_e_to_g_progression.jpg)](backtested_EA_b_to_e_to_g_progression.jpg)
+
+**B→E→G Compression Progression on Real Backtest Data (02–06 Mar 2026):**
+
+- **Circle (03.03 07:45):** H1 ESTABLISHED SQZ — in SQZ since 03.03 04:00. E-tier. Contrast with onset: same SQZ shape but different because it has been in SQZ for 3+ hours. [Decision 5 — validated]
+- **Rectangle left edge (03.04 16:00):** H1 ONSET SQZ — just entered SQZ. Same snapshot shape as the circle but different state: only prior-bar history distinguishes onset from established. [Decision 5 — validated]
+- **Rectangle through 03.06 14:30:** Compression deepening — H4 shrinking, then H4 goes flat (BBUpDn=0) = the PIVOT-PENDING / G-tier waiting state.
+- **G RESOLUTION** (which direction the pivot breaks): OOS-UNVALIDATED. This chart shows the progression INTO the pivot, not a validated G/F resolution rule. The pivot direction remains to be confirmed out-of-sample.
+
+---
+
 ### Touch Type Classification
 
 During D1, bands move toward price — candle wicks touch multiple TF bands simultaneously.
