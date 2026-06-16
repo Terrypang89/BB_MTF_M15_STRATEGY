@@ -1656,6 +1656,17 @@ flowchart TD
 **Discriminator A1 vs A2:** Check W1 and D1 BBW_stage — both 511/512 = A1, either opposing = A2
 **Discriminator A2 vs A3:** A3 is a sub-state within A1 or A2 — M5/M15 brief squeeze only, M30 still 511/512
 
+### Scenario A Sub-State Flowchart
+
+```mermaid
+flowchart TD
+    A["Scenario A confirmed"] --> B{"M15/M5 brief squeeze (513/400-499)?"}
+    B -->|Yes| A3s["A3 — Noise squeeze\nHOLD through — Type 1\nSize: 1.0×"]
+    B -->|No| C{"W1 + D1 both 511/512 same direction?"}
+    C -->|Yes| A1s["A1 — Strong fly\nFull trend — hold to D1 outer\nSize: 1.0×"]
+    C -->|No| A2s["A2 — Partial fly\nShorter hold — exit at H4\nSize: 0.75×"]
+```
+
 **A-tier priority rule:** When cas_sqzCount=0 AND no diffBBW-confirmed shrink
 (i.e., the highest shrink TF has stage 513/523 but its diffBBW is positive or
 None — stage label lags), the state is A-tier regardless of LTF opposition or
@@ -1918,6 +1929,17 @@ PriceLoc=at_upper or at_lower at the HIGHEST still-flying TF AND that TF diffMid
 **Discriminator B2→B3:** Watch H1 BBW_stage — when H1 enters 513/523, depth increases to B3
 **Discriminator B→E:** When M15+M30 both show 400-499 (SQZ) simultaneously → E2
 
+### Scenario B Sub-State Flowchart
+
+```mermaid
+flowchart TD
+    A["Scenario B confirmed"] --> B{"M30 in shrink (513/523)?"}
+    B -->|No| B1s["B1 — M15 shrink only\nShallow compression\nSize: 0.75×"]
+    B -->|Yes| C{"H1 in shrink (513/523)?"}
+    C -->|No| B2s["B2 — M30 also shrinking\nModerate compression\nSize: 0.50×"]
+    C -->|Yes| B3s["B3 — H1 also shrinking\nDeep compression\nSize: 0.25×"]
+```
+
 **HTF context:** H4 is still in fly, but M30 or M15 starting to shrink. H4 provides the direction and target; M30/M15 are resting before continuing.
 
 **What you see:**
@@ -2020,6 +2042,18 @@ SIZE: 0.75× (M15 or M30 shrink alone) → 0.50× (M30+H1 both) → 0.25× (all 
 
 **Discriminator C1→C2:** H4 BBW_stage flips from original direction fly to new direction fly
 **Discriminator C2 vs C3:** Check W1+D1 — if both also reversed = C2 full (→ A1). If W1/D1 still original = C3 counter-trend
+
+### Scenario C Sub-State Flowchart
+
+```mermaid
+flowchart TD
+    A["Scenario C confirmed"] --> B{"H4 in new direction fly?"}
+    B -->|No| C1s["C1 — MTF reversal only\nWait — H4 not confirmed\nSize: 0.25×"]
+    B -->|Yes| C_node{"W1 + D1 also reversed?"}
+    C_node -->|Yes| C2s["C2 — H4 confirmed\nNew A begins [OOS-UNVALIDATED]\nSize: 1.0× / 0.75×"]
+    C_node -->|No| C3s["C3 — Counter-trend\nW1/D1 still original [OOS-UNVALIDATED]\nSize: 0.50×"]
+```
+
 **Key rule:** Do NOT enter at C1. Wait for H4 confirmation (C2) unless deliberately taking
 counter-trend with tight stop and 0.25× size.
 
@@ -2987,6 +3021,19 @@ All TFs SQZ simultaneously → transition to Scenario G (Direction pivot).
 D2 direction will be determined by which side H4 breaks SQZ toward.
 If D1 is still fly (D1 BBUpDn=1/3), that D1 direction gives the bias for G1 sub-state.
 
+### Scenario E Sub-State Flowchart
+
+```mermaid
+flowchart TD
+    A["Scenario E confirmed"] --> B{"M30 in SQZ (400-499)?"}
+    B -->|No| E1s["E1 — LTF partial SQZ\nNo new entries\nGate: G0c-SQZLOCK"]
+    B -->|Yes| C{"H4 compressing (513/400-499)?"}
+    C -->|Yes| E4s["E4 — H4 also compressing\nNO ENTRY → Scenario G"]
+    C -->|No| D{"M5 broke SQZ?"}
+    D -->|Yes| E3s["E3 — M5 loading\nARM — wait M15\nGate: G6-LOAD"]
+    D -->|No| E2s["E2 — LTF full SQZ\nEXIT ALL\nGate: G0b-PINK"]
+```
+
 **Touch rule in E:** During E1/E2 all LTF touches are Type 1 or Type 3 (noise/geometry).
 Only M5 BBUpDn_state 2→1 transition (shrinking→expanding = band actively expanding) combined with PriceLoc=above_upper is the valid Type 2 signal.
 
@@ -3306,6 +3353,18 @@ SIZE: 0.75× (1-2 TFs compress) → 0.50× (3 TFs compress) → 0.25× (all 3 co
 
 **F1→F2 discriminator:** M30 BBW_stage exits 400-499/513 and reaches 511/512 = F2 confirmed
 **F2→F3 discriminator:** H4 BBW_stage exits 400-499/513 and reaches 511/512 new direction = F3
+
+### Scenario F Sub-State Flowchart
+
+```mermaid
+flowchart TD
+    A["Scenario F confirmed"] --> B{"M30 in fly (511/512)?"}
+    B -->|No| F1s["F1 — LTF only\nWAIT — quality ≤ 59\nGate: G5-WEAK"]
+    B -->|Yes| C{"H4 in fly (511/512)?"}
+    C -->|No| F2s["F2 — MTF confirmed\nENTER on M15 FLAT→UP/DN\nSize: 0.75×"]
+    C -->|Yes| F3s["F3 — HTF confirmed\nTreat as Scenario A [OOS-UNVALIDATED]\nSize: 1.0×"]
+```
+
 **False breakout rule:** If M15 fly expands but reverses within 3-5 bars back to 513/400-499
 → invalidated → return to E3/G2, wait for re-SQZ and re-expand
 
@@ -3869,10 +3928,10 @@ flowchart TD
     B -->|Yes| C{"H4 BBUpDn 0→1 sustained 3+ bars?"}
     C -->|No — still 0| D["F1 state\nLTF only — wait for H4"]
     C -->|Yes| E{"D1 BBUpDn = 1/3 same direction?"}
-    E -->|Yes| F["G1 — High confidence\nEnter F rules 0.75×\n→ Scenario F"]
-    E -->|No — D1 opposing| G_node["G2 — Low confidence\nEnter C1 rules 0.25×\n→ Scenario C"]
-    C -->|Yes then reverts to 0| H_node["G3 — False breakout\nExit → return to E/G"]
-    C -->|Alternates 1 and 4| I_node["G4 — Whipsaw\nNo trade — wait 3+ bars"]
+    E -->|Yes| F["G1 — High confidence\nEnter F rules 0.75× [OOS-UNVALIDATED]\n→ Scenario F"]
+    E -->|No — D1 opposing| G_node["G2 — Low confidence\nEnter C1 rules 0.25× [OOS-UNVALIDATED]\n→ Scenario C"]
+    C -->|Yes then reverts to 0| H_node["G3 — False breakout\nExit → return to E/G [OOS-UNVALIDATED]"]
+    C -->|Alternates 1 and 4| I_node["G4 — Whipsaw\nNo trade — wait 3+ bars [OOS-UNVALIDATED]"]
 ```
 
 ### Cascade Position — Scenario G
