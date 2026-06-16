@@ -463,6 +463,19 @@ TIER_MAP = {
 }
 G_TIER = {'G1', 'G2', 'G3', 'G4'}
 
+def phase_name(phase):
+    """Mirror MQL5 PhaseName() — strip PH_ prefix, map to display string.
+
+    MQL5 PhaseName: PH_1→"1" PH_2→"2" PH_3A→"3A" PH_3B_INTO→"3BI"
+                     PH_3B_OUT→"3BO" PH_4→"4" PH_5→"5" PH_6→"6" default→"NA"
+    """
+    return {
+        'PH_1': '1', 'PH_2': '2', 'PH_3A': '3A',
+        'PH_3B_INTO': '3BI', 'PH_3B_OUT': '3BO',
+        'PH_4': '4', 'PH_5': '5', 'PH_6': '6',
+    }.get(phase, 'NA')
+
+
 def scenario_display_label(scenario, phase, pivot_substate, prev_pivot_pending=False):
     """Compute display label for a scenario — read-only, no recompute.
 
@@ -491,25 +504,26 @@ def scenario_display_label(scenario, phase, pivot_substate, prev_pivot_pending=F
     g_reversal = (pivot_substate == 2) # read from struct, no recompute
 
     tier_colors = {
-        'A': 'darkgray', 'B': 'yellow', 'E': 'darkorange',
-        'G': 'red', 'F': 'limegreen', 'C': 'magenta',
+        'A': 'turquoise', 'B': 'deepskyblue', 'E': 'deepskyblue',
+        'G': 'white', 'F': 'deeppink', 'C': 'deeppink',
     }
 
+    pn = phase_name(phase)
     if pivot_now and not prev_pivot_pending:
         # Just entered PIVOT-PENDING
-        return (f"PIVOT-PENDING  ph:{phase}", 'white', True)
+        return (f"PIVOT-PENDING  ph:{pn}", 'white', True)
     elif prev_pivot_pending and not pivot_now:
         # PIVOT-PENDING cleared
         if g_tier and g_reversal:
-            return (f"{scenario}?  ph:{phase}", 'red', False)
+            return (f"{scenario}?  ph:{pn}", 'red', False)
         else:
             tier = TIER_MAP.get(scenario, 'A')
             clr = tier_colors.get(tier, 'white')
-            return (f"{scenario}  ph:{phase}", clr, False)
+            return (f"{scenario}  ph:{pn}", clr, False)
     elif not prev_pivot_pending:
         tier = TIER_MAP.get(scenario, 'A')
         clr = tier_colors.get(tier, 'white')
-        return (f"{scenario}  ph:{phase}", clr, False)
+        return (f"{scenario}  ph:{pn}", clr, False)
     else:
         # Still in PIVOT-PENDING (no change)
         return (None, 'white', True)

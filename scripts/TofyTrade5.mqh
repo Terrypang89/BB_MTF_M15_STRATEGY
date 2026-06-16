@@ -175,17 +175,18 @@ double GetATRSLStop(ATRSLBUF_struct &ATRSL1BUF, int direction) {  // kept verbat
 #define GATE_CLR_WAIT  clrYellow
 #define GATE_CLR_PINK  clrMagenta
 #define GATE_CLR_LOAD  clrGold
-#define GATE_CLR_NOISE clrDimGray
+#define GATE_CLR_NOISE clrTan                    
 #define GATE_CLR_AQUA  clrAqua
 
-//── Tier colors for scenario labels (display only) ───────────────────
-#define TIER_CLR_A        clrDarkGray
-#define TIER_CLR_B        clrYellow
-#define TIER_CLR_E        clrDarkOrange
-#define TIER_CLR_G        clrRed            // provisional — OOS-UNVALIDATED
-#define TIER_CLR_F        clrLimeGreen
-#define TIER_CLR_C        clrMagenta
-#define TIER_CLR_PIVOT    clrWhite
+//── Tier colors for scenario labels (display only, non-chart colors)
+// 4 colors × 4 groups — label text disambiguates within group ─
+#define TIER_CLR_A        clrTurquoise   // Trend group
+#define TIER_CLR_B        clrDeepSkyBlue // Compression group
+#define TIER_CLR_E        clrDeepSkyBlue // Compression group
+#define TIER_CLR_G        clrWhite       // Pivot/waiting group (has "?" suffix)
+#define TIER_CLR_F        clrDeepPink    // Expansion group
+#define TIER_CLR_C        clrDeepPink    // Expansion group
+#define TIER_CLR_PIVOT    clrWhite       // Pivot/waiting group
 
 void DrawGateLabel(string tag, double price, BB_MTF_Data_struct &BB_datas[],
                    color labelColor, int tf_idx=1)               // kept verbatim
@@ -1048,10 +1049,16 @@ void Trade_Strategy(
 
    //── Layer 2 (prediction drawn AND consumed) ─────────────────────
    Prediction p = PredictNext(s, BB_datas);
-   string pdir=(p.direction==1)?"BUY":(p.direction==2)?"SELL":"NEUTRAL";
-   DrawGateLabel("[PRED:"+pdir+":"+IntegerToString(p.confidence)+"]",
-                 BB_datas[2].BB_Mid[LA], BB_datas,
-                 (p.direction==1)?GATE_CLR_BUY:(p.direction==2)?GATE_CLR_SELL:GATE_CLR_NOISE, 2);
+
+   // Suppress PRED labels until Phase 3 wires real PredictNext
+   bool ShowPredLabels = false;          // flip to true after Phase 3
+   if(ShowPredLabels)
+   {
+      string pdir=(p.direction==1)?"BUY":(p.direction==2)?"SELL":"NEUTRAL";
+      DrawGateLabel("[PRED:"+pdir+":"+IntegerToString(p.confidence)+"]",
+                    BB_datas[2].BB_Mid[LA], BB_datas,
+                    (p.direction==1)?GATE_CLR_BUY:(p.direction==2)?GATE_CLR_SELL:GATE_CLR_NOISE, 2);
+   }
 
    //── Trailing stop maintenance (tighten-only) — before decisions ─
    if(BUYS+SELLS>0) {
