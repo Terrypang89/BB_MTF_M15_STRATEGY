@@ -1468,7 +1468,7 @@ flowchart TD
     I -->|Yes| J["M30/M15 BBUpDn=0 (SQZ)?"]
     J -->|Yes| K["SCENARIO E\nDeep compression\nLTF SQZ, HTF fly"]
     J -->|No| L["SCENARIO B\nShallow compression\nWatch depth level"]
-    I -->|No — H4 BBUpDn=0 (SQZ)| M["SCENARIO E4→H\nH4 also compressing\nAll TFs SQZ — direction pivot"]
+    I -->|No — H4 BBUpDn=0 (SQZ)| M["SCENARIO E4→G\nH4 also compressing\nAll TFs SQZ — direction pivot"]
     M --> N{"D1 BBUpDn=1/3 (fly bias)?"}
     N -->|Yes — bias exists| O{"H4 BBUpDn 0→1 same as D1?"}
     O -->|Yes sustained 3+ bars| P["SCENARIO G1→F\nCompression release\nHigh confidence — F2 rules"]
@@ -1528,14 +1528,13 @@ diffBBW=+41.34 — breakout already underway).
 ## TIER 2 — COMPRESSION AND BOTTOM (D1)
 
 > HTF compressing downward toward LTF. Trades shorter and size reduces
-> as compression depth increases. Includes the BOTTOM state (H) where
+> as compression depth increases. Includes the BOTTOM state (G) where
 > all TFs have fully compressed and D2 direction is about to resolve.
-> D1 cascade is the cause — HTF state confines every TF below it.
 
 **Scenarios in this tier:**
 - B — Shallow compression (D1 at MTF depth, H4 fly intact)
 - E — Deep compression (D1 at LTF depth, HTF fly intact, includes E4 formerly G1)
-- H — Direction pivot (D1 complete, all TFs SQZ, D2 direction resolving)
+- G — Direction pivot (D1 complete, all TFs SQZ, D2 direction resolving)
 
 ---
 
@@ -3010,7 +3009,7 @@ M5/M15/M30: Stage 400-499 (SQZ persistent)
 | E1 | LTF partial SQZ | 511/512 | 1 or 3 | 511/512 or 513 | 1/2/3 | 513/523 | 2 | 400-499 | 400-499 | Noise at M30, SQZ-peak at M15 | G0c-SQZLOCK | No new entries |
 | E2 | LTF full SQZ | 511/512 | 1 or 3 | 511/512 or 513 | 2/3 | 400-499 | 0 | 400-499 | 400-499 | SQZ-peak all LTF — alternating PriceLoc | G0b-PINK | EXIT all |
 | E3 | M5 loading | 511/512 | 1 or 3 | 511/512 | 1 or 3 | 513/523 | 2→1 | 513 | Breaking SQZ | Signal at M5 — BBUpDn 0→1 | G6-LOAD | ARM — wait M15 mid confirm |
-| E4 | H4 also compressing | 513/523 or 400-499 | 2 or 0 | 400-499 | 0 | 400-499 | 0 | 400-499 | 400-499 | SQZ-peak all TFs | G0b-PINK + G0c-SQZLOCK | NO ENTRY — transition to H |
+| E4 | H4 also compressing | 513/523 or 400-499 | 2 or 0 | 400-499 | 0 | 400-499 | 0 | 400-499 | 400-499 | SQZ-peak all TFs | G0b-PINK + G0c-SQZLOCK | NO ENTRY — transition to G |
 
 **E2 BBUpDn sequence:** M5 BBUpDn_state alternates 0 (no_state) and 2 (shrinking) on consecutive bars = SQZ peak, band so narrow it catches every candle = G0b-PINK
 **E3 BBUpDn sequence:** M5 BBUpDn_state 2→1 (shrinking→expanding) = band actively expanding upward = D2 initiated = G6-LOAD fires. PriceLoc transitions from at_lower → above_upper confirming breakout direction.
@@ -4218,9 +4217,9 @@ Part 3 identification to Part 4 prediction:
 | B3 + Phase 3b-INTO | Trending side favoured | H4 outer band (dropping) | 3-8h per leg | E (H4 about to SQZ) | Medium for trend side |
 | E2 + Phase 4 | UNKNOWN | None — noise | Hours to 1 day | G (direction pivot) | None |
 | E3 + Phase 4→5 | M5 expansion direction | H4 outer band → D1 | Hours | G → F or C | Medium → High |
-| H1 + Phase 5 | Same as D1 | H4 → D1 outer band | Hours | F → A | High |
-| H2 + Phase 5 | Opposite to D1 | H4 outer band (new dir) | Hours → days | C → new A | Low → Medium |
-| H4 + Phase 6 | Each leg opposite | H4 boundaries | 12-24h per leg | Eventually F or C or Scenario I | Low |
+| G1 + Phase 5 | Same as D1 | H4 → D1 outer band | Hours | F → A | High |
+| G2 + Phase 5 | Opposite to D1 | H4 outer band (new dir) | Hours → days | C → new A | Low → Medium |
+| G4 + Phase 6 | Each leg opposite | H4 boundaries | 12-24h per leg | Eventually F or C or Scenario I | Low |
 | D2 + Phase 5 | Same as H4 fly | H4 outer band | Hours | A (full fly restored) | Medium-High |
 | F2 | Same as M30 expansion | H4 outer band | Hours | F3 → A or back to G | Medium |
 | C2 | New direction confirmed | D1 outer band (new dir) | Days | New A | High |
