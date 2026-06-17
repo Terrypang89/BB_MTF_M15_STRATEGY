@@ -94,6 +94,21 @@ that resolves as a directional pivot (G).
 02.20 20:00  A2  H4=512  ← resolution: F continuation (F-tier missed)
 ```
 
+### Harness Gap: G2→C1→C2/C3 forward transition not implemented
+
+The G-tier returns G2 (reversal signal, pivot_substate=2) but does NOT
+implement the G2→C1→C2/C3 forward transition. The reversal-confirmed states
+(C1 = MTF reversal only, C2 = H4 confirmed new direction, C3 = H4 flipped
+but W1/D1 still original) are doc-only, unimplemented in identify_scenario.
+Must be built before the G-reversal branch can be validated on
+reversal-containing data.
+
+- **Affected tier:** G (Direction Pivot)
+- **Affected sub-states:** G2, C1, C2, C3
+- **Doc location:** Scenario G → Post-G2 Reversal Resolution Progression
+- **Status:** OOS-UNVALIDATED — cannot validate until harness supports
+  the G2→C1→C2/C3 state transitions
+
 ### Scenario Distribution (OOS — 349 snapshots)
 
 | Scenario | Count | Pct |
