@@ -1,6 +1,27 @@
 # CLAUDE.md — BB MTF Strategy Repository
 
-## When editing references/backtest_chart_analysis.md
+## Source of Truth Hierarchy
+- `references/backtest_chart_analysis.md` = PRIMARY reference for scenario/rule MEANINGS and the model. Always consult first for "what does X mean."
+- The CODE (`scripts/TofyTrade5.mqh` and `scripts/replay_harness.py`) = FINAL AUTHORITY on what's implemented. Doc and code disagree → code wins, doc is stale (e.g. Scenario C/H had old gate names / unimplemented logic).
+- `references/fixtures/validation_status.md` = what's VALIDATED vs hypothesis. A documented rule is not necessarily validated.
+- `references/ARCHITECTURE.md` = system DESIGN (how layers connect). Don't confuse with the rules doc.
+
+## Architecture
+- 3 layers: L1 IdentifyScenario (VALIDATED/built) → L2 PredictNext (Phase 3, not built) → L3 DecideAction (Phase 4, not built).
+
+## Recurring Lessons
+- **STORE-vs-RECOMPUTE**: MQL5 stores values on structs; Python recomputes. NOT auto-equivalent — verify bar-for-bar. (Hit on prev_h1_sqz, b1_block/b2_pink, veto_priceloc.)
+- **VALIDATED ≠ committed**. G-reversal = HYPOTHESIS (0 OOS episodes); flag OOS-UNVALIDATED in code/doc/chart. Don't tune rules to fit test data.
+- **GATES**: GATE 2 = port faithfulness (100% expected). GATE 3 = prediction hit-rate (NOT 100% — forecasting; report real accuracy, don't tune). GATE 4 = firing benchmark.
+
+## Editing backtest_chart_analysis.md (5256 lines, validated)
+- Prefer ADDITIVE. Structural edits get show-before-commit + post-verification. Read the code before documenting (pre-restructure sections are often stale). Confirm line count after each str_replace.
+
+---
+
+## Task — Image Analysis Blocks
+
+When inserting image-analysis blocks into `references/backtest_chart_analysis.md`, follow the rules below. This is a specific task, not the entire project.
 
 ### Mandatory template for image analysis blocks
 
