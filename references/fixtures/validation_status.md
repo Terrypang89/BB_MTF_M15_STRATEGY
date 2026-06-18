@@ -126,6 +126,19 @@ making Python stricter than MQL5.
 - **Status:** UNRESOLVED — Python is strictly more defensive but
   behaviorally different.
 
+### Phase 3 Fix Item: diffBBW Damping Thresholds
+
+MQL5 PredictNext (TofyTrade5.mqh lines 600-603) applies diffBBW damping
+with thresholds -0.5 (contracting) and 1.0 (expanding). These were
+written for the percentage-era diffBBW formula — they are WRONG with
+the absolute formula (flagged in integration note 6, line 1132).
+
+- **Phase 3 fix:** re-derive thresholds for absolute diffBBW scale.
+  Don't port the stale percentage-era values.
+- **Affected:** PredictNext confidence scores — all confidence values
+  are unreliable until thresholds are corrected.
+- **Status:** STALE — must be fixed before GATE 3 validation.
+
 ### Phase 4 Verification Item: Store-vs-Recompute Equivalence
 
 MQL5 STORES b1_block, b2_pink, and priceloc on the ScenarioState struct
@@ -141,6 +154,11 @@ prev_h1_sqz divergence (assumed equivalent until timing differed).
   equivalence is assumed, not yet verified — same pattern as prev_h1_sqz.
 - **Blocks:** Nothing now (L1 unaffected). Must be verified when L3
   is built, not silently trusted.
+- **PredictNext prior-bar state:** MQL5 reads BB_datas[tf][LA_1]
+  (prior-bar stage + mid) directly for TF_DirectionScore transitions.
+  Python port must match MQL5 bar-for-bar — same class as prev_h1_sqz
+  (store-vs-recompute with timing dependency). Must be verified when
+  L2 is built, not silently trusted.
 
 ### Scenario Distribution (OOS — 349 snapshots)
 

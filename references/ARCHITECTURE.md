@@ -255,6 +255,182 @@ For the full validation record with episode detail, see [`references/fixtures/va
 
 ---
 
-## Part 4 — Layer 2: PredictNext (design, TBD)
+## Part 4 — Layer 2: PredictNext (DESIGN — built Phase 3)
+
+Consumes Layer 1 ScenarioState + per-TF BB data → outputs Prediction for Layer 3. D1/W1 do their heaviest work here — resolving the H4 pivot that Part 3 left pending. For prediction rule MEANINGS see `backtest_chart_analysis.md` Part 4 (Rules 1-4); this section designs the layer structure, not rule values.
+
+### 4.0 Link from Layer 1 — what Part 4 consumes from Part 3
+
+**ScenarioState consumption table** — every Part 3 field mapped to Part 4 use:
+
+| ScenarioState field (from Part 3 §3.1) | How PredictNext uses it |
+|---|---|
+| `scenario` | Selects which prediction rule applies; scenario-gates confidence and next-scenario edges |
+| `phase` | Scenario-gates confidence (PH_4 → None, PH_5 → explosive); drives timeline estimate |
+| `b2_pink` | Gating — forces confidence=0 (no prediction possible, M15+M30 locked in SQZ) |
+| `container_tf` | The target the prediction aims at (Rule 2: next confinement boundary) |
+| `pivot_substate` | G-tier: 0=N/A, 1=PIVOT-PENDING (direction unresolved — D1/W1 bias predicts G→F vs G→C), 2=G-REVERSAL (reversal_flag=True) |
+| `cas_shrinkTF` | Not used directly by Layer 2 — consumed by Layer 3 (decoder size) |
+| `cas_sqzCount` | Not used directly by Layer 2 — consumed by Layer 3 (decoder size). Provides compression depth context for timeline estimate. |
+| `b1_block` | Not used by Layer 2 — consumed by Layer 3 (entry gating) |
+| `container_dir` | Not used directly — direction is scored from per-TF BB data (see gap below) |
+| `container_diffbbw` | Not used directly — container health scored from per-TF BB data via ADiffBBW |
+| `priceloc` | Not used by Layer 2 — consumed by Layer 3 (E3, VETO, X1) |
+| `info` | Not used — logging field from Part 3 |
+
+**GAP — per-TF BB data**: PredictNext needs per-TF BB data (stage, mid, diffBBW, BBUpDn) to score direction across TFs. ScenarioState does NOT expose this — it exposes `container_tf`, `container_dir`, and `container_diffbbw` for the container only. Therefore Part 4 receives **both** ScenarioState (for scenario/phase gating) **and** the raw `BB_datas[]` array (for per-TF direction scoring). This matches the MQL5 signature: `PredictNext(ScenarioState &s, BB_MTF_Data_struct &bb[])`.
+
+**GAP — D1/W1 prior-bar state**: Direction scoring needs `stage[LA_1]` and `mid[LA_1]` (prior-bar) for transition detection (sqz→fly, fly→shrink). ScenarioState doesn't store prior-bar per-TF state. Part 4 reads this directly from `BB_datas[tf].BBW_stage[LA_1]` — the same raw array it already receives. No additional Part 3 change needed.
+
+**Impact — how Part 3 constrains Part 4:**
+
+1. **Can only predict from what ScenarioState exposes.** Part 4 can gate on scenario, phase, and b2_pink. Everything else (per-TF direction scoring, diffBBW damping) requires raw BB data. If a prediction needed per-TF diffBBW and Part 3 didn't pass BB_datas, that would be an unresolvable gap — but the dual-input design avoids this.
+2. **G-pivot handoff.** Part 3 marks G-tier as "pivot-pending" (pivot_substate=1) and sets direction=UNKNOWN — it does NOT resolve the pivot. Part 4 INHERITS this unresolved pivot as its primary job: D1/W1 bias predicts whether G resolves as F (continuation) or C (reversal). This is the most important Part 3 → Part 4 handoff.
+3. **OOS-unvalidated propagation.** Part 3 flags G→C transition as OOS-UNVALIDATED (0 of 7 OOS episodes resolved as reversal) and G2→C1→C2/C3 as UNIMPLEMENTED. Any Part 4 prediction that depends on G→C resolution inherits these flags — it is also OOS-UNVALIDATED.
+4. **Fields Part 3 computes but Part 4 ignores.** cas_shrinkTF, cas_sqzCount, b1_block, priceloc are Layer 3 fields. Part 4 doesn't consume them — they flow ScenarioState → Layer 3 directly.
+
+### 4.1 Interface — Class Diagram
+
+```mermaid
+classDiagram
+    class ScenarioState {
+        <<from Part 3>>
+        SCENARIO scenario
+        PHASE phase
+        bool b2_pink
+        int container_tf
+        int pivot_substate
+    }
+
+    class BB_MTF_Data_struct {
+        <<per-TF raw input>>
+        int BBW_stage[LA, LA_1]
+        int BB_diffMid_Trend[LA, LA_1]
+        int BBUpDn_state[LA]
+        double diffBBW[LA]
+        double BBUppLV[LA]
+        double BBLowLV[LA]
+    }
+
+    class Prediction {
+        <<output contract for Part 5>>
+        int direction     1=BUY / 2=SELL / 0=NEUTRAL
+        int target_tf     container_tf or scenario fallback
+        int timeline_bars coarse, in M5 bars
+        SCENARIO next_scenario
+        int confidence    0-100
+        bool reversal     G→C reversal flag
+        string info       logging
+    }
+
+    class PredictNext {
+        +Prediction PredictNext(ScenarioState &s, BB_MTF_Data_struct &bb[])
+    }
+
+    ScenarioState --> PredictNext : gates
+    BB_MTF_Data_struct --> PredictNext : scores
+    PredictNext --> Prediction : returns
+```
+
+**Prediction field meanings:**
+
+| Field | Type | Meaning | Rule | Consumed by Part 5 |
+|---|---|---|---|---|
+| `direction` | int | Predicted direction (1=BUY, 2=SELL, 0=NEUTRAL) | Rule 1 | Entry side |
+| `target_tf` | int | Which TF band is the target (0=M5..5=D1, -1=none) | Rule 2 | Exit target |
+| `timeline_bars` | int | Coarse estimate in M5 bars (TBD — GATE 3) | Rule 3 | Hold-duration check |
+| `next_scenario` | SCENARIO | Predicted next scenario | Rule 4 | Scenario-transition gating |
+| `confidence` | int | 0-100, drives Part 5 size | Rule 5 | Size multiplier |
+| `reversal` | bool | True if HTF LTF diverge (reversal imminent) | Rule 1 | Exit-not-entry signal |
+| `info` | string | Debug string (score components) | logging | — |
+
+**Output contract:** Prediction is the structured output Part 5 consumes. direction → entry side; confidence → size; target_tf → exit target TF; reversal → exit-not-entry signal.
+
+### 4.2 Sequence Diagram — per-bar flow
+
+This diagram makes the consumption arrow explicit: Prediction is CONSUMED by Part 5, not decorative. (TofyTrade4 PredictNextTrend was drawn-and-discarded — its output was never consumed by the firing matrix.)
+
+```mermaid
+sequenceDiagram
+    participant Tick as Tick (per bar)
+    participant L1 as Layer 1<br/>IdentifyScenario
+    participant L2 as Layer 2<br/>PredictNext
+    participant L3 as Layer 3<br/>DecideAction
+
+    Tick->>L1: BB_datas[] + close[]
+    L1->>L1: Classify scenario, phase, cascade
+    L1-->>Tick: ScenarioState s
+
+    Tick->>L2: ScenarioState s + BB_datas[]
+    L2->>L2: Scenario-gate (PH_4/G4→None)
+    L2->>L2: Direction score (per-TF)
+    L2->>L2: G-tier: D1/W1 predicts G→F vs G→C
+    L2-->>Tick: Prediction p
+
+    Tick->>L3: ScenarioState s + Prediction p + BB_datas[]
+    L3->>L3: Firing matrix (scenario,phase row)
+    L3->>L3: Entry/exit/size/stop decision
+    L3-->>Tick: TradeAction
+```
+
+**Key difference from TofyTrade4:** In TofyTrade4, PredictNextTrend returned a TrendPrediction that was drawn on chart but NOT consumed by the entry/exit logic — the firing matrix operated independently. In TofyTrade5, Prediction flows into DecideAction: direction determines entry side, confidence determines size, target_tf determines exit boundary, reversal determines whether the signal is an exit or entry.
+
+### 4.3 Activity Diagram — internal flow
+
+Flow only — no weights, thresholds, or formulas. All values TBD — GATE 3.
+
+```mermaid
+flowchart TD
+    Start([Start: ScenarioState s + BB_datas[]]) --> Init["Initialize Prediction defaults<br/>direction=0, confidence=0, target_tf=-1"]
+
+    Init --> Gate["Scenario-gate<br/>PH_4 or G4 or E2 → confidence=0, direction=0"]
+
+    Gate --> Score["Direction scoring per-TF<br/>For each TF M15..W1:<br/>  TF_DirectionScore(stage, mid, prev_stage, prev_mid)<br/>  diffBBW damping<br/>  Weight by TF hierarchy"]
+
+    Score --> Aggregate["Aggregate scores<br/>LTF + MTF + HTF totals → direction<br/>Magnitude → confidence"]
+
+    Aggregate --> GTier{"G-tier?<br/>pivot_substate > 0"}
+    GTier -->|yes| GPredict["D1/W1 bias predicts G→F vs G→C<br/>D1 same direction as H4 → F (continuation)<br/>D1 opposite → C (reversal)<br/>Set reversal flag if D1 opposes H4<br/>OOS-UNVALIDATED — 0 reversal episodes"]
+    GTier -->|no| Target["Target TF (Rule 2)<br/>container_tf if > 0 else scenario fallback"]
+
+    GPredict --> Target
+
+    Target --> Timeline["Timeline estimate (Rule 3)<br/>Phase → coarse bar estimate TBD-GATE-3<br/>diffBBW as accelerator/decelerator TBD-GATE-3"]
+
+    Timeline --> NextSc["Next scenario (Rule 4)<br/>Scenario → principal edge TBD-GATE-3"]
+
+    NextSc --> Assemble["Assemble Prediction struct"]
+    Assemble --> Return([Return Prediction])
+```
+
+**TBD — GATE 3 markers:**
+- Direction scoring weights per TF (LTF/MTF/HTF hierarchy weights)
+- diffBBW damping thresholds (current values -0.5, 1.0 are WRONG with absolute formula — see integration note 6 in TofyTrade5.mqh)
+- Confidence thresholds (magnitude → confidence mapping)
+- Timeline bar estimates per phase
+- Next-scenario edge transitions
+- G→F vs G→C discrimination thresholds
+
+### 4.4 Consumption note — link forward to Part 5
+
+Prediction is the structured input Part 5 receives. How each field is consumed:
+
+| Prediction field | How Part 5 uses it |
+|---|---|
+| `direction` | Entry side — 1=BUY, 2=SELL, 0=NEUTRAL (no entry) |
+| `confidence` | Size multiplier — confidence → size mapping (Rule 5) |
+| `target_tf` | Exit target — which TF band boundary triggers X1 |
+| `timeline_bars` | Hold-duration sanity — if price hasn't moved in N bars, re-evaluate |
+| `next_scenario` | Scenario-transition gating — if L1 transitions to next_scenario, re-evaluate position |
+| `reversal` | Exit-not-entry signal — if reversal=True, the firing matrix prioritizes exit conditions over entry |
+
+**Existing code status:** The MQL5 PredictNext stub (lines 590-648 of TofyTrade5.mqh) is functional but suppressed — `ShowPredLabels=false` and Prediction fields are not wired into DecideAction. The Python harness has no PredictNext equivalent. Both are Phase 3 work.
+
+**Staleness report:**
+- `TF_DirectionScore` — salvaged verbatim from TofyTrade4. Core scoring logic (stage→stg, mid→mid_b, transition→stg_t, mid_transition→mid_t) is intact. **NOT stale** — the scoring formula is unchanged from TofyTrade4.
+- `PredictNext` — uses TF_DirectionScore + diffBBW damping + scenario-gating. **PARTIALLY STALE**: diffBBW damping thresholds (-0.5, 1.0) are WRONG with the absolute formula (flagged in integration note 6, line 1132). Confidence thresholds and next-scenario edges are hardcoded from doc rules but unvalidated — no GATE 3 run.
+- TofyTrade4 `PredictNextTrend` — **STALE**: drawn-and-discarded, output not consumed by firing matrix. TofyTrade5 PredictNext fixes this by flowing Prediction into DecideAction.
+
+---
 
 ## Part 5 — Layer 3: DecideAction (design, TBD)
