@@ -109,6 +109,23 @@ reversal-containing data.
 - **Status:** OOS-UNVALIDATED — cannot validate until harness supports
   the G2→C1→C2/C3 state transitions
 
+### Known Divergence: veto_priceloc (MQL5 vs Python, Layer 3 only)
+
+MQL5 VETO (line 1087) uses `s.priceloc` — computed vs container TF only.
+Python `decide_action()` (line 734) uses `veto_priceloc` — combines
+container priceloc AND D1 priceloc (more-extreme-of-same-sign rule,
+line 933). This means D1 can veto when in SQZ-but-not-container,
+making Python stricter than MQL5.
+
+- **Concrete divergence:** D1 in SQZ (not selected as container) + price
+  at D1's upper band → MQL5: no VETO; Python: VETO fires.
+- **Affected layer:** L3 only — does NOT feed back into L1 classification.
+- **Resolution:** Phase 4. Python harness must match MQL5 for replay
+  accuracy. Whether MQL5 should also check D1 (more defensive) is a
+  design decision — D1 is the natural target for most trades.
+- **Status:** UNRESOLVED — Python is strictly more defensive but
+  behaviorally different.
+
 ### Scenario Distribution (OOS — 349 snapshots)
 
 | Scenario | Count | Pct |
