@@ -126,6 +126,22 @@ making Python stricter than MQL5.
 - **Status:** UNRESOLVED — Python is strictly more defensive but
   behaviorally different.
 
+### Phase 4 Verification Item: Store-vs-Recompute Equivalence
+
+MQL5 STORES b1_block, b2_pink, and priceloc on the ScenarioState struct
+(computed once per bar in IdentifyScenario). Python RECOMPUTES these
+from raw BB data in the simulation loop. They are equivalent ONLY IF
+Python's recompute uses identical inputs and timing to MQL5's stored
+value — which is the SAME store-vs-recompute pattern that caused the
+prev_h1_sqz divergence (assumed equivalent until timing differed).
+
+- **Phase 4 check:** confirm Python's recomputation of b1_block,
+  b2_pink (and veto_priceloc) matches MQL5's stored struct values
+  bar-for-bar when DecideAction is built. Store-vs-recompute
+  equivalence is assumed, not yet verified — same pattern as prev_h1_sqz.
+- **Blocks:** Nothing now (L1 unaffected). Must be verified when L3
+  is built, not silently trusted.
+
 ### Scenario Distribution (OOS — 349 snapshots)
 
 | Scenario | Count | Pct |
