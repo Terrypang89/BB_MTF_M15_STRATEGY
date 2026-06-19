@@ -116,7 +116,7 @@ This flowchart shows the **as-built** evaluation order of `IdentifyScenario`, ma
 
 ```mermaid
 flowchart TD
-    Start([Start: BB_datas[0..6] + close_prices]) --> Init["Initialize ScenarioState defaults<br/>scenario=SC_NONE phase=PH_NONE"]
+    Start["Start: BB_datas[0..6] + close_prices"] --> Init["Initialize ScenarioState defaults<br/>scenario=SC_NONE phase=PH_NONE"]
 
     Init --> Cascade["§12d: Compute cascade decoders<br/>cas_shrinkTF = highest shrink TF M15..D1<br/>cas_sqzCount = SQZ count M5..H1"]
 
@@ -357,17 +357,17 @@ sequenceDiagram
     participant L2 as Layer 2<br/>PredictNext
     participant L3 as Layer 3<br/>DecideAction
 
-    Tick->>L1: BB_datas[] + close[]
+    Tick->>L1: "BB_datas[] + close[]"
     L1->>L1: Classify scenario, phase, cascade
     L1-->>Tick: ScenarioState s
 
-    Tick->>L2: ScenarioState s + BB_datas[]
+    Tick->>L2: "ScenarioState s + BB_datas[]"
     L2->>L2: Scenario-gate (PH_4/G4→None)
     L2->>L2: Direction score (per-TF)
     L2->>L2: G-tier: D1/W1 predicts G→F vs G→C
     L2-->>Tick: Prediction p
 
-    Tick->>L3: ScenarioState s + Prediction p + BB_datas[]
+    Tick->>L3: "ScenarioState s + Prediction p + BB_datas[]"
     L3->>L3: Firing matrix (scenario,phase row)
     L3->>L3: Entry/exit/size/stop decision
     L3-->>Tick: TradeAction
@@ -381,7 +381,7 @@ Flow only — no weights, thresholds, or formulas. All values TBD — GATE 3.
 
 ```mermaid
 flowchart TD
-    Start([Start: ScenarioState s + BB_datas[]]) --> Init["Initialize Prediction defaults<br/>direction=0, confidence=0, target_tf=-1"]
+    Start["Start: ScenarioState s + BB_datas[]"] --> Init["Initialize Prediction defaults<br/>direction=0, confidence=0, target_tf=-1"]
 
     Init --> Gate["Scenario-gate<br/>PH_4 or G4 or E2 → confidence=0, direction=0"]
 
@@ -551,7 +551,7 @@ This is the evaluation order. The order IS the design. Cell values are TBD — G
 
 ```mermaid
 flowchart TD
-    Start([Start: ScenarioState s + Prediction p + BB_datas[]]) --> Invariants["INVARIANTS (always first, unconditional)"]
+    Start["Start: ScenarioState s + Prediction p + BB_datas[]"] --> Invariants["INVARIANTS (always first, unconditional)"]
 
     Invariants --> Inv1{"EMERGENCY?<br/>Float loss < -$50"}
     Inv1 -->|yes| Emerg["act=7 EMERGENCY exit"]
