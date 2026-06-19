@@ -433,4 +433,259 @@ Prediction is the structured input Part 5 receives. How each field is consumed:
 
 ---
 
-## Part 5 — Layer 3: DecideAction (design, TBD)
+## Part 5 — Layer 3: DecideAction (DESIGN — built Phase 4)
+
+Consumes ScenarioState (Part 3) + Prediction (Part 4) + raw BB_datas → outputs a TradeAction (entry/exit/size/stop). This is where trades actually fire — the layer GATE 4 tests against the March 2026 benchmark. Core principle: **NOTHING FIRES UNLESS ARMED** — opposite of TofyTrade4's fire-unless-blocked model. For entry/exit/block/size/stop rule MEANINGS see `backtest_chart_analysis.md` Part 5; this section designs the layer structure, not rule values.
+
+### 5.0 Link from Layers 1 & 2 — what Part 5 consumes
+
+**Table A — ScenarioState (Part 3) consumption:**
+
+| ScenarioState field (from Part 3 §3.1) | How DecideAction uses it |
+|---|---|
+| `scenario` | Firing-matrix ROW key — selects which row of the matrix arms triggers |
+| `phase` | Firing-matrix ROW key (combined with scenario); gates entry path (E3 in zigzag vs E1/E2 in trend) |
+| `b1_block` | Entry gating — M15 sideways block (M15 mid ≥ 3 → no flip-entries) |
+| `b2_pink` | X4-PINK exit trigger — M15+M30 both SQZ → forced exit all |
+| `priceloc` | E3 boundary entry (at container band), VETO-at-target (no entry at target), X1 (price at target_tf band) |
+| `container_tf` | Exit target boundary — which TF band triggers X1 |
+| `container_dir` | E3 counter-trend sizing (3B-INTO: counter side 0.25× max) |
+| `container_diffbbw` | X2 qualification — container cracking (diffBBW ≤ 0 → qualified exit) |
+| `cas_shrinkTF` | Decoder size — compression depth → size multiplier |
+| `cas_sqzCount` | Decoder size — B4 block (≥3 → no entries), combined with cas_shrinkTF |
+| `pivot_substate` | G-tier routing — 1=PIVOT-PENDING (arm cautiously, exit-only on reversal), 2=G-REVERSAL (reversal_flag → EXIT branch) |
+| `info` | Not used — logging field from Part 3 |
+
+**Table B — Prediction (Part 4) consumption:**
+
+| Prediction field (from Part 4 §4.1) | How DecideAction uses it |
+|---|---|
+| `direction` | Entry side — 1=BUY, 2=SELL, 0=NEUTRAL (no entry); flip-entries require dir==p.direction |
+| `confidence` | Size multiplier — confidence → size mapping (ConfSize, Rule 5) |
+| `target_tf` | Exit target — which TF band boundary triggers X1 |
+| `reversal` | EXIT-not-entry routing — reversal=True → counter-H4 M15 signal closes longs, doesn't open counter-shorts |
+| `timeline_bars` | Hold-duration sanity — if price hasn't moved in N bars, re-evaluate |
+| `next_scenario` | Re-evaluate on transition — if L1 transitions to next_scenario, re-evaluate position |
+
+**Impact — how the two upstream layers constrain Part 5:**
+
+1. **Nothing fires unless armed.** Both ScenarioState (scenario+phase row) AND Prediction (direction+confidence) must arm the trigger. An M15 flip with ceiling=0 (E1/E2/E4) → WAIT. A prediction with direction=0 → no entry. This is the inversion of TofyTrade4 (which fired unless a gate blocked).
+2. **Counter-H4 reversal routing.** A counter-H4 M15 trigger + reversal=True → EXIT route (close existing longs), NOT a new entry (don't open counter-shorts). This branch is explicit in the activity diagram.
+3. **OOS-UNVALIDATED propagation.** G→C transition is OOS-UNVALIDATED (Part 3) and G-reversal prediction is OOS-UNVALIDATED (Part 4). Any Part 5 action depending on G-reversal resolution inherits the flag — pivot_substate=2 → exit-only, arm cautiously.
+4. **Store-vs-recompute.** b1_block, b2_pink come from ScenarioState (MQL5 stores these on the struct). Python harness recomputes from raw BB data — must match bar-for-bar (per CLAUDE.md and validation_status.md Phase 4 verification item).
+5. **Fields consumed but not by Part 5.** Part 3's info field is logging-only; Part 4's timeline_bars and next_scenario are advisory (re-evaluate triggers, not firing conditions).
+
+### 5.1 Interface — Class Diagram
+
+```mermaid
+classDiagram
+    class ScenarioState {
+        <<from Part 3>>
+        SCENARIO scenario
+        PHASE phase
+        bool b1_block
+        bool b2_pink
+        int container_tf
+        int container_dir
+        double container_diffbbw
+        int priceloc
+        int cas_shrinkTF
+        int cas_sqzCount
+        int pivot_substate
+    }
+
+    class Prediction {
+        <<from Part 4>>
+        int direction
+        int confidence
+        int target_tf
+        bool reversal
+        int timeline_bars
+        SCENARIO next_scenario
+    }
+
+    class BB_MTF_Data_struct {
+        <<per-TF raw input>>
+        int BBW_stage[LA, LA_1]
+        int BB_diffMid_Trend[LA, LA_1]
+        int BBUpDn_state[LA]
+        double diffBBW[LA]
+        double BBUppLV[LA]
+        double BBLowLV[LA]
+    }
+
+    class TradeAction {
+        <<final EA output — drives OrderSend/OrderClose>>
+        int act           0=hold / 1=BUY / 2=SELL / 7=exit_all
+        string condition_id  E1-E6 / X1-X4 / VETO / WAIT
+        double size_mult    0.0-1.0
+        double stop_price   ATRSL-based
+        string info         logging
+    }
+
+    class DecideAction {
+        +TradeAction DecideAction(ScenarioState &s, Prediction &p, BB_MTF_Data_struct &bb[], ...)
+    }
+
+    ScenarioState --> DecideAction : arms
+    Prediction --> DecideAction : directs
+    BB_MTF_Data_struct --> DecideAction : boundaries
+    DecideAction --> TradeAction : outputs
+```
+
+**TradeAction field meanings:**
+
+| Field | Type | Meaning | Consumed by |
+|---|---|---|---|
+| `act` | int | 0=hold, 1=BUY, 2=SELL, 7=exit_all | OrderSend / OrderClose |
+| `condition_id` | string | E1-E6 (entry), X1-X4 (exit), VETO, WAIT | Logging, benchmark verification |
+| `size_mult` | double | 0.0–1.0, final = min(ceiling, conf_size, decoder_size) | Lot size |
+| `stop_price` | double | ATRSL stop at entry | OrderSend SL |
+| `info` | string | Debug string | Logging |
+
+**Output contract:** TradeAction is the final EA output — it drives OrderSend (act=1/2), OrderClose (act=7), or holds (act=0). size_mult is the product of three independent constraints: matrix ceiling (scenario-based), confidence size (Prediction), and decoder size (cascade state). stop_price is set at entry — INVARIANT 1: no trade without a stop.
+
+### 5.2 Activity Diagram — control-flow order
+
+This is the evaluation order. The order IS the design. Cell values are TBD — GATE 4. The "nothing fires unless armed" principle is visible: an unarmed trigger has no path to act=1/2.
+
+```mermaid
+flowchart TD
+    Start([Start: ScenarioState s + Prediction p + BB_datas[]]) --> Invariants["INVARIANTS (always first, unconditional)"]
+
+    Invariants --> Inv1{"EMERGENCY?<br/>Float loss < -$50"}
+    Inv1 -->|yes| Emerg["act=7 EMERGENCY exit"]
+    Inv1 -->|no| Inv2{"b2_pink?<br/>X4-PINK"}
+    Inv2 -->|yes| Pink["act=7 X4-PINK forced exit"]
+    Inv2 -->|no| Inv3{"VETO-AT-TARGET?<br/>BUY-at-upper or SELL-at-lower<br/>and entry was attempted"}
+    Inv3 -->|yes| Veto["act=0 VETO-AT-TARGET"]
+    Inv3 -->|no| Blocks
+
+    subgraph BLOCKS["BLOCKS (no new entries)"]
+        B1["B1: b1_block → no flip-entries"]
+        B3["B3: H4-OPPOSE (H4 committed opposing fly)"]
+        B4["B4: cas_sqzCount>=3 → no entries"]
+    end
+
+    Inv3 --> B1
+    B1 --> B3
+    B3 --> B4
+    B4 --> Exits
+
+    subgraph EXITS["EXIT checks (position open only)"]
+        X1{"X1: price at<br/>target_tf band?"}
+        X2{"X2: M15 fade +<br/>qualified?"}
+        X2a{"Zigzag phase?"}
+        X2b{"Container cracking?<br/>or invalidated or stall?"}
+    end
+
+    Exits --> X1
+    X1 -->|yes| Exit1["act=7 X1 target exit"]
+    X1 -->|no| X2
+    X2 -->|no fade| Hold1["act=0 hold"]
+    X2 -->|fade yes| X2a
+    X2a -->|no (PH_1)| Exit2["act=7 X2 trend-fade exit"]
+    X2a -->|yes (zigzag)| X2b
+    X2b -->|yes (qualified)| Exit2
+    X2b -->|no (unqualified)| Hold1
+
+    Hold1 --> Ceiling["MATRIX CEILING<br/>ceiling = MatrixCeiling(scenario, phase)"]
+
+    Ceiling --> Ceil0{"ceiling <= 0?"}
+    Ceil0 -->|yes| Wait1["act=0 WAIT — ceiling blocks"]
+    Ceil0 -->|no| Arming
+
+    subgraph ARMING["ENTRY ARMING (scenario,phase row + Prediction)"]
+        EntryPath["Which entry path?<br/>Zigzag → E3 boundary<br/>PH_1/2/5 → flip-path E1/E2/E5"]
+
+        E3{"E3: priceloc at band?<br/>+ 6 confinement checks"}
+        E3pass["E3 entry fired<br/>size = min(ceiling, conf_size, decoder_size)"]
+        E3fail["E3 check failed → WAIT"]
+
+        Flip{"Flip: DetectFlip +<br/>dir == p.direction"}
+        FlipYes["Flip entry E1/E2/E5<br/>size = min(ceiling, conf_size, decoder_size)"]
+        FlipNo["No flip → WAIT"]
+
+        ReversalCheck{"reversal=True?<br/>+ counter-H4 signal"}
+        ReversalExit["EXIT route — close longs<br/>don't open counter-shorts"]
+    end
+
+    Arming --> EntryPath
+    EntryPath --> E3
+    E3 -->|pass| E3pass
+    E3 -->|fail| E3fail
+    E3pass --> Sizing
+    E3fail --> Flip
+    Flip -->|yes| ReversalCheck
+    ReversalCheck -->|yes| ReversalExit
+    ReversalCheck -->|no| FlipYes
+    FlipYes --> Sizing
+    Flip -->|no| FlipNo
+    FlipNo --> Wait2["act=0 WAIT — no trigger armed"]
+
+    Sizing["SIZE = min(ceiling, ConfSize(confidence), DecoderSize(cascade))<br/>STOP = ATRSL at entry (INVARIANT 1)"]
+    Sizing --> Return([Return TradeAction])
+    Emerg --> Return
+    Pink --> Return
+    Veto --> Return
+    Exit1 --> Return
+    Exit2 --> Return
+    Wait1 --> Return
+    ReversalExit --> Return
+    Wait2 --> Return
+```
+
+**Contract established:** The evaluation order is INVARIANTS → BLOCKS → EXITS → ARMING → SIZE. Invariants fire unconditionally (EMERGENCY, X4-PINK, VETO). Blocks prevent new entries but don't close existing positions. Exits check only when a position is open. Arming requires BOTH scenario/phase row AND Prediction direction — unarmored triggers have no path to fire. Stop is set at entry (INVARIANT 1).
+
+### 5.3 Firing Matrix — Structure (the shape, not the cells)
+
+The matrix defines which triggers are armed per (scenario, phase) row. Cell VALUES are TBD — GATE 4. This section designs the table structure.
+
+```mermaid
+flowchart LR
+    subgraph MATRIX["FIRING MATRIX — structure only"]
+        Rows["ROWS: scenario × phase<br/>(e.g. A1/PH_1, B2/PH_3A, G3/PH_4)"]
+        C1["COL 1: armed triggers<br/>E1/E2/E3/E4/E5/E6"]
+        C2["COL 2: size ceiling<br/>(0.0–1.0, scenario-based)"]
+        C3["COL 3: target_tf<br/>(which TF band for X1)"]
+        C4["COL 4: allowed entry conditions<br/>(which E-conditions fire)"]
+        C5["COL 5: entry mode<br/>(entry / exit-only / blocked)"]
+    end
+
+    Rows --> C1
+    Rows --> C2
+    Rows --> C3
+    Rows --> C4
+    Rows --> C5
+```
+
+**Structure rules (design-time, not GATE-4-validated):**
+- Each row is a unique (scenario, phase) combination
+- Ceiling = 0.0 → exit-only or blocked (no entries possible)
+- Ceiling > 0.0 → entries possible if triggers armed
+- PH_4 rows → exit-only (X4-PINK or WAIT, no entries)
+- PH_5 rows → E5/E6 only (expansion entries)
+- G-tier rows (G1-G4) → arm cautiously; pivot_substate=2 → exit-only
+- C-tier rows → OOS-UNVALIDATED — cells TBD — no OOS episodes to validate
+- Cell values (which specific triggers fire per row) = TBD — GATE 4
+
+**Existing code status:** The MQL5 DecideAction (lines 731-828 of TofyTrade5.mqh) is implemented with the control flow matching the activity diagram: invariants (b2_pink, VETO), exits (X1, X2 qualified), ceiling check, E3 in zigzag, flip-path E1/E2/E5. The replay_harness.py `decide_action()` mirrors this (lines 706-847). Matrix ceiling values are hardcoded from backtest_chart_analysis.md Part 5 — not yet GATE-4-validated.
+
+**Staleness report:**
+- TofyTrade5 DecideAction — **CURRENT**: implements the three-layer design with firing matrix. Condition IDs (E1-E6, X1-X4, VETO, WAIT) match the v31 signal taxonomy. No old G0b/G4x gate names in control flow — those are in the gate decoder table only (for log parsing).
+- TofyTrade4 gate-based model — **STALE**: fire-unless-blocked model replaced by nothing-fires-unless-armed. Old gate names (G0b-TOUCH → E3, G8-BNDTGT → X1, G5-FADE → X2, G0b-PINK → X4) documented in gate decoder table.
+- Matrix ceiling values — **UNVALIDATED**: hardcoded from doc rules, no GATE 4 run against benchmark.
+
+### 5.4 GATE 4 — what validates this layer
+
+GATE 4 is the firing benchmark. Part 5 must produce results matching the March 2026 benchmark (`references/fixtures/march2026_benchmark.md`):
+
+1. **≥ 6 leg-capture entries** — matching the 8 verified arrow legs (03.03 SELL crash, 03.04 BUY, 03.04 SELL, 03.05 BUY, 03.05 SELL, 03.06 BUY, 03.10 BUY, 03.17 SELL run)
+2. **03.03 07:45 → VETO-AT-TARGET** — not BUY (price at D1 upper band — the -191.29 nine-day hold must be impossible)
+3. **No exit within 3 bars on mid=3 wobble** — 03.17-03.19 SELL run held through M15 wobble (X2 qualified only)
+4. **Zero positions held > 3 days** — stop at entry (INVARIANT 1) + emergency $50 exit
+5. **Counter-H4 M15 sell = EXIT not new short** — reversal routing (reversal=True → exit branch)
+
+The replay harness `simulate_trades()` + `score_benchmark()` (replay_harness.py lines 851-1117) runs this validation.
+
+---
