@@ -289,6 +289,228 @@ Consumes Layer 1 ScenarioState + per-TF BB data → outputs Prediction for Layer
 3. **OOS-unvalidated propagation.** Part 3 flags G→C transition as OOS-UNVALIDATED (0 of 7 OOS episodes resolved as reversal) and G2→C1→C2/C3 as UNIMPLEMENTED. Any Part 4 prediction that depends on G→C resolution inherits these flags — it is also OOS-UNVALIDATED.
 4. **Fields Part 3 computes but Part 4 ignores.** cas_shrinkTF, cas_sqzCount, b1_block, priceloc are Layer 3 fields. Part 4 doesn't consume them — they flow ScenarioState → Layer 3 directly.
 
+### 4.0a Part 3 → Part 4 Link (visual)
+
+Three diagrams showing how Layer 1 connects to and constrains Layer 2 — the handoff made visible, not just the table above.
+
+#### Diagram 1 — Cross-Layer Data-Flow (field → function wiring)
+
+Which ScenarioState field wires to which Layer 2 sub-function. Shows the dual-input: ScenarioState (gating) vs raw BB_datas (scoring).
+
+```mermaid
+flowchart LR
+    subgraph L1["Layer 1 — IdentifyScenario"]
+        ID["IdentifyScenario"]
+    end
+
+    subgraph SS["ScenarioState s (struct)"]
+        sc["scenario"]
+        ph["phase"]
+        b2["b2_pink"]
+        piv["pivot_substate"]
+        ct["container_tf"]
+    end
+
+    subgraph BB["BB_datas[] (raw per-TF)"]
+        raw["raw per-TF data<br/>BBW_stage / BB_diffMid_Trend"]
+        d1w1["D1/W1 per-TF data"]
+    end
+
+    subgraph L2["Layer 2 — PredictNext"]
+        SG["ScenarioGate"]
+        DS["DirectionScore"]
+        GTR["GTierResolve"]
+        ASM["Assemble"]
+        PNX["PredictNext"]
+    end
+
+    subgraph OUT["Output"]
+        PRED["Prediction p"]
+        L3["Layer 3 (Part 5)"]
+    end
+
+    ID --> SS
+    ID -->|"raw BB_datas[]"| BB
+    sc --> SG
+    ph --> SG
+    b2 --> SG
+    piv --> GTR
+    ct --> ASM
+    raw -->|"NOT from ScenarioState"| DS
+    d1w1 --> GTR
+    piv -->|"pivot_substate"| GTR
+    SG --> ASM
+    DS --> ASM
+    GTR --> ASM
+    ASM --> PRED
+    PRED --> L3
+```
+
+*Review criterion: I can trace any ScenarioState field to the exact sub-function that consumes it.*
+
+#### Diagram 2 — Impact / Constraint (how Part 3 shapes Part 4)
+
+Three ways Layer 1's design constrains Layer 2 — the unresolved pivot, the OOS flag, the dual-input gap.
+
+```mermaid
+flowchart TD
+    subgraph A["(a) G-PIVOT HANDOFF — core handoff"]
+        L1a["Layer 1: H4 SQZ → G-tier<br/>sets pivot_substate<br/>direction = UNKNOWN<br/>(pivot unresolved)"]
+        L2a["Layer 2 GTierResolve INHERITS:<br/>D1/W1 bias predicts<br/>G→F continuation vs G→C reversal"]
+        L1a -->|"Part 3 stops at pivot-pending;<br/>resolving it IS Part 4 primary job"| L2a
+    end
+
+    subgraph B["(b) OOS-UNVALIDATED PROPAGATION"]
+        L1b["Layer 1: G→C flagged<br/>OOS-UNVALIDATED<br/>0 of 7 OOS episodes"]
+        L2b["Layer 2: any G→C prediction<br/>INHERITS OOS-UNVALIDATED"]
+        L1b -.->|"flag propagates"| L2b
+    end
+
+    subgraph C["(c) DUAL-INPUT GAP"]
+        L1c["ScenarioState exposes<br/>container only<br/>NOT per-TF detail"]
+        L2c1["ScenarioState<br/>(gating)"]
+        L2c2["BB_datas[]<br/>(per-TF scoring)"]
+        L1c -->|"so PredictNext takes BOTH"| L2c1
+        L1c -->|"so PredictNext takes BOTH"| L2c2
+    end
+```
+
+*Review criterion: I see WHY Part 4 is shaped the way it is — the unresolved pivot it inherits, the flag it carries, the raw data it needs.*
+
+#### Diagram 3 — Detailed Cross-Layer Sequence (runtime call order)
+
+Per-bar call sequence at the skeleton-function level — the exact functions the skeleton implements.
+
+```mermaid
+sequenceDiagram
+    participant Caller as "Caller<br/>(OnBar)"
+    participant Ident as "IdentifyScenario"
+    participant SS as "ScenarioState s"
+    participant PNX as "PredictNext"
+    participant SG as "ScenarioGate"
+    participant DS as "DirectionScore"
+    participant GTR as "GTierResolve"
+    participant ASM as "Assemble"
+    participant DecAct as "DecideAction"
+
+    Caller->>Ident: "IdentifyScenario(bb)"
+    Ident->>Ident: "decoders → ClassifyPhase →<br/>H4 classify → set<br/>scenario/phase/pivot_substate/container"
+    Ident-->>Caller: "ScenarioState s"
+    Note over Caller,SS: "HANDOFF: s leaves L1, enters L2"
+
+    Caller->>PNX: "PredictNext(s, bb)"
+    PNX->>SG: "ScenarioGate(s) — reads<br/>scenario/phase/b2_pink"
+    SG-->>PNX: "suppress flag [TBD-GATE-3 stub]"
+
+    PNX->>DS: "DirectionScore(bb) — reads<br/>RAW bb (dual-input gap)"
+    DS-->>PNX: "score [TBD-GATE-3 stub]"
+
+    alt "s.pivot_substate > 0 (G-tier)"
+        PNX->>GTR: "GTierResolve(s, bb) —<br/>pivot_substate + D1/W1"
+        note over GTR : "OOS-UNVALIDATED"
+        GTR-->>PNX: "reversal flag [TBD-GATE-3 stub]"
+    end
+
+    PNX->>ASM: "Assemble(s, score, reversal)"
+    ASM-->>PNX: "Prediction p"
+    PNX-->>Caller: "Prediction p"
+
+    Caller->>DecAct: "DecideAction(s, p, bb)<br/>[Part 5, stubbed]"
+```
+
+*Review criterion: this reads as the exact call sequence the skeleton implements — diagram and code are two views of one structure.*
+
+### 4.0b Cross-Layer Sequence — Per-Bar Call Flow (L1 → L2 → L3)
+
+This diagram shows the function-level call sequence at runtime. Every L2 sub-function is a TBD-GATE-3 stub — structure built, logic deferred.
+
+```mermaid
+sequenceDiagram
+    participant Caller as "Caller<br/>(OnBar / main handler)"
+    participant IdentScen as "IdentifyScenario<br/>(bb, close)"
+    participant L1internal as "L1 Internal<br/>(cascade, ClassifyPhase,<br/>H4 classify, container)"
+    participant SS as "ScenarioState<br/>s"
+    participant PredNext as "PredictNext<br/>(s, bb)"
+    participant SG as "ScenarioGate(s)"
+    participant DS as "DirectionScore(bb)"
+    participant GTR as "GTierResolve(s, bb)"
+    participant ASM as "Assemble(s, total,<br/>reversal, p)"
+    participant DecAct as "DecideAction<br/>(s, p, bb)"
+
+    rect rgb(240, 248, 255)
+    Note over Caller,SS: "LAYER 1 — IdentifyScenario (VALIDATED)"
+    Caller->>IdentScen: "BB_datas[] bb + close[]<br/>IdentifyScenario(bb, close)"
+    activate IdentScen
+    IdentScen->>L1internal: "Cascade decoders (cas_shrinkTF,<br/>cas_sqzCount)"
+    IdentScen->>L1internal: "ClassifyPhase(bb)"
+    IdentScen->>L1internal: "H4 classify (stage/mid/diffBBW)"
+    IdentScen->>L1internal: "Set scenario / phase / pivot_substate<br/>Set container_tf / container_dir"
+    IdentScen->>L1internal: "Set b2_pink / b1_block"
+    IdentScen-->>SS: "ScenarioState s"
+    deactivate IdentScen
+    end
+
+    rect rgb(255, 248, 240)
+    Note over Caller,DecAct: "LAYER 2 — PredictNext (SKELETON — TBD-GATE-3)"
+    Caller->>PredNext: "ScenarioState s + BB_datas[] bb<br/>PredictNext(s, bb)"
+    activate PredNext
+
+    PredNext->>PredNext: "Initialize Prediction defaults<br/>direction=0, target_tf=-1, ..."
+
+    Note over PredNext,SG: "HANDOFF: s.scenario, s.phase, s.b2_pink"
+    PredNext->>SG: "ScenarioState s"
+    activate SG
+    SG-->>PredNext: "suppress (bool)"
+    deactivate SG
+    Note over SG: "TBD-GATE-3 stub:<br/>returns true (always suppress)"
+
+    alt suppress == true
+        PredNext->>PredNext: "p.confidence=0, p.direction=0"
+    end
+
+    Note over PredNext,DS: "DUAL INPUT: raw bb[] (NOT s)"
+    PredNext->>DS: "BB_datas[] bb"
+    activate DS
+    DS-->>PredNext: "total (int)"
+    deactivate DS
+    Note over DS: "TBD-GATE-3 stub:<br/>reads per-TF stage/mid from bb<br/>returns 0"
+
+    alt s.pivot_substate > 0 (G-tier)
+        Note over PredNext,GTR: "G-TIER BRANCH: OOS-UNVALIDATED"
+        PredNext->>GTR: "ScenarioState s + BB_datas[] bb"
+        activate GTR
+        GTR-->>PredNext: "reversal (bool)"
+        deactivate GTR
+        Note over GTR: "OOS-UNVALIDATED:<br/>0 reversal episodes in OOS<br/>TBD-GATE-3 stub:<br/>returns false"
+    else s.pivot_substate == 0
+        PredNext->>PredNext: "reversal = false (default)"
+    end
+
+    PredNext->>ASM: "s, total, reversal, Prediction &p"
+    activate ASM
+    ASM-->>PredNext: "Prediction p (filled)"
+    deactivate ASM
+    Note over ASM: "TBD-GATE-3 stub:<br/>safe defaults"
+
+    PredNext-->>Caller: "Prediction p"
+    deactivate PredNext
+    end
+
+    rect rgb(250, 250, 250)
+    Note over Caller,DecAct: "LAYER 3 — DecideAction (PHASE 4 — NOT WIRED YET)"
+    Caller->>DecAct: "s, p, bb, ATRSL1BUF, close, BUYS, SELLS"
+    Note over DecAct: "Stubbed — Prediction not yet<br/>consumed. Phase 4 work."
+    end
+```
+
+**Critical details visible in this diagram:**
+
+- **HANDOFF POINT:** ScenarioState `s` flows from IdentifyScenario → PredictNext → ScenarioGate. This is the exact interface boundary between L1 and L2.
+- **DUAL INPUT:** PredictNext receives both `s` (ScenarioGate reads it) and `bb` (DirectionScore reads it). The gap-resolution is visible: ScenarioGate reads `s.scenario`, `s.phase`, `s.b2_pink`; DirectionScore reads raw `bb[]` per-TF stage/mid.
+- **G-TIER BRANCH:** GTierResolve fires only when `s.pivot_substate > 0`. Marked OOS-UNVALIDATED.
+- **STUB MARKERS:** Every L2 sub-function is annotated as TBD-GATE-3. No rule values are present — structure only.
+- **LAYER 3 NOT WIRED:** DecideAction receives Prediction `p` but does not consume it yet. Phase 4 work.
+
 ### 4.1 Interface — Class Diagram
 
 ```mermaid
@@ -374,6 +596,73 @@ sequenceDiagram
 ```
 
 **Key difference from TofyTrade4:** In TofyTrade4, PredictNextTrend returned a TrendPrediction that was drawn on chart but NOT consumed by the entry/exit logic — the firing matrix operated independently. In TofyTrade5, Prediction flows into DecideAction: direction determines entry side, confidence determines size, target_tf determines exit boundary, reversal determines whether the signal is an exit or entry.
+
+#### Detailed Internal Sequence — PredictNext sub-function calls
+
+This diagram breaks PredictNext into its internal sub-function calls, showing data flow between steps. Each sub-function is a stub (TBD-GATE-3) — no rule values.
+
+```mermaid
+sequenceDiagram
+    participant Caller as "DecideAction / Tick"
+    participant PNX as "PredictNext(s, bb)"
+    participant SG as "ScenarioGate(s)"
+    participant DS as "DirectionScore(bb)"
+    participant GTR as "GTierResolve(s, bb)"
+    participant ASM as "Assemble(s, total, reversal, p)"
+
+    Caller->>PNX: "ScenarioState s + BB_datas[] bb"
+    activate PNX
+
+    PNX->>PNX: "Initialize Prediction defaults<br/>direction=0, target_tf=-1, timeline_bars=0,<br/>next_scenario=SC_NONE, confidence=0,<br/>reversal=false, info=''"
+    Note over PNX: "Safe defaults — no rule values"
+
+    PNX->>SG: "ScenarioState s (scenario, phase, b2_pink)"
+    activate SG
+    SG-->>PNX: "suppress (bool)"
+    deactivate SG
+    Note over SG: "TBD-GATE-3:<br/>PH_4 / G4 / E2 suppression<br/>Returns true = suppress all"
+
+    alt suppress == true
+        PNX->>PNX: "Set p.confidence=0, p.direction=0<br/>Skip scoring (optional optimization)"
+    end
+
+    PNX->>DS: "BB_datas[] bb (per-TF raw data)"
+    activate DS
+    DS-->>PNX: "total (int) — aggregate score"
+    deactivate DS
+    Note over DS: "TBD-GATE-3:<br/>Per-TF TF_DirectionScore +<br/>diffBBW damping + aggregation<br/>diffBBW: re-derive absolute scale<br/>Returns 0 (safe default)"
+
+    PNX->>PNX: "Check s.pivot_substate > 0"
+
+    alt pivot_substate > 0
+        PNX->>GTR: "ScenarioState s + BB_datas[] bb"
+        activate GTR
+        GTR-->>PNX: "reversal (bool)"
+        deactivate GTR
+        Note over GTR: "OOS-UNVALIDATED:<br/>D1/W1 bias → G→F vs G→C<br/>TBD-GATE-3:<br/>Returns false (safe default)"
+    else pivot_substate == 0
+        PNX->>PNX: "reversal = false (default)"
+    end
+
+    PNX->>ASM: "ScenarioState s, total, reversal, Prediction &p"
+    activate ASM
+    ASM-->>PNX: "Prediction p (filled)"
+    deactivate ASM
+    Note over ASM: "TBD-GATE-3:<br/>total → direction/confidence<br/>container_tf → target_tf<br/>phase → timeline_bars<br/>scenario → next_scenario<br/>Safe defaults: direction=0,<br/>confidence=0, target_tf=container_tf"
+
+    PNX->>PNX: "p.info = KVi('tot', total)"
+
+    PNX-->>Caller: "Prediction p"
+    deactivate PNX
+```
+
+**Data consumption notes:**
+- `ScenarioGate` consumes only `ScenarioState` fields: `scenario`, `phase`, `b2_pink`
+- `DirectionScore` consumes only raw `BB_datas[]` — reads per-TF `BBW_stage`, `BB_diffMid_Trend` (current + prior bar via `LA`/`LA_1`)
+- `GTierResolve` consumes both: `ScenarioState.pivot_substate` + raw `BB_datas[]` for D1/W1 bias
+- `Assemble` consumes `ScenarioState` fields: `scenario`, `phase`, `container_tf` + score from DirectionScore + reversal from GTierResolve
+
+**Store-vs-recompute note:** MQL5 reads `BBW_stage[LA_1]` and `BB_diffMid_Trend[LA_1]` (prior-bar state) directly from the `BB_datas[]` struct. Python harness recomputes these from consecutive log snapshots. Must match bar-for-bar (per `validation_status.md` Phase 4 item).
 
 ### 4.3 Activity Diagram — internal flow
 
