@@ -142,20 +142,20 @@ flowchart TD
 
     ConfComp -->|yes| D5{"Decision 5:<br/>H1-SQZ this bar<br/>AND prior-bar?"}
 
-    D5 -->|established<br/>(2+ bars H1-SQZ)| D5Sub{"M15+M30 both SQZ?"}
+    D5 -->|"established<br/>(2+ bars H1-SQZ)"| D5Sub{"M15+M30 both SQZ?"}
     D5Sub -->|yes| E2a["E2 — H1-SQZ established,<br/>M15+M30 SQZ"]
     D5Sub -->|no| E1a["E1 — H1-SQZ established"]
     E2a --> Return
     E1a --> Return
 
-    D5 -->|recovery<br/>(H1 exited SQZ,<br/>compression persists)| E1b["E1 — H1-SQZ recovery"]
+    D5 -->|"recovery<br/>(H1 exited SQZ,<br/>compression persists)"| E1b["E1 — H1-SQZ recovery"]
     E1b --> Return
 
-    D5 -->|onset<br/>(first bar H1-SQZ)| B3onset["B3 — H1-SQZ onset"]
+    D5 -->|"onset<br/>(first bar H1-SQZ)"| B3onset["B3 — H1-SQZ onset"]
     B3onset --> Return
 
     D5 -->|none of above| D2{"Decision 2:<br/>h4_fly + diffBBW > 5<br/>+ no ltf_shrink + no prev H1-SQZ<br/>+ cas_sqzCount==1"}
-    D2 -->|yes| D2Sub{"D1 aligned<br/>(D1 fly + same dir as H4)?"}
+    D2 -->|"D1 aligned<br/>(D1 fly + same dir as H4)?"| D2Sub{"D1 aligned<br/>(D1 fly + same dir as H4)?"}
     D2Sub -->|yes| A1c["A1 — transient SQZ,<br/>D1 aligned"]
     D2Sub -->|no| A2c["A2 — transient SQZ,<br/>D1 not aligned"]
     A1c --> Return
@@ -197,15 +197,15 @@ This diagram shows the scenario lifecycle: how the system transitions between ti
 stateDiagram-v2
     [*] --> A
 
-    A --> B: LTF shrink appears<br/>(cas_sqzCount >= 1<br/>or ltf_shrinkTF >= 1)
-    B --> E: H1-SQZ established<br/>(2+ bars, Decision 5)
-    E --> G: H4 enters SQZ<br/>(h4_sqz = true)
+    A --> B: "LTF shrink appears<br/>(cas_sqzCount >= 1<br/>or ltf_shrinkTF >= 1)"
+    B --> E: "H1-SQZ established<br/>(2+ bars, Decision 5)"
+    E --> G: "H4 enters SQZ<br/>(h4_sqz = true)"
 
-    G --> F: H4 exits SQZ with expansion<br/>(diffBBW recovering, early F-tier)
-    G --> C: G-reversal resolves<br/>(M5 break confirmed,<br/>pivot_substate = 2)
+    G --> F: "H4 exits SQZ with expansion<br/>(diffBBW recovering, early F-tier)"
+    G --> C: "G-reversal resolves<br/>(M5 break confirmed,<br/>pivot_substate = 2)"
 
-    F --> A: Expansion completes<br/>(F3 → new trend phase)
-    C --> A: Reversal completes<br/>(C2 → new A-tier)
+    F --> A: "Expansion completes<br/>(F3 → new trend phase)"
+    C --> A: "Reversal completes<br/>(C2 → new A-tier)"
 
     note right of G
         OOS-UNVALIDATED:<br/>
@@ -226,8 +226,8 @@ stateDiagram-v2
     end note
 
     state G {
-        [*] --> PIVOT_PENDING: M5 break not confirmed<br/>(pivot_substate = 1)
-        PIVOT_PENDING --> G_REVERSAL: M5 break confirmed<br/>(pivot_substate = 2)
+        [*] --> PIVOT_PENDING: "M5 break not confirmed<br/>(pivot_substate = 1)"
+        PIVOT_PENDING --> G_REVERSAL: "M5 break confirmed<br/>(pivot_substate = 2)"
         PIVOT_PENDING --> [*]: Resolved to F-tier
     }
 ```
@@ -584,10 +584,10 @@ flowchart TD
     X1 -->|no| X2
     X2 -->|no fade| Hold1["act=0 hold"]
     X2 -->|fade yes| X2a
-    X2a -->|no (PH_1)| Exit2["act=7 X2 trend-fade exit"]
-    X2a -->|yes (zigzag)| X2b
-    X2b -->|yes (qualified)| Exit2
-    X2b -->|no (unqualified)| Hold1
+    X2a -->|"no (PH_1)"| Exit2["act=7 X2 trend-fade exit"]
+    X2a -->|"yes (zigzag)"| X2b
+    X2b -->|"yes (qualified)"| Exit2
+    X2b -->|"no (unqualified)"| Hold1
 
     Hold1 --> Ceiling["MATRIX CEILING<br/>ceiling = MatrixCeiling(scenario, phase)"]
 
