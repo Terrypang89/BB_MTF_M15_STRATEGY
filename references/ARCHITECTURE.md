@@ -902,70 +902,48 @@ sequenceDiagram
     Note over PNX,TA: "HANDOFF: p + s leave L2, enter L3"
 
     Caller->>DA: "DecideAction(s, p, bb)"
-    activate DA
 
     DA->>Inv: "EMERGENCY / X4-PINK / VETO-AT-TARGET"
-    activate Inv
     Inv-->>DA: "short-circuit or continue"
-    deactivate Inv
 
     DA->>Exi: "X1 target_tf / X2 multi-bar reversal"
-    activate Exi
     Exi-->>DA: "exit fired or hold"
-    deactivate Exi
 
     alt "X2b: M15 reversed but H4 committed"
         DA->>X2bRead: "Read per-bar inputs:<br/>- M15 stage (521 counter-fly vs mid≥3)<br/>- price vs H4 band (edge/top vs mid-channel)<br/>- H4 diffBBW trend (decreasing=expansion slowing)"
-        activate X2bRead
         Note over X2bRead: "HYPOTHESIS inputs<br/>— GATE 4 two-sided:<br/>Apr 1 must EXIT, 03.17 must HOLD"
         X2bRead-->>DA: "pullback=HOLD or top=EXIT"
-        deactivate X2bRead
     end
 
     alt "p.reversal == True"
         DA->>Arm: "EXIT route — close, do not open"
-        activate Arm
         Arm-->>DA: "TradeAction act=7"
-        deactivate Arm
         DA-->>Caller: "TradeAction"
-        deactivate DA
     end
 
     DA->>E4Veto: "Block entry if price at target<br/>(prevents buying at resistance — 03.03)"
-    activate E4Veto
     E4Veto-->>DA: "blocked or clear"
-    deactivate E4Veto
 
     alt "E4 blocks"
         DA-->>Caller: "TradeAction act=0 WAIT"
-        deactivate DA
     end
 
     DA->>Arm: "firing-matrix[scenario,phase] + p.direction"
-    activate Arm
     Arm-->>DA: "armed or WAIT"
-    deactivate Arm
 
     alt "Entry armed — E6 discriminator"
         DA->>E6Read: "Read per-bar inputs:<br/>- M30 confirming fly (511/512) vs flat<br/>- diffBBW expanding vs near-zero<br/>- quality threshold (≥90/75/60/45)"
-        activate E6Read
         Note over E6Read: "HYPOTHESIS inputs<br/>— GATE 4 two-sided:<br/>real entries must FIRE,<br/>fakeouts must SKIP"
         E6Read-->>DA: "real=FIRE or fakeout=SKIP"
-        deactivate E6Read
     end
 
     DA->>Siz: "E5: min(ceiling, ConfSize(p.confidence), DecoderSize(cascade))<br/>size flows compute → ORDER — not dropped"
-    activate Siz
     Siz-->>DA: "size_mult"
-    deactivate Siz
 
     DA->>Stp: "ATRSL stop at entry (INVARIANT 1)"
-    activate Stp
     Stp-->>DA: "stop_price"
-    deactivate Stp
 
     DA-->>Caller: "TradeAction"
-    deactivate DA
 
     Note over DA: "X2c: p.reversal from PredictNext<br/>→ marked [INERT until Phase 3]<br/>reversal routing not wired yet"
 ```
