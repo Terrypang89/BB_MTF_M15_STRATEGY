@@ -587,64 +587,79 @@ int TF_DirectionScore(int stage, int mid, int prev_stage, int prev_mid)   // kep
    return raw;
 }
 
+// ── Sub-function stubs (TBD-GATE-3 — no rule values) ─────────────────
+
+// ScenarioGate: PH_4/G4/E2 → suppress confidence + direction
+// Consumes ScenarioState only (scenario, phase, b2_pink)
+bool ScenarioGate(ScenarioState &s)   // TBD-GATE-3: suppression rules
+{
+   // TBD-GATE-3: PH_4 / G4 / E2 suppression — rules from Part 4 Rule 5
+   // Current stub: always suppress (safe default)
+   return true;
+}
+
+// DirectionScore: per-TF scoring + aggregation + diffBBW damping
+// Consumes raw bb[] only (per-TF BBW_stage, BB_diffMid_Trend)
+int DirectionScore(BB_MTF_Data_struct &bb[])   // TBD-GATE-3: weights, thresholds, diffBBW
+{
+   // TBD-GATE-3: per-TF score via TF_DirectionScore + diffBBW damping + aggregation
+   // NOTE: diffBBW thresholds (-0.5, 1.0) are WRONG (percentage-era, absolute formula)
+   //       re-derive for absolute scale at GATE 3 — do NOT carry stale values
+   return 0;
+}
+
+// GTierResolve: D1/W1 bias → G→F vs G→C prediction
+// Consumes ScenarioState + raw bb[] (pivot_substate + D1/W1 per-TF data)
+bool GTierResolve(ScenarioState &s, BB_MTF_Data_struct &bb[])   // OOS-UNVALIDATED
+{
+   // OOS-UNVALIDATED: 0 of 7 OOS H4-SQZ episodes resolved as reversal (G→C)
+   // TBD-GATE-3: D1/W1 direction bias → continuation (F) vs reversal (C)
+   // Current stub: no reversal (safe default)
+   return false;
+}
+
+// Assemble: fills Prediction from sub-function results
+// Consumes ScenarioState + score + reversal flag
+void Assemble(ScenarioState &s, int total_score, bool reversal, Prediction &p)   // TBD-GATE-3: mapping rules
+{
+   // TBD-GATE-3: total_score → direction/confidence, container_tf → target_tf,
+   //             phase → timeline_bars, scenario → next_scenario
+   // Current stub: safe defaults
+   p.direction = 0;
+   p.target_tf = s.container_tf > 0 ? s.container_tf : -1;
+   p.timeline_bars = 0;
+   p.next_scenario = SC_NONE;
+   p.confidence = 0;
+   p.reversal = reversal;
+}
+
+// ── Main PredictNext — control-flow order only ───────────────────────
+
 Prediction PredictNext(ScenarioState &s, BB_MTF_Data_struct &bb[])
 {
    Prediction p; p.direction=0; p.target_tf=-1; p.timeline_bars=0;
    p.next_scenario=SC_NONE; p.confidence=0; p.reversal=false; p.info="";
 
-   int sc[7];
-   for(int tf=1; tf<=6; tf++)
-      sc[tf] = TF_DirectionScore(bb[tf].BBW_stage[LA],  bb[tf].BB_diffMid_Trend[LA],
-                                 bb[tf].BBW_stage[LA_1],bb[tf].BB_diffMid_Trend[LA_1]);
-   // diffBBW damping (Part 4 Rule 5 adjust): expanding reinforces, contracting damps
-   for(int tf=1; tf<=6; tf++) {
-      double db = ADiffBBW(bb, tf);
-      if(db < -0.5) sc[tf] = (int)MathRound(sc[tf]*0.5);              // contracting halves conviction
-      else if(db > 1.0 && sc[tf]!=0) sc[tf] += (sc[tf]>0?+1:-1);      // strong expansion +1
+   // Step 1: Scenario gate (consumes ScenarioState only)
+   bool suppress = ScenarioGate(s);
+   if(suppress)
+   {
+      p.confidence = 0;
+      p.direction = 0;
    }
-   int ltf = sc[1]*1, mtf = sc[2]*2+sc[3]*2, htf = sc[4]*3+sc[5]*2+sc[6]*1;   // weights kept
-   int total = ltf+mtf+htf;
-   if(total>=22) p.direction=1; else if(total<=-22) p.direction=2;     // threshold kept
-   int a=MathAbs(total);
-   p.confidence = (a>=66)?95:(a>=44)?80:(a>=22)?60:25;
-   p.reversal = (htf>=18 && ltf+mtf<=-12)||(htf<=-18 && ltf+mtf>=12);
-   if(p.reversal) p.confidence=MathMin(p.confidence,65);
 
-   // scenario/phase gating (Part 4 Rule 5): PH_4 / G4 force band None
-   if(s.phase==PH_4 || s.scenario==SC_G4 || s.scenario==SC_E2) { p.confidence=0; p.direction=0; }
-   if(s.scenario==SC_G2 || s.scenario==SC_C1) p.confidence=MathMin(p.confidence,60);  // counter-D1 cap
+   // Step 2: Direction score (consumes raw bb[] only)
+   int total = DirectionScore(bb);
 
-   // target (Part 4 Rule 2): container primary, scenario fallback
-   p.target_tf = (s.container_tf>0) ? s.container_tf :
-                 (s.scenario==SC_B1||s.scenario==SC_D1s||s.scenario==SC_D2s) ? 2 :
-                 (s.scenario==SC_B2) ? 3 : 4;
+   // Step 3: G-tier resolution if pivot-substate > 0 (consumes both)
+   bool reversal = false;
+   if(s.pivot_substate > 0)
+      reversal = GTierResolve(s, bb);
 
-   // timeline (Part 4 Rule 3, coarse M5 bars)
-   p.timeline_bars = (s.phase==PH_5)?24:(s.phase==PH_2)?96:(s.phase==PH_3A||s.phase==PH_3B_INTO)?60:
-                     (s.phase==PH_6)?192:48;
+   // Step 4: Assemble Prediction (consumes ScenarioState + score + reversal)
+   Assemble(s, total, reversal, p);
 
-   // next scenario (Part 4 Rule 4, principal edges)
-   switch(s.scenario){
-      case SC_A1: case SC_A2: p.next_scenario=SC_B1; break;
-      case SC_B1:             p.next_scenario=SC_B2; break;
-      case SC_B2:             p.next_scenario=SC_B3; break;
-      case SC_B3:             p.next_scenario=SC_E1; break;
-      case SC_E1:             p.next_scenario=SC_E2; break;
-      case SC_E2: case SC_E3L:p.next_scenario=SC_E4; break;
-      case SC_E4:             p.next_scenario= (ADiffBBW(bb,5)<-0.3)?SC_G3:SC_G2; break;
-      case SC_G1:             p.next_scenario=SC_F2; break;
-      case SC_G2:             p.next_scenario=SC_C1; break;
-      case SC_F1:             p.next_scenario=SC_F2; break;
-      case SC_F2:             p.next_scenario=SC_F3; break;
-      case SC_F3:             p.next_scenario=SC_A1; break;
-      case SC_C1:             p.next_scenario=SC_C2; break;
-      case SC_C2:             p.next_scenario=SC_A1; break;
-      case SC_D1s:            p.next_scenario=SC_D2s; break;
-      case SC_D2s:            p.next_scenario=SC_D3s; break;
-      case SC_D3s:            p.next_scenario=SC_A1; break;
-      default:                p.next_scenario=SC_NONE;
-   }
-   p.info = KVi("tot",total)+KVi("htf",htf)+KVi("mtf",mtf)+KVi("ltf",ltf);
+   p.info = KVi("tot", total);
    return p;
 }
 

@@ -703,6 +703,204 @@ def detect_flip(tf_states):
 
 ASSERT_COUNT = 0
 
+# ══ Layer 2 — PredictNext skeleton (TBD-GATE-3 — no rule values) ════
+
+# ── TF_DirectionScore — salvageable primitive from TofyTrade4 ──────────
+
+def tf_direction_score(stage, mid, prev_stage, prev_mid):
+    """Per-TF direction scoring primitive — verbatim from TofyTrade4.
+
+    Salvageable, not stale. Core scoring logic (stage→stg, mid→mid_b,
+    transition→stg_t, mid_transition→mid_t) is unchanged from TofyTrade4.
+
+    Args:
+        stage: current BBW_stage
+        mid: current BB_diffMid_Trend
+        prev_stage: prior-bar BBW_stage
+        prev_mid: prior-bar BB_diffMid_Trend
+
+    Returns:
+        raw score clamped to [-8, +8]
+    """
+    # Stage component
+    if stage == 511: stg = +3
+    elif stage == 512: stg = +2
+    elif stage == 513: stg = +1
+    elif stage == 521: stg = -3
+    elif stage == 522: stg = -2
+    elif stage == 523: stg = -1
+    else: stg = 0
+
+    # Mid baseline component
+    if mid == 1: mid_b = +2
+    elif mid == 5: mid_b = +1
+    elif mid == 4: mid_b = -1
+    elif mid == 2: mid_b = -2
+    else: mid_b = 0
+
+    # Transitions
+    prev_sqz = 400 <= prev_stage < 500
+    prev_fu = prev_stage in (511, 512)
+    prev_fd = prev_stage in (521, 522)
+    cur_fu = stage in (511, 512)
+    cur_fd = stage in (521, 522)
+
+    if prev_sqz and cur_fu: stg_t = +3
+    elif prev_sqz and cur_fd: stg_t = -3
+    elif prev_fd and cur_fu: stg_t = +3
+    elif prev_fu and cur_fd: stg_t = -3
+    elif prev_fu and stage == 513: stg_t = -1
+    elif prev_fd and stage == 523: stg_t = +1
+    elif prev_stage == 513 and cur_fu: stg_t = +2
+    elif prev_stage == 523 and cur_fd: stg_t = -2
+    else: stg_t = 0
+
+    if prev_mid == 3 and mid == 1: mid_t = +2
+    elif prev_mid == 3 and mid == 2: mid_t = -2
+    elif prev_mid == 2 and mid == 1: mid_t = +3
+    elif prev_mid == 1 and mid == 2: mid_t = -3
+    elif prev_mid == 1 and mid == 3: mid_t = -1
+    elif prev_mid == 2 and mid == 3: mid_t = +1
+    elif prev_mid == 3 and mid == 5: mid_t = +1
+    elif prev_mid == 3 and mid == 4: mid_t = -1
+    else: mid_t = 0
+
+    raw = stg + mid_b + stg_t + mid_t
+    return max(-8, min(8, raw))
+
+# ── Sub-function stubs (TBD-GATE-3 — no rule values) ─────────────────
+
+def scenario_gate(s):
+    """Scenario gate: PH_4/G4/E2 → suppress confidence + direction.
+
+    Consumes ScenarioState only (scenario, phase, b2_pink).
+
+    Args:
+        s: dict with ScenarioState fields from identify_scenario
+
+    Returns:
+        suppress: bool — True means suppress (safe default: True)
+
+    TBD-GATE-3: suppression rules from Part 4 Rule 5
+    """
+    # TBD-GATE-3: PH_4 / G4 / E2 suppression — rules from Part 4 Rule 5
+    # Current stub: always suppress (safe default)
+    return True
+
+def direction_score(bb):
+    """Direction score: per-TF scoring + aggregation + diffBBW damping.
+
+    Consumes raw bb[] only (per-TF BBW_stage, BB_diffMid_Trend).
+
+    Args:
+        bb: list of BB_MTF_Data dicts (M5..W1) with stage, mid, etc.
+
+    Returns:
+        total: aggregate score (safe default: 0)
+
+    TBD-GATE-3: weights, thresholds, diffBBW damping
+    NOTE: diffBBW thresholds (-0.5, 1.0) are WRONG (percentage-era, absolute formula)
+          re-derive for absolute scale at GATE 3 — do NOT carry stale values
+    """
+    # TBD-GATE-3: per-TF score via tf_direction_score + diffBBW damping + aggregation
+    return 0
+
+def g_tier_resolve(s, bb):
+    """G-tier resolution: D1/W1 bias → G→F vs G→C prediction.
+
+    OOS-UNVALIDATED: 0 of 7 OOS H4-SQZ episodes resolved as reversal (G→C)
+
+    Consumes ScenarioState + raw bb[] (pivot_substate + D1/W1 per-TF data).
+
+    Args:
+        s: dict with ScenarioState fields from identify_scenario
+        bb: list of BB_MTF_Data dicts (M5..W1)
+
+    Returns:
+        reversal: bool (safe default: False)
+
+    TBD-GATE-3: D1/W1 direction bias → continuation (F) vs reversal (C)
+    """
+    # OOS-UNVALIDATED: 0 of 7 OOS H4-SQZ episodes resolved as reversal (G→C)
+    # TBD-GATE-3: D1/W1 direction bias → continuation (F) vs reversal (C)
+    # Current stub: no reversal (safe default)
+    return False
+
+def assemble_prediction(s, total_score, reversal):
+    """Assemble Prediction from sub-function results.
+
+    Consumes ScenarioState + score + reversal flag.
+
+    Args:
+        s: dict with ScenarioState fields from identify_scenario
+        total_score: aggregate score from direction_score
+        reversal: bool from g_tier_resolve (or False)
+
+    Returns:
+        dict with Prediction fields (direction, target_tf, timeline_bars,
+            next_scenario, confidence, reversal, info)
+
+    TBD-GATE-3: mapping rules for direction/confidence/target/timeline/next_scenario
+    """
+    # TBD-GATE-3: total_score → direction/confidence, container_tf → target_tf,
+    #             phase → timeline_bars, scenario → next_scenario
+    # Current stub: safe defaults
+    return {
+        'direction': 0,
+        'target_tf': s.get('container_tf', -1) if s.get('container_tf', -1) > 0 else -1,
+        'timeline_bars': 0,
+        'next_scenario': 'NONE',
+        'confidence': 0,
+        'reversal': reversal,
+        'info': f"tot={total_score}",
+    }
+
+def predict_next(s, bb):
+    """PredictNext — control-flow skeleton for Layer 2.
+
+    Mirrors TofyTrade5.mqh PredictNext(ScenarioState &s, BB_MTF_Data_struct &bb[])
+    same function names, same order, same signatures.
+
+    Args:
+        s: dict with ScenarioState fields (scenario, phase, container_tf,
+           pivot_substate, etc.) from identify_scenario
+        bb: list of BB_MTF_Data dicts (M5..W1) — raw per-TF data
+
+    Returns:
+        dict with Prediction fields (direction, target_tf, timeline_bars,
+            next_scenario, confidence, reversal, info)
+
+    NOTE: Python has no ScenarioState struct — fields are recomputed from raw BB data.
+          store-vs-recompute: must match MQL5 bar-for-bar (per validation_status.md)
+          Python receives bb list instead of BB_MTF_Data_struct array.
+    """
+    # Initialize Prediction defaults
+    p = {
+        'direction': 0, 'target_tf': -1, 'timeline_bars': 0,
+        'next_scenario': 'NONE', 'confidence': 0,
+        'reversal': False, 'info': '',
+    }
+
+    # Step 1: Scenario gate (consumes ScenarioState only)
+    suppress = scenario_gate(s)
+    if suppress:
+        p['confidence'] = 0
+        p['direction'] = 0
+
+    # Step 2: Direction score (consumes raw bb only)
+    total = direction_score(bb)
+
+    # Step 3: G-tier resolution if pivot_substate > 0 (consumes both)
+    reversal = False
+    if s.get('pivot_substate', 0) > 0:
+        reversal = g_tier_resolve(s, bb)
+
+    # Step 4: Assemble Prediction (consumes ScenarioState + score + reversal)
+    p = assemble_prediction(s, total, reversal)
+
+    p['info'] = f"tot={total}"
+    return p
+
 def decide_action(tf_states, s, confidence=50, prev_snap=None):
     """Decide trade action — mirrors TofyTrade5.mqh Layer 3.
 
