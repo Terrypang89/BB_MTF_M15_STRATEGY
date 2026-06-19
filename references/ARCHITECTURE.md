@@ -764,6 +764,177 @@ Consumes ScenarioState (Part 3) + Prediction (Part 4) + raw BB_datas → outputs
 4. **Store-vs-recompute.** b1_block, b2_pink come from ScenarioState (MQL5 stores these on the struct). Python harness recomputes from raw BB data — must match bar-for-bar (per CLAUDE.md and validation_status.md Phase 4 verification item).
 5. **Fields consumed but not by Part 5.** Part 3's info field is logging-only; Part 4's timeline_bars and next_scenario are advisory (re-evaluate triggers, not firing conditions).
 
+### 5.0a Part 4 → Part 5 Link (visual)
+
+Three diagrams showing how Layer 2 connects to and constrains Layer 3 — the handoff made visible. Prediction (Part 4) is designed but not yet GATE-3-validated; these diagrams consume its designed interface. Part 5 code skeleton waits until Part 4 is built + GATE-3-validated.
+
+#### Diagram 1 — Cross-Layer Data-Flow (field → stage wiring)
+
+Which Prediction and ScenarioState fields wire to which DecideAction stage. Two input structs, one output.
+
+```mermaid
+flowchart LR
+    subgraph P4["Prediction p (from Part 4)"]
+        dir["direction"]
+        conf["confidence"]
+        tgt["target_tf"]
+        rev["reversal"]
+        tl["timeline_bars"]
+    end
+
+    subgraph P3["ScenarioState s (from Part 3)"]
+        sc["scenario"]
+        ph["phase"]
+        b1["b1_block"]
+        b2["b2_pink"]
+        pl["priceloc"]
+    end
+
+    subgraph STAGES["DecideAction Stages"]
+        Inv["Invariant checks"]
+        Blk["Block checks"]
+        Exi["Exit checks"]
+        RevR["Reversal routing"]
+        Arm["Entry arming"]
+        Siz["Size stage"]
+        Stp["Set stop"]
+    end
+
+    subgraph OUT["Output"]
+        TA["TradeAction"]
+    end
+
+    dir --> Arm
+    conf --> Siz
+    tgt --> Exi
+    rev --> RevR
+    tl --> Exi
+    sc --> Arm
+    ph --> Arm
+    b1 --> Blk
+    b2 --> Inv
+    pl --> Inv
+    pl --> Exi
+    Inv --> Blk
+    Blk --> Exi
+    Exi --> RevR
+    RevR --> Arm
+    Arm --> Siz
+    Siz --> Stp
+    Stp --> TA
+```
+
+*Review criterion: I can trace any Prediction or ScenarioState field to the exact DecideAction stage that consumes it.*
+
+#### Diagram 2 — Impact / Constraint (how Part 4 shapes Part 5)
+
+Four ways Layer 2's Prediction constrains Layer 3 — reversal routing, confidence as one of three size inputs, OOS propagation, and the armed-only AND gate.
+
+```mermaid
+flowchart TD
+    subgraph A["a) REVERSAL ROUTING — key behavioral handoff"]
+        P4a["Prediction.reversal = True<br/>(HTF/LTF diverge, reversal imminent)"]
+        P5a["DecideAction routes to EXIT<br/>close existing longs<br/>do NOT open counter-shorts"]
+        P4a -->|"reversal flag<br/>changes branch direction"| P5a
+    end
+
+    subgraph B["b) CONFIDENCE as ONE of THREE size inputs"]
+        B1["Matrix ceiling<br/>(scenario-based)"]
+        B2["ConfSize<br/>(Prediction.confidence)"]
+        B3["DecoderSize<br/>(cascade state)"]
+        B4["size_mult = min<br/>(ceiling, conf_size, decoder_size)"]
+        B1 --> B4
+        B2 --> B4
+        B3 --> B4
+    end
+
+    subgraph C["c) OOS-UNVALIDATED PROPAGATION"]
+        P4c["Prediction.reversal from G→C<br/>OOS-UNVALIDATED flag<br/>(0 OOS episodes)"]
+        P5c["Any DecideAction on G→C<br/>inherits OOS-UNVALIDATED<br/>arm cautiously, exit-only"]
+        P4c -.->|"flag propagates"| P5c
+    end
+
+    subgraph D["d) NOTHING FIRES UNLESS ARMED — AND gate"]
+        D1["ScenarioState<br/>scenario + phase arms row"]
+        D2["Prediction<br/>direction != 0 provides side"]
+        D3["BOTH required<br/>neither alone fires"]
+        D1 --> D3
+        D2 --> D3
+    end
+```
+
+*Review criterion: I see WHY Part 5 is shaped the way it is — the reversal branch it must handle, that confidence is not the sole size driver, the OOS flag it carries, and the AND gate at its core.*
+
+#### Diagram 3 — Detailed Cross-Layer Sequence (runtime call order)
+
+Per-bar call sequence at the DecideAction stage level — continuing from where §4.0a ended (PredictNext returns Prediction). Function names are DESIGN-level (from §5.2 activity diagram), marked as such — not yet coded.
+
+```mermaid
+sequenceDiagram
+    participant Caller as "Caller<br/>(OnBar)"
+    participant PNX as "PredictNext"
+    participant P as "Prediction p"
+    participant S as "ScenarioState s"
+    participant DA as "DecideAction"
+    participant Inv as "CheckInvariants<br/>[DESIGN — Phase 4,<br/>not yet coded]"
+    participant Blk as "CheckBlocks<br/>[DESIGN — Phase 4,<br/>not yet coded]"
+    participant Exi as "CheckExits<br/>[DESIGN — Phase 4,<br/>not yet coded]"
+    participant RevR as "ReversalExit<br/>[DESIGN — Phase 4,<br/>not yet coded]"
+    participant Arm as "ArmEntry<br/>[DESIGN — Phase 4,<br/>not yet coded]"
+    participant Siz as "Size<br/>[DESIGN — Phase 4,<br/>not yet coded]"
+    participant Stp as "SetStop<br/>[DESIGN — Phase 4,<br/>not yet coded]"
+    participant TA as "TradeAction"
+
+    Note over PNX,TA: "HANDOFF: p + s leave L2, enter L3"
+
+    Caller->>DA: "DecideAction(s, p, bb)"
+    activate DA
+
+    DA->>Inv: "EMERGENCY / X4-PINK / VETO-AT-TARGET"
+    activate Inv
+    Inv-->>DA: "short-circuit or continue"
+    deactivate Inv
+
+    DA->>Blk: "B3 H4-OPPOSE / b1_block"
+    activate Blk
+    Blk-->>DA: "blocked or not"
+    deactivate Blk
+
+    DA->>Exi: "X1 target_tf / X2 / stop"
+    activate Exi
+    Exi-->>DA: "exit fired or hold"
+    deactivate Exi
+
+    alt "p.reversal == True"
+        DA->>RevR: "EXIT route — close, do not open"
+        activate RevR
+        RevR-->>DA: "TradeAction act=7"
+        deactivate RevR
+        DA-->>Caller: "TradeAction"
+        deactivate DA
+    end
+
+    DA->>Arm: "firing-matrix[scenario,phase] + p.direction"
+    activate Arm
+    Arm-->>DA: "armed or WAIT"
+    deactivate Arm
+
+    DA->>Siz: "min(ceiling, ConfSize(p.confidence), decoder)"
+    activate Siz
+    Siz-->>DA: "size_mult"
+    deactivate Siz
+
+    DA->>Stp: "ATRSL stop at entry"
+    activate Stp
+    Stp-->>DA: "stop_price"
+    deactivate Stp
+
+    DA-->>Caller: "TradeAction"
+    deactivate DA
+```
+
+*Review criterion: I can follow one bar from the DecideAction entry point through invariants, blocks, exits, reversal routing, arming, sizing, and stop — ending at TradeAction — and see where Prediction and ScenarioState fields enter the flow.*
+
 ### 5.1 Interface — Class Diagram
 
 ```mermaid
