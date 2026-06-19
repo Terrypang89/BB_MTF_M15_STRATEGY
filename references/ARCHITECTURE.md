@@ -1144,6 +1144,21 @@ flowchart TD
 - **HYPOTHESIS**: X2b discriminator + inputs, E6 discriminator + inputs — both GATE 4 two-sided
 - **BLOCKED**: X2c reversal routing [inert until Phase 3]
 
+![April 1 failure — 03.03 mode reproduced](Backtest_data/extras/backtested_EA_test_phase_April_01.jpg)
+
+**April 1 2026 — Ticket #36: 03.03 failure mode reproduced**
+
+EA held a +135 long through a full M15 reversal down to breakeven. H4 looked committed throughout (diffBBW>0, mid=1, fly stage 511/512) right up until the crash.
+
+Three implementation gaps prevented the exit:
+(a) X2 fade required a one-bar 1→3 flip; the reversal was gradual (1→2→3→5→2) so X2 never fired — motivates **REQ-X2a** (multi-bar M15 reversal detection).
+(b) Zigzag qualification required the H4 container to crack, which didn't happen until after the crash — the pullback-vs-top tension, motivates **REQ-X2b** (pullback-vs-top HYPOTHESIS discriminator).
+(c) Reversal routing inert — PredictNext stubbed until Phase 3 (**X2c**, BLOCKED).
+
+**What worked:** B3 H4-OPPOSE correctly blocked a counter-H4 short — no wrong short was opened. The design is correct; the implementation has gaps.
+
+This is OLD scaffold behavior — the 03.03 failure mode reproduced. DecideAction is not yet built (Phase 2). The fix is designed in §5.2 (REQ-X2a/X2b) and will be validated at GATE 4 two-sided (April 1 must EXIT, 03.17 must HOLD). This chart documents the PROBLEM the redesign fixes, NOT correct strategy behavior.
+
 ### 5.2a M15 Trigger State Machine — sub-state transitions
 
 This diagram defines the M15 sub-states precisely so "gradual reversal" and "with-H4 entry" aren't hand-waved. The same state machine drives both the entry trigger (with-H4 flip) and the exit trigger (gradual against-H4 reversal) as traversals through states.
