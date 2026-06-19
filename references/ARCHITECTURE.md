@@ -790,13 +790,20 @@ flowchart LR
         pl["priceloc"]
     end
 
+    subgraph BB["BB_datas[] (raw per-TF)"]
+        m15st["M15 stage<br/>(for X2b, E6)"]
+        h4dbbw["H4 diffBBW trend<br/>(for X2b)"]
+        m30fly["M30 confirming fly<br/>(for E6)"]
+    end
+
     subgraph STAGES["DecideAction Stages"]
         Inv["Invariant checks"]
-        Blk["Block checks"]
-        Exi["Exit checks"]
-        RevR["Reversal routing"]
+        Exi["Exit checks<br/>(before entries)"]
+        X2bNode["X2b: pullback-vs-top<br/>[HYPOTHESIS]"]
+        E4Node["E4: VETO-AT-TARGET<br/>(entry gate)"]
         Arm["Entry arming"]
-        Siz["Size stage"]
+        E6Node["E6: real-vs-fakeout<br/>[HYPOTHESIS]"]
+        Siz["E5: Size stage<br/>(flows to order)"]
         Stp["Set stop"]
     end
 
@@ -807,19 +814,25 @@ flowchart LR
     dir --> Arm
     conf --> Siz
     tgt --> Exi
-    rev --> RevR
+    rev --> X2bNode
+    rev -.->|"INERT until Phase 3<br/>(X2c)"| Arm
     tl --> Exi
     sc --> Arm
     ph --> Arm
-    b1 --> Blk
+    b1 --> Arm
     b2 --> Inv
     pl --> Inv
     pl --> Exi
-    Inv --> Blk
-    Blk --> Exi
-    Exi --> RevR
-    RevR --> Arm
-    Arm --> Siz
+    m15st --> X2bNode
+    m15st --> E6Node
+    h4dbbw --> X2bNode
+    m30fly --> E6Node
+    Inv --> Exi
+    Exi --> X2bNode
+    X2bNode --> E4Node
+    E4Node --> Arm
+    Arm --> E6Node
+    E6Node --> Siz
     Siz --> Stp
     Stp --> TA
 ```
@@ -867,7 +880,7 @@ flowchart TD
 
 #### Diagram 3 — Detailed Cross-Layer Sequence (runtime call order)
 
-Per-bar call sequence at the DecideAction stage level — continuing from where §4.0a ended (PredictNext returns Prediction). Function names are DESIGN-level (from §5.2 activity diagram), marked as such — not yet coded.
+Per-bar call sequence at the DecideAction stage level — continuing from where §4.0a ended (PredictNext returns Prediction). Function names are DESIGN-level (from §5.2 activity diagram), marked as such — not yet coded. Shows per-bar data reads for X2b, E6, E5, and X2c.
 
 ```mermaid
 sequenceDiagram
@@ -876,13 +889,14 @@ sequenceDiagram
     participant P as "Prediction p"
     participant S as "ScenarioState s"
     participant DA as "DecideAction"
-    participant Inv as "CheckInvariants<br/>[DESIGN — Phase 4,<br/>not yet coded]"
-    participant Blk as "CheckBlocks<br/>[DESIGN — Phase 4,<br/>not yet coded]"
-    participant Exi as "CheckExits<br/>[DESIGN — Phase 4,<br/>not yet coded]"
-    participant RevR as "ReversalExit<br/>[DESIGN — Phase 4,<br/>not yet coded]"
-    participant Arm as "ArmEntry<br/>[DESIGN — Phase 4,<br/>not yet coded]"
-    participant Siz as "Size<br/>[DESIGN — Phase 4,<br/>not yet coded]"
-    participant Stp as "SetStop<br/>[DESIGN — Phase 4,<br/>not yet coded]"
+    participant Inv as "CheckInvariants<br/>[DESIGN — Phase 4]"
+    participant Exi as "CheckExits<br/>[DESIGN — Phase 4]"
+    participant X2bRead as "X2b Data Reads<br/>[HYPOTHESIS]"
+    participant E6Read as "E6 Data Reads<br/>[HYPOTHESIS]"
+    participant E4Veto as "E4 Veto (entry gate)<br/>[design-firm]"
+    participant Arm as "ArmEntry<br/>[DESIGN — Phase 4]"
+    participant Siz as "Size (E5)<br/>[design-firm]"
+    participant Stp as "SetStop<br/>[design-firm]"
     participant TA as "TradeAction"
 
     Note over PNX,TA: "HANDOFF: p + s leave L2, enter L3"
@@ -895,22 +909,35 @@ sequenceDiagram
     Inv-->>DA: "short-circuit or continue"
     deactivate Inv
 
-    DA->>Blk: "B3 H4-OPPOSE / b1_block"
-    activate Blk
-    Blk-->>DA: "blocked or not"
-    deactivate Blk
-
-    DA->>Exi: "X1 target_tf / X2 / stop"
+    DA->>Exi: "X1 target_tf / X2 multi-bar reversal"
     activate Exi
     Exi-->>DA: "exit fired or hold"
     deactivate Exi
 
+    alt "X2b: M15 reversed but H4 committed"
+        DA->>X2bRead: "Read per-bar inputs:<br/>- M15 stage (521 counter-fly vs mid≥3)<br/>- price vs H4 band (edge/top vs mid-channel)<br/>- H4 diffBBW trend (decreasing=expansion slowing)"
+        activate X2bRead
+        Note over X2bRead: "HYPOTHESIS inputs<br/>— GATE 4 two-sided:<br/>Apr 1 must EXIT, 03.17 must HOLD"
+        X2bRead-->>DA: "pullback=HOLD or top=EXIT"
+        deactivate X2bRead
+    end
+
     alt "p.reversal == True"
-        DA->>RevR: "EXIT route — close, do not open"
-        activate RevR
-        RevR-->>DA: "TradeAction act=7"
-        deactivate RevR
+        DA->>Arm: "EXIT route — close, do not open"
+        activate Arm
+        Arm-->>DA: "TradeAction act=7"
+        deactivate Arm
         DA-->>Caller: "TradeAction"
+        deactivate DA
+    end
+
+    DA->>E4Veto: "Block entry if price at target<br/>(prevents buying at resistance — 03.03)"
+    activate E4Veto
+    E4Veto-->>DA: "blocked or clear"
+    deactivate E4Veto
+
+    alt "E4 blocks"
+        DA-->>Caller: "TradeAction act=0 WAIT"
         deactivate DA
     end
 
@@ -919,21 +946,31 @@ sequenceDiagram
     Arm-->>DA: "armed or WAIT"
     deactivate Arm
 
-    DA->>Siz: "min(ceiling, ConfSize(p.confidence), decoder)"
+    alt "Entry armed — E6 discriminator"
+        DA->>E6Read: "Read per-bar inputs:<br/>- M30 confirming fly (511/512) vs flat<br/>- diffBBW expanding vs near-zero<br/>- quality threshold (≥90/75/60/45)"
+        activate E6Read
+        Note over E6Read: "HYPOTHESIS inputs<br/>— GATE 4 two-sided:<br/>real entries must FIRE,<br/>fakeouts must SKIP"
+        E6Read-->>DA: "real=FIRE or fakeout=SKIP"
+        deactivate E6Read
+    end
+
+    DA->>Siz: "E5: min(ceiling, ConfSize(p.confidence), DecoderSize(cascade))<br/>size flows compute → ORDER — not dropped"
     activate Siz
     Siz-->>DA: "size_mult"
     deactivate Siz
 
-    DA->>Stp: "ATRSL stop at entry"
+    DA->>Stp: "ATRSL stop at entry (INVARIANT 1)"
     activate Stp
     Stp-->>DA: "stop_price"
     deactivate Stp
 
     DA-->>Caller: "TradeAction"
     deactivate DA
+
+    Note over DA: "X2c: p.reversal from PredictNext<br/>→ marked [INERT until Phase 3]<br/>reversal routing not wired yet"
 ```
 
-*Review criterion: I can follow one bar from the DecideAction entry point through invariants, blocks, exits, reversal routing, arming, sizing, and stop — ending at TradeAction — and see where Prediction and ScenarioState fields enter the flow.*
+*Review criterion: I can follow one bar from DecideAction entry through invariants, exits (including X2b reads), E4 veto, arming (including E6 reads), E5 sizing (flows to order), and stop — and see where X2c is marked inert.*
 
 ### 5.1 Interface — Class Diagram
 
@@ -1009,6 +1046,8 @@ classDiagram
 
 This is the evaluation order. The order IS the design. Cell values are TBD — GATE 4. The "nothing fires unless armed" principle is visible: an unarmed trigger has no path to act=1/2.
 
+**Evaluation order: INVARIANTS → EXIT CHECKS → ENTRY ARMING → SIZE → STOP.** Exits are checked before any entry — a position that should close must close before a new one opens. (This is the April 1 lesson: the EA held +135 through a full M15 reversal because exit logic was bypassed.)
+
 ```mermaid
 flowchart TD
     Start["Start: ScenarioState s + Prediction p + BB_datas[]"] --> Invariants["INVARIANTS (always first, unconditional)"]
@@ -1018,53 +1057,56 @@ flowchart TD
     Inv1 -->|no| Inv2{"b2_pink?<br/>X4-PINK"}
     Inv2 -->|yes| Pink["act=7 X4-PINK forced exit"]
     Inv2 -->|no| Inv3{"VETO-AT-TARGET?<br/>BUY-at-upper or SELL-at-lower<br/>and entry was attempted"}
-    Inv3 -->|yes| Veto["act=0 VETO-AT-TARGET"]
-    Inv3 -->|no| Blocks
+    Inv3 -->|yes| Veto["act=0 VETO-AT-TARGET<br/>(03.03: no BUY at D1 upper)"]
+    Inv3 -->|no| Exits
 
-    subgraph BLOCKS["BLOCKS (no new entries)"]
-        B1["B1: b1_block → no flip-entries"]
-        B3["B3: H4-OPPOSE (H4 committed opposing fly)"]
-        B4["B4: cas_sqzCount>=3 → no entries"]
-    end
-
-    Inv3 --> B1
-    B1 --> B3
-    B3 --> B4
-    B4 --> Exits
-
-    subgraph EXITS["EXIT checks (position open only)"]
+    subgraph EXITS["EXIT CHECKS — before any entry (position open only)"]
         X1{"X1: price at<br/>target_tf band?"}
-        X2{"X2: M15 fade +<br/>qualified?"}
+        X2{"X2: M15 multi-bar reversal<br/>(trend-dir → mid≥3 → counter-dir<br/>over N bars)"}
         X2a{"Zigzag phase?"}
-        X2b{"Container cracking?<br/>or invalidated or stall?"}
+        X2bQual{"Container cracking?<br/>or invalidated or stall?"}
+
+        X2bDec["X2b: PULLBACK vs REAL TOP?<br/>M15 reversed but H4 committed<br/>(diffBBW>0, mid=1)<br/>[HYPOTHESIS — GATE 4 two-sided:<br/>Apr 1 must EXIT, 03.17 must HOLD]"]
     end
 
-    Exits --> X1
+    Invariants --> X1
     X1 -->|yes| Exit1["act=7 X1 target exit"]
     X1 -->|no| X2
-    X2 -->|no fade| Hold1["act=0 hold"]
-    X2 -->|fade yes| X2a
-    X2a -->|"no (PH_1)"| Exit2["act=7 X2 trend-fade exit"]
-    X2a -->|"yes (zigzag)"| X2b
-    X2b -->|"yes (qualified)"| Exit2
-    X2b -->|"no (unqualified)"| Hold1
+    X2 -->|no reversal| Hold1["act=0 hold"]
+    X2 -->|reversal detected| X2a
+    X2a -->|"no (PH_1 trend)"| Exit2["act=7 X2 trend-fade exit"]
+    X2a -->|"yes (zigzag)"| X2bQual
+    X2bQual -->|"yes (qualified)"| Exit2
+    X2bQual -->|"no (unqualified)"| X2bDec
+    X2bDec -->|"PULLBACK — HOLD"| Hold1
+    X2bDec -->|"REAL TOP — EXIT"| Exit2b["act=7 X2b pullback-vs-top exit"]
 
-    Hold1 --> Ceiling["MATRIX CEILING<br/>ceiling = MatrixCeiling(scenario, phase)"]
+    Exit1 --> Ceiling["MATRIX CEILING<br/>ceiling = MatrixCeiling(scenario, phase)"]
+    Exit2 --> Ceiling
+    Exit2b --> Ceiling
+    Hold1 --> Ceiling
 
     Ceiling --> Ceil0{"ceiling <= 0?"}
     Ceil0 -->|yes| Wait1["act=0 WAIT — ceiling blocks"]
-    Ceil0 -->|no| Arming
+    Ceil0 -->|no| E4Check
+
+    E4EntryVeto["E4 VETO-AT-TARGET (entry gate)<br/>Block entry if price at target<br/>(prevents buying at resistance — 03.03)<br/>[design-firm]"]
+    E4Check --> E4EntryVeto
+    E4EntryVeto -->|blocked| Wait1
+    E4EntryVeto -->|clear| Arming
 
     subgraph ARMING["ENTRY ARMING (scenario,phase row + Prediction)"]
         EntryPath["Which entry path?<br/>Zigzag → E3 boundary<br/>PH_1/2/5 → flip-path E1/E2/E5"]
 
-        E3{"E3: priceloc at band?<br/>+ 6 confinement checks"}
-        E3pass["E3 entry fired<br/>size = min(ceiling, conf_size, decoder_size)"]
+        E3{"E3: priceloc at band?<br/>+ 6 confinement checks<br/>[design-firm]"}
+        E3pass["E3 entry fired<br/>[design-firm]"]
         E3fail["E3 check failed → WAIT"]
 
-        Flip{"Flip: DetectFlip +<br/>dir == p.direction"}
-        FlipYes["Flip entry E1/E2/E5<br/>size = min(ceiling, conf_size, decoder_size)"]
+        Flip{"Flip: DetectFlip +<br/>dir == p.direction<br/>[design-firm]"}
+        FlipYes["Flip entry E1/E2/E5<br/>[design-firm]"]
         FlipNo["No flip → WAIT"]
+
+        E6Dec["E6: REAL vs FAKEOUT?<br/>M30 confirming fly vs flat?<br/>diffBBW expanding vs near-zero?<br/>quality threshold (≥90/75/60/45)?<br/>[HYPOTHESIS — GATE 4 two-sided:<br/>real entries must FIRE, fakeouts must SKIP]"]
 
         ReversalCheck{"reversal=True?<br/>+ counter-H4 signal"}
         ReversalExit["EXIT route — close longs<br/>don't open counter-shorts"]
@@ -1074,28 +1116,89 @@ flowchart TD
     EntryPath --> E3
     E3 -->|pass| E3pass
     E3 -->|fail| E3fail
-    E3pass --> Sizing
+    E3pass --> E6Dec
     E3fail --> Flip
-    Flip -->|yes| ReversalCheck
+    Flip -->|yes| E6Dec
+    E6Dec -->|FAKEOUT — SKIP| Wait2["act=0 WAIT — fakeout filtered"]
+    E6Dec -->|REAL — FIRE| ReversalCheck
     ReversalCheck -->|yes| ReversalExit
     ReversalCheck -->|no| FlipYes
     FlipYes --> Sizing
     Flip -->|no| FlipNo
-    FlipNo --> Wait2["act=0 WAIT — no trigger armed"]
+    FlipNo --> Wait2
 
-    Sizing["SIZE = min(ceiling, ConfSize(confidence), DecoderSize(cascade))<br/>STOP = ATRSL at entry (INVARIANT 1)"]
+    Sizing["SIZE = min(ceiling, ConfSize(confidence), DecoderSize(cascade))<br/>E5: size flows to order — not dropped [design-firm]<br/>STOP = ATRSL at entry (INVARIANT 1) [design-firm]"]
     Sizing --> Return([Return TradeAction])
     Emerg --> Return
     Pink --> Return
     Veto --> Return
-    Exit1 --> Return
-    Exit2 --> Return
     Wait1 --> Return
     ReversalExit --> Return
     Wait2 --> Return
 ```
 
-**Contract established:** The evaluation order is INVARIANTS → BLOCKS → EXITS → ARMING → SIZE. Invariants fire unconditionally (EMERGENCY, X4-PINK, VETO). Blocks prevent new entries but don't close existing positions. Exits check only when a position is open. Arming requires BOTH scenario/phase row AND Prediction direction — unarmored triggers have no path to fire. Stop is set at entry (INVARIANT 1).
+**Contract established:** The evaluation order is **INVARIANTS → EXIT CHECKS → MATRIX CEILING → E4 VETO-AT-TARGET (entry gate) → ENTRY ARMING → SIZE → STOP**. Exits fire before entries. Invariants fire unconditionally (EMERGENCY, X4-PINK, VETO). X2 detects multi-bar M15 reversal (trend-dir → mid≥3 → counter-dir over N bars); the old 1→3-only condition is **SUPERSEDED**. X2b pullback-vs-top is a HYPOTHESIS discriminator — validates at GATE 4 two-sided (April 1 must EXIT, 03.17 must HOLD). E4 VETO-AT-TARGET blocks entry when price is at target (03.03: no BUY at D1 upper). E6 real-vs-fakeout is a HYPOTHESIS discriminator — validates at GATE 4 two-sided (real entries must FIRE, fakeouts must SKIP). E5 size flows compute → order, not dropped. Stop at entry (INVARIANT 1).
+
+**Validation flagging:**
+- **design-firm** (draw as decided): X1, X2 multi-bar detection, X4-PINK, E1 arming, E2 trigger, E3 boundary, E4 VETO-AT-TARGET, E5 size, exit-before-entry order, B3 block
+- **HYPOTHESIS**: X2b discriminator + inputs, E6 discriminator + inputs — both GATE 4 two-sided
+- **BLOCKED**: X2c reversal routing [inert until Phase 3]
+
+### 5.2a M15 Trigger State Machine — sub-state transitions
+
+This diagram defines the M15 sub-states precisely so "gradual reversal" and "with-H4 entry" aren't hand-waved. The same state machine drives both the entry trigger (with-H4 flip) and the exit trigger (gradual against-H4 reversal) as traversals through states.
+
+**States:**
+- **UP** (mid=1, trend direction): M15 aligned with current trend
+- **FADING** (mid≥3, sideways): M15 losing conviction — transitional, NOT yet exit
+- **COUNTER** (mid=2 or 521 counter-fly): M15 has committed to opposite direction
+
+**Transitions define both triggers:**
+- **WITH-H4 entry (REQ-E2, design-firm):** FLAT/FADING → UP in H4 direction = ENTRY trigger. The M15 flip to H4 direction fires entry.
+- **AGAINST-H4 exit (REQ-X2a, design-firm):** UP → FADING → COUNTER over N bars = EXIT trigger. Fires at COUNTER state, NOT at first FADING bar (the 1→3-only condition is SUPERSEDED).
+
+```mermaid
+stateDiagram-v2
+    [*] --> UP: "M15 mid=1, aligned with trend"
+
+    UP --> FADING: "mid 1→≥3<br/>losing conviction<br/>(NOT exit yet — gradual reversal)"
+    note right of FADING
+        X2a: old 1→3-only exit
+        is SUPERSEDED.
+        FADING alone does NOT fire exit.
+        Must reach COUNTER over N bars.
+    end note
+
+    FADING --> UP: "mid ≥3→1<br/>recovers trend alignment"
+    FADING --> COUNTER: "mid ≥3→2 OR 521 counter-fly<br/>commits to opposite direction"
+
+    COUNTER --> FADING: "mid 2→≥3<br/>loses counter-conviction"
+    COUNTER --> UP: "mid 2→1<br/>re-aligns with trend"
+
+    note right of COUNTER
+        X2a EXIT fires here:
+        UP → FADING → COUNTER
+        over N bars = multi-bar reversal.
+        design-firm.
+    end note
+
+    note right of UP
+        E2 ENTRY fires on transition:
+        FLAT/FADING → UP in H4 direction
+        = with-H4 flip entry.
+        design-firm.
+    end note
+
+    FADING --> [*]: "—"
+    COUNTER --> [*]: "—"
+```
+
+**Key design decisions visible:**
+1. **Gradual reversal (X2a):** UP→FADING→COUNTER over N bars. Exit fires at COUNTER, not FADING. This is the fix for the old 1→3-only condition — a M15 wobble to mid=3 doesn't exit, only a committed counter-direction does.
+2. **With-H4 entry (E2):** FLAT/FADING→UP in H4 direction. The M15 flip aligns with H4 — entry fires.
+3. **Same machine, two traversals:** Entry and exit share the same state machine but traverse different paths. Entry = FADING→UP (with H4). Exit = UP→FADING→COUNTER (against H4).
+
+**Validation flagging:** State transitions (UP⇄FADING⇄COUNTER) and triggers (E2 entry, X2a exit) are **design-firm**. The X2b discriminator at the COUNTER state (pullback vs top) is **HYPOTHESIS** — designed in §5.2 activity diagram.
 
 ### 5.3 Firing Matrix — Structure (the shape, not the cells)
 
@@ -1127,6 +1230,9 @@ flowchart LR
 - PH_5 rows → E5/E6 only (expansion entries)
 - G-tier rows (G1-G4) → arm cautiously; pivot_substate=2 → exit-only
 - C-tier rows → OOS-UNVALIDATED — cells TBD — no OOS episodes to validate
+- E4 VETO-AT-TARGET blocks entry per row when price at target (03.03: no BUY at D1 upper)
+- E6 real-vs-fakeout discriminator filters armed entries [HYPOTHESIS — GATE 4 two-sided]
+- X2b pullback-vs-top discriminator in exit path [HYPOTHESIS — GATE 4 two-sided: Apr 1/03.17]
 - Cell values (which specific triggers fire per row) = TBD — GATE 4
 
 **Existing code status:** The MQL5 DecideAction (lines 731-828 of TofyTrade5.mqh) is implemented with the control flow matching the activity diagram: invariants (b2_pink, VETO), exits (X1, X2 qualified), ceiling check, E3 in zigzag, flip-path E1/E2/E5. The replay_harness.py `decide_action()` mirrors this (lines 706-847). Matrix ceiling values are hardcoded from backtest_chart_analysis.md Part 5 — not yet GATE-4-validated.
@@ -1145,6 +1251,12 @@ GATE 4 is the firing benchmark. Part 5 must produce results matching the March 2
 3. **No exit within 3 bars on mid=3 wobble** — 03.17-03.19 SELL run held through M15 wobble (X2 qualified only)
 4. **Zero positions held > 3 days** — stop at entry (INVARIANT 1) + emergency $50 exit
 5. **Counter-H4 M15 sell = EXIT not new short** — reversal routing (reversal=True → exit branch)
+
+**HYPOTHESIS discriminators — two-sided GATE 4 tests:**
+- **X2b pullback-vs-top:** April 1 (must EXIT — +135 held through reversal) AND 03.17 (must HOLD — don't churn the winner). Both outcomes must be correct simultaneously.
+- **E6 real-vs-fakeout:** Real March/April entries (must FIRE) AND fakeout bars (must SKIP). Both outcomes must be correct simultaneously.
+
+Both discriminators are **BLOCKED from being marked design-firm** until these two-sided tests pass at GATE 4.
 
 The replay harness `simulate_trades()` + `score_benchmark()` (replay_harness.py lines 851-1117) runs this validation.
 
