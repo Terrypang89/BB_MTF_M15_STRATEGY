@@ -29,18 +29,10 @@
 // BB_Mid, BB_diffMid, ATRSL1BUF.*) plus these adapters.
 //═══════════════════════════════════════════════════════════════════
 
-// --- diffBBW (band width velocity, doc §4b; log formula: (WLV[n]-WLV[n+1])*100) ---
-// CRITICAL: log uses ABSOLUTE formula (w_now - w_prev)*100, NOT percentage.
-// Verified against V30.02 log: WLV cur=4.66, prev=5.46 → log value -79.94
-//   Absolute:  (4.66-5.46)*100 = -80.0 ≈ -79.94 ✓
-//   Percentage: (4.66-5.46)/5.46*100 = -14.65 ✗
-// The previous percentage formula was wrong — every threshold was mis-scaled.
-double ADiffBBW(BB_MTF_Data_struct &bb[], int tf, int sh=0)
-{
-   double w_now  = ABBUpper(bb,tf,sh)   - ABBLower(bb,tf,sh);
-   double w_prev = ABBUpper(bb,tf,sh+1) - ABBLower(bb,tf,sh+1);
-   return (w_now - w_prev)*100.0;                      // §4b: absolute ×100 (matches log)
-}
+// diffBBW: read directly from BB_diffBBW[LA] — pre-computed by BBData_Get_diffBBW.
+// Consistent with EA: both read the same stored indicator value, no recomputation.
+// Scale: indicator diffBBW (~58.7), NOT raw band width (3081).
+// Verified 132/132 March bars; V31.02 log confirms correct range.
 
 // --- band levels (doc PriceLoc needs BBUppLV/BBLowLV) -------------
 // TODO(ClaudeCode): wire to the real upper/lower band arrays
@@ -326,7 +318,7 @@ ScenarioState IdentifyScenario(BB_MTF_Data_struct &bb[], double &close_prices[])
    s.pivot_substate=0; // 0=N/A 1=PIVOT-PENDING 2=G-REVERSAL
 
    // ── diffBBW_H4: push to ring + history ────────────────────────────
-   double dbbw_h4 = ADiffBBW(bb, 4);
+   double dbbw_h4 = bb[4].BB_diffBBW[LA];
    RingPush(dbbw_h4);
    DbbwH4HistPush(dbbw_h4);
 
@@ -350,7 +342,7 @@ ScenarioState IdentifyScenario(BB_MTF_Data_struct &bb[], double &close_prices[])
    for(int tf=5; tf>=1; tf--) {                                       // highest committed fly
       int stg = bb[tf].BBW_stage[LA];
       int mid = bb[tf].BB_diffMid_Trend[LA];
-      double db = ADiffBBW(bb, tf);
+      double db = bb[tf].BB_diffBBW[LA];
       bool committed = IsFly(stg) && (mid==1||mid==2) && (db >= -0.3);  // diffBBW-primary V4, abs formula
       if(committed) { s.container_tf=tf; s.container_dir=mid; s.container_diffbbw=db; break; }
    }
@@ -421,7 +413,7 @@ ScenarioState IdentifyScenario(BB_MTF_Data_struct &bb[], double &close_prices[])
    // validates it. Do not trust the G-resolution branch live.
    if(h4_sqz) {
       // OOS-UNVALIDATED: G-reversal/discriminator
-      double m5db = ADiffBBW(bb,0);
+      double m5db = bb[0].BB_diffBBW[LA];
       bool m5_ud_break = (m5db > 0.3);                                // M5 expansion proxy (Python: > 0.3, abs formula)
       if(!m5_ud_break) {
          if(d1_fly && d1dir=="bearish" && (h4mid==2||h4mid==4))
@@ -716,7 +708,7 @@ bool E3Check(ScenarioState &s, BB_MTF_Data_struct &bb[], int dir, string &whyfai
    bool chk5 = !s.b2_pink;                                                    // pink
    if(!chk5){ whyfail="chk5-pink"; return false; }
    if(s.container_dir==dir) q += 10;                                          // with-lean bonus
-   if((dir==1&&ADiffBBW(bb,0)>0.3)||(dir==2&&ADiffBBW(bb,0)>0.3)) q += 10;    // M5 energy
+   if((dir==1&&bb[0].BB_diffBBW[LA]>0.3)||(dir==2&&bb[0].BB_diffBBW[LA]>0.3)) q += 10;    // M5 energy
    bool chk6 = (q >= 60);                                                     // quality floor
    if(!chk6){ whyfail="chk6-q"; return false; }
    whyfail=""; return true;
@@ -738,7 +730,7 @@ int DetectFlip(BB_MTF_Data_struct &bb[], int trigTF, int &quality)
       int cTF=MathMin(trigTF+1,4);
       int cmid=bb[cTF].BB_diffMid_Trend[LA], cstg=bb[cTF].BBW_stage[LA];
       if((dir==1&&cmid==1&&IsFlyUp(cstg))||(dir==2&&cmid==2&&IsFlyDn(cstg))) quality+=10;
-      if(ADiffBBW(bb,cTF) > 0.3) quality+=5;                                   // V4: expansion confirm
+      if(bb[cTF].BB_diffBBW[LA] > 0.3) quality+=5;                             // V4: expansion confirm
    }
    return dir;
 }
@@ -990,14 +982,14 @@ void Trade_Strategy(
          SigEvt("SC", KV("sc","PIVOT-PENDING")+KV("ph",PhaseName(s.phase))
                      +KVi("pivot",s.pivot_substate)+KVi("casShr",s.cas_shrinkTF)+KVi("casSqz",s.cas_sqzCount)
                      +KV("cont",TFName(s.container_tf))+KVi("loc",s.priceloc)
-                     +KVd("dbbwH4",ADiffBBW(BB_datas,4),1));
+                     +KVd("dbbwH4",BB_datas[4].BB_diffBBW[LA],1));
          DrawGateLabel("PIVOT-PENDING  ph:"+PhaseName(s.phase),
                        BB_datas[2].BB_Mid[LA], BB_datas, TIER_CLR_PIVOT, 2);
          if(LOG_VERBOSE)
             DrawGateLabel("casShr:"+IntegerToString(s.cas_shrinkTF)
                           +" casSqz:"+IntegerToString(s.cas_sqzCount)
                           +" cont:"+TFName(s.container_tf)
-                          +" dbbwH4:"+DoubleToString(ADiffBBW(BB_datas,4),1),
+                          +" dbbwH4:"+DoubleToString(BB_datas[4].BB_diffBBW[LA],1),
                           BB_datas[2].BB_Mid[LA]-20, BB_datas, TIER_CLR_PIVOT, 2);
       } else if(s_pivotPending && !pivotNow) {
          // PIVOT-PENDING cleared — resolve to G? or new scenario
@@ -1007,21 +999,21 @@ void Trade_Strategy(
             SigEvt("SC", KV("sc",ScenarioName(s.scenario)+"?")+KV("ph",PhaseName(s.phase))
                         +KVi("pivot",s.pivot_substate)+KVi("casShr",s.cas_shrinkTF)+KVi("casSqz",s.cas_sqzCount)
                         +KV("cont",TFName(s.container_tf))+KVi("loc",s.priceloc)
-                        +KVd("dbbwH4",ADiffBBW(BB_datas,4),1));
+                        +KVd("dbbwH4",BB_datas[4].BB_diffBBW[LA],1));
             DrawGateLabel(ScenarioName(s.scenario)+"?  ph:"+PhaseName(s.phase),
                           BB_datas[2].BB_Mid[LA], BB_datas, TIER_CLR_G, 2);
             if(LOG_VERBOSE)
                DrawGateLabel("casShr:"+IntegerToString(s.cas_shrinkTF)
                              +" casSqz:"+IntegerToString(s.cas_sqzCount)
                              +" cont:"+TFName(s.container_tf)
-                             +" dbbwH4:"+DoubleToString(ADiffBBW(BB_datas,4),1),
+                             +" dbbwH4:"+DoubleToString(BB_datas[4].BB_diffBBW[LA],1),
                              BB_datas[2].BB_Mid[LA]-20, BB_datas, TIER_CLR_G, 2);
          } else if(s.scenario!=s_prevSc || s.phase!=s_prevPh) {
             // Resolved to non-G scenario (F/C/etc) — draw new label
             SigEvt("SC", KV("sc",ScenarioName(s.scenario))+KV("ph",PhaseName(s.phase))
                         +KVi("pivot",s.pivot_substate)+KVi("casShr",s.cas_shrinkTF)+KVi("casSqz",s.cas_sqzCount)
                         +KV("cont",TFName(s.container_tf))+KVi("loc",s.priceloc)
-                        +KVd("dbbwH4",ADiffBBW(BB_datas,4),1));
+                        +KVd("dbbwH4",BB_datas[4].BB_diffBBW[LA],1));
             color clr = ScenarioLabelColor(s.scenario);
             DrawGateLabel(ScenarioName(s.scenario)+"  ph:"+PhaseName(s.phase),
                           BB_datas[2].BB_Mid[LA], BB_datas, clr, 2);
@@ -1029,7 +1021,7 @@ void Trade_Strategy(
                DrawGateLabel("casShr:"+IntegerToString(s.cas_shrinkTF)
                              +" casSqz:"+IntegerToString(s.cas_sqzCount)
                              +" cont:"+TFName(s.container_tf)
-                             +" dbbwH4:"+DoubleToString(ADiffBBW(BB_datas,4),1),
+                             +" dbbwH4:"+DoubleToString(BB_datas[4].BB_diffBBW[LA],1),
                              BB_datas[2].BB_Mid[LA]-20, BB_datas, clr, 2);
          }
       } else if(!s_pivotPending && (s.scenario!=s_prevSc || s.phase!=s_prevPh)) {
@@ -1037,7 +1029,7 @@ void Trade_Strategy(
          SigEvt("SC", KV("sc",ScenarioName(s.scenario))+KV("ph",PhaseName(s.phase))
                      +KVi("pivot",s.pivot_substate)+KVi("casShr",s.cas_shrinkTF)+KVi("casSqz",s.cas_sqzCount)
                      +KV("cont",TFName(s.container_tf))+KVi("loc",s.priceloc)
-                     +KVd("dbbwH4",ADiffBBW(BB_datas,4),1));
+                     +KVd("dbbwH4",BB_datas[4].BB_diffBBW[LA],1));
          color clr = ScenarioLabelColor(s.scenario);
          DrawGateLabel(ScenarioName(s.scenario)+"  ph:"+PhaseName(s.phase),
                        BB_datas[2].BB_Mid[LA], BB_datas, clr, 2);
@@ -1045,7 +1037,7 @@ void Trade_Strategy(
             DrawGateLabel("casShr:"+IntegerToString(s.cas_shrinkTF)
                           +" casSqz:"+IntegerToString(s.cas_sqzCount)
                           +" cont:"+TFName(s.container_tf)
-                          +" dbbwH4:"+DoubleToString(ADiffBBW(BB_datas,4),1),
+                          +" dbbwH4:"+DoubleToString(BB_datas[4].BB_diffBBW[LA],1),
                           BB_datas[2].BB_Mid[LA]-20, BB_datas, clr, 2);
       }
       s_prevSc=s.scenario; s_prevPh=s.phase;
@@ -1129,12 +1121,12 @@ void Trade_Strategy(
               + KV("sc",ScenarioName(s.scenario)) + KV("ph",PhaseName(s.phase))
               + KV("id",a.condition_id) + KVi("act",a.act)
               + KVd("sz",a.size_mult) + KVi("conf",p.confidence)
-              + KVi("dir",p.direction) + KVd("dbbwH4",ADiffBBW(BB_datas,4),1);
+              + KVi("dir",p.direction) + KVd("dbbwH4",BB_datas[4].BB_diffBBW[LA],1);
 }
 //+------------------------------------------------------------------+
 // INTEGRATION NOTES for Claude Code (delete after wiring):
-// 1. ADAPTER: ADiffBBW now uses ABSOLUTE formula (w_now-w_prev)*100
-//    to match the V30.02 log. Verified against log values.
+// 1. diffBBW: reads BB_diffBBW[LA] directly (pre-computed by BBData_Get_diffBBW).
+//    Consistent with EA — both read same stored indicator value.
 //    ABBUpper/ABBLower field names still need verification.
 // 2. AFloatingPL: magic-number filter added (MAGIC_NUMBER=898989).
 // 3. Caller must: print Trade_info only when non-empty; apply Trade_sl
