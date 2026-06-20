@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "31.03"
+#property version   "31.04"
 //+------------------------------------------------------------------+
 //| TofyTrade5 — three-layer architecture, 1:1 with                  |
 //| references/backtest_chart_analysis.md                            |
@@ -33,14 +33,6 @@
 // Consistent with EA: both read the same stored indicator value, no recomputation.
 // Scale: indicator diffBBW (~58.7), NOT raw band width (3081).
 // Verified 132/132 March bars; V31.02 log confirms correct range.
-
-// --- band levels (doc PriceLoc needs BBUppLV/BBLowLV) -------------
-// TODO(ClaudeCode): wire to the real upper/lower band arrays
-// (check names like BB_Upper/BB_Lower/BBUppLV/BBLowLV).
-double ABBUpper(BB_MTF_Data_struct &bb[], int tf, int sh=0)
-{  return bb[tf].BBUppLV[sh]; }      // ← VERIFY field name
-double ABBLower(BB_MTF_Data_struct &bb[], int tf, int sh=0)
-{  return bb[tf].BBLowLV[sh]; }      // ← VERIFY field name
 
 // --- floating P/L of our positions (INVARIANT 1) ------------------
 // Magic-number filter required: EA uses MAGIC_NUMBER=898989 (tester.ini)
@@ -347,8 +339,8 @@ ScenarioState IdentifyScenario(BB_MTF_Data_struct &bb[], double &close_prices[])
       if(committed) { s.container_tf=tf; s.container_dir=mid; s.container_diffbbw=db; break; }
    }
    if(s.container_tf > 0) {                                           // PriceLoc vs container
-      double up = ABBUpper(bb, s.container_tf);
-      double lo = ABBLower(bb, s.container_tf);
+      double up = bb[s.container_tf].BBUppLV[LA];
+      double lo = bb[s.container_tf].BBLowLV[LA];
       double w  = up - lo;
       double px = close_prices[LA];
       double band = 0.15*w;                                           // "at" threshold
@@ -749,7 +741,7 @@ TradeAction DecideAction(ScenarioState &s, Prediction &p, BB_MTF_Data_struct &bb
       int tdir = holdingBuy?1:2;
       // X1: target band reached (Part 5 X1; EDIT V3 primary in zigzag)
       if(p.target_tf>0) {
-         double up=ABBUpper(bb,p.target_tf), lo=ABBLower(bb,p.target_tf);
+         double up=bb[p.target_tf].BBUppLV[LA], lo=bb[p.target_tf].BBLowLV[LA];
          if((holdingBuy && px>=up) || (holdingSell && px<=lo)) {
             a.act=7; a.condition_id="X1";
             SigEvt("X1", KV("dir",holdingBuy?"BUY":"SELL")+KV("tgt",TFName(p.target_tf))+KVd("hit",px,1));
@@ -937,7 +929,7 @@ void Trade_Strategy(
    static bool     s_pivotPending=false; // display-only: PIVOT-PENDING tracker
    static bool     s_initialized=false;
    if(!s_initialized) {
-      SigEvt("INIT", KV("ver","31.01")+KV("ruleset","TofyTrade5-v31"));
+      SigEvt("INIT", KV("ver","31.04")+KV("ruleset","TofyTrade5-v31"));
       s_initialized=true;
    }
 
@@ -1127,7 +1119,7 @@ void Trade_Strategy(
 // INTEGRATION NOTES for Claude Code (delete after wiring):
 // 1. diffBBW: reads BB_diffBBW[LA] directly (pre-computed by BBData_Get_diffBBW).
 //    Consistent with EA — both read same stored indicator value.
-//    ABBUpper/ABBLower field names still need verification.
+//    Band reads: BBUppLV[LA] / BBLowLV[LA] (inlined, sh-param removed).
 // 2. AFloatingPL: magic-number filter added (MAGIC_NUMBER=898989).
 // 3. Caller must: print Trade_info only when non-empty; apply Trade_sl
 //    tighten-only vs the live position SL; treat act semantics
