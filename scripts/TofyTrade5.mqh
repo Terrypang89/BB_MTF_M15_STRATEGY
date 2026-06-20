@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "31.01"
+#property version   "31.03"
 //+------------------------------------------------------------------+
 //| TofyTrade5 — three-layer architecture, 1:1 with                  |
 //| references/backtest_chart_analysis.md                            |
