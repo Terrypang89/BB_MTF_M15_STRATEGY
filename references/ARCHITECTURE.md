@@ -750,6 +750,28 @@ Prediction is the structured input Part 5 receives. How each field is consumed:
 - `PredictNext` — uses TF_DirectionScore + diffBBW damping + scenario-gating. **PARTIALLY STALE**: diffBBW damping thresholds (-0.5, 1.0) are WRONG with the absolute formula (flagged in integration note 6, line 1132). Confidence thresholds and next-scenario edges are hardcoded from doc rules but unvalidated — no GATE 3 run.
 - TofyTrade4 `PredictNextTrend` — **STALE**: drawn-and-discarded, output not consumed by firing matrix. TofyTrade5 PredictNext fixes this by flowing Prediction into DecideAction.
 
+### 4.4a Part 4 Requirements — Reversal Prediction with Target (Phase 3 build)
+
+The §5.2 UC3 use case (April 1 sell entry) reveals three requirements that Part 4 must satisfy to arm Part 5's reversal entry. These sit alongside the existing stubbed sub-functions (DirectionScore, NextScenario, GTierResolve) — same Phase 3 scope, same TBD-GATE-3 status.
+
+**REQ-P4-TARGET:** Part 4 computes a TARGET for the current trend — where the trend is heading and where directional bias weakens (e.g., D1 BBmid for an up-fly). The target is the boundary Part 5 watches to know "is the trend reaching its limit?" [DESIGN — Phase 3 build; the target source (D1 BBmid) is the design intent. DirectionScore/NextScenario stubs must produce this.]
+
+**REQ-P4-REVERSAL:** Part 4 predicts a REVERSAL when conditions indicate the trend will turn (e.g., "reversal likely as price reaches the D1-mid target"). This prediction is what ARMS Part 5's reversal entry — without it, Part 5 has no arming signal and must wait for M30 (late) or fire on M15 alone (noisy). [DESIGN — Phase 3 build. NextScenario/GTierResolve stubs must produce this.]
+
+**REQ-P4-EARLYSIGNAL:** The signal Part 4 keys on to predict the reversal EARLY — before M15 confirms 521+diffMid=2 and while H4 may still be flying. At April-1 circle 2, H4 was flying up (+19 diffBBW) — what Part 4 could have keyed on there to predict reversal is UNRESOLVED. Candidates to validate:
+- price approaching/reaching the D1-mid target
+- D1-down divergence (D1 bearish while H4 up)
+- HTF bias rolling over
+We have NOT established which (if any) lets Part 4 predict the reversal early. Part 4's reliability AS the M30-replacement depends on this being solved. [HYPOTHESIS — signal TBD/UNVERIFIED. The key open question UC3's arming depends on.]
+
+**How Part 5 consumes it (cross-reference §5.2 UC3):**
+Part 5 reversal entry = Part 4's REVERSAL prediction (REQ-P4-REVERSAL, arming) + M15 521+diffMid=2 (firing) + price at target (REQ-P4-TARGET). Part 5 does NOT wait for M30 — Part 4's prediction replaces M30 as the "is it real" filter. This is WHY Part 4's target+prediction is critical — without it, Part 5 can only wait for M30 (late) or fire on M15 alone (noisy). See §5.2 UC3 for the full arming/firing walk-through.
+
+**Validation flags:**
+- REQ-P4-TARGET, REQ-P4-REVERSAL: DESIGN, Phase 3 build (Part 4 stubbed — DirectionScore/NextScenario/GTierResolve TBD-GATE-3)
+- REQ-P4-EARLYSIGNAL: HYPOTHESIS, signal TBD/UNVERIFIED — the key open question. Part 4's reliability as the M30-replacement depends on this being solved.
+- Part 4's reversal prediction does NOT work yet — it is unbuilt AND the early signal is unestablished.
+
 ---
 
 ## Part 5 — Layer 3: DecideAction (DESIGN — built Phase 4)
@@ -1178,6 +1200,42 @@ Three implementation gaps prevented the exit:
 
 This is OLD scaffold behavior — the 03.03 failure mode reproduced. DecideAction is not yet built (Phase 2). The fix is designed in §5.2 (REQ-X2a/X2b) and will be validated at GATE 4 two-sided (April 1 must EXIT, 03.17 must HOLD). This chart documents the PROBLEM the redesign fixes, NOT correct strategy behavior.
 
+**April 1 use cases — what the chart shows (final investigation):**
+
+**UC1 — Circle 1: Pullback, held correctly.**
+- Part 3: A2, PH_3BI (zigzag). H4 flying (512, diffBBW=22).
+- Part 4: PREDICT continuation BECAUSE H4+M30 flying, M15 never compressed (diffMid_Trend stayed 1.0). TARGET D1 BBmid. CONFIDENCE high. IMPACT → hold.
+- Part 5: HOLD. M15 never confirmed reversal (stayed 1.0), cascade didn't propagate → genuine pullback, correctly held.
+
+**UC2 — Circle 2: The top, but looked like pullback at the time.**
+- Part 3: A2, PH_1 (trend). H4 flying (512, diffBBW=19.5).
+- Part 4: PREDICT mostly-continuation BUT FLAG risk BECAUSE H4 still flying (+19 diffBBW) + price below D1-mid target (not reached). RISK: M15 compressed deep (to 5) but RECOVERED (5→1). CONFIDENCE medium. IMPACT → hold by prediction, watch M15.
+- Part 5: NO sell entry — M15 never hit 521+diffMid=2 (only reached 5 then recovered), target not reached, H4 flying (B3 blocks short). At most exit-long if X2b acted on the deep-M15 signal [HYPOTHESIS]. Correct action: HOLD (the un-clean case).
+
+**UC3 — Sell entry: 04.02 ~04:30, M15 confirms down.**
+- Part 3: M15 confirmed down (BBW_stage 521, diffMid_Trend=2). Price reached D1 mid target.
+- Part 4: [PRIOR bar] PREDICTED reversal at D1-mid target — this ARMS the sell. BECAUSE price reached the predicted D1-mid target. [FLAG: what Part 4 keys on to predict this reversal EARLY is TBD — Phase 3.]
+- Part 5: SELL ENTRY = Part 4's prior reversal prediction (ARMING) + M15 521+diffMid=2 (FIRING). Does NOT wait for M30 (too late) — Part 4's prediction is the filter, not M30. Self-discriminates from circle 2: M15 hit 521+diffMid=2 here, only 5-then-recovered at circle 2.
+
+**UC4 — X2a late exit: fallback if a long was still held.**
+- Part 3: M30 reverses (1→3→2 through SQZ, ~04:30-05:00).
+- Part 4: reversal confirmed by M30.
+- Part 5: X2a FIRES (multi-bar M30 detection) → exit any remaining long. LATE but GUARANTEED safety net.
+
+**Key principles (from April 1 investigation):**
+1. Part 4's TARGET (D1 BBmid) + reversal PREDICTION ARM Part 5's reversal entry; Part 5 fires on M15 521+diffMid=2 WITHOUT waiting for M30 (too late). The prediction replaces M30 as the filter — this is WHY Part 4's target is critical.
+2. Sell entry self-discriminates: M15 521+diffMid=2 fires it; circle 2 only reached M15=5-then-recovered → no false fire there.
+3. X2a (M30 multi-bar) = guaranteed-but-LATE fallback exit.
+4. NO auto-flip: entries arm independently (Part4 prediction + M15 confirm + target + VETO clear).
+
+**Validation flags — April 1 use cases:**
+- **Part 4 (target + reversal prediction): STUBBED — Phase 3 build.** UC3's arming depends on Part 4 predicting the D1-mid target and reversal; this is unbuilt.
+- **Part 4's early-prediction signal (what it keys on at circle 2 to predict reversal before M15 fires while H4 still flying): TBD / UNVERIFIED.**
+- **M15 521+diffMid=2 as fire condition:** Candidate, validate across dataset (false-fire in pullbacks?).
+- **X2a multi-bar:** Design, supersedes 1→3-only, Phase 3.
+- **X2b early exit (M15 deep compression):** HYPOTHESIS, validate across dataset.
+- **DO NOT reintroduce:** Scenario D (circle 1 = A2/PH_3BI, not D-tier), HTF-intact discriminator (falsified — H4 flying at both circles), "un-catchable" (superseded — M15-confirm + Part4-prediction distinguish circle 1 from circle 2).
+
 ### 5.2a M15 Trigger State Machine — sub-state transitions
 
 This diagram defines the M15 sub-states precisely so "gradual reversal" and "with-H4 entry" aren't hand-waved. The same state machine drives both the entry trigger (with-H4 flip) and the exit trigger (gradual against-H4 reversal) as traversals through states.
@@ -1293,5 +1351,26 @@ GATE 4 is the firing benchmark. Part 5 must produce results matching the March 2
 Both discriminators are **BLOCKED from being marked design-firm** until these two-sided tests pass at GATE 4.
 
 The replay harness `simulate_trades()` + `score_benchmark()` (replay_harness.py lines 851-1117) runs this validation.
+
+### 5.5 REQ-P5-REEVALUATE — Recovery when Part 4's Prediction Disconfirms (Phase 4 build)
+
+Firing early on Part 4's reversal prediction (REQ-P4-REVERSAL) is acceptable ONLY because REQ-P4-EARLYSIGNAL is unproven — the early signal is HYPOTHESIS/TBD. Therefore Part 5 needs a safety net: when new information diverges from Part 4's prediction (e.g., M30 fails to confirm a predicted reversal within N bars), the system RE-EVALUATES through all three layers rather than hardcoding a special-case response.
+
+**REQ-P5-REEVALUATE:** When new data diverges from Part 4's prediction, Part 5 re-evaluates fresh:
+→ Part 3 reclassifies with the new data
+→ Part 4 re-predicts (the disconfirmed reversal updates)
+→ Part 5 re-decides entry/exit/hold FRESH on the updated scenario+prediction
+→ An open position no longer supported by the re-evaluated layers is EXITED — derived from normal evaluation, not a special "cancel" rule
+→ Any new entry (opposite, same, or none) arms INDEPENDENTLY — NO auto-flip ("short was wrong" ≠ "long is right")
+
+This avoids a pile of hardcoded special-case handlers. "M30 didn't confirm" is just new input flowing through normal layer evaluation. This is the safety net for REQ-P4-EARLYSIGNAL being unproven — if the early signal fires a false positive, re-evaluation backs it out.
+
+**Validation flags:**
+- REQ-P5-REEVALUATE: DESIGN, Phase 4 build
+- N-bar disconfirm window: HYPOTHESIS (TBD — the threshold for "how long before a disconfirmed prediction triggers re-evaluation" is unestablished)
+- Exit-unsupported-position + no-auto-flip: design-firm (consistent with existing no-auto-flip rule, §5.2 key principle 4)
+- Cross-reference: REQ-P4-EARLYSIGNAL — this is its safety net
+
+**GATE 4 implication:** This requirement is validated at GATE 4 by confirming that false-positive early entries (where Part 4 predicted reversal but the cascade didn't propagate) are exited by re-evaluation — not by a hardcoded rule. The exit must be DERIVED from the three-layer re-evaluation.
 
 ---
