@@ -183,11 +183,13 @@ flowchart TD
     A2a --> Return
 
     H4Fly -->|no| Default["Default: A2 — conservative"]
-    Default --> UpdatePrev["Update s_prevH1Sqz = H1 in SQZ"]
+    Default --> UpdatePrev["Capture h1sqz_prior → update s_prevH1Sqz<br/>[FIXED V31.06: capture-prior-then-update]"]
     UpdatePrev --> Return
 ```
 
 **Contract established:** IdentifyScenario returns a fully populated ScenarioState. The evaluation order is: cascade decoders → phase → CHECK-HTF (h4_sqz/h4_shrink) → compression routing → h4_fly → default. This implements the Part 2 HTF-first principle: H4 state is checked before LTF compression, and D1 direction gates G-tier sub-states (G1 vs G2).
+
+**s_prevH1Sqz fix (V31.06):** The prior-bar H1-SQZ timing bug (update-then-read collapsed current-vs-prior, Decision 6 dead code) is fixed with capture-prior-then-update (`bool h1sqz_prior = s_prevH1Sqz;` before updating). Now matches harness read-then-update — Decision 6 recovery is live. See validation_status.md Bug 3 for full postmortem.
 
 ### 3.3 Scenario State Machine — State Diagram
 
@@ -837,7 +839,7 @@ So: scenario ARMS (stale-but-stable), M15 flip FIRES (fresh). The decision = "if
 
 **Justification:** Scenario can't flip mid-M15-bar (BB indicator mechanics — bands transition on accumulated movement, not one M5 tick), so the M15-close scenario is valid through the next M15 bar. This is the same mechanical principle as the bottom-up cascade (higher-TF bands need accumulated lower-TF movement).
 
-**Part 3 cadence:** Per M15 close (stable). NOT per M5 (would add churn for no benefit — the heavy TFs don't change on M5).
+**Part 3 cadence:** Per M15 close (design intent — stable, avoids M5 churn). **CODE GAP:** Trade_Strategy currently gates per-M5 (line 952, `iTime(PERIOD_M5)`); changing to per-M15 is a pending fix, not yet applied.
 
 ### 5.0a Part 4 → Part 5 Link (visual)
 
@@ -1221,7 +1223,7 @@ Three implementation gaps prevented the exit:
 
 **What worked:** B3 H4-OPPOSE correctly blocked a counter-H4 short — no wrong short was opened. The design is correct; the implementation has gaps.
 
-This is OLD scaffold behavior — the 03.03 failure mode reproduced. DecideAction is not yet built (Phase 2). The fix is designed in §5.2 (REQ-X2a/X2b) and will be validated at GATE 4 two-sided (April 1 must EXIT, 03.17 must HOLD). This chart documents the PROBLEM the redesign fixes, NOT correct strategy behavior.
+This is OLD scaffold behavior — the 03.03 failure mode reproduced. DecideAction was not yet built when this chart was captured; the fix is designed in §5.2 (REQ-X2a/X2b), to be built in Phase 4, and validated at GATE 4 two-sided (April 1 must EXIT, 03.17 must HOLD). This chart documents the PROBLEM the redesign fixes, NOT correct strategy behavior.
 
 **April 1 use cases — what the chart shows (final investigation):**
 
