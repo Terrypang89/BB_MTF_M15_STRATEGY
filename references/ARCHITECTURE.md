@@ -270,8 +270,8 @@ Consumes Layer 1 ScenarioState + per-TF BB data → outputs Prediction for Layer
 | `b2_pink` | Gating — forces confidence=0 (no prediction possible, M15+M30 locked in SQZ) |
 | `container_tf` | The target the prediction aims at (Rule 2: next confinement boundary) |
 | `pivot_substate` | G-tier: 0=N/A, 1=PIVOT-PENDING (direction unresolved — D1/W1 bias predicts G→F vs G→C), 2=G-REVERSAL (reversal_flag=True) |
-| `cas_shrinkTF` | Not used directly by Layer 2 — consumed by Layer 3 (decoder size) |
-| `cas_sqzCount` | Not used directly by Layer 2 — consumed by Layer 3 (decoder size). Provides compression depth context for timeline estimate. |
+| `cas_shrinkTF` | Not used directly by Layer 2 — consumed by Layer 3 (decoder size). Provides compression depth context for NextScenario (cascade state input). |
+| `cas_sqzCount` | Not used directly by Layer 2 — consumed by Layer 3 (decoder size). Provides compression depth context for timeline estimate. Feeds NextScenario (cascade state input). |
 | `b1_block` | Not used by Layer 2 — consumed by Layer 3 (entry gating) |
 | `container_dir` | Not used directly — direction is scored from per-TF BB data (see gap below) |
 | `container_diffbbw` | Not used directly — container health scored from per-TF BB data via ADiffBBW |
@@ -309,6 +309,7 @@ flowchart LR
         b2["b2_pink"]
         piv["pivot_substate"]
         ct["container_tf"]
+        cas["cas_sqzCount /<br/>cas_shrinkTF"]
     end
 
     subgraph BB["BB_datas[] (raw per-TF)"]
@@ -320,12 +321,13 @@ flowchart LR
         SG["ScenarioGate"]
         DS["DirectionScore"]
         GTR["GTierResolve"]
+        NS["NextScenario"]
         ASM["Assemble"]
         PNX["PredictNext"]
     end
 
     subgraph OUT["Output"]
-        PRED["Prediction p"]
+        PRED["Prediction p<br/>(incl. next_scenario)"]
         L3["Layer 3 (Part 5)"]
     end
 
@@ -339,14 +341,29 @@ flowchart LR
     raw -->|"NOT from ScenarioState"| DS
     d1w1 --> GTR
     piv -->|"pivot_substate"| GTR
+    sc -->|"current scenario"| NS
+    ph -->|"current phase"| NS
+    cas -->|"cascade state<br/>(compression depth)"| NS
+    piv -->|"pivot_substate<br/>(G-tier resolution)"| NS
+    d1w1 -->|"D1/W1 bias<br/>(G→F vs G→C)"| NS
     SG --> ASM
     DS --> ASM
     GTR --> ASM
+    NS -->|"next_scenario"| ASM
     ASM --> PRED
     PRED --> L3
 ```
 
 *Review criterion: I can trace any ScenarioState field to the exact sub-function that consumes it.*
+
+**Why next_scenario is needed beyond direction:** `direction` says up/down; `next_scenario` says WHICH REGIME (fly / squeeze / pivot / reversal). DecideAction needs the regime to decide enter-vs-wait, the target band, and the size ceiling. The two-circle case proves it: the 1st circle has `next_scenario = continuation (A/B)` → HOLD; the 2nd circle has `next_scenario = reversal (G→C)` → EXIT. `direction` alone can't separate these (M15 points down at both); the next scenario does. See the test chart at `references/Backtest_data/extras/backtested_EA_test_phase_April_01.jpg` — the two-circle test pair (1st = predict continuation/HOLD, 2nd = predict reversal/EXIT) is the test for NextScenario's output.
+
+**Validation flagging — NextScenario transitions (granular split):**
+- **Compression-deepening transitions (A→B→E→G)** = follow the validated bottom-up cascade (§12d, Decision 4) → **[design-firm, validatable]**
+- **G→F continuation** = **[OOS-VALIDATED 7/7]**
+- **G→C reversal** = **[HYPOTHESIS — OOS-UNVALIDATED, 0 episodes; validates at GATE 4 / when reversal data exists]**
+
+NextScenario is mostly firm; ONLY its G→C reversal output carries the hypothesis flag. Do NOT flag the whole node as unvalidated — that would wrongly taint the validated compression/continuation predictions.
 
 #### Diagram 2 — Impact / Constraint (how Part 3 shapes Part 4)
 
@@ -390,6 +407,7 @@ sequenceDiagram
     participant SG as "ScenarioGate"
     participant DS as "DirectionScore"
     participant GTR as "GTierResolve"
+    participant NS as "NextScenario"
     participant ASM as "Assemble"
     participant DecAct as "DecideAction"
 
@@ -411,8 +429,12 @@ sequenceDiagram
         GTR-->>PNX: "reversal flag [TBD-GATE-3 stub]"
     end
 
-    PNX->>ASM: "Assemble(s, score, reversal)"
-    ASM-->>PNX: "Prediction p"
+    PNX->>NS: "NextScenario(s, bb) — reads<br/>scenario/phase/pivot_substate/<br/>cascade state + D1/W1 bias"
+    note over NS : "compression = design-firm<br/>G→F = OOS-VALIDATED<br/>G→C = HYPOTHESIS"
+    NS-->>PNX: "next_scenario [TBD-GATE-3 stub]"
+
+    PNX->>ASM: "Assemble(s, score, reversal,<br/>next_scenario)"
+    ASM-->>PNX: "Prediction p<br/>(incl. next_scenario)"
     PNX-->>Caller: "Prediction p"
 
     Caller->>DecAct: "DecideAction(s, p, bb)<br/>[Part 5, stubbed]"
@@ -434,7 +456,8 @@ sequenceDiagram
     participant SG as "ScenarioGate(s)"
     participant DS as "DirectionScore(bb)"
     participant GTR as "GTierResolve(s, bb)"
-    participant ASM as "Assemble(s, total,<br/>reversal, p)"
+    participant NS as "NextScenario(s, bb)"
+    participant ASM as "Assemble(s, total,<br/>reversal, next_scenario, p)"
     participant DecAct as "DecideAction<br/>(s, p, bb)"
 
     rect rgb(240, 248, 255)
@@ -486,13 +509,19 @@ sequenceDiagram
         PredNext->>PredNext: "reversal = false (default)"
     end
 
-    PredNext->>ASM: "s, total, reversal, Prediction &p"
-    activate ASM
-    ASM-->>PredNext: "Prediction p (filled)"
-    deactivate ASM
-    Note over ASM: "TBD-GATE-3 stub:<br/>safe defaults"
+    PredNext->>NS: "ScenarioState s + BB_datas[] bb"
+    activate NS
+    NS-->>PredNext: "next_scenario (SCENARIO)"
+    deactivate NS
+    Note over NS: "compression = design-firm<br/>G→F = OOS-VALIDATED 7/7<br/>G→C = HYPOTHESIS<br/>TBD-GATE-3 stub:<br/>returns SC_NONE"
 
-    PredNext-->>Caller: "Prediction p"
+    PredNext->>ASM: "s, total, reversal, next_scenario, Prediction &p"
+    activate ASM
+    ASM-->>PredNext: "Prediction p (filled, incl. next_scenario)"
+    deactivate ASM
+    Note over ASM: "TBD-GATE-3 stub:<br/>safe defaults; next_scenario=SC_NONE"
+
+    PredNext-->>Caller: "Prediction p (incl. next_scenario)"
     deactivate PredNext
     end
 
@@ -508,6 +537,7 @@ sequenceDiagram
 - **HANDOFF POINT:** ScenarioState `s` flows from IdentifyScenario → PredictNext → ScenarioGate. This is the exact interface boundary between L1 and L2.
 - **DUAL INPUT:** PredictNext receives both `s` (ScenarioGate reads it) and `bb` (DirectionScore reads it). The gap-resolution is visible: ScenarioGate reads `s.scenario`, `s.phase`, `s.b2_pink`; DirectionScore reads raw `bb[]` per-TF stage/mid.
 - **G-TIER BRANCH:** GTierResolve fires only when `s.pivot_substate > 0`. Marked OOS-UNVALIDATED.
+- **NEXT SCENARIO:** NextScenario produces `next_scenario` (predicted regime transition) from current scenario/phase, cascade state, pivot_substate, and D1/W1 bias. Compression transitions = design-firm; G→F = OOS-VALIDATED; G→C = HYPOTHESIS. Flows into Assemble → `Prediction.next_scenario`.
 - **STUB MARKERS:** Every L2 sub-function is annotated as TBD-GATE-3. No rule values are present — structure only.
 - **LAYER 3 NOT WIRED:** DecideAction receives Prediction `p` but does not consume it yet. Phase 4 work.
 
@@ -764,6 +794,17 @@ Consumes ScenarioState (Part 3) + Prediction (Part 4) + raw BB_datas → outputs
 4. **Store-vs-recompute.** b1_block, b2_pink come from ScenarioState (MQL5 stores these on the struct). Python harness recomputes from raw BB data — must match bar-for-bar (per CLAUDE.md and validation_status.md Phase 4 verification item).
 5. **Fields consumed but not by Part 5.** Part 3's info field is logging-only; Part 4's timeline_bars and next_scenario are advisory (re-evaluate triggers, not firing conditions).
 
+**DESIGN NOTE — two data freshnesses in the trade decision (design-firm):**
+
+- **ARMING (scenario context):** Part 5 reads the pre-computed ScenarioState from the LAST M15 CLOSE. Stale by up to one M15 bar — acceptable because H4/D1/W1 context and scenario don't transition on M5 ticks (BB bands need sustained movement, not a single tick).
+- **FIRING (M15 trigger):** Part 5 reads RAW BB data FRESH from the current bar for the M15 flip detection. This is the actual trigger.
+
+So: scenario ARMS (stale-but-stable), M15 flip FIRES (fresh). The decision = "if armed by last-M15-close scenario AND M15 flip fires fresh this bar → act."
+
+**Justification:** Scenario can't flip mid-M15-bar (BB indicator mechanics — bands transition on accumulated movement, not one M5 tick), so the M15-close scenario is valid through the next M15 bar. This is the same mechanical principle as the bottom-up cascade (higher-TF bands need accumulated lower-TF movement).
+
+**Part 3 cadence:** Per M15 close (stable). NOT per M5 (would add churn for no benefit — the heavy TFs don't change on M5).
+
 ### 5.0a Part 4 → Part 5 Link (visual)
 
 Three diagrams showing how Layer 2 connects to and constrains Layer 3 — the handoff made visible. Prediction (Part 4) is designed but not yet GATE-3-validated; these diagrams consume its designed interface. Part 5 code skeleton waits until Part 4 is built + GATE-3-validated.
@@ -782,7 +823,7 @@ flowchart LR
         tl["timeline_bars"]
     end
 
-    subgraph P3["ScenarioState s (from Part 3)"]
+    subgraph P3["ScenarioState s (from Part 3)<br/>[last M15 close — arming]"]
         sc["scenario"]
         ph["phase"]
         b1["b1_block"]
@@ -790,7 +831,7 @@ flowchart LR
         pl["priceloc"]
     end
 
-    subgraph BB["BB_datas[] (raw per-TF)"]
+    subgraph BB["BB_datas[] (raw per-TF)<br/>[current bar — firing]"]
         m15st["M15 stage<br/>(for X2b, E6)"]
         h4dbbw["H4 diffBBW trend<br/>(for X2b)"]
         m30fly["M30 confirming fly<br/>(for E6)"]
@@ -1130,7 +1171,7 @@ EA held a +135 long through a full M15 reversal down to breakeven. H4 looked com
 
 Three implementation gaps prevented the exit:
 (a) X2 fade required a one-bar 1→3 flip; the reversal was gradual (1→2→3→5→2) so X2 never fired — motivates **REQ-X2a** (multi-bar M15 reversal detection).
-(b) Zigzag qualification required the H4 container to crack, which didn't happen until after the crash — the pullback-vs-top tension, motivates **REQ-X2b** (pullback-vs-top HYPOTHESIS discriminator).
+(b) Zigzag qualification required the H4 container to crack, which didn't happen until after the crash — the pullback-vs-top tension, motivates **REQ-X2b** (pullback-vs-top HYPOTHESIS discriminator). **X2b consumes PredictNext's `next_scenario`/`reversal_flag` — the discrimination lives in Part 4, not Part 5.** Phase-order consequence: Phase 3 (PredictNext + NextScenario) must precede the Phase 4 X2b exit logic, because X2b consumes the prediction.
 (c) Reversal routing inert — PredictNext stubbed until Phase 3 (**X2c**, BLOCKED).
 
 **What worked:** B3 H4-OPPOSE correctly blocked a counter-H4 short — no wrong short was opened. The design is correct; the implementation has gaps.

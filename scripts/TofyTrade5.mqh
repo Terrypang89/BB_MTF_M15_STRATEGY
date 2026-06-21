@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "31.04"
+#property version   "31.05"
 //+------------------------------------------------------------------+
 //| TofyTrade5 — three-layer architecture, 1:1 with                  |
 //| references/backtest_chart_analysis.md                            |
@@ -309,6 +309,9 @@ ScenarioState IdentifyScenario(BB_MTF_Data_struct &bb[], double &close_prices[])
    s.container_tf=-1;  s.container_dir=0; s.container_diffbbw=0; s.priceloc=0;
    s.pivot_substate=0; // 0=N/A 1=PIVOT-PENDING 2=G-REVERSAL
 
+   // ── Update prev H1-SQZ for next call (Decision 5/6) ───────────────
+   s_prevH1Sqz = IsSQZ(bb[3].BBW_stage[LA]);
+
    // ── diffBBW_H4: push to ring + history ────────────────────────────
    double dbbw_h4 = bb[4].BB_diffBBW[LA];
    RingPush(dbbw_h4);
@@ -535,9 +538,6 @@ ScenarioState IdentifyScenario(BB_MTF_Data_struct &bb[], double &close_prices[])
 
    // ── Step 8: Default fallback ─────────────────────────────────────
    s.scenario = SC_A2; s.info = "default — conservative";
-
-   // ── Update prev H1-SQZ for next call (Decision 5/6) ───────────────
-   s_prevH1Sqz = IsSQZ(bb[3].BBW_stage[LA]);
 
    return s;
 }
@@ -929,7 +929,7 @@ void Trade_Strategy(
    static bool     s_pivotPending=false; // display-only: PIVOT-PENDING tracker
    static bool     s_initialized=false;
    if(!s_initialized) {
-      SigEvt("INIT", KV("ver","31.04")+KV("ruleset","TofyTrade5-v31"));
+      SigEvt("INIT", KV("ver","31.05")+KV("ruleset","TofyTrade5-v31"));
       s_initialized=true;
    }
 

@@ -60,6 +60,67 @@ defined in the code but has no OOS evidence.
 **G (reversal) is the rare case.** Jan-Apr 2026 contained 7 H4-SQZ episodes and all resolved
 as F (expansion continuation). No reversal occurred.
 
+---
+
+## Known False-Verification — ADiffBBW (Commit 21fad56)
+
+Commit 21fad56 ("Phase 2: Port OOS-validated Layer 1 to MQL5 — diffBBW fix, GATE 2 100%")
+claimed ADiffBBW was "verified against V30.02 log values." This claim was **CIRCULAR**:
+the verification compared the COMMENT'S WLV example (4.66 vs 5.46) against the log,
+but the CODE PATH read BBUppLV-BBLowLV (raw band width) instead of BBWLV (indicator WLV).
+
+**What happened:**
+- ADiffBBW computed `(BBUppLV[0]-BBLowLV[0] - (BBUppLV[1]-BBLowLV[1])) * 100`
+- This produced values 10-100x larger than indicator diffBBW (e.g. 3081 vs 58.7)
+- The indicator computes diffBBW as `(BBWLV[0]-BBWLV[1]) * 100` — using WLV, not raw band width
+- The EA struct has BBWLV (populated via CopyBuffer from indicator buffer 8) and BB_diffBBW
+  (populated by the indicator as `(BBWLV[LA]-BBWLV[LA_1])*100`) — both fields were available but unused by ADiffBBW
+
+**Why GATE 2 wasn't exposed:**
+- GATE 2 was a source-to-source desk-check (verify_mql5_port.py). Both the MQL5-sim and the
+  Python harness read indicator diffBBW from the log. The EA's ADiffBBW code path was never
+  exercised — it was dead code at GATE 2 time. The GATE 2 100% proved control-flow faithfulness,
+  not data-input correctness.
+- V31.02 was the first compiled EA run of the validated logic. It exposed the divergence:
+  26.9% scenario match, 0% phase match, 0% diffBBW match on the 78 March bars.
+
+**The real verification (never done until now):**
+- WLV-based ADiffBBW vs indicator diffBBW at 132 March bars: 132/132 match (100%, within 1.0 tolerance)
+- WLV-based ADiffBBW vs fixture diffBBW at 72 fixture bars: 72/72 match (100%)
+- BBUppLV-based ADiffBBW at the same bars: 0/72 match — every bar off by 10-100x
+
+**Fix applied:** ADiffBBW now reads `bb[tf].BBWLV[sh]` instead of `ABBUpper(bb,tf,sh)-ABBLower(bb,tf,sh)`.
+One-line change. No indicator modification needed — BBWLV is already in the struct.
+
+**V31.02 status:** V30.02 remains the frozen baseline. V31.02 is unverified — the compiled EA
+hasn't been re-run with the fixed ADiffBBW to confirm scenario recovery to ~100%.
+
+### Three Compiled-vs-Source Bugs Found (V31.02–V31.04)
+
+All three bugs belong to the same family: **"a value/state not accessed or maintained
+at the right point — logic correct, data plumbing wrong."** This is the class to watch
+when the compiled EA diverges from the harness.
+
+| Bug | What | Where | Root Cause | Fix |
+|-----|------|-------|------------|-----|
+| Bug 1 | ADiffBBW read `BBWLV[0]` (oldest bar) | `ADiffBBW(bb,tf,sh)` | `sh` parameter default 0 = slot [0] = oldest | Read `bb[tf].BB_diffBBW[LA]` directly |
+| Bug 2 | Band-edge read `BBUppLV[0]` (oldest bar) | `ABBUpper/ABBLower(bb,tf,sh)` | Same `sh` pattern — default 0 = slot [0] | Inline `bb[tf].BBUppLV[LA]` at call sites |
+| Bug 3 | `s_prevH1Sqz` never updated | `IdentifyScenario` line 540 | Update at bottom of function; 19 early returns bypass it | Move update to top of function, before any return |
+
+**Bug 3 = the MQL5 never received the harness's prev_h1_sqz fix.** The harness
+(replay_harness.py:1383-1385, 1412-1415) updates `prev_h1_sqz` on every bar.
+The MQL5 code had the update at the bottom of IdentifyScenario where it was
+unreachable — every scenario path (B3, E1, E2, G-tier, etc.) returns before
+reaching it.
+
+**Impact:** Bug 3 caused B3 (H1-SQZ onset) to fire on every bar where H1 was
+in SQZ, instead of E1 (H1-SQZ established) after the first bar. This explains
+6 of 10 V31.04 scenario mismatches (84.6% → expected ~94.9% after fix).
+
+**Lesson:** The `sh` parameter pattern (Bugs 1+2) is misleading — default `sh=0`
+reads slot [0] which is the OLDEST bar, not the current one. All helpers with
+this pattern should be inlined with explicit `[LA]` indices.
+
 ### Candidate Periods for G-Reversal Validation
 
 To validate the G reversal branch, a data period is needed containing at least 1 H4-SQZ episode
