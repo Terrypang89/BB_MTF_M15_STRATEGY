@@ -517,7 +517,7 @@ sequenceDiagram
     deactivate NS
     Note over NS: "compression = design-firm<br/>G→F = OOS-VALIDATED 7/7<br/>G→C = HYPOTHESIS<br/>TBD-GATE-3 stub:<br/>returns SC_NONE"
 
-    PredNext->>ASM: "s, total, reversal, next_scenario, Prediction &p"
+    PredNext->>ASM: "s, total, reversal, next_scenario, fill Prediction p"
     activate ASM
     ASM-->>PredNext: "Prediction p (filled, incl. next_scenario)"
     deactivate ASM
@@ -676,7 +676,7 @@ sequenceDiagram
         PNX->>PNX: "reversal = false (default)"
     end
 
-    PNX->>ASM: "ScenarioState s, total, reversal, Prediction &p"
+    PNX->>ASM: "ScenarioState s, total, reversal, fill Prediction p"
     activate ASM
     ASM-->>PNX: "Prediction p (filled)"
     deactivate ASM
