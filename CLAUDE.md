@@ -14,6 +14,10 @@
 - **VALIDATED ≠ committed**. G-reversal = HYPOTHESIS (0 OOS episodes); flag OOS-UNVALIDATED in code/doc/chart. Don't tune rules to fit test data.
 - **GATES**: GATE 2 = port faithfulness (100% expected). GATE 3 = prediction hit-rate (NOT 100% — forecasting; report real accuracy, don't tune). GATE 4 = firing benchmark.
 
+## Current Blocker
+
+- **s_prevH1Sqz timing bug fixed in repo** (TofyTrade5.mqh v31.06 — capture-prior-then-update; was current-vs-prior collapse making Decision 6 recovery dead). **OPEN:** confirm whether the EA (local TofyIncludeSimple/Tofu_EA_Simple) `#includes` TofyTrade5.mqh (fix flows through) or has its own copy of IdentifyScenario (fix must be applied to EA separately — user-side, Claude Code does not touch EA source). diffBBW history (repo correct, EA diverged) suggests own-copy. **Next:** resolve include-vs-copy → V31.06 backtest → confirm 6 B3-vs-E1 bars match (~94.9%) → promote baseline. See validation_status.md for the Bug 3 record.
+
 ## Editing backtest_chart_analysis.md (5256 lines, validated)
 - Prefer ADDITIVE. Structural edits get show-before-commit + post-verification. Read the code before documenting (pre-restructure sections are often stale). Confirm line count after each str_replace.
 
