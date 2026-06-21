@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "31.05"
+#property version   "31.06"
 //+------------------------------------------------------------------+
 //| TofyTrade5 — three-layer architecture, 1:1 with                  |
 //| references/backtest_chart_analysis.md                            |
@@ -309,8 +309,9 @@ ScenarioState IdentifyScenario(BB_MTF_Data_struct &bb[], double &close_prices[])
    s.container_tf=-1;  s.container_dir=0; s.container_diffbbw=0; s.priceloc=0;
    s.pivot_substate=0; // 0=N/A 1=PIVOT-PENDING 2=G-REVERSAL
 
-   // ── Update prev H1-SQZ for next call (Decision 5/6) ───────────────
-   s_prevH1Sqz = IsSQZ(bb[3].BBW_stage[LA]);
+   // ── Capture prior-bar H1-SQZ for Decision 5/6 (current-vs-prior) ───
+   bool h1sqz_prior = s_prevH1Sqz;                    // capture prior before update
+   s_prevH1Sqz = IsSQZ(bb[3].BBW_stage[LA]);          // update for next call
 
    // ── diffBBW_H4: push to ring + history ────────────────────────────
    double dbbw_h4 = bb[4].BB_diffBBW[LA];
@@ -450,7 +451,7 @@ ScenarioState IdentifyScenario(BB_MTF_Data_struct &bb[], double &close_prices[])
       bool h1_sqz_now = IsSQZ(bb[3].BBW_stage[LA]);
 
       // Established (2+ bars H1-SQZ) → E-tier
-      if(h1_sqz_now && s_prevH1Sqz) {
+      if(h1_sqz_now && h1sqz_prior) {
          if(m15sqz && m30sqz) {
             s.scenario = SC_E2; s.info = "E2 — H1-SQZ established, M15+M30 SQZ";
             return s;
@@ -461,7 +462,7 @@ ScenarioState IdentifyScenario(BB_MTF_Data_struct &bb[], double &close_prices[])
 
       // ── Decision 6: H1-SQZ recovery → E1 ───────────────────────────
       // H1 just exited SQZ but prior bar was SQZ, compression persists
-      if(s_prevH1Sqz && !h1_sqz_now && ltf_shrinkTF >= 1) {
+      if(h1sqz_prior && !h1_sqz_now && ltf_shrinkTF >= 1) {
          s.scenario = SC_E1; s.info = "E1 — H1-SQZ recovery, compression persists";
          return s;
       }
@@ -473,7 +474,7 @@ ScenarioState IdentifyScenario(BB_MTF_Data_struct &bb[], double &close_prices[])
       }
 
       // ── Decision 2: transient mid-TF SQZ, H4 flying → A-tier ───────
-      if(h4_fly && dbbw_h4 > 5 && ltf_shrinkTF == -1 && !s_prevH1Sqz) {
+      if(h4_fly && dbbw_h4 > 5 && ltf_shrinkTF == -1 && !h1sqz_prior) {
          int m5stg = bb[0].BBW_stage[LA];
          if(s.cas_sqzCount == 1 && !m15sqz && !IsSQZ(m5stg)) {
             bool d1_aligned = (d1stg >= 500 && d1dir != "neutral");

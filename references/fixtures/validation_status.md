@@ -105,19 +105,32 @@ when the compiled EA diverges from the harness.
 |-----|------|-------|------------|-----|
 | Bug 1 | ADiffBBW read `BBWLV[0]` (oldest bar) | `ADiffBBW(bb,tf,sh)` | `sh` parameter default 0 = slot [0] = oldest | Read `bb[tf].BB_diffBBW[LA]` directly |
 | Bug 2 | Band-edge read `BBUppLV[0]` (oldest bar) | `ABBUpper/ABBLower(bb,tf,sh)` | Same `sh` pattern — default 0 = slot [0] | Inline `bb[tf].BBUppLV[LA]` at call sites |
-| Bug 3 | `s_prevH1Sqz` never updated | `IdentifyScenario` line 540 | Update at bottom of function; 19 early returns bypass it | Move update to top of function, before any return |
+| Bug 3 | `s_prevH1Sqz` timing — current-vs-prior | `IdentifyScenario` lines 313, 454, 465, 477 | Update-then-read with LA=current collapsed prior to current-bar value → Decision 6 (recovery) dead code | Capture-prior-then-update: `bool h1sqz_prior = s_prevH1Sqz;` before update, use `h1sqz_prior` in Decisions 5/6/2 |
 
-**Bug 3 = the MQL5 never received the harness's prev_h1_sqz fix.** The harness
-(replay_harness.py:1383-1385, 1412-1415) updates `prev_h1_sqz` on every bar.
-The MQL5 code had the update at the bottom of IdentifyScenario where it was
-unreachable — every scenario path (B3, E1, E2, G-tier, etc.) returns before
-reaching it.
+**Bug 3 = the MQL5 never received the harness's prev_h1_sqz fix — and the
+move-to-top was a partial fix that traded one bug for another.** The harness
+(replay_harness.py:1383-1385, 1412-1415) updates `prev_h1_sqz` on every bar
+AFTER reading it (read-then-update = current-vs-prior). The MQL5 code had
+the update at the bottom of IdentifyScenario where it was unreachable — every
+scenario path (B3, E1, E2, G-tier, etc.) returns before reaching it. The
+move-to-top fix (V31.03) made the update reachable but introduced a new bug:
+update-then-read with LA=current means both the update and the read access the
+same bar → current-vs-current. The prior-bar check collapses to a tautology.
+Decision 6 (recovery: `h1sqz_prior && !h1_sqz_now`) was dead code — can't be
+SQZ and not-SQZ on the same bar.
 
 **Impact:** Bug 3 caused B3 (H1-SQZ onset) to fire on every bar where H1 was
-in SQZ, instead of E1 (H1-SQZ established) after the first bar. This explains
-6 of 10 V31.04 scenario mismatches (84.6% → expected ~94.9% after fix).
+in SQZ, instead of E1 (H1-SQZ established) after the first bar. Decision 6
+(recovery) never fired — H1 exiting SQZ with compression persisting could not
+route to E1. This explains 6 of 10 V31.04 scenario mismatches (84.6% →
+expected ~94.9% after fix).
 
-**Lesson:** The `sh` parameter pattern (Bugs 1+2) is misleading — default `sh=0`
+**Lesson (committed → fixed):** Moving a state update to the top of a function
+makes it reachable but doesn't guarantee correct timing. If the update and
+reads share the same bar (LA=current), the prior-bar semantics collapse.
+The fix is capture-prior-then-update: capture the prior value in a local
+variable BEFORE updating the static, then use the captured value in reads.
+The `sh` parameter pattern (Bugs 1+2) is misleading — default `sh=0`
 reads slot [0] which is the OLDEST bar, not the current one. All helpers with
 this pattern should be inlined with explicit `[LA]` indices.
 
