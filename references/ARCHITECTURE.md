@@ -704,17 +704,23 @@ flowchart TD
 
     Init --> Gate["Scenario-gate<br/>PH_4 or G4 or E2 → confidence=0, direction=0"]
 
-    Gate --> Score["Direction scoring per-TF<br/>For each TF M15..W1:<br/>  TF_DirectionScore(stage, mid, prev_stage, prev_mid)<br/>  diffBBW damping<br/>  Weight by TF hierarchy"]
+    Gate --> HTFEnv["HTF bias envelope [DESIGN — Phase 3]<br/>H4/D1/W1 set directional constraint<br/>HTF alignment → high confidence<br/>HTF divergence → low confidence<br/>Weight: HTF > M30 > H1"]
+
+    HTFEnv --> Score["Direction scoring per-TF<br/>For each TF M15..W1:<br/>  TF_DirectionScore(stage, mid, prev_stage, prev_mid)<br/>  diffBBW damping<br/>  Weight by TF hierarchy"]
 
     Score --> Aggregate["Aggregate scores<br/>LTF + MTF + HTF totals → direction<br/>Magnitude → confidence"]
 
     Aggregate --> GTier{"G-tier?<br/>pivot_substate > 0"}
     GTier -->|yes| GPredict["D1/W1 bias predicts G→F vs G→C<br/>D1 same direction as H4 → F (continuation)<br/>D1 opposite → C (reversal)<br/>Set reversal flag if D1 opposes H4<br/>OOS-UNVALIDATED — 0 reversal episodes"]
-    GTier -->|no| Target["Target TF (Rule 2)<br/>container_tf if > 0 else scenario fallback"]
+    GTier -->|no| Target["Target TF (Rule 2)<br/>container_tf if > 0 else scenario fallback<br/>REQ-P4-TARGET [DESIGN — Phase 3]"]
 
     GPredict --> Target
 
-    Target --> Timeline["Timeline estimate (Rule 3)<br/>Phase → coarse bar estimate TBD-GATE-3<br/>diffBBW as accelerator/decelerator TBD-GATE-3"]
+    Target --> EarlySig["REQ-P4-EARLYSIGNAL [HYPOTHESIS — TBD]<br/>Early reversal signal?<br/>HTF divergence + target reached?<br/>Signal unestablished — see §4.3a"]
+
+    EarlySig --> RevPred["REQ-P4-REVERSAL [DESIGN — Phase 3]<br/>Predict reversal at target?<br/>Arms Part 5 reversal entry"]
+
+    RevPred --> Timeline["Timeline estimate (Rule 3)<br/>Phase → coarse bar estimate TBD-GATE-3<br/>diffBBW as accelerator/decelerator TBD-GATE-3"]
 
     Timeline --> NextSc["Next scenario (Rule 4)<br/>Scenario → principal edge TBD-GATE-3"]
 
@@ -729,6 +735,12 @@ flowchart TD
 - Timeline bar estimates per phase
 - Next-scenario edge transitions
 - G→F vs G→C discrimination thresholds
+
+### 4.3a HTF-as-Constraint and Divergence as EARLYSIGNAL Candidate
+
+**HTF-as-constraint principle [DESIGN — Phase 3, weights TBD]:** HTF (H4/D1/W1) sets the bias ENVELOPE for MTF predictions. MTF predictions aligning with HTF = high confidence; fighting HTF = low confidence. HTF constrains what's plausible — it doesn't pick the exact move. This is the missing DirectionScore weight hierarchy: HTF weighted heavier than M30, M30 heavier than H1. The weight values are TBD — GATE 3.
+
+**HTF divergence as EARLYSIGNAL candidate [HYPOTHESIS — noisy alone, validate with target combination]:** At April-1 circle 2, H4 flew up (+19 diffBBW) but D1 flew down (522) — an H4-up/D1-down DIVERGENCE. This divergence is a candidate for what Part 4 keys on to predict reversal early (REQ-P4-EARLYSIGNAL, §4.4a). **Known noise: this divergence exists on many days without reversal — divergence ALONE is too noisy.** May need combining with the target-reached condition: divergence AND price at D1-mid → reversal risk. Validate this combination before treating it as a confirmed predictor. Cross-reference: REQ-P4-EARLYSIGNAL (§4.4a).
 
 ### 4.4 Consumption note — link forward to Part 5
 
@@ -1163,8 +1175,19 @@ flowchart TD
     E6Dec -->|FAKEOUT — SKIP| Wait2["act=0 WAIT — fakeout filtered"]
     E6Dec -->|REAL — FIRE| ReversalCheck
     ReversalCheck -->|yes| ReversalExit
-    ReversalCheck -->|no| FlipYes
-    FlipYes --> Sizing
+    ReversalCheck -->|no| RevEntryArmed["Reversal entry armed<br/>[DESIGN — Phase 4 — see §5.5]"]
+
+    subgraph REVERSAL_ENTRY["REVERSAL ENTRY [DESIGN — Phase 4]"]
+        RevFire["M15 521+diffMid=2 fires<br/>No M30 wait — Part 4 prediction<br/>replaces M30 as filter<br/>Arming = Part 4 prediction<br/>Firing = M15 521+diffMid=2"]
+        RevDisconf["M30 fails to confirm<br/>within N bars [HYPOTHESIS — TBD]"]
+    end
+
+    RevEntryArmed --> RevFire
+    RevEntryArmed --> RevDisconf
+    RevFire --> Sizing
+    RevDisconf --> Reeval["REQ-P5-REEVALUATE [DESIGN — Phase 4]<br/>Re-evaluate through L1→L2→L3<br/>Exit unsupported position<br/>No auto-flip — new entry arms<br/>independently"]
+    Reeval --> Return
+
     Flip -->|no| FlipNo
     FlipNo --> Wait2
 
