@@ -50,7 +50,7 @@ Work through: **Part 1** (read the chart) → **Part 2** (HTF context) → **Par
 | Only M5 shrinking | **Ignore** — M5 is noise; not used as trigger (V30.02+) |
 | H1/M30 SQZ, price at outer band | Cascade entry (G0b-TOUCH) if all filters pass |
 | M15+M30 both SQZ | **No entry** — G0b-PINK exits all open positions |
-| M30 mid≥3 AND M15 mid≥3 | **No new entries** — G0 or G0-HOLD depending on H1 |
+| M30 mid≥3 AND M15 mid≥3 | **No new entries** — G0 or G0-HOLD depending on H1 *(HISTORICAL — visible on old EA charts; G0/G0-HOLD deleted in v31)* |
 
 ### Step 3: Entry trigger — M15 transition (V30.02+)
 The entry signal is a **BBMidTrend change on M15** (EA runs on M5 chart, fires on M15 bar close):
@@ -81,7 +81,7 @@ Block gates fire **before** the entry. If you see a DimGray or DarkOrange label,
 | Trigger | Gate | Act |
 |---------|------|-----|
 | M15 UP→FLAT or DN→FLAT | G5-FADE | 7 — exit all |
-| M30+M15+H1 all mid≥3 | G0 | 7 — exit all |
+| M30+M15+H1 all mid≥3 | G0 *(HISTORICAL — deleted in v31)* | 7 — exit all |
 | M15+M30 both SQZ | G0b-PINK | 7 — exit all |
 | Price hits outer band (cascade context) | G8-BNDTGT | 7 — exit all |
 | Float loss < −$50 | G0e-MAXLOSS | 7 — exit all |
@@ -1304,7 +1304,7 @@ Also check H4 BBW_stage:
 
 **Emergency exit conditions:**
 - Float loss < −$50 → G0e-MAXLOSS (exit immediately)
-- M30+M15+H1 all mid≥3 → G0 (exit all)
+- M30+M15+H1 all mid≥3 → G0 (exit all) *(HISTORICAL — G0 was deleted in v31; the old EA fired this, current EA does not)*
 - M15+M30 both SQZ → G0b-PINK (exit all)
 - ATRSL trailing stop hit → Broker closes
 
@@ -4210,7 +4210,7 @@ then held −191.29 for 9 days.
 | ID | Condition name | What triggers it | Variable to watch | Applies to |
 |---|---|---|---|---|
 | X1 | Target reached | Price hits the Part 4 predicted target band | PriceLoc = above_upper or below_lower at target TF | All scenarios |
-| X2 | M15 trend fading | M15 loses direction — move exhausted | M15 diffMid flips 1→3 (BUY fading) or 2→3 (SELL fading) | All scenarios |
+| X2 | M15 trend fading | M15 loses direction — move exhausted | UP→FADING→COUNTER over N bars; fires at COUNTER (mid≥3→2 or 521 stage), NOT at first FADING bar — 1→3-only superseded (see ARCH §5.2a) | All scenarios |
 | X3 | Quality degraded | Signal quality dropped below threshold | Quality score < 60 | F1 (LTF only) |
 | X4 | Pink zone — forced exit | M15+M30 both enter SQZ simultaneously | M15 BBW=400-499 AND M30 BBW=400-499 same time | E2, Phase 4 — EXIT ALL |
 
