@@ -17,21 +17,20 @@ Work through: **Part 1** (read the chart) → **Part 2** (HTF context) → **Par
 | Compression zones | Part 1 Section 8 |
 | Compression → reversal or continuation | Part 1 Section 9 |
 | Block gates | Part 1 Section 10 |
-| Position sizing | Part 1 Section 10 |
+| Position sizing | Part 1 Section 11 |
+| Cascade direction model | Part 1 Section 12 |
+| Touch classification | Part 1 Section 12 — Touch Type Classification |
+| TRADEINFO chain flags | Part 1 Section 12b |
+| BBTFImpact pressure indicators | Part 1 Section 12c |
+| Cascade state decoder | Part 1 Section 12d |
 | HTF cascade rules | Part 2 — HTF Compression Cascade |
 | Scenario matching | Part 2 — Scenario Identification Flowchart |
 | Scenario details | Part 3 — Tier 1 (A) / Tier 2 (B, E, G) / Tier 3 (D, F, C) |
+| Scenario cycle sequence | Part 3 — Cycle sequence (top of Part 3) |
+| Direction pivot / BOTTOM state | Part 3 — Scenario G |
 | Trend prediction | Part 4 — Direction, Target, Timeline, Confidence |
 | Trade action rules | Part 5 — Entry/Exit/Block/Size/Stop |
-| Compression analysis                   | Part 1 Section 8 — Compression Zone Identification  |
-| Cascade direction model                | Part 1 Section 12 — Cascade Direction Model         |
-| TRADEINFO chain flags                  | Part 1 Section 12b — TRADEINFO Chain Flags          |
-| BBTFImpact pressure indicators         | Part 1 Section 12c — BBTFImpact Flags               |
-| Cascade state decoder                  | Part 1 Section 12d — Cascade State Decoder           |
-| BBUpDn_state reference                 | Part 1 Section 12 — BBUpDn_state Quick Reference    |
-| Touch classification                   | Part 1 Section 12 — Touch Classification Reference  |
-| Scenario cycle sequence                | Part 3 — Cycle sequence (top of Part 3)             |
-| Direction pivot / BOTTOM state         | Part 3 — Scenario G (Direction pivot)               |
+| Common misreads | Part 7 — Common Misreads |
 
 ---
 
@@ -170,7 +169,7 @@ Format: `{TF}-{BBW_stage}` or `{TF}-{debug}-{BBW_stage}` (SQZ includes BBW ratio
 
 ## 4. Middle Band Labels — BB_diffMid_Trend
 
-Format: `{value}` or `{value}-REVUP/REVDN`. Values 1 and 2 are **not shown** on chart.
+Format: `{value}`. Values 1 and 2 are **not shown** on chart.
 
 | Value | Name | Visual | Label shown? |
 |-------|------|--------|-------------|
@@ -180,8 +179,10 @@ Format: `{value}` or `{value}-REVUP/REVDN`. Values 1 and 2 are **not shown** on 
 | 4 | Sideway downtrend | Midband flat, slight downward bias | Yes |
 | 5 | Sideway uptrend | Midband flat, slight upward bias | Yes |
 
-- `REVUP` = midtrend just flipped from 2 → uptrend reversal this bar
-- `REVDN` = midtrend just flipped from 1 → downtrend reversal this bar
+- `REVUP` / `REVDN` also appear at the mid-band position — drawn when the separate `trend_TF` field
+  (ENUM_BB_trend, which carries 0–5 plus 7=REVUP / 8=REVDN), distinct from `BB_diffMid_Trend`
+  (ENUM_BBMID_trend, 0–5 only) documented in this table. They fire on the transition bar when
+  the midtrend flips: dn→up = REVUP (trend_TF=7), up→dn = REVDN (trend_TF=8).
 - **Reading combo:** Upper label = structure (expanding/contracting/compressed); middle label = direction. Together they define the full regime.
 
 ---
@@ -1468,14 +1469,14 @@ flowchart TD
     I -->|Yes| J["M30/M15 BBUpDn=0 (SQZ)?"]
     J -->|Yes| K["SCENARIO E\nDeep compression\nLTF SQZ, HTF fly"]
     J -->|No| L["SCENARIO B\nShallow compression\nWatch depth level"]
-    I -->|No — H4 BBUpDn=0 (SQZ)| M["SCENARIO E4→G\nH4 also compressing\nAll TFs SQZ — direction pivot"]
+    I -->|"No — H4 BBUpDn=0 (SQZ)"| M["SCENARIO E4→G\nH4 also compressing\nAll TFs SQZ — direction pivot"]
     M --> N{"D1 BBUpDn=1/3 (fly bias)?"}
     N -->|Yes — bias exists| O{"H4 BBUpDn 0→1 same as D1?"}
     O -->|Yes sustained 3+ bars| P["SCENARIO G1→F\nCompression release\nHigh confidence — F2 rules"]
     O -->|Opposite direction| Q["G2→C1/C2/C3\nTrend reversal\nLow confidence — C1 rules 0.25× [OOS-UNVALIDATED]"]
     O -->|Reverts to 0| R["SCENARIO G3\nFalse breakout\nReturn to E/G — wait"]
     O -->|Alternates 1 and 4| S["SCENARIO G4\nWhipsaw — no trade\nWait 3+ bars"]
-    N -->|No — no bias (D1 also SQZ)| T["SCENARIO G4\nFull flat\nWait for sustained direction"]
+    N -->|"No — no bias (D1 also SQZ)"| T["SCENARIO G4\nFull flat\nWait for sustained direction"]
 ```
 
 ---
@@ -3509,8 +3510,6 @@ TARGET: H4 outer band (if H4 also breaking) → D1 outer band
 
 ---
 
----
-
 ## Scenario G — Direction Pivot (formerly Scenario H)
 
 **When user asks to analyze a Scenario G:**
@@ -4405,10 +4404,10 @@ v31 signal taxonomy, for cross-version log verification.
 | G4k-TRIGDIR | Trigger TF stage contradicts direction | Cross-check rule (diffBBW/diffMid primary) makes this unreachable |
 | G5-WEAK | Quality < 60 floor | Confidence band "None" → size 0; log reason in info, no gate |
 | G5-NONE | No transition | No signal = no label needed |
-| G0 / G0-HOLD | All-TF mid≥3 exit/hold | THE 03.17 winner-killer. Replaced by qualified X2 (W1c) — delete outright |
+| G0 / G0-HOLD | All-TF mid≥3 exit/hold | Caused premature exit of winning trades during genuine compress-then-recover cycles (confirmed Mar 2026 log). Replaced by qualified X2 (W1c) — exits now require a documented reason |
 | G0b-WAIT | Cascade waiting | State [SC:*|PH:*] tag conveys this |
 | G7-NEUTRAL | Prediction neutral | [PRED] label already carries direction=NEUTRAL |
-| G1-FAIL / G1-OK | (verify purpose via grep) | Expected: info-only → fold into state tag |
+| G1-FAIL / G1-OK | Neither M30 nor M15 midtrend confirms direction | Info-only; no entry when quality < 45 — subsumed by state tag |
 
 ### RENAMED — same trigger, new condition-ID label
 
@@ -4481,7 +4480,7 @@ v31 signal taxonomy, for cross-version log verification.
 | C2 | PH_5→1 | E6 | X1(D1 band new dir), X2 | 1.00 | → new A |
 | C3 | any | E5 | X1(H4 band), tight | 0.50 | W1/D1 opposing |
 
-Final size = MathMin(matrix ceiling, confidence size, §12d decoder size)  // EDIT V5
+Final size = MathMin(matrix ceiling, confidence size, §12d decoder size)
 
 Always armed (3 invariants, evaluated in order):
 1. EMERGENCY (MAX_FLOATING_LOSS_USD)
@@ -5206,8 +5205,6 @@ what you're trying to verify:
 
 ---
 
----
-
 # PART 7 — COMMON MISREADS
 
 | Misread | Correct interpretation |
@@ -5225,32 +5222,3 @@ what you're trying to verify:
 | Cascade BUY with M5 in 521/522 | G0b-M5FLY blocks this — M5 committed opposing fly contradicts cascade direction |
 | "Why did BUY stop here?" | Price hit H4 outer band during H4 shrink — G8-BNDTGT fired as expected cascade target |
 
----
-
-## 15. Document Update Summary
-
-| Section | Name | Status |
-|---------|------|--------|
-| 1 | Chart Layers | Complete |
-| 2 | BB Stage Labels (Upper Band) | Complete |
-| 3 | BB Stage Labels (Lower Band) | Complete |
-| 4 | Middle Band Labels | Complete |
-| 4b | BBW Velocity — diffBBW | Complete |
-| 5 | ATRSL Indicator | Complete |
-| 6 | Gate Label Colors | Complete |
-| 7 | Entry Trigger Labels | Complete |
-| 8 | Compression Zone Identification | Complete |
-| 9 | Compression Resolution | Complete |
-| 10 | Block Gate Reference Table | Complete |
-| 11 | Position Sizing Matrix | Complete |
-| 12 | Cascade Direction Model | Complete |
-| 12b | TRADEINFO Chain Flags | Complete |
-| 12c | BBTFImpact Flags | Complete |
-| 12d | Cascade State Decoder | Complete |
-| 13 | Candlestick Behavior During Fly → Shrink → SQZ | Complete |
-| 14 | Risk Management Guidelines | Complete |
-| Part 2 | HTF Reference Charts | Complete |
-| Part 3 | Scenario Analysis (Tier 1/2/3: A,B,E,G,D,F,C) | Complete |
-| Part 4 | Trend Prediction | Planned |
-| Part 5 | Trade Action via Trend Prediction | Planned |
-| Scenario I | Macro Sideways | Planned |
