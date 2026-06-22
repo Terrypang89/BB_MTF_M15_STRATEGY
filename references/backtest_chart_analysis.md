@@ -2022,6 +2022,40 @@ SIZE: 0.75× (M15 or M30 shrink alone) → 0.50× (M30+H1 both) → 0.25× (all 
 
 ---
 
+## Scenario C — Trend Reversal (consolidated under Scenario G)
+
+Scenario C (the reversal progression C1 → E4 → G2 → C2/C3) is documented
+under **Scenario G** as the "Reversal Progression" (formerly Scenario C),
+because C is structurally the G-reversal branch (G2 is the pivot; C
+resolves it).
+
+- **C1** — pre-pivot divergence: M30 (and M15) reversed opposite a still-
+  flying H4 (H4 original 511/512). Brief early window. H1 still original/
+  lagging. [UNIMPLEMENTED — directional-agreement check not in
+  identify_scenario]
+- **E4 / G2** — H4 compresses (E4) then pivots opposite to D1 (G2).
+- **C2/C3** — post-pivot resolution: H4 flipped; C2 = D1 also reversed
+  (full → new A); C3 = D1 still original (counter-trend).
+
+Full sub-state tables, discriminators, and the cascade sequence: see
+[Scenario G — Reversal Progression](#scenario-g---direction-pivot-formerly-scenario-h).
+
+[OOS-UNVALIDATED, UNIMPLEMENTED — DESIGN Phase 3]
+
+![April 1-2 A2 to C1 progression](./Backtest_data/extras/backtested_EA_test_phase_April_01.jpg)
+
+*April 1-2, 2nd circle (left→right) — the A2 → C1 progression. At the 2nd
+circle (04.01 14:30), M30 was still flying UP (511/512, diffMid_Trend=1.0)
+aligned with H4 → classified A2. The reversal then propagated bottom-up: M30
+reversed to down-fly (521) ~13-15 hrs later (04.02 ~04:30-05:00, gradually
+1→3→2 through SQZ) while H4 was still flying → this is the C1 state (M30
+opposite a still-flying H4). So the circle is the A2 ENTRY; C1 occurs as M30
+reverses, time-shifted from the visible circle. C1's directional-agreement
+detection is UNIMPLEMENTED — currently this falls through to A-tier.
+[OOS-UNVALIDATED, UNIMPLEMENTED — DESIGN Phase 3]*
+
+---
+
 ## Scenario D — Rest Recovery
 
 **When user asks to analyze part 3 Scenario D:**
