@@ -521,7 +521,7 @@ sequenceDiagram
     activate ASM
     ASM-->>PredNext: "Prediction p (filled, incl. next_scenario)"
     deactivate ASM
-    Note over ASM: "TBD-GATE-3 stub:<br/>safe defaults; next_scenario=SC_NONE"
+    Note over ASM: "TBD-GATE-3 stub:<br/>safe defaults, next_scenario=SC_NONE"
 
     PredNext-->>Caller: "Prediction p (incl. next_scenario)"
     deactivate PredNext
