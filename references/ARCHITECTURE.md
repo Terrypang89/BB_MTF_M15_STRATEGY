@@ -209,6 +209,10 @@ stateDiagram-v2
     F --> A: "Expansion completes<br/>(F3 → new trend phase)"
     C --> A: "Reversal completes<br/>(C2 → new A-tier)"
 
+    C1["C1 — Pre-Pivot Divergence<br/>H4 original, M30 opposite<br/>[UNIMPLEMENTED, Tier 3, pre-pivot timing]"]
+    A --> C1: "M30 opposes H4 direction<br/>(h4_fly + M30 opposite-fly)"
+    C1 --> G: "H4 enters SQZ<br/>(h4_sqz = true)"
+
     note right of G
         OOS-UNVALIDATED:<br/>
         G→C transition never fired<br/>
@@ -220,10 +224,11 @@ stateDiagram-v2
 
     note right of C
         UNIMPLEMENTED:<br/>
-        G2→C1→C2/C3 forward<br/>
+        C1 (pre-pivot divergence) and<br/>
+        C2/C3 (post-G2 resolution)<br/>
         transitions not in harness.<br/>
-        C-tier states are<br/>
-        doc-only in identify_scenario.<br/>
+        C-tier states are doc-only<br/>
+        in identify_scenario.<br/>
         See validation_status.md.
     end note
 
@@ -234,7 +239,7 @@ stateDiagram-v2
     }
 ```
 
-**Contract established:** The scenario machine is a left-side (A→B→E→G) then right-side (F continuation or C reversal) cycle. The G→F edge is OOS-validated (7/7 episodes). The G→C edge is structurally defined but unvalidated — both the discriminator and the C-tier state transitions are unimplemented in the harness.
+**Contract established:** The scenario machine is a left-side (A→B→E→G) then right-side (F continuation or C reversal) cycle. The G→F edge is OOS-validated (7/7 episodes). The G→C edge is structurally defined but unvalidated — both the discriminator and the C-tier state transitions are unimplemented in the harness. The reversal path is C1 (pre-pivot divergence: H4 original, M30 opposite) → G2 (H4 pivots) → C2/C3 (H4 resolves). C1 is pre-G2, not post-G2.
 
 ### 3.4 Validation Status
 
@@ -249,11 +254,43 @@ stateDiagram-v2
 | Early F-tier detection | OOS-VALIDATED | Fires before G-tier, prevents misclassification |
 | **G reversal branch (G→C)** | **HYPOTHESIS** | Never fired on OOS data — 0/7 episodes |
 | **G-vs-F discriminator** | **HYPOTHESIS** | Requires reversal episodes — none in current data |
-| **G2→C1→C2/C3 transitions** | **UNIMPLEMENTED** | Not in identify_scenario, doc-only |
+| **C1 pre-pivot detection** | **UNIMPLEMENTED** | Directional-agreement check not in identify_scenario, doc-only |
+| **G2→C2/C3 transitions** | **UNIMPLEMENTED** | Not in identify_scenario, doc-only |
 | VETO-AT-TARGET | OOS-VALIDATED | Architecture-enforced, item 5 PASS |
 | veto_priceloc (L3) | **KNOWN DIVERGENCE** | Python stricter than MQL5 — D1 veto when not container |
 
 For the full validation record with episode detail, see [`references/fixtures/validation_status.md`](fixtures/validation_status.md).
+
+### 3.4a C1 as Pre-Pivot Divergence State — the April 1 Circle 2 Gap
+
+C1 ("MTF reversal only, H4 original direction") already exists in the scenario enum and the C-tier table — but it is **misframed as post-G2** and **unimplemented**. The C1 table row says "511/512 or 513 (original direction)" for H4 — meaning H4 is still in its original direction, not yet pivoted. This is **pre-pivot**, not post-G2.
+
+**C1 definition (re-timed):** H4 still flying in its original direction (511/512/513), but M30 (and/or H1/M15) has reversed and is flying OPPOSITE to H4. A directional conflict under a still-flying H4 — the pre-pivot reversal entry.
+
+**Detection (directional-agreement check — the core fix):**
+- H4 fly direction: 511/512 = up, 521/522 = down
+- M30 fly direction: same mapping
+- If H4 flying dir X AND M30 flying dir NOT-X → C1
+- M30's BBW_stage and BB_diffMid_Trend are already read by IdentifyScenario; this adds the **comparison to H4**, not a new read
+- [DESIGN — Phase 3, unimplemented. The April-1 2nd-circle state that currently falls through to A-tier.]
+
+**A-tier tightening:** A currently = "h4_fly + no compression" with **no directional check**, so M30-opposite-H4 wrongly reads as A. Tighten: A requires "h4_fly + no compression + MTF **aligned** with H4 direction". If M30 opposes H4 → C1, not A. [DESIGN — Phase 3. Flagged as a classification change; validate it doesn't break existing A1/A2 cases against the baseline.]
+
+**Distinctions:**
+- **A (aligned fly):** MTF agrees with H4 — C1 is the opposite (MTF opposes H4)
+- **B (pullback):** LTF shrinking, will resume H4 — C1 is M30 committed opposite, not pulling back
+- **G (H4 pivot):** H4 in SQZ (400s) — C1 has H4 still flying (511/512/513). **Clean boundary:** C1 = H4 fly/shrink in original direction; G = H4 SQZ. The moment H4 enters SQZ → G2, not C1. No H4-stage overlap.
+- **C2/C3 (H4 flipped):** H4 reversed — C1 is H4 still original
+
+**Timing:** C1 is pre-pivot (H4 hasn't turned). The reversal path is C1 → G2 (H4 pivots) → C2/C3. C1 leads the reversal; C2/C3 resolve it.
+
+**C1 = fact-detection (late-but-visible):** C1 catches the reversal once M30 flies opposite to H4 — unambiguous, no prediction needed. This is NOT the early discriminator (predicting during M30's compression stays REQ-P4-EARLYSIGNAL, separate/open). C1 fixes the A-tier blindness: once M30 commits to opposite-fly, the system sees it instead of classifying A.
+
+**Anchored example:** April 1, 2nd circle — H4 flew up (512, diffBBW=19.5) while M30 reversed down (511→411-422→521). C1 state (M30 opposite H4, H4 original). Currently misclassified as A2. [DESIGN — Phase 3.]
+
+**Status: UNIMPLEMENTED.** The directional-agreement check is not in identify_scenario. M30-opposite-H4 falls through to A-tier.
+
+**Tier placement:** C1 is grouped in Tier 3 with C2/C3 for reversal-progression coherence, but functionally C1 is the PRE-PIVOT entry (Tier-2-like timing): H4 is still flying (original direction), unlike the post-pivot C2/C3 where H4 has flipped. So C1 sits in Tier 3 by grouping, but is pre-pivot by timing — it's the divergence entry that PRECEDES the G2 pivot.
 
 ---
 
