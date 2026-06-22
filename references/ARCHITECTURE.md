@@ -209,7 +209,7 @@ stateDiagram-v2
     F --> A: "Expansion completes<br/>(F3 → new trend phase)"
     C --> A: "Reversal completes<br/>(C2 → new A-tier)"
 
-    C1["C1 — Pre-Pivot Divergence<br/>H4 fly (511/512), M30 opposite<br/>[UNIMPLEMENTED, Tier 3, pre-pivot timing]"]
+    C1 ["C1 — Pre-Pivot Divergence<br/>H4 fly (511/512), M30 opposite<br/>[UNIMPLEMENTED, Tier 3, pre-pivot timing]"]
     E4s["E4 — H4 Compressing<br/>H4 shrink (513) or SQZ<br/>[design-firm]"]
     A --> C1: "M30 opposes H4 direction<br/>(h4_fly + M30 opposite-fly)"
     C1 --> E4s: "H4 starts shrinking<br/>(512 → 513)"
