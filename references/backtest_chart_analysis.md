@@ -3831,7 +3831,7 @@ The reversal progression flows through three phases:
 
 | Phase | Sub | Name | H4 State | H1 State | M30 State | M15 State | Entry | Size |
 |-------|-----|------|----------|----------|-----------|-----------|-------|------|
-| Pre-Pivot (Tier 3, Tier-2-like timing) | C1 | MTF reversal only, H4 flying | 511/512 (flying, original direction) | Reversed 521/522 | Reversed 521/522 | Reversed 521/522 | Wait — H4 not confirmed, counter-trend risk | 0.25× |
+| Pre-Pivot (Tier 3, Tier-2-like timing) | C1 | MTF reversal only, H4 flying | 511/512 (flying, original direction) | Still original direction or reversing | Reversed 521/522 | Reversed 521/522 | Wait — H4 not confirmed, counter-trend risk | 0.25× |
 | Compression | E4 | H4 compressing | 513/400s (shrink/SQZ) | — | — | — | H4 compressing, M30 already opposite | — |
 | Pivot | G2 | H4 breaks opposite to D1 | 400s (SQZ) | — | — | — | G-tier pivot, pivot_substate=2 | — |
 | Post-Pivot (Tier 3, resolution) | C2 | H4 confirmed — new A begins | H4 flipped to new direction 511/512 | New direction | New direction | New direction | ENTER — treat as new Scenario A1/A2 | 1.0× or 0.75× |

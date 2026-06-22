@@ -230,7 +230,7 @@ This applies to every scenario table in Part 3 and every gate/condition in Part 
 | F1 | 3 | H4 400-499 or 513, H1 513 or 400-499, M30 513 or 400-499, M15 511/512, M5 511/512 | → F2 if M30 511/512, WAIT (quality capped) |
 | F2 | 3 | H4 400-499 or 513, H1 511/512, M30 511/512, M15 511/512, M5 511/512 | → F3 if H4 511/512 |
 | F3 | 3 | H4+H1+M30+M15+M5 all 511/512 (new direction) | → A (full fly) |
-| C1 | 3 | H4 511/512 or 513 (original dir), H1+M30+M15 reversed 521/522 | → C2 if H4 flips new dir, WAIT |
+| C1 | 3 | H4 511/512 (original dir), H1 still original or reversing, M30+M15 reversed 521/522 | → C2 if H4 flips new dir, WAIT |
 | C2 | 3 | H4 flipped new direction 511/512, all TFs new direction | → new A (full fly) |
 | C3 | 3 | H4 reversed but W1/D1 still original direction | → C2 if D1 also reverses |
 
