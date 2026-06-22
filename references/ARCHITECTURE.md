@@ -209,9 +209,12 @@ stateDiagram-v2
     F --> A: "Expansion completes<br/>(F3 → new trend phase)"
     C --> A: "Reversal completes<br/>(C2 → new A-tier)"
 
-    C1["C1 — Pre-Pivot Divergence<br/>H4 original, M30 opposite<br/>[UNIMPLEMENTED, Tier 3, pre-pivot timing]"]
+    C1["C1 — Pre-Pivot Divergence<br/>H4 fly (511/512), M30 opposite<br/>[UNIMPLEMENTED, Tier 3, pre-pivot timing]"]
+    E4s["E4 — H4 Compressing<br/>H4 shrink (513) or SQZ<br/>[design-firm]"]
     A --> C1: "M30 opposes H4 direction<br/>(h4_fly + M30 opposite-fly)"
-    C1 --> G: "H4 enters SQZ<br/>(h4_sqz = true)"
+    C1 --> E4s: "H4 starts shrinking<br/>(512 → 513)"
+    C1 --> A: "M30 recovers to H4 dir<br/>(pullback, circle 1)"
+    E4s --> G: "H4 enters SQZ<br/>(h4_sqz = true)"
 
     note right of G
         OOS-UNVALIDATED:<br/>
@@ -239,7 +242,7 @@ stateDiagram-v2
     }
 ```
 
-**Contract established:** The scenario machine is a left-side (A→B→E→G) then right-side (F continuation or C reversal) cycle. The G→F edge is OOS-validated (7/7 episodes). The G→C edge is structurally defined but unvalidated — both the discriminator and the C-tier state transitions are unimplemented in the harness. The reversal path is C1 (pre-pivot divergence: H4 original, M30 opposite) → G2 (H4 pivots) → C2/C3 (H4 resolves). C1 is pre-G2, not post-G2.
+**Contract established:** The scenario machine is a left-side (A→B→E→G) then right-side (F continuation or C reversal) cycle. The G→F edge is OOS-validated (7/7 episodes). The G→C edge is structurally defined but unvalidated — both the discriminator and the C-tier state transitions are unimplemented in the harness. The reversal path is C1 (pre-pivot divergence: H4 fly 511/512, M30 opposite) → E4 (H4 compresses 513) → G2 (H4 pivots) → C2/C3 (H4 resolves). C1→A fork: M30 recovery = pullback. C1 is pre-G2, not post-G2.
 
 ### 3.4 Validation Status
 
@@ -263,14 +266,14 @@ For the full validation record with episode detail, see [`references/fixtures/va
 
 ### 3.4a C1 as Pre-Pivot Divergence State — the April 1 Circle 2 Gap
 
-C1 ("MTF reversal only, H4 original direction") already exists in the scenario enum and the C-tier table — but it is **misframed as post-G2** and **unimplemented**. The C1 table row says "511/512 or 513 (original direction)" for H4 — meaning H4 is still in its original direction, not yet pivoted. This is **pre-pivot**, not post-G2.
+C1 ("MTF reversal only, H4 original direction") already exists in the scenario enum and the C-tier table — but it is **misframed as post-G2** and **unimplemented**. The C1 table row says "511/512 or 513 (original direction)" for H4 — but C1 requires H4 FLYING, not shrinking. C1 = 511/512 only. This is **pre-pivot**, not post-G2.
 
-**C1 definition (re-timed):** H4 still flying in its original direction (511/512/513), but M30 (and/or H1/M15) has reversed and is flying OPPOSITE to H4. A directional conflict under a still-flying H4 — the pre-pivot reversal entry.
+**C1 definition (re-timed, fly-only):** The brief early-warning window where M30 has reversed opposite while H4 is still flying clean (511/512, not yet compressing). Its value: the earliest detectable flag of "reversal beginning (M30 defected)", before H4 compresses. Short-lived by nature — transitions to E4 when H4 starts shrinking. C1 fires when H4 flying dir X (511/512) AND M30 flying dir NOT-X (521/522).
 
 **Detection (directional-agreement check — the core fix):**
 - H4 fly direction: 511/512 = up, 521/522 = down
 - M30 fly direction: same mapping
-- If H4 flying dir X AND M30 flying dir NOT-X → C1
+- If H4 flying dir X (511/512) AND M30 flying dir NOT-X (521/522) → C1
 - M30's BBW_stage and BB_diffMid_Trend are already read by IdentifyScenario; this adds the **comparison to H4**, not a new read
 - [DESIGN — Phase 3, unimplemented. The April-1 2nd-circle state that currently falls through to A-tier.]
 
@@ -279,14 +282,21 @@ C1 ("MTF reversal only, H4 original direction") already exists in the scenario e
 **Distinctions:**
 - **A (aligned fly):** MTF agrees with H4 — C1 is the opposite (MTF opposes H4)
 - **B (pullback):** LTF shrinking, will resume H4 — C1 is M30 committed opposite, not pulling back
-- **G (H4 pivot):** H4 in SQZ (400s) — C1 has H4 still flying (511/512/513). **Clean boundary:** C1 = H4 fly/shrink in original direction; G = H4 SQZ. The moment H4 enters SQZ → G2, not C1. No H4-stage overlap.
+- **E4 (H4 compressing):** H4 shrinking (513) or SQZ (400s) — C1 has H4 flying (511/512). **Clean boundary:** C1 = H4 FLYING in original direction (511/512); E4 = H4 SHRINKING/SQZ (513, 400s). The moment H4 goes 512→513, leave C1, enter E4. No H4-stage overlap (511/512 vs 513).
+- **G (H4 pivot):** H4 in SQZ (400s) — C1 has H4 flying (511/512). No H4-stage overlap (511/512 vs 400s).
 - **C2/C3 (H4 flipped):** H4 reversed — C1 is H4 still original
 
-**Timing:** C1 is pre-pivot (H4 hasn't turned). The reversal path is C1 → G2 (H4 pivots) → C2/C3. C1 leads the reversal; C2/C3 resolve it.
+**Timing:** C1 is pre-pivot (H4 hasn't turned). The reversal cascade:
 
-**C1 = fact-detection (late-but-visible):** C1 catches the reversal once M30 flies opposite to H4 — unambiguous, no prediction needed. This is NOT the early discriminator (predicting during M30's compression stays REQ-P4-EARLYSIGNAL, separate/open). C1 fixes the A-tier blindness: once M30 commits to opposite-fly, the system sees it instead of classifying A.
+A (all aligned) → M15 reverses (511→513→521) → M30 reverses (511→513→521, H4 STILL flying 511/512) = C1 [BRIEF] → H4 starts shrinking (513) = E4 → H4 enters SQZ = G2 → H4 breaks opposite = C2/C3
 
-**Anchored example:** April 1, 2nd circle — H4 flew up (512, diffBBW=19.5) while M30 reversed down (511→411-422→521). C1 state (M30 opposite H4, H4 original). Currently misclassified as A2. [DESIGN — Phase 3.]
+C1 is a FORK — two exits:
+- C1 → E4 (reversal continues: H4 compresses, pivots)
+- C1 → A (M30 recovers to H4 direction: was a pullback, like circle 1)
+
+The C1→A fork is the reversal-vs-pullback distinction. M30 recovering while H4 still flying = pullback.
+
+**Anchored example:** April 1, 2nd circle — H4 flew up (512, diffBBW=19.5). M30 pullback (511→411-422, never hit 521) — no C1 window on April 1 per log (M30 never opposed H4). The C1→A recovery fork IS validated: M30 compressed then recovered in H4 direction = pullback. The C1-before-E4 sequence is structurally correct but has no April 1 validation. [DESIGN — Phase 3.]
 
 **Status: UNIMPLEMENTED.** The directional-agreement check is not in identify_scenario. M30-opposite-H4 falls through to A-tier.
 
