@@ -18,14 +18,20 @@
 
 - **s_prevH1Sqz timing bug fixed in repo** (TofyTrade5.mqh v31.06 — capture-prior-then-update; was current-vs-prior collapse making Decision 6 recovery dead). **OPEN:** confirm whether the EA (local TofyIncludeSimple/Tofu_EA_Simple) `#includes` TofyTrade5.mqh (fix flows through) or has its own copy of IdentifyScenario (fix must be applied to EA separately — user-side, Claude Code does not touch EA source). diffBBW history (repo correct, EA diverged) suggests own-copy. **Next:** resolve include-vs-copy → V31.06 backtest → confirm 6 B3-vs-E1 bars match (~94.9%) → promote baseline. See validation_status.md for the Bug 3 record.
 
-## Editing backtest_chart_analysis.md (5256 lines, validated)
+## Editing backtest_chart_analysis.md (3866 lines) / IMAGE_ANALYSIS.md (903 lines)
 - Prefer ADDITIVE. Structural edits get show-before-commit + post-verification. Read the code before documenting (pre-restructure sections are often stale). Confirm line count after each str_replace.
 
 ---
 
 ## Task — Image Analysis Blocks
 
-When inserting image-analysis blocks into `references/backtest_chart_analysis.md`, follow the rules below. This is a specific task, not the entire project.
+Image-analysis blocks (7-step templates) live in `references/IMAGE_ANALYSIS.md`.
+When inserting new blocks, add them there — NOT into Part 3 of `backtest_chart_analysis.md`.
+The scenario definitions (Cascade Position, Sub-Scenarios, Sub-State Flowchart,
+Identification Flowchart, Trade action) remain in `backtest_chart_analysis.md`.
+A pointer line in Part 3 links to the corresponding section in IMAGE_ANALYSIS.md.
+
+When inserting image-analysis blocks into `references/IMAGE_ANALYSIS.md`, follow the rules below. This is a specific task, not the entire project.
 
 ### Mandatory template for image analysis blocks
 
