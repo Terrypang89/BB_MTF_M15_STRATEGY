@@ -25,7 +25,7 @@ Work through: **Part 1** (read the chart) → **Part 2** (HTF context) → **Par
 | Cascade state decoder | Part 1 Section 12d |
 | HTF cascade rules | Part 2 — HTF Compression Cascade |
 | Scenario matching | Part 2 — Scenario Identification Flowchart |
-| Scenario details | Part 3 — Tier 1 (A) / Tier 2 (B, E, G) / Tier 3 (D, F, C) |
+| Scenario details | Part 3 — Tier 1 (F) / Tier 2 (S, C, V) / Tier 3 (P, B, R) |
 | Scenario cycle sequence | Part 3 — Cycle sequence (top of Part 3) |
 | Direction pivot / BOTTOM state | Part 3 — Scenario V |
 | Trend prediction | Part 4 — Direction, Target, Timeline, Confidence |
