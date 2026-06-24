@@ -30,25 +30,25 @@ CASCADE_TFS = ["M15", "M30", "H1", "H4", "D1"]  # for cas_shrinkTF
 
 # ── Scenario / Phase enums (matching MQL5) ────────────────────────────
 SCENARIOS = {
-    "A1": "A", "A2": "A", "A3": "A",
-    "B1": "B", "B2": "B", "B3": "B",
-    "E1": "E", "E2": "E", "E3": "E", "E4": "E",
-    "G1": "H", "G2": "H", "G3": "H", "G4": "H",  # Direction pivot (scaffold SC_G1-SC_G4)
-    "D1": "D", "D2": "D", "D3": "D",
     "F1": "F", "F2": "F", "F3": "F",
-    "C1": "C", "C2": "C", "C3": "C",
+    "S1": "S", "S2": "S", "S3": "S",
+    "C1": "C", "C2": "C", "C3": "C", "C4": "C",
+    "V1": "V", "V2": "V", "V3": "V", "V4": "V",  # Direction pivot (scaffold SC_V1-SC_V4)
+    "P1": "P", "P2": "P", "P3": "P",
+    "B1": "B", "B2": "B", "B3": "B",
+    "R1": "R", "R2": "R", "R3": "R",
 }
 PARENT_SCENARIO = {k: v for k, v in SCENARIOS.items()}
 
 # Scenario labels used in expected CSV
 SCENARIO_LABELS = [
-    "A1", "A2", "A3",
-    "B1", "B2", "B3",
-    "E1", "E2", "E3", "E4",
-    "G1", "G2", "G3", "G4",
-    "D1", "D2", "D3",
     "F1", "F2", "F3",
-    "C1", "C2", "C3",
+    "S1", "S2", "S3",
+    "C1", "C2", "C3", "C4",
+    "V1", "V2", "V3", "V4",
+    "P1", "P2", "P3",
+    "B1", "B2", "B3",
+    "R1", "R2", "R3",
 ]
 
 PHASES = ["PH_1", "PH_2", "PH_3A", "PH_3B_INTO", "PH_3B_OUT", "PH_4", "PH_5", "PH_6"]
@@ -225,22 +225,22 @@ def identify_scenario(tf_states, diffbbw_h4_history=None, prev_h1_sqz=False):
     Restructured cascade (Cluster 1 fix — compression routing before h4_fly):
       1. Compute cas_sqzCount (M5..H1) and cas_shrinkTF (M15..D1)  // §12d
       2. h4_fly / h4_shrink / h4_sqz booleans                     // §12
-      3. F-tier early: H4 exiting compression (diffBBW recovering) // Early F
-      4. H4 SQZ → G-tier                                          // Part 3 G (before shrink)
-      5. H4 shrink → E4                                           // Part 3 E4
+      3. B-tier early: H4 exiting compression (diffBBW recovering) // Early B
+      4. H4 SQZ → V-tier                                          // Part 3 V (before shrink)
+      5. H4 shrink → C4                                           // Part 3 C4
       6. Compression routing (NEW — before h4_fly)                // Cluster 1 fix
-         a. Decision 5: H1-SQZ prior-bar → E/B-tier               // Decision 5
-         b. Decision 6: H1-SQZ recovery → E1
-         c. Decision 2: transient mid-TF SQZ, H4 flying → A-tier
-         d. E-tier: cas_sqzCount>=2
-         e. B-tier: ltf_shrinkTF>=1, keyed by max(shrink, sqz) depth
-         f. A2: SQZ without LTF shrink
-      7. H4 flying → A-tier (no-compression cases only)           // Decision 1 intact
-      8. Default → A2
+         a. Decision 5: H1-SQZ prior-bar → C/S-tier               // Decision 5
+         b. Decision 6: H1-SQZ recovery → C1
+         c. Decision 2: transient mid-TF SQZ, H4 flying → F-tier
+         d. C-tier: cas_sqzCount>=2
+         e. S-tier: ltf_shrinkTF>=1, keyed by max(shrink, sqz) depth
+         f. F2: SQZ without LTF shrink
+      7. H4 flying → F-tier (no-compression cases only)           // Decision 1 intact
+      8. Default → F2
 
     Decision 5 — prior-bar H1-SQZ tracking:
-      H1 in SQZ this bar AND H1 in SQZ prior bar  → E-tier (established)
-      H1 in SQZ this bar but NOT prior bar         → B3 (onset)
+      H1 in SQZ this bar AND H1 in SQZ prior bar  → C-tier (established)
+      H1 in SQZ this bar but NOT prior bar         → S3 (onset)
 
     >>> OOS-UNVALIDATED: The "2 consecutive bars" threshold below is fit to
     >>> a single March 2026 in-sample episode. It has NOT been validated on
@@ -249,7 +249,7 @@ def identify_scenario(tf_states, diffbbw_h4_history=None, prev_h1_sqz=False):
 
     Decision 6 — D2-vs-D5 conflict resolution:
       Decision 2's "transient" exemption applies ONLY to single-bar mid-TF SQZ.
-      Once H1-SQZ is established (prior bar also SQZ), E-tier wins.
+      Once H1-SQZ is established (prior bar also SQZ), C-tier wins.
       Note: M30/M15 SQZ during H4-fly is transient noise — Decision 6
       applies only to H1 (the reliable mid-TF for established compression).
     """
@@ -275,7 +275,7 @@ def identify_scenario(tf_states, diffbbw_h4_history=None, prev_h1_sqz=False):
     h4_shrink = (is_shrink(h4stg) and not is_sqz(h4stg)) or (h4_dbbw < -20 and not is_sqz(h4stg))
     h4_sqz = is_sqz(h4stg) or (abs(h4_dbbw) <= 0.2 and h4mid == 3 and not h4_fly)
 
-    # ── LTF shrink (M15..H1 only — D1 shrink doesn't trigger B-tier) ──
+    # ── LTF shrink (M15..H1 only — D1 shrink doesn't trigger S-tier) ──
     ltf_shrinkTF = -1
     for tf in ["M15", "M30", "H1"]:
         st = tf_states.get(tf, {})
@@ -310,10 +310,10 @@ def identify_scenario(tf_states, diffbbw_h4_history=None, prev_h1_sqz=False):
     else:
         h4_dir = 0
 
-    pivot_ss = 0  # 0=N/A 1=PIVOT-PENDING 2=G-REVERSAL (set by G-tier, 0 otherwise)
+    pivot_ss = 0  # 0=N/A 1=PIVOT-PENDING 2=V-REVERSAL (set by V-tier, 0 otherwise)
 
-    # ── Early F-tier: H4 exiting compression (diffBBW recovering) ──
-    # Fires before G/E4 because H4 may still be in SQZ/shrink stage
+    # ── Early B-tier: H4 exiting compression (diffBBW recovering) ──
+    # Fires before V/C4 because H4 may still be in SQZ/shrink stage
     # but bands are expanding — compression resolving to continuation
     if diffbbw_h4_history and len(diffbbw_h4_history) >= 2:
         recent_dbbw = diffbbw_h4_history[-1]
@@ -325,46 +325,46 @@ def identify_scenario(tf_states, diffbbw_h4_history=None, prev_h1_sqz=False):
                 if len(diffbbw_h4_history) >= 3:
                     recent3 = diffbbw_h4_history[-3:]
                     if all(v > 0 for v in recent3):
-                        return ('F3', 'F3 — HTF confirmed expansion',
+                        return ('B3', 'B3 — HTF confirmed expansion',
                                 cas_shrinkTF, cas_sqzCount, pivot_ss)
                 if m30.get('bbupdn') == 1:
-                    return ('F2', 'F2 — MTF confirmed expansion',
+                    return ('B2', 'B2 — MTF confirmed expansion',
                             cas_shrinkTF, cas_sqzCount, pivot_ss)
-                return ('F1', 'F1 — LTF expansion', cas_shrinkTF, cas_sqzCount, pivot_ss)
+                return ('B1', 'B1 — LTF expansion', cas_shrinkTF, cas_sqzCount, pivot_ss)
 
-    # ── H4 SQZ → G-tier (Direction pivot) — before h4_shrink
-    # because H4 in SQZ with diffBBW<-20 triggers both; G-tier wins ──
+    # ── H4 SQZ → V-tier (Direction pivot) — before h4_shrink
+    # because H4 in SQZ with diffBBW<-20 triggers both; V-tier wins ──
     if h4_sqz:
         m5_dbbw = tf_states.get('M5', {}).get('diffBBW', 0)
         m5_ud_break = (m5_dbbw > 0.3) if m5_dbbw is not None else False
         pivot_ss = 2 if m5_ud_break else 1  # one-place computation — label reads this
         if not m5_ud_break:
             if d1_fly and d1_dir == 'bearish' and h4mid in (2, 4):
-                return ('G1', 'G1 — H1 bearish resolution', cas_shrinkTF, cas_sqzCount, pivot_ss)
+                return ('V1', 'V1 — H1 bearish resolution', cas_shrinkTF, cas_sqzCount, pivot_ss)
             if d1_fly:
-                return ('G2', 'G2 — H2 opposite D1', cas_shrinkTF, cas_sqzCount, pivot_ss)
-            return ('G3', 'G3 — H4 SQZ waiting', cas_shrinkTF, cas_sqzCount, pivot_ss)
+                return ('V2', 'V2 — H2 opposite D1', cas_shrinkTF, cas_sqzCount, pivot_ss)
+            return ('V3', 'V3 — H4 SQZ waiting', cas_shrinkTF, cas_sqzCount, pivot_ss)
         m5mid = tf_states.get('M5', {}).get('mid', 0)
         if d1_fly:
             same_as_d1 = ((d1mid in (1, 5)) and (m5mid in (1, 5))) or \
                          ((d1mid in (2, 4)) and (m5mid in (2, 4)))
             if same_as_d1:
-                return ('G1', 'G1 — H1 same as D1', cas_shrinkTF, cas_sqzCount, pivot_ss)
-            return ('G2', 'G2 — H2 opposite D1', cas_shrinkTF, cas_sqzCount, pivot_ss)
-        return ('G3', 'G3 — H3 false breakout', cas_shrinkTF, cas_sqzCount, pivot_ss)
+                return ('V1', 'V1 — H1 same as D1', cas_shrinkTF, cas_sqzCount, pivot_ss)
+            return ('V2', 'V2 — H2 opposite D1', cas_shrinkTF, cas_sqzCount, pivot_ss)
+        return ('V3', 'V3 — H3 false breakout', cas_shrinkTF, cas_sqzCount, pivot_ss)
 
-    # ── H4 shrink → E4 (after G-tier, since SQZ takes priority) ──
+    # ── H4 shrink → C4 (after V-tier, since SQZ takes priority) ──
     if h4_shrink:
-        return ('E4', 'E4 — HTF compressing', cas_shrinkTF, cas_sqzCount, pivot_ss)
+        return ('C4', 'C4 — HTF compressing', cas_shrinkTF, cas_sqzCount, pivot_ss)
 
     # ── Step 3: Compression routing (before h4_fly — Cluster 1 fix) ──
     # Confirmed compression = cas_sqzCount>=1 OR diffBBW-confirmed LTF shrink
     confirmed_compression = (cas_sqzCount >= 1 or
                             (ltf_shrinkTF >= 1 and h4_dbbw < 30))
     if confirmed_compression:
-        # ── Decision 5: H1-SQZ prior-bar → E/B-tier ──────────────
-        # Established (2+ bars H1-SQZ) → E-tier
-        # Onset (first bar H1-SQZ) → B3
+        # ── Decision 5: H1-SQZ prior-bar → C/S-tier ──────────────
+        # Established (2+ bars H1-SQZ) → C-tier
+        # Onset (first bar H1-SQZ) → S3
         # NOTE: "2 consecutive bars" threshold is OOS-unvalidated (fit to 1 episode)
         h1_sqz_now = is_sqz(h1.get('stage', 0))
 
@@ -372,21 +372,21 @@ def identify_scenario(tf_states, diffbbw_h4_history=None, prev_h1_sqz=False):
             m15sqz = is_sqz(m15.get('stage', 0))
             m30sqz = is_sqz(m30.get('stage', 0))
             if m15sqz and m30sqz:
-                return ('E2', 'E2 — H1-SQZ established, M15+M30 SQZ',
+                return ('C2', 'C2 — H1-SQZ established, M15+M30 SQZ',
                         cas_shrinkTF, cas_sqzCount, pivot_ss)
-            return ('E1', 'E1 — H1-SQZ established', cas_shrinkTF, cas_sqzCount, pivot_ss)
+            return ('C1', 'C1 — H1-SQZ established', cas_shrinkTF, cas_sqzCount, pivot_ss)
 
         # ── H1-SQZ recovery: H1 just exited SQZ but prior bar was SQZ,
-        # and compression persists (M30 shrink or SQZ) → E1 ──
+        # and compression persists (M30 shrink or SQZ) → C1 ──
         if prev_h1_sqz and not h1_sqz_now and ltf_shrinkTF >= 1:
-            return ('E1', 'E1 — H1-SQZ recovery, compression persists',
+            return ('C1', 'C1 — H1-SQZ recovery, compression persists',
                     cas_shrinkTF, cas_sqzCount, pivot_ss)
 
-        # Onset — H1 first-bar SQZ → B3
+        # Onset — H1 first-bar SQZ → S3
         if h1_sqz_now:
-            return ('B3', 'B3 — H1-SQZ onset', cas_shrinkTF, cas_sqzCount, pivot_ss)
+            return ('S3', 'S3 — H1-SQZ onset', cas_shrinkTF, cas_sqzCount, pivot_ss)
 
-        # ── Decision 2: transient mid-TF SQZ, H4 flying → A-tier ──
+        # ── Decision 2: transient mid-TF SQZ, H4 flying → F-tier ──
         # Only applies when no H1-SQZ on prior bar (truly transient)
         if h4_fly and h4_dbbw > 5 and ltf_shrinkTF == -1 and not prev_h1_sqz:
             m5_stg = tf_states.get('M5', {}).get('stage', 0)
@@ -396,22 +396,22 @@ def identify_scenario(tf_states, diffbbw_h4_history=None, prev_h1_sqz=False):
                     h4_up = (h4_dir == 1)
                     d1_up = (d1_dir == 'bullish')
                     if h4_up == d1_up:
-                        return ('A1', 'A1 — mid-TF SQZ, M15+M5 flying, D1 aligned',
+                        return ('F1', 'F1 — mid-TF SQZ, M15+M5 flying, D1 aligned',
                                 cas_shrinkTF, cas_sqzCount, pivot_ss)
-                return ('A2', 'A2 — mid-TF SQZ, M15+M5 flying, D1 not aligned',
+                return ('F2', 'F2 — mid-TF SQZ, M15+M5 flying, D1 not aligned',
                         cas_shrinkTF, cas_sqzCount, pivot_ss)
 
-        # ── E-tier: cas_sqzCount>=2 ──
+        # ── C-tier: cas_sqzCount>=2 ──
         if cas_sqzCount >= 2:
             m15sqz = is_sqz(tf_states.get('M15', {}).get('stage', 0))
             m30sqz = is_sqz(tf_states.get('M30', {}).get('stage', 0))
             b2_pink = m15sqz and m30sqz
             if b2_pink:
-                return ('E2', 'E2 — M15+M30 both SQZ', cas_shrinkTF, cas_sqzCount, pivot_ss)
-            return ('E1', 'E1 — LTF SQZ', cas_shrinkTF, cas_sqzCount, pivot_ss)
+                return ('C2', 'C2 — M15+M30 both SQZ', cas_shrinkTF, cas_sqzCount, pivot_ss)
+            return ('C1', 'C1 — LTF SQZ', cas_shrinkTF, cas_sqzCount, pivot_ss)
 
-        # ── B-tier: ltf_shrinkTF>=1, keyed by max(shrink, sqz) depth ──
-        # Decision 4: B-substate depth = deepest compressed TF (shrink OR SQZ)
+        # ── S-tier: ltf_shrinkTF>=1, keyed by max(shrink, sqz) depth ──
+        # Decision 4: S-substate depth = deepest compressed TF (shrink OR SQZ)
         if ltf_shrinkTF >= 1:
             deepest_sqz_TF = -1
             for tf in ["M5", "M15", "M30", "H1"]:
@@ -419,49 +419,49 @@ def identify_scenario(tf_states, diffbbw_h4_history=None, prev_h1_sqz=False):
                 if st.get('stage') is not None and 400 <= st['stage'] <= 499:
                     deepest_sqz_TF = max(deepest_sqz_TF, TF_INDEX[tf])
             max_depth = max(ltf_shrinkTF, deepest_sqz_TF)
-            b_decoder = {
-                (1, 0): ('B1', 'B1 — M15 shrink'),
-                (1, 1): ('B1', 'B1 — M15 shrink + 1 SQZ'),
-                (2, 0): ('B2', 'B2 early — M30 shrink'),
-                (2, 1): ('B2', 'B2 — M30 shrink + 1 SQZ'),
-                (3, 0): ('B3', 'B3 — H1 shrink'),
-                (3, 1): ('B3', 'B3 — H1 shrink + 1 SQZ'),
+            s_decoder = {
+                (1, 0): ('S1', 'S1 — M15 shrink'),
+                (1, 1): ('S1', 'S1 — M15 shrink + 1 SQZ'),
+                (2, 0): ('S2', 'S2 early — M30 shrink'),
+                (2, 1): ('S2', 'S2 — M30 shrink + 1 SQZ'),
+                (3, 0): ('S3', 'S3 — H1 shrink'),
+                (3, 1): ('S3', 'S3 — H1 shrink + 1 SQZ'),
             }
-            b_key = (max_depth, cas_sqzCount)
-            if b_key in b_decoder:
-                return b_decoder[b_key] + (cas_shrinkTF, cas_sqzCount, pivot_ss)
-            return ('B3', 'B3 — LTF shrink', cas_shrinkTF, cas_sqzCount, pivot_ss)
+            s_key = (max_depth, cas_sqzCount)
+            if s_key in s_decoder:
+                return s_decoder[s_key] + (cas_shrinkTF, cas_sqzCount, pivot_ss)
+            return ('S3', 'S3 — LTF shrink', cas_shrinkTF, cas_sqzCount, pivot_ss)
 
-        # ── A2: SQZ without LTF shrink (safety net) ──
-        return ('A2', 'A2 — SQZ without LTF shrink', cas_shrinkTF, cas_sqzCount, pivot_ss)
+        # ── F2: SQZ without LTF shrink (safety net) ──
+        return ('F2', 'F2 — SQZ without LTF shrink', cas_shrinkTF, cas_sqzCount, pivot_ss)
 
-    # ── H4 flying → A-tier (no-compression cases only) ──
+    # ── H4 flying → F-tier (no-compression cases only) ──
     if h4_fly:
-        # ── A1: h4_fly && no confirmed shrink && no SQZ && D1 aligned ──
+        # ── F1: h4_fly && no confirmed shrink && no SQZ && D1 aligned ──
         if d1stg >= 500 and d1_dir != 'neutral':
             h4_up = (h4_dir == 1)
             d1_up = (d1_dir == 'bullish')
             if h4_up == d1_up:
-                return ('A1', 'A1 — H4+D1 fly aligned', cas_shrinkTF, cas_sqzCount, pivot_ss)
+                return ('F1', 'F1 — H4+D1 fly aligned', cas_shrinkTF, cas_sqzCount, pivot_ss)
 
-        # ── A2: h4_fly, no confirmed compression, D1 not aligned ──
-        return ('A2', 'A2 — H4 fly, D1 not aligned', cas_shrinkTF, cas_sqzCount, pivot_ss)
+        # ── F2: h4_fly, no confirmed compression, D1 not aligned ──
+        return ('F2', 'F2 — H4 fly, D1 not aligned', cas_shrinkTF, cas_sqzCount, pivot_ss)
 
     # ── Default fallback ──────────────────────────────────────────
-    return ('A2', 'default — conservative', cas_shrinkTF, cas_sqzCount, pivot_ss)
+    return ('F2', 'default — conservative', cas_shrinkTF, cas_sqzCount, pivot_ss)
 
 # ── Display label helper (mirrors MQL5 Tier 1 label logic) ────────────
 
 TIER_MAP = {
-    'A1': 'A', 'A2': 'A', 'A3': 'A',
-    'B1': 'B', 'B2': 'B', 'B3': 'B',
-    'E1': 'E', 'E2': 'E', 'E3': 'E', 'E4': 'E',
-    'G1': 'G', 'G2': 'G', 'G3': 'G', 'G4': 'G',
-    'D1': 'B', 'D2': 'B', 'D3': 'B',  # D-tier displayed as B-tier color
     'F1': 'F', 'F2': 'F', 'F3': 'F',
-    'C1': 'C', 'C2': 'C', 'C3': 'C',
+    'S1': 'S', 'S2': 'S', 'S3': 'S',
+    'C1': 'C', 'C2': 'C', 'C3': 'C', 'C4': 'C',
+    'V1': 'V', 'V2': 'V', 'V3': 'V', 'V4': 'V',
+    'P1': 'S', 'P2': 'S', 'P3': 'S',  # P-tier displayed as S-tier color
+    'B1': 'B', 'B2': 'B', 'B3': 'B',
+    'R1': 'R', 'R2': 'R', 'R3': 'R',
 }
-G_TIER = {'G1', 'G2', 'G3', 'G4'}
+V_TIER = {'V1', 'V2', 'V3', 'V4'}
 
 def phase_name(phase):
     """Mirror MQL5 PhaseName() — strip PH_ prefix, map to display string.
@@ -483,29 +483,29 @@ def scenario_display_label(scenario, phase, pivot_substate, prev_pivot_pending=F
     Does NOT access tf_states — that's the classification boundary.
 
     Mirrors MQL5 Tier 1 label logic:
-    - PIVOT-PENDING during H4 SQZ until scenario exits G-tier
-    - G? with ? suffix when G-reversal branch fires (M5 break)
+    - PIVOT-PENDING during H4 SQZ until scenario exits V-tier
+    - V? with ? suffix when V-reversal branch fires (M5 break)
     - Normal "SC ph:PH" for all others
 
     Args:
-        scenario: scenario string from identify_scenario (e.g. "G1", "B3")
+        scenario: scenario string from identify_scenario (e.g. "V1", "S3")
         phase: phase string from identify_phase (e.g. "PH_4")
         pivot_substate: from identify_scenario 5th return (0=N/A 1=PIVOT-PENDING 2=G-REVERSAL)
         prev_pivot_pending: bool, state from previous call
 
     Returns:
         (display_label, display_color, new_pivot_pending)
-        display_label: str, e.g. "B3  ph:3A", "PIVOT-PENDING  ph:4", "G1?  ph:4"
+        display_label: str, e.g. "B3  ph:3A", "PIVOT-PENDING  ph:4", "V1?  ph:4"
         display_color: str, e.g. "yellow", "white", "red"
         new_pivot_pending: bool, state for next call
     """
-    g_tier = scenario in G_TIER
+    g_tier = scenario in V_TIER
     pivot_now = (pivot_substate == 1)   # read from struct, no recompute
     g_reversal = (pivot_substate == 2) # read from struct, no recompute
 
     tier_colors = {
-        'A': 'turquoise', 'B': 'deepskyblue', 'E': 'deepskyblue',
-        'G': 'white', 'F': 'deeppink', 'C': 'deeppink',
+        'F': 'turquoise', 'S': 'deepskyblue', 'C': 'deepskyblue',
+        'V': 'white', 'B': 'deeppink', 'R': 'deeppink',
     }
 
     pn = phase_name(phase)
@@ -517,11 +517,11 @@ def scenario_display_label(scenario, phase, pivot_substate, prev_pivot_pending=F
         if g_tier and g_reversal:
             return (f"{scenario}?  ph:{pn}", 'red', False)
         else:
-            tier = TIER_MAP.get(scenario, 'A')
+            tier = TIER_MAP.get(scenario, 'F')
             clr = tier_colors.get(tier, 'white')
             return (f"{scenario}  ph:{pn}", clr, False)
     elif not prev_pivot_pending:
-        tier = TIER_MAP.get(scenario, 'A')
+        tier = TIER_MAP.get(scenario, 'F')
         clr = tier_colors.get(tier, 'white')
         return (f"{scenario}  ph:{pn}", clr, False)
     else:
@@ -609,13 +609,13 @@ def identify_phase(h4, diffbbw_h4_history):
 def matrix_ceiling(scenario):
     """Matrix ceilings — Part 5 + gate-rewrite Step 4."""
     CEIL = {
-        "A1": 1.0, "A2": 0.75, "A3": 0.0,
-        "B1": 0.75, "B2": 0.50, "B3": 0.25,
-        "E1": 0.0, "E2": 0.0, "E3": 0.50, "E4": 0.0,
-        "G1": 0.75, "G2": 0.25, "G3": 0.0, "G4": 0.25,
-        "D1": 0.0, "D2": 0.75, "D3": 1.0,
-        "F1": 0.0, "F2": 0.75, "F3": 1.0,
-        "C1": 0.25, "C2": 1.0, "C3": 0.50,
+        "F1": 1.0, "F2": 0.75, "F3": 0.0,
+        "S1": 0.75, "S2": 0.50, "S3": 0.25,
+        "C1": 0.0, "C2": 0.0, "C3": 0.50, "C4": 0.0,
+        "V1": 0.75, "V2": 0.25, "V3": 0.0, "V4": 0.25,
+        "P1": 0.0, "P2": 0.75, "P3": 1.0,
+        "B1": 0.0, "B2": 0.75, "B3": 1.0,
+        "R1": 0.25, "R2": 1.0, "R3": 0.50,
     }
     return CEIL.get(scenario, 0.0)
 
@@ -806,7 +806,7 @@ def direction_score(bb):
     return 0
 
 def g_tier_resolve(s, bb):
-    """G-tier resolution: D1/W1 bias → G→F vs G→C prediction.
+    """V-tier resolution: D1/W1 bias → V→B vs V→R prediction.
 
     OOS-UNVALIDATED: 0 of 7 OOS H4-SQZ episodes resolved as reversal (G→C)
 
@@ -890,7 +890,7 @@ def predict_next(s, bb):
     # Step 2: Direction score (consumes raw bb only)
     total = direction_score(bb)
 
-    # Step 3: G-tier resolution if pivot_substate > 0 (consumes both)
+    # Step 3: V-tier resolution if pivot_substate > 0 (consumes both)
     reversal = False
     if s.get('pivot_substate', 0) > 0:
         reversal = g_tier_resolve(s, bb)
@@ -989,11 +989,11 @@ def decide_action(tf_states, s, confidence=50, prev_snap=None):
             if (prev_m15_mid >= 3 and cur_m15_mid == 1):
                 direction = 1
                 quality = 70
-                id_ = 'E5' if s['phase'] == 'PH_5' else ('E2' if s['scenario'] == 'A2' else 'E1')
+                id_ = 'E5' if s['phase'] == 'PH_5' else ('E2' if s['scenario'] == 'F2' else 'E1')
             elif (prev_m15_mid >= 3 and cur_m15_mid == 2):
                 direction = 2
                 quality = 70
-                id_ = 'E5' if s['phase'] == 'PH_5' else ('E2' if s['scenario'] == 'A2' else 'E1')
+                id_ = 'E5' if s['phase'] == 'PH_5' else ('E2' if s['scenario'] == 'F2' else 'E1')
             else:
                 direction = 0
 
@@ -1606,13 +1606,13 @@ RC_INCIDENTS = [
     {"rc": "RC16", "date": "2026.03.02", "desc": "G5-EARLY BUY M15 SQZ bearish", "loss": -62.63,
      "old_gate": "G4c-M15OPP", "expected": "E1/E2 — decoder size=0 blocks"},
     {"rc": "RC18a", "date": "2026.02.09", "desc": "G6-BUY H4=523/3", "loss": -11.49,
-     "old_gate": "G4e-H4OPP", "expected": "B3/E4 — H4 mid=3 disables B3; ceiling limits"},
+     "old_gate": "G4e-H4OPP", "expected": "S3/C4 — H4 mid=3 disables S3; ceiling limits"},
     {"rc": "RC18b", "date": "2026.02.27", "desc": "G6-SELL H4=513/3", "loss": -15.72,
-     "old_gate": "G4e-H4OPP", "expected": "B3/E4 — H4 mid=3 disables B3; ceiling limits"},
+     "old_gate": "G4e-H4OPP", "expected": "S3/C4 — H4 mid=3 disables S3; ceiling limits"},
     {"rc": "RC31", "date": "2026.04.24", "desc": "SELL tTF=2 M30=512 bullish", "loss": -16.01,
-     "old_gate": "G4k-TRIGDIR", "expected": "B-tier — ltf_oppose blocks or decoder limits"},
+     "old_gate": "G4k-TRIGDIR", "expected": "S-tier — ltf_oppose blocks or decoder limits"},
     {"rc": "RC35", "date": "2026.04.27", "desc": "SELL H1=511/mid=3", "loss": -32.41,
-     "old_gate": "G4c-H1OPP", "expected": "B3 — H1 shrink; B3 scope limits allow 0.25"},
+     "old_gate": "G4c-H1OPP", "expected": "S3 — H1 shrink; S3 scope limits allow 0.25"},
 ]
 
 def parse_snapshots_for_date(date_str):

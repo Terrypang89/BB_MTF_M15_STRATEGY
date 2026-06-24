@@ -63,25 +63,25 @@ grep -r "BBUpDn" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -10
 # TRADEINFO chain flags — confirm cascade direction
 grep -r "\[TRADEINFO\]" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -10
 # Expected match:
-#   H2L_flyStrink active    = Scenario B/E (compression)
-#   L2H_flyUP/DN active     = Scenario D/F (expansion)
-#   H2L_sideway active      = Scenario E4/G (all suppressed)
-#   All flags = -1           = Scenario G (direction pivot, transitional)
+#   H2L_flyStrink active    = Scenario S/E (compression)
+#   L2H_flyUP/DN active     = Scenario P/F (expansion)
+#   H2L_sideway active      = Scenario C4/G (all suppressed)
+#   All flags = -1           = Scenario V (direction pivot, transitional)
 
 # BBTFImpact — confirm compression depth = sub-scenario
 grep -r "\[BBTFImpact\]" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -10
 # Expected match:
-#   HTF_Drive_LTF_Sideway:[M15_1]              = B1
-#   HTF_Drive_LTF_Sideway:[M15_1, M30_1]       = B2
-#   HTF_Drive_LTF_Sideway:[M15_1, M30_1, H1_1] = B3
-#   + LTF_Drive_HTF_Fly appearing              = E3 loading / transition to F
+#   HTF_Drive_LTF_Sideway:[M15_1]              = S1
+#   HTF_Drive_LTF_Sideway:[M15_1, M30_1]       = S2
+#   HTF_Drive_LTF_Sideway:[M15_1, M30_1, H1_1] = S3
+#   + LTF_Drive_HTF_Fly appearing              = C3 loading / transition to F
 
 # Cascade state values — confirm sub-scenario directly
 grep -r "cas_shrinkTF" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
 grep -r "cas_sqzCount" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
 # Expected match:
-#   cas_shrinkTF=1 → B1    =2 → B2    =3 → B3    =-1 → not in B
-#   cas_sqzCount=0 → B     =1 → E1    =2 → E2 (pink)   =3+ → E4/G
+#   cas_shrinkTF=1 → S1    =2 → S2    =3 → S3    =-1 → not in B
+#   cas_sqzCount=0 → B     =1 → C1    =2 → C2 (pink)   =3+ → C4/G
 ```
 
 #### Phase Identification (confirms Step 4)
@@ -99,7 +99,7 @@ grep -r "diffBBW" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -10
 grep -r "MIDLINE_SQZ" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
 grep -r "SQZ_BREAK" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
 # Expected match:
-#   MIDLINE_SQZ_LOADING    = E3 / Phase 4 (loading state)
+#   MIDLINE_SQZ_LOADING    = C3 / Phase 4 (loading state)
 #   MIDLINE_SQZ_ENTRY      = Phase 4→5 transition (entry fires)
 #   SQZ_BREAK_UP           = Phase 5 BUY direction
 #   SQZ_BREAK_DN           = Phase 5 SELL direction
@@ -108,21 +108,21 @@ grep -r "SQZ_BREAK" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
 grep -r "CASCADE_TOUCH" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
 grep -r "CASCADE_PINK" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
 # Expected match:
-#   CASCADE_TOUCH(TF:n upper_band) = confinement boundary hit (E3 entry check)
+#   CASCADE_TOUCH(TF:n upper_band) = confinement boundary hit (C3 entry check)
 #   CASCADE_TOUCH(TF:n lower_band) = confinement boundary hit
-#   CASCADE_PINK_ZONE              = Phase 4 / E2 pink zone (exit all)
+#   CASCADE_PINK_ZONE              = Phase 4 / C2 pink zone (exit all)
 ```
 
 #### Trade Action (confirms Step 6)
 
 ```bash
-# Entry gate fires — confirm entry conditions E1-E6
+# Entry gate fires — confirm entry conditions C1-E6
 # v31 labels:
-grep -r "E3:\|E4-ARM\|ORD:BUY\|ORD:SELL" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -10
-# E3: boundary fade entry; E4-ARM: loading; ORD:BUY/SELL: order placed
+grep -r "C3:\|C4-ARM\|ORD:BUY\|ORD:SELL" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -10
+# C3: boundary fade entry; C4-ARM: loading; ORD:BUY/SELL: order placed
 # legacy labels (pre-v31):
 grep -r "G6-BUY\|G6-SELL\|G6-LOAD" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -10
-# G6-BUY/SELL maps to: E1/E2/E5; G6-LOAD maps to: E4
+# G6-BUY/SELL maps to: C1/C2/E5; G6-LOAD maps to: C4
 
 # Exit gate fires — confirm exit conditions X1-X4
 # v31 labels:
@@ -133,11 +133,11 @@ grep -r "G8-BNDTGT" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
 grep -r "G5-FADE" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
 grep -r "G5-WEAK" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
 
-# Block gate fires — confirm block conditions B1-B4
+# Block gate fires — confirm block conditions S1-B4
 # v31 labels:
 grep -r "X4-PINK\|VETO-AT-TARGET\|EMERGENCY\|ASSERT" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
 # X4-PINK: pink zone; VETO-AT-TARGET: entry veto; EMERGENCY: max loss
-# ASSERT-B1..B4: consistency failures (should be zero)
+# ASSERT-S1..B4: consistency failures (should be zero)
 # legacy labels (pre-v31):
 grep -r "G0b-PINK\|PINK_ZONE" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
 grep -r "G0c-SQZLOCK\|SQZLOCK" .\Backtest_data\(version)\(YYYYMMDD)_clean.log | tail -5
@@ -167,11 +167,11 @@ Match log values against expected values for your identified scenario:
 | Phase 4 (noise oscillation) | diffBBW_H4 | Near zero |
 | Phase 5 (explosive breakout) | SQZ_BREAK_UP or SQZ_BREAK_DN | Present in log |
 | Phase 6 (equal legs post-SQZ) | diffBBW_H4 | Alternating positive and negative |
-| Scenario B1 | cas_shrinkTF | 1 |
-| Scenario B2 | cas_shrinkTF | 2 |
-| Scenario B3 | cas_shrinkTF | 3 |
-| Scenario E2 (pink zone) | cas_sqzCount | ≥ 2 |
-| Scenario G (all SQZ) | TRADEINFO all flags | -1 |
+| Scenario S1 | cas_shrinkTF | 1 |
+| Scenario S2 | cas_shrinkTF | 2 |
+| Scenario S3 | cas_shrinkTF | 3 |
+| Scenario C2 (pink zone) | cas_sqzCount | ≥ 2 |
+| Scenario V (all SQZ) | TRADEINFO all flags | -1 |
 | Entry fired | G6-BUY or G6-SELL | Present in log at expected bar |
 | Target exit | G8-BNDTGT | Present in log at target level |
 | Forced exit (pink) | G0b-PINK | Present in log |
@@ -180,9 +180,9 @@ Match log values against expected values for your identified scenario:
 
 | Situation | Likely cause | Action |
 |---|---|---|
-| Chart shows H4 fly but log shows H4 BBUpDn=2 | H4 just entered shrink — visual lags behind computation | Trust log — reassess as Scenario B |
+| Chart shows H4 fly but log shows H4 BBUpDn=2 | H4 just entered shrink — visual lags behind computation | Trust log — reassess as Scenario S |
 | Chart shows SQZ but log shows BBW_stage=513 | Not yet full SQZ — still in late shrink | Wait — not Phase 4 yet, still Phase 3 |
-| Chart shows breakout but no SQZ_BREAK label | M5 broke but M15 hasn't confirmed yet | Wait — still E3/F1, not Phase 5 |
+| Chart shows breakout but no SQZ_BREAK label | M5 broke but M15 hasn't confirmed yet | Wait — still C3/B1, not Phase 5 |
 | Log shows G6-BUY fired but chart looks sideways | Entry valid by computed values — visual is deceptive | Trust entry condition — use small size, tight stop |
 | Log shows pink zone but chart looks tradeable | M15+M30 both hit BBW 400-499 — hard block | Trust log — EXIT ALL, do not override pink zone |
 | cas_shrinkTF=3 but chart shows H1 still fly | H1 just entered shrink — band hasn't visually changed yet | Trust log — H1 shrink confirmed, reduce to 0.25× |
@@ -211,19 +211,19 @@ If D1 diffMid_Trend = 1 or 2 appears in any line = D1 still has direction, NOT s
 
 ```
 1. Chart shows: H4-fly-- labels, M30 oscillating, legs shortening
-   Visual assessment: Scenario B3, Phase 3a
+   Visual assessment: Scenario S3, Phase 3a
 
 2. Extract log:
-   grep -r "cas_shrinkTF" (log) → cas_shrinkTF=3 ✅ matches B3
+   grep -r "cas_shrinkTF" (log) → cas_shrinkTF=3 ✅ matches S3
    grep -r "diffBBW_H4" (log) → negative values ✅ matches Phase 3
-   grep -r "\[BBTFImpact\]" (log) → HTF_Drive_LTF_Sideway:[M15_1,M30_1,H1_1] ✅ matches B3
+   grep -r "\[BBTFImpact\]" (log) → HTF_Drive_LTF_Sideway:[M15_1,M30_1,H1_1] ✅ matches S3
    grep -r "\[TRADEINFO\]" (log) → H2L_flyStrink:3 ✅ matches compression
 
 3. All match → visual assessment confirmed
    Proceed to Part 4 prediction with HIGH confidence in scenario identification
 
 4. If mismatch found:
-   grep shows cas_shrinkTF=2 (not 3) → actually B2, not B3
+   grep shows cas_shrinkTF=2 (not 3) → actually S2, not S3
    → Reassess: H1 hasn't entered shrink yet — adjust size from 0.25× to 0.50×
 ```
 
@@ -351,10 +351,10 @@ BBW_stage may still show 513 while diffBBW has already turned positive (expansio
 
 ---
 
-### Worked Example — Identifying Scenario B2 from Log
+### Worked Example — Identifying Scenario S2 from Log
 
 **Chart observation:** H4-fly-- labels visible, M30 bands tightening,
-M15 oscillating with shortening legs. Visually assessed as Scenario B2, Phase 3a.
+M15 oscillating with shortening legs. Visually assessed as Scenario S2, Phase 3a.
 
 **Step 1: Extract the relevant period**
 
@@ -379,7 +379,7 @@ Example output (simplified):
 | H4 | 512 (FLY parallel) | 1 (uptrend) | -1.2 (contracting) | ⚠️ BBW says fly but diffBBW negative — fly WEAKENING, approaching shrink | 3 (up) | Both bands moving up |
 | H1 | 512 (FLY parallel) | 1 (uptrend) | -0.8 (contracting) | ⚠️ Same — fly label but contracting — H1 will enter shrink soon | 1 (expanding) | Expanding |
 | M30 | 513 (SHRINK) | 2 (downtrend) | -2.1 (contracting) | ✅ All agree — shrink confirmed and accelerating | 2 (shrinking) | Shrinking |
-| M15 | 513 (SHRINK) | 3 (sideways) | -1.5 (contracting) | ✅ Shrink + sideways = B1 block active (M15 no direction) | 2 (shrinking) | Shrinking |
+| M15 | 513 (SHRINK) | 3 (sideways) | -1.5 (contracting) | ✅ Shrink + sideways = S1 block active (M15 no direction) | 2 (shrinking) | Shrinking |
 | M5 | 400 (SQZ) | 3 (sideways) | -0.3 (barely contracting) | ✅ SQZ confirmed — diffBBW near zero = SQZ floor | 0 (no_state) | SQZ |
 
 **Step 4: Identify scenario from log values**
@@ -394,43 +394,43 @@ CHECK compression depth:
   M15 = 513 (shrink) → M15 also shrinking
   H1 = 512 (still fly) → H1 NOT shrinking yet
 
-  cas_shrinkTF would = 2 (M30 is highest shrink TF) → Scenario B2 ✅
+  cas_shrinkTF would = 2 (M30 is highest shrink TF) → Scenario S2 ✅
 
 CHECK phase:
   diffBBW_H4 = -1.2 (negative) → compression active → Phase 3
   H4 mid = 1 (uptrend lean) → Phase 3b-INTO (not 3a — H4 has lean)
-  → BUT M15 diffMid = 3 (sideways) → B1 block active for new entries
+  → BUT M15 diffMid = 3 (sideways) → S1 block active for new entries
 ```
 
 **Step 5: Determine expected behavior**
 
 ```
-Scenario: B2 (M30 shrink, H4 fly intact)
+Scenario: S2 (M30 shrink, H4 fly intact)
 Phase: 3b-INTO (BUY trending — H4 mid=1)
-Block: B1 active (M15 diffMid=3 — no new entry until M15 restores direction)
+Block: S1 active (M15 diffMid=3 — no new entry until M15 restores direction)
 
 Expected EA behavior:
-  ✗ No new entry — M15 sideways blocks entry (B1)
+  ✗ No new entry — M15 sideways blocks entry (S1)
   ✓ Existing BUY position HOLDS — H4 still fly up
-  ✓ Size should be at 0.50× (B2 depth)
+  ✓ Size should be at 0.50× (S2 depth)
   ✓ diffBBW negative = legs shortening on chart (Phase 3 confirmed)
 
 What happens next (Part 4 prediction):
   Direction: BUY legs favoured (H4 mid=1) but shortening
   Target: H1 outer band per leg (H1 is highest still-flying MTF)
   Timeline: 3-8 hours per leg, compression continues
-  Next: If M5 BBUpDn 0→1 same dir as H4 → Scenario D (rest)
-        If H1 also enters 513 → B3 (depth increases, size → 0.25×)
+  Next: If M5 BBUpDn 0→1 same dir as H4 → Scenario P (rest)
+        If H1 also enters 513 → S3 (depth increases, size → 0.25×)
 
 Verify prediction by checking next few bars:
   findstr "10:45\|11:00\|11:15" (log) → does M15 mid flip to 1 or 2?
-  If yes → B1 clears, new BUY entry valid (E5)
+  If yes → S1 clears, new BUY entry valid (E5)
   If stays 3 → still blocked, wait
 ```
 
 ---
 
-### Worked Example — Identifying Scenario E2 (Pink Zone) from Log
+### Worked Example — Identifying Scenario C2 (Pink Zone) from Log
 
 **Chart observation:** Price chopping sideways, bands extremely tight,
 no impulse legs visible. Visually assessed as Phase 4.
@@ -453,16 +453,16 @@ Example output:
 **Step 3: Map**
 
 ```
-cas_sqzCount = 2 → two TFs in SQZ (M15+M30 both 400-499) → Scenario E2
-CASCADE_PINK_ZONE appeared → B2 block active → EXIT ALL
+cas_sqzCount = 2 → two TFs in SQZ (M15+M30 both 400-499) → Scenario C2
+CASCADE_PINK_ZONE appeared → S2 block active → EXIT ALL
 ```
 
 **Step 4: Identify**
 
 ```
-Scenario: E2 (LTF full SQZ)
+Scenario: C2 (LTF full SQZ)
 Phase: Phase 4 (compressed oscillation)
-Block: B2 active (pink zone — M15+M30 both SQZ)
+Block: S2 active (pink zone — M15+M30 both SQZ)
 Action: EXIT ALL positions — no exceptions
 ```
 
@@ -471,13 +471,13 @@ Action: EXIT ALL positions — no exceptions
 ```
 Expected EA behavior:
   ✗ All positions CLOSED when CASCADE_PINK_ZONE fired
-  ✗ No new entries allowed — B2 hard block
-  ✓ Wait for M5 BBUpDn 0→1 (E3 loading → Phase 5 breakout)
+  ✗ No new entries allowed — S2 hard block
+  ✓ Wait for M5 BBUpDn 0→1 (C3 loading → Phase 5 breakout)
 
 What to watch next:
   findstr "SQZ_BREAK\|G6-LOAD" (log) → M5 expansion signal
-  If SQZ_BREAK_UP appears → Phase 5 BUY direction → arm entry (E4)
-  If SQZ_BREAK_DN appears → Phase 5 SELL direction → arm entry (E4)
+  If SQZ_BREAK_UP appears → Phase 5 BUY direction → arm entry (C4)
+  If SQZ_BREAK_DN appears → Phase 5 SELL direction → arm entry (C4)
   Neither → still Phase 4, wait
 
 Verify by extracting next hour:
@@ -545,19 +545,19 @@ D1 diffMid = 3 across recent days → D1 losing direction too
 **Step 5: Expected behavior**
 
 ```
-Scenario: Extended G4 whipsaw (Scenario G4 sub-state)
+Scenario: Extended V4 whipsaw (Scenario V4 sub-state)
 Phase: Phase 6 (post-SQZ oscillation)
 D1 bias: uptrend (D1 mid=1)
 
 Expected EA behavior:
   ✓ Each H4 cycle IS tradeable but at 0.25× max
-  ✓ Entry at H4 boundary (E3 confinement entry) each cycle
+  ✓ Entry at H4 boundary (C3 confinement entry) each cycle
   ✓ Exit at OPPOSITE H4 boundary (X1) — do not hold through reversal
   ✓ Slightly favour BUY legs (D1 bias = uptrend)
 
 Resolution watch:
   Monitor H4 BBUpDn — when it sustains 1 for 3+ consecutive H4 bars:
-  → Phase 6 ends → Phase 5 (committed breakout) → Scenario F
+  → Phase 6 ends → Phase 5 (committed breakout) → Scenario B
   findstr "BBUpDn.*H4" (log) → look for three consecutive "1" values
 ```
 
@@ -570,18 +570,18 @@ what you're trying to verify:
 
 | What you're verifying | Extract these fields | Expected pattern |
 |---|---|---|
-| Scenario A (all fly) | BBW_stage all TFs, TRADEINFO | All 511/512, H2L_flyUP/DN active |
-| Scenario B depth | cas_shrinkTF, BBTFImpact | cas_shrinkTF = 1/2/3, HTF_Drive count |
-| Scenario E depth | cas_sqzCount, CASCADE_PINK | cas_sqzCount ≥ 2, PINK if E2 |
-| Scenario G (direction pivot) | H4 BBUpDn over 3+ bars, TRADEINFO | H4 BBUpDn sustains 1 or 4, all TRADEINFO = -1 before |
-| Scenario D (rest) | M5 BBUpDn, M15 diffMid, H4 BBW | M5 BBUpDn 0→1, M15 mid flips, H4 still 511/512 |
-| Scenario F (release) | M30 BBUpDn, H4 BBUpDn | M30 BBUpDn=1, H4 BBUpDn 0→? |
-| G reversal C1→E4→G2→C2/C3 | H4 BBUpDn direction, D1 diffMid | H4 BBUpDn=1 opposite to previous, D1 may be flipping |
+| Scenario F (all fly) | BBW_stage all TFs, TRADEINFO | All 511/512, H2L_flyUP/DN active |
+| Scenario S depth | cas_shrinkTF, BBTFImpact | cas_shrinkTF = 1/2/3, HTF_Drive count |
+| Scenario C depth | cas_sqzCount, CASCADE_PINK | cas_sqzCount ≥ 2, PINK if C2 |
+| Scenario V (direction pivot) | H4 BBUpDn over 3+ bars, TRADEINFO | H4 BBUpDn sustains 1 or 4, all TRADEINFO = -1 before |
+| Scenario P (rest) | M5 BBUpDn, M15 diffMid, H4 BBW | M5 BBUpDn 0→1, M15 mid flips, H4 still 511/512 |
+| Scenario B (release) | M30 BBUpDn, H4 BBUpDn | M30 BBUpDn=1, H4 BBUpDn 0→? |
+| G reversal C1→E4→G2→R2/R3 | H4 BBUpDn direction, D1 diffMid | H4 BBUpDn=1 opposite to previous, D1 may be flipping |
 | Phase 3 (legs shortening) | diffBBW_H4 over time | Negative values, getting more negative |
 | Phase 4 (SQZ noise) | diffBBW_H4, cas_sqzCount | Near zero, sqzCount ≥ 2 |
 | Phase 5 (breakout) | SQZ_BREAK label, diffBBW_H4 | SQZ_BREAK_UP/DN present, diffBBW sharply positive |
 | Phase 6 (cycling) | H4 BBUpDn over days | Pattern: 1→2→0→1→2→0 repeating |
-| M15 block (B1) | M15 diffMid_Trend | ≥ 3 (sideways — blocking new entries) |
-| Pink zone (B2) | CASCADE_PINK_ZONE | Present in log — EXIT ALL |
+| M15 block (S1) | M15 diffMid_Trend | ≥ 3 (sideways — blocking new entries) |
+| Pink zone (S2) | CASCADE_PINK_ZONE | Present in log — EXIT ALL |
 | Entry fired | G6-BUY/SELL/LOAD | Present at expected timestamp |
 | Target exit | G8-BNDTGT | Present at expected price level |

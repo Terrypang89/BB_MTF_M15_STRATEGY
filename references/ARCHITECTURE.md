@@ -24,11 +24,11 @@ These responsibilities are invariant across all three layers — they define wha
 | TF | Role | Layers that consume |
 |----|------|---------------------|
 | W1 | Macro bias — highest container candidate, sets directional a priori | L1 (container), L2 (direction score), L3 (X2 container-crack) |
-| D1 | Macro bias — alignment check for A1, G-tier sub-state discriminator | L1 (A1/G1-G2), L2 (direction score), L3 (VETO via veto_priceloc in .py) |
-| H4 | Trend / context — primary classifier (fly/shrink/sqz), phase driver | L1 (CHECK-HTF, phase), L2 (direction score), L3 (E3 chk1, X2) |
-| M30 | Primary trend DRIVER — the leg ridden, E3 confinement check | L1 (compression routing), L2 (direction score), L3 (E3 chk4, X2) |
-| M15 | Entry TRIGGER — flip detection, B-tier depth | L1 (B-tier, E-tier, flip detection), L2 (direction score), L3 (X2 fade) |
-| M5 | Noise / unused for entry — SQZ count contributor only | L1 (cas_sqzCount, E3 chk3), L2 (not scored — index 0 excluded) |
+| D1 | Macro bias — alignment check for F1, V-tier sub-state discriminator | L1 (F1/V1-V2), L2 (direction score), L3 (VETO via veto_priceloc in .py) |
+| H4 | Trend / context — primary classifier (fly/shrink/sqz), phase driver | L1 (CHECK-HTF, phase), L2 (direction score), L3 (C3 chk1, X2) |
+| M30 | Primary trend DRIVER — the leg ridden, C3 confinement check | L1 (compression routing), L2 (direction score), L3 (C3 chk4, X2) |
+| M15 | Entry TRIGGER — flip detection, S-tier depth | L1 (S-tier, C-tier, flip detection), L2 (direction score), L3 (X2 fade) |
+| M5 | Noise / unused for entry — SQZ count contributor only | L1 (cas_sqzCount, C3 chk3), L2 (not scored — index 0 excluded) |
 
 ---
 
@@ -89,17 +89,17 @@ classDiagram
 
 | Field | Type | Meaning | Consumed by |
 |-------|------|---------|-------------|
-| `scenario` | SCENARIO | Identified scenario (A1..C3) | L2, L3 |
+| `scenario` | SCENARIO | Identified scenario (F1..R3) | L2, L3 |
 | `phase` | PHASE | Phase classification (PH_1..PH_6) | L2, L3 |
 | `cas_shrinkTF` | int | Highest TF in shrink (1=M15..5=D1, -1=none), per §12d | L3 |
 | `cas_sqzCount` | int | Count of M5..H1 TFs in SQZ (400-499), per §12d | L3 |
 | `b1_block` | bool | M15 diffMid >= 3 (blocks flip-entries) | L3 (read from struct by DecideAction line 809; Python harness recomputes from raw BB data — no ScenarioState struct) |
-| `b2_pink` | bool | M15 AND M30 both BBW 400-499 (forces flat) | L3 (read from struct by X4 invariant line 1040 + ASSERT line 784; L2 uses `scenario==E2` as proxy, not b2_pink directly; Python harness recomputes) |
+| `b2_pink` | bool | M15 AND M30 both BBW 400-499 (forces flat) | L3 (read from struct by X4 invariant line 1040 + ASSERT line 784; L2 uses `scenario==C2` as proxy, not b2_pink directly; Python harness recomputes) |
 | `container_tf` | int | Highest TF with committed fly, -1 if none | L2, L3 |
 | `container_dir` | int | Container's diffMid (1=UP, 2=DN, 0=none) | L3 |
 | `container_diffbbw` | double | Container health: >0 room, <=0 aging | L3 |
 | `priceloc` | int | Price vs container bands: -2..+2 | L3 |
-| `pivot_substate` | int | G-tier: 0=N/A, 1=PIVOT-PENDING, 2=G-REVERSAL | display only |
+| `pivot_substate` | int | V-tier: 0=N/A, 1=PIVOT-PENDING, 2=G-REVERSAL | display only |
 | `info` | string | Human-readable reason string | logging |
 
 > **Note:** `dbbwH4` is NOT a ScenarioState field — it is computed internally and pushed to ring buffers (`g_dbbw_ring`, `s_dbbwH4_hist`) used by `ClassifyPhase()` and early F-tier detection. The value is available to callers via `ADiffBBW(bb, 4)` but is not part of the output contract.
@@ -112,7 +112,7 @@ classDiagram
 
 ### 3.2 Control Flow — Activity Diagram
 
-This flowchart shows the **as-built** evaluation order of `IdentifyScenario`, matching the validated Decisions 1-6. Note: the early F-tier check fires **before** G-tier (Step 3 in code), not after compression routing — this is the Cluster 1 fix that prevents misclassifying H4-exiting-compression as G when it should be F.
+This flowchart shows the **as-built** evaluation order of `IdentifyScenario`, matching the validated Decisions 1-6. Note: the early F-tier check fires **before** V-tier (Step 3 in code), not after compression routing — this is the Cluster 1 fix that prevents misclassifying H4-exiting-compression as G when it should be F.
 
 ```mermaid
 flowchart TD
@@ -127,67 +127,67 @@ flowchart TD
     Phase --> H4Class["§12: Classify H4 state<br/>h4_fly, h4_shrink, h4_sqz<br/>+ D1 direction + D1 fly"]
 
     H4Class --> EarlyF{"Early F-tier?<br/>H4 exiting compression<br/>diffBBW recovering"}
-    EarlyF -->|yes| FSub["Route to F1/F2/F3<br/>based on D1+M30 confirm"]
+    EarlyF -->|yes| FSub["Route to B1/B2/B3<br/>based on D1+M30 confirm"]
     FSub --> Return([return ScenarioState])
 
     EarlyF -->|no| H4Sqz{"h4_sqz?"}
-    H4Sqz -->|yes| GTier["G-tier: Direction pivot<br/>G1 = M5 break same as D1<br/>G2 = M5 break opposite D1<br/>G3 = no M5 break / D1 not flying<br/>G4 = phase PH_6<br/>pivot_substate = 1 or 2"]
+    H4Sqz -->|yes| GTier["V-tier: Direction pivot<br/>V1 = M5 break same as D1<br/>V2 = M5 break opposite D1<br/>V3 = no M5 break / D1 not flying<br/>V4 = phase PH_6<br/>pivot_substate = 1 or 2"]
     GTier --> Return
 
     H4Sqz -->|no| H4Shrink{"h4_shrink?"}
-    H4Shrink -->|yes| E4["E4 — HTF compressing"]
-    E4 --> Return
+    H4Shrink -->|yes| C4["C4 — HTF compressing"]
+    C4 --> Return
 
     H4Shrink -->|no| ConfComp{"confirmed_compression?<br/>cas_sqzCount >= 1<br/>OR ltf_shrinkTF >= 1 + diffBBW < 30"}
 
     ConfComp -->|yes| D5{"Decision 5:<br/>H1-SQZ this bar<br/>AND prior-bar?"}
 
     D5 -->|"established<br/>(2+ bars H1-SQZ)"| D5Sub{"M15+M30 both SQZ?"}
-    D5Sub -->|yes| E2a["E2 — H1-SQZ established,<br/>M15+M30 SQZ"]
-    D5Sub -->|no| E1a["E1 — H1-SQZ established"]
+    D5Sub -->|yes| E2a["C2 — H1-SQZ established,<br/>M15+M30 SQZ"]
+    D5Sub -->|no| E1a["C1 — H1-SQZ established"]
     E2a --> Return
     E1a --> Return
 
-    D5 -->|"recovery<br/>(H1 exited SQZ,<br/>compression persists)"| E1b["E1 — H1-SQZ recovery"]
+    D5 -->|"recovery<br/>(H1 exited SQZ,<br/>compression persists)"| E1b["C1 — H1-SQZ recovery"]
     E1b --> Return
 
-    D5 -->|"onset<br/>(first bar H1-SQZ)"| B3onset["B3 — H1-SQZ onset"]
+    D5 -->|"onset<br/>(first bar H1-SQZ)"| B3onset["S3 — H1-SQZ onset"]
     B3onset --> Return
 
     D5 -->|none of above| D2{"Decision 2:<br/>h4_fly + diffBBW > 5<br/>+ no ltf_shrink + no prev H1-SQZ<br/>+ cas_sqzCount==1"}
     D2 -->|"D1 aligned<br/>(D1 fly + same dir as H4)?"| D2Sub{"D1 aligned<br/>(D1 fly + same dir as H4)?"}
-    D2Sub -->|yes| A1c["A1 — transient SQZ,<br/>D1 aligned"]
-    D2Sub -->|no| A2c["A2 — transient SQZ,<br/>D1 not aligned"]
+    D2Sub -->|yes| A1c["F1 — transient SQZ,<br/>D1 aligned"]
+    D2Sub -->|no| A2c["F2 — transient SQZ,<br/>D1 not aligned"]
     A1c --> Return
     A2c --> Return
 
     D2 -->|no| Ecomp{"cas_sqzCount >= 2?"}
     Ecomp -->|yes| EcompSub{"b2_pink?"}
-    EcompSub -->|yes| E2b["E2 — M15+M30 both SQZ"]
-    EcompSub -->|no| E1b2["E1 — LTF SQZ"]
+    EcompSub -->|yes| E2b["C2 — M15+M30 both SQZ"]
+    EcompSub -->|no| E1b2["C1 — LTF SQZ"]
     E2b --> Return
     E1b2 --> Return
 
     Ecomp -->|no| Bcomp{"ltf_shrinkTF >= 1?"}
-    Bcomp -->|yes| BDecode["B-tier decoder:<br/>max(shrink_depth, sqz_depth)<br/>+ cas_sqzCount → B1/B2/B3"]
+    Bcomp -->|yes| BDecode["S-tier decoder:<br/>max(shrink_depth, sqz_depth)<br/>+ cas_sqzCount → S1/S2/S3"]
     BDecode --> Return
 
-    Bcomp -->|no| A2safe["A2 — SQZ without LTF shrink<br/>(safety net)"]
+    Bcomp -->|no| A2safe["F2 — SQZ without LTF shrink<br/>(safety net)"]
     A2safe --> Return
 
     ConfComp -->|no| H4Fly{"h4_fly?"}
     H4Fly -->|yes| A1Sub{"D1 aligned<br/>(D1 fly + same dir as H4)?"}
-    A1Sub -->|yes| A1a["A1 — H4+D1 fly aligned"]
-    A1Sub -->|no| A2a["A2 — H4 fly, D1 not aligned"]
+    A1Sub -->|yes| A1a["F1 — H4+D1 fly aligned"]
+    A1Sub -->|no| A2a["F2 — H4 fly, D1 not aligned"]
     A1a --> Return
     A2a --> Return
 
-    H4Fly -->|no| Default["Default: A2 — conservative"]
+    H4Fly -->|no| Default["Default: F2 — conservative"]
     Default --> UpdatePrev["Capture h1sqz_prior → update s_prevH1Sqz<br/>[FIXED V31.06: capture-prior-then-update]"]
     UpdatePrev --> Return
 ```
 
-**Contract established:** IdentifyScenario returns a fully populated ScenarioState. The evaluation order is: cascade decoders → phase → CHECK-HTF (h4_sqz/h4_shrink) → compression routing → h4_fly → default. This implements the Part 2 HTF-first principle: H4 state is checked before LTF compression, and D1 direction gates G-tier sub-states (G1 vs G2).
+**Contract established:** IdentifyScenario returns a fully populated ScenarioState. The evaluation order is: cascade decoders → phase → CHECK-HTF (h4_sqz/h4_shrink) → compression routing → h4_fly → default. This implements the Part 2 HTF-first principle: H4 state is checked before LTF compression, and D1 direction gates V-tier sub-states (V1 vs V2).
 
 **s_prevH1Sqz fix (V31.06):** The prior-bar H1-SQZ timing bug (update-then-read collapsed current-vs-prior, Decision 6 dead code) is fixed with capture-prior-then-update (`bool h1sqz_prior = s_prevH1Sqz;` before updating). Now matches harness read-then-update — Decision 6 recovery is live. See validation_status.md Bug 3 for full postmortem.
 
@@ -206,11 +206,11 @@ stateDiagram-v2
     G --> F: "H4 exits SQZ with expansion<br/>(diffBBW recovering, early F-tier)"
     G --> C: "G-reversal resolves<br/>(M5 break confirmed,<br/>pivot_substate = 2)"
 
-    F --> A: "Expansion completes<br/>(F3 → new trend phase)"
-    C --> A: "Reversal completes<br/>(C2 → new A-tier)"
+    F --> A: "Expansion completes<br/>(B3 → new trend phase)"
+    C --> A: "Reversal completes<br/>(R2 → new F-tier)"
 
-    C1s ["C1: Pre-Pivot Divergence<br/>H4 fly (511/512), M30 opposite<br/>Tier 3, pre-pivot timing"]
-    E4s ["E4: H4 Compressing<br/>H4 shrink (513) or SQZ<br/>design-firm"]
+    C1s ["R1: Pre-Pivot Divergence<br/>H4 fly (511/512), M30 opposite<br/>Tier 3, pre-pivot timing"]
+    E4s ["C4: H4 Compressing<br/>H4 shrink (513) or SQZ<br/>design-firm"]
     A --> C1s: "M30 opposes H4 direction<br/>(h4_fly + M30 opposite-fly)"
     C1s --> E4s: "H4 starts shrinking<br/>(512 → 513)"
     C1s --> A: "M30 recovers to H4 dir<br/>(pullback, circle 1)"
@@ -218,7 +218,7 @@ stateDiagram-v2
 
     note right of G
         OOS-UNVALIDATED:<br/>
-        G→C transition never fired<br/>
+        V→R transition never fired<br/>
         on Jan-Apr OOS data.<br/>
         0 of 7 H4-SQZ episodes<br/>
         resolved as reversal.<br/>
@@ -227,8 +227,8 @@ stateDiagram-v2
 
     note right of C
         UNIMPLEMENTED:<br/>
-        C1 (pre-pivot divergence) and<br/>
-        C2/C3 (post-G2 resolution)<br/>
+        R1 (pre-pivot divergence) and<br/>
+        R2/R3 (post-V2 resolution)<br/>
         transitions not in harness.<br/>
         C-tier states are doc-only<br/>
         in identify_scenario.<br/>
@@ -242,65 +242,65 @@ stateDiagram-v2
     }
 ```
 
-**Contract established:** The scenario machine is a left-side (A→B→E→G) then right-side (F continuation or C reversal) cycle. The G→F edge is OOS-validated (7/7 episodes). The G→C edge is structurally defined but unvalidated — both the discriminator and the C-tier state transitions are unimplemented in the harness. The reversal path is C1 (pre-pivot divergence: H4 fly 511/512, M30 opposite) → E4 (H4 compresses 513) → G2 (H4 pivots) → C2/C3 (H4 resolves). C1→A fork: M30 recovery = pullback. C1 is pre-G2, not post-G2.
+**Contract established:** The scenario machine is a left-side (A→B→E→G) then right-side (F continuation or C reversal) cycle. The V→F edge is OOS-validated (7/7 episodes). The V→R edge is structurally defined but unvalidated — both the discriminator and the C-tier state transitions are unimplemented in the harness. The reversal path is R1 (pre-pivot divergence: H4 fly 511/512, M30 opposite) → C4 (H4 compresses 513) → V2 (H4 pivots) → R2/R3 (H4 resolves). C1→A fork: M30 recovery = pullback. R1 is pre-V2, not post-V2.
 
 ### 3.4 Validation Status
 
 | Component | Status | Detail |
 |-----------|--------|--------|
-| A-tier routing (A1/A2) | OOS-VALIDATED | 103/349 snapshots, D1 alignment working |
-| B-tier routing (B1/B2/B3) | OOS-VALIDATED | 81/349 snapshots, depth decoder working |
-| E-tier routing (E1/E2/E4) | OOS-VALIDATED | 153/349 snapshots |
-| G-tier compression entry | OOS-VALIDATED | 36/36 H4-SQZ bars detected correctly |
+| F-tier routing (F1/F2) | OOS-VALIDATED | 103/349 snapshots, D1 alignment working |
+| S-tier routing (S1/S2/S3) | OOS-VALIDATED | 81/349 snapshots, depth decoder working |
+| C-tier routing (C1/C2/C4) | OOS-VALIDATED | 153/349 snapshots |
+| V-tier compression entry | OOS-VALIDATED | 36/36 H4-SQZ bars detected correctly |
 | F continuation resolution | OOS-VALIDATED | 7/7 episodes resolved as F |
 | Decision 5 (onset/established) | OOS-VALIDATED | H1-SQZ tracking consistent |
-| Early F-tier detection | OOS-VALIDATED | Fires before G-tier, prevents misclassification |
-| **G reversal branch (G→C)** | **HYPOTHESIS** | Never fired on OOS data — 0/7 episodes |
+| Early F-tier detection | OOS-VALIDATED | Fires before V-tier, prevents misclassification |
+| **G reversal branch (V→R)** | **HYPOTHESIS** | Never fired on OOS data — 0/7 episodes |
 | **G-vs-F discriminator** | **HYPOTHESIS** | Requires reversal episodes — none in current data |
-| **C1 pre-pivot detection** | **UNIMPLEMENTED** | Directional-agreement check not in identify_scenario, doc-only |
-| **G2→C2/C3 transitions** | **UNIMPLEMENTED** | Not in identify_scenario, doc-only |
+| **R1 pre-pivot detection** | **UNIMPLEMENTED** | Directional-agreement check not in identify_scenario, doc-only |
+| **G2→R2/R3 transitions** | **UNIMPLEMENTED** | Not in identify_scenario, doc-only |
 | VETO-AT-TARGET | OOS-VALIDATED | Architecture-enforced, item 5 PASS |
 | veto_priceloc (L3) | **KNOWN DIVERGENCE** | Python stricter than MQL5 — D1 veto when not container |
 
 For the full validation record with episode detail, see [`references/fixtures/validation_status.md`](fixtures/validation_status.md).
 
-### 3.4a C1 as Pre-Pivot Divergence State — the April 1 Circle 2 Gap
+### 3.4a R1 as Pre-Pivot Divergence State — the April 1 Circle 2 Gap
 
-C1 ("MTF reversal only, H4 original direction") already exists in the scenario enum and the C-tier table — but it is **misframed as post-G2** and **unimplemented**. The C1 table row says "511/512 or 513 (original direction)" for H4 — but C1 requires H4 FLYING, not shrinking. C1 = 511/512 only. This is **pre-pivot**, not post-G2.
+R1 ("MTF reversal only, H4 original direction") already exists in the scenario enum and the C-tier table — but it is **misframed as post-V2** and **unimplemented**. The R1 table row says "511/512 or 513 (original direction)" for H4 — but R1 requires H4 FLYING, not shrinking. R1 = 511/512 only. This is **pre-pivot**, not post-V2.
 
-**C1 definition (re-timed, fly-only):** The brief early-warning window where M30 has reversed opposite while H4 is still flying clean (511/512, not yet compressing). Its value: the earliest detectable flag of "reversal beginning (M30 defected)", before H4 compresses. Short-lived by nature — transitions to E4 when H4 starts shrinking. C1 fires when H4 flying dir X (511/512) AND M30 flying dir NOT-X (521/522).
+**R1 definition (re-timed, fly-only):** The brief early-warning window where M30 has reversed opposite while H4 is still flying clean (511/512, not yet compressing). Its value: the earliest detectable flag of "reversal beginning (M30 defected)", before H4 compresses. Short-lived by nature — transitions to C4 when H4 starts shrinking. R1 fires when H4 flying dir X (511/512) AND M30 flying dir NOT-X (521/522).
 
 **Detection (directional-agreement check — the core fix):**
 - H4 fly direction: 511/512 = up, 521/522 = down
 - M30 fly direction: same mapping
-- If H4 flying dir X (511/512) AND M30 flying dir NOT-X (521/522) → C1
+- If H4 flying dir X (511/512) AND M30 flying dir NOT-X (521/522) → R1
 - M30's BBW_stage and BB_diffMid_Trend are already read by IdentifyScenario; this adds the **comparison to H4**, not a new read
-- [DESIGN — Phase 3, unimplemented. The April-1 2nd-circle state that currently falls through to A-tier.]
+- [DESIGN — Phase 3, unimplemented. The April-1 2nd-circle state that currently falls through to F-tier.]
 
-**A-tier tightening:** A currently = "h4_fly + no compression" with **no directional check**, so M30-opposite-H4 wrongly reads as A. Tighten: A requires "h4_fly + no compression + MTF **aligned** with H4 direction". If M30 opposes H4 → C1, not A. [DESIGN — Phase 3. Flagged as a classification change; validate it doesn't break existing A1/A2 cases against the baseline.]
+**F-tier tightening:** A currently = "h4_fly + no compression" with **no directional check**, so M30-opposite-H4 wrongly reads as A. Tighten: A requires "h4_fly + no compression + MTF **aligned** with H4 direction". If M30 opposes H4 → R1, not A. [DESIGN — Phase 3. Flagged as a classification change; validate it doesn't break existing F1/F2 cases against the baseline.]
 
 **Distinctions:**
-- **A (aligned fly):** MTF agrees with H4 — C1 is the opposite (MTF opposes H4)
-- **B (pullback):** LTF shrinking, will resume H4 — C1 is M30 committed opposite, not pulling back
-- **E4 (H4 compressing):** H4 shrinking (513) or SQZ (400s) — C1 has H4 flying (511/512). **Clean boundary:** C1 = H4 FLYING in original direction (511/512); E4 = H4 SHRINKING/SQZ (513, 400s). The moment H4 goes 512→513, leave C1, enter E4. No H4-stage overlap (511/512 vs 513).
-- **G (H4 pivot):** H4 in SQZ (400s) — C1 has H4 flying (511/512). No H4-stage overlap (511/512 vs 400s).
-- **C2/C3 (H4 flipped):** H4 reversed — C1 is H4 still original
+- **A (aligned fly):** MTF agrees with H4 — R1 is the opposite (MTF opposes H4)
+- **B (pullback):** LTF shrinking, will resume H4 — R1 is M30 committed opposite, not pulling back
+- **C4 (H4 compressing):** H4 shrinking (513) or SQZ (400s) — R1 has H4 flying (511/512). **Clean boundary:** R1 = H4 FLYING in original direction (511/512); C4 = H4 SHRINKING/SQZ (513, 400s). The moment H4 goes 512→513, leave R1, enter C4. No H4-stage overlap (511/512 vs 513).
+- **G (H4 pivot):** H4 in SQZ (400s) — R1 has H4 flying (511/512). No H4-stage overlap (511/512 vs 400s).
+- **R2/R3 (H4 flipped):** H4 reversed — R1 is H4 still original
 
-**Timing:** C1 is pre-pivot (H4 hasn't turned). The reversal cascade:
+**Timing:** R1 is pre-pivot (H4 hasn't turned). The reversal cascade:
 
-A (all aligned) → M15 reverses (511→513→521) → M30 reverses (511→513→521, H4 STILL flying 511/512) = C1 [BRIEF] → H4 starts shrinking (513) = E4 → H4 enters SQZ = G2 → H4 breaks opposite = C2/C3
+A (all aligned) → M15 reverses (511→513→521) → M30 reverses (511→513→521, H4 STILL flying 511/512) = R1 [BRIEF] → H4 starts shrinking (513) = C4 → H4 enters SQZ = V2 → H4 breaks opposite = R2/R3
 
-C1 is a FORK — two exits:
-- C1 → E4 (reversal continues: H4 compresses, pivots)
-- C1 → A (M30 recovers to H4 direction: was a pullback, like circle 1)
+R1 is a FORK — two exits:
+- R1 → C4 (reversal continues: H4 compresses, pivots)
+- R1 → F (M30 recovers to H4 direction: was a pullback, like circle 1)
 
 The C1→A fork is the reversal-vs-pullback distinction. M30 recovering while H4 still flying = pullback.
 
-**Anchored example:** April 1, 2nd circle — H4 flew up (512, diffBBW=19.5). M30 pullback (511→411-422, never hit 521) — no C1 window on April 1 per log (M30 never opposed H4). The C1→A recovery fork IS validated: M30 compressed then recovered in H4 direction = pullback. The C1-before-E4 sequence is structurally correct but has no April 1 validation. [DESIGN — Phase 3.]
+**Anchored example:** April 1, 2nd circle — H4 flew up (512, diffBBW=19.5). M30 pullback (511→411-422, never hit 521) — no R1 window on April 1 per log (M30 never opposed H4). The C1→A recovery fork IS validated: M30 compressed then recovered in H4 direction = pullback. The R1-before-C4 sequence is structurally correct but has no April 1 validation. [DESIGN — Phase 3.]
 
-**Status: UNIMPLEMENTED.** The directional-agreement check is not in identify_scenario. M30-opposite-H4 falls through to A-tier.
+**Status: UNIMPLEMENTED.** The directional-agreement check is not in identify_scenario. M30-opposite-H4 falls through to F-tier.
 
-**Tier placement:** C1 is grouped in Tier 3 with C2/C3 for reversal-progression coherence, but functionally C1 is the PRE-PIVOT entry (Tier-2-like timing): H4 is still flying (original direction), unlike the post-pivot C2/C3 where H4 has flipped. So C1 sits in Tier 3 by grouping, but is pre-pivot by timing — it's the divergence entry that PRECEDES the G2 pivot.
+**Tier placement:** R1 is grouped in Tier 3 with R2/R3 for reversal-progression coherence, but functionally R1 is the PRE-PIVOT entry (Tier-2-like timing): H4 is still flying (original direction), unlike the post-pivot R2/R3 where H4 has flipped. So R1 sits in Tier 3 by grouping, but is pre-pivot by timing — it's the divergence entry that PRECEDES the V2 pivot.
 
 ---
 
@@ -318,13 +318,13 @@ Consumes Layer 1 ScenarioState + per-TF BB data → outputs Prediction for Layer
 | `phase` | Scenario-gates confidence (PH_4 → None, PH_5 → explosive); drives timeline estimate |
 | `b2_pink` | Gating — forces confidence=0 (no prediction possible, M15+M30 locked in SQZ) |
 | `container_tf` | The target the prediction aims at (Rule 2: next confinement boundary) |
-| `pivot_substate` | G-tier: 0=N/A, 1=PIVOT-PENDING (direction unresolved — D1/W1 bias predicts G→F vs G→C), 2=G-REVERSAL (reversal_flag=True) |
+| `pivot_substate` | V-tier: 0=N/A, 1=PIVOT-PENDING (direction unresolved — D1/W1 bias predicts V→F vs V→R), 2=G-REVERSAL (reversal_flag=True) |
 | `cas_shrinkTF` | Not used directly by Layer 2 — consumed by Layer 3 (decoder size). Provides compression depth context for NextScenario (cascade state input). |
 | `cas_sqzCount` | Not used directly by Layer 2 — consumed by Layer 3 (decoder size). Provides compression depth context for timeline estimate. Feeds NextScenario (cascade state input). |
 | `b1_block` | Not used by Layer 2 — consumed by Layer 3 (entry gating) |
 | `container_dir` | Not used directly — direction is scored from per-TF BB data (see gap below) |
 | `container_diffbbw` | Not used directly — container health scored from per-TF BB data via ADiffBBW |
-| `priceloc` | Not used by Layer 2 — consumed by Layer 3 (E3, VETO, X1) |
+| `priceloc` | Not used by Layer 2 — consumed by Layer 3 (C3, VETO, X1) |
 | `info` | Not used — logging field from Part 3 |
 
 **GAP — per-TF BB data**: PredictNext needs per-TF BB data (stage, mid, diffBBW, BBUpDn) to score direction across TFs. ScenarioState does NOT expose this — it exposes `container_tf`, `container_dir`, and `container_diffbbw` for the container only. Therefore Part 4 receives **both** ScenarioState (for scenario/phase gating) **and** the raw `BB_datas[]` array (for per-TF direction scoring). This matches the MQL5 signature: `PredictNext(ScenarioState &s, BB_MTF_Data_struct &bb[])`.
@@ -334,8 +334,8 @@ Consumes Layer 1 ScenarioState + per-TF BB data → outputs Prediction for Layer
 **Impact — how Part 3 constrains Part 4:**
 
 1. **Can only predict from what ScenarioState exposes.** Part 4 can gate on scenario, phase, and b2_pink. Everything else (per-TF direction scoring, diffBBW damping) requires raw BB data. If a prediction needed per-TF diffBBW and Part 3 didn't pass BB_datas, that would be an unresolvable gap — but the dual-input design avoids this.
-2. **G-pivot handoff.** Part 3 marks G-tier as "pivot-pending" (pivot_substate=1) and sets direction=UNKNOWN — it does NOT resolve the pivot. Part 4 INHERITS this unresolved pivot as its primary job: D1/W1 bias predicts whether G resolves as F (continuation) or C (reversal). This is the most important Part 3 → Part 4 handoff.
-3. **OOS-unvalidated propagation.** Part 3 flags G→C transition as OOS-UNVALIDATED (0 of 7 OOS episodes resolved as reversal) and G2→C1→C2/C3 as UNIMPLEMENTED. Any Part 4 prediction that depends on G→C resolution inherits these flags — it is also OOS-UNVALIDATED.
+2. **V-pivot handoff.** Part 3 marks V-tier as "pivot-pending" (pivot_substate=1) and sets direction=UNKNOWN — it does NOT resolve the pivot. Part 4 INHERITS this unresolved pivot as its primary job: D1/W1 bias predicts whether V resolves as F (continuation) or C (reversal). This is the most important Part 3 → Part 4 handoff.
+3. **OOS-unvalidated propagation.** Part 3 flags V→R transition as OOS-UNVALIDATED (0 of 7 OOS episodes resolved as reversal) and G2→C1→R2/R3 as UNIMPLEMENTED. Any Part 4 prediction that depends on V→R resolution inherits these flags — it is also OOS-UNVALIDATED.
 4. **Fields Part 3 computes but Part 4 ignores.** cas_shrinkTF, cas_sqzCount, b1_block, priceloc are Layer 3 fields. Part 4 doesn't consume them — they flow ScenarioState → Layer 3 directly.
 
 ### 4.0a Part 3 → Part 4 Link (visual)
@@ -393,8 +393,8 @@ flowchart LR
     sc -->|"current scenario"| NS
     ph -->|"current phase"| NS
     cas -->|"cascade state<br/>(compression depth)"| NS
-    piv -->|"pivot_substate<br/>(G-tier resolution)"| NS
-    d1w1 -->|"D1/W1 bias<br/>(G→F vs G→C)"| NS
+    piv -->|"pivot_substate<br/>(V-tier resolution)"| NS
+    d1w1 -->|"D1/W1 bias<br/>(V→F vs V→R)"| NS
     SG --> ASM
     DS --> ASM
     GTR --> ASM
@@ -405,14 +405,14 @@ flowchart LR
 
 *Review criterion: I can trace any ScenarioState field to the exact sub-function that consumes it.*
 
-**Why next_scenario is needed beyond direction:** `direction` says up/down; `next_scenario` says WHICH REGIME (fly / squeeze / pivot / reversal). DecideAction needs the regime to decide enter-vs-wait, the target band, and the size ceiling. The two-circle case proves it: the 1st circle has `next_scenario = continuation (A/B)` → HOLD; the 2nd circle has `next_scenario = reversal (G→C)` → EXIT. `direction` alone can't separate these (M15 points down at both); the next scenario does. See the test chart at `references/Backtest_data/extras/backtested_EA_test_phase_April_01.jpg` — the two-circle test pair (1st = predict continuation/HOLD, 2nd = predict reversal/EXIT) is the test for NextScenario's output.
+**Why next_scenario is needed beyond direction:** `direction` says up/down; `next_scenario` says WHICH REGIME (fly / squeeze / pivot / reversal). DecideAction needs the regime to decide enter-vs-wait, the target band, and the size ceiling. The two-circle case proves it: the 1st circle has `next_scenario = continuation (A/B)` → HOLD; the 2nd circle has `next_scenario = reversal (V→R)` → EXIT. `direction` alone can't separate these (M15 points down at both); the next scenario does. See the test chart at `references/Backtest_data/extras/backtested_EA_test_phase_April_01.jpg` — the two-circle test pair (1st = predict continuation/HOLD, 2nd = predict reversal/EXIT) is the test for NextScenario's output.
 
 **Validation flagging — NextScenario transitions (granular split):**
 - **Compression-deepening transitions (A→B→E→G)** = follow the validated bottom-up cascade (§12d, Decision 4) → **[design-firm, validatable]**
-- **G→F continuation** = **[OOS-VALIDATED 7/7]**
-- **G→C reversal** = **[HYPOTHESIS — OOS-UNVALIDATED, 0 episodes; validates at GATE 4 / when reversal data exists]**
+- **V→F continuation** = **[OOS-VALIDATED 7/7]**
+- **V→R reversal** = **[HYPOTHESIS — OOS-UNVALIDATED, 0 episodes; validates at GATE 4 / when reversal data exists]**
 
-NextScenario is mostly firm; ONLY its G→C reversal output carries the hypothesis flag. Do NOT flag the whole node as unvalidated — that would wrongly taint the validated compression/continuation predictions.
+NextScenario is mostly firm; ONLY its V→R reversal output carries the hypothesis flag. Do NOT flag the whole node as unvalidated — that would wrongly taint the validated compression/continuation predictions.
 
 #### Diagram 2 — Impact / Constraint (how Part 3 shapes Part 4)
 
@@ -421,14 +421,14 @@ Three ways Layer 1's design constrains Layer 2 — the unresolved pivot, the OOS
 ```mermaid
 flowchart TD
     subgraph A["(a) G-PIVOT HANDOFF — core handoff"]
-        L1a["Layer 1: H4 SQZ → G-tier<br/>sets pivot_substate<br/>direction = UNKNOWN<br/>(pivot unresolved)"]
-        L2a["Layer 2 GTierResolve INHERITS:<br/>D1/W1 bias predicts<br/>G→F continuation vs G→C reversal"]
+        L1a["Layer 1: H4 SQZ → V-tier<br/>sets pivot_substate<br/>direction = UNKNOWN<br/>(pivot unresolved)"]
+        L2a["Layer 2 GTierResolve INHERITS:<br/>D1/W1 bias predicts<br/>V→F continuation vs V→R reversal"]
         L1a -->|"Part 3 stops at pivot-pending;<br/>resolving it IS Part 4 primary job"| L2a
     end
 
     subgraph B["(b) OOS-UNVALIDATED PROPAGATION"]
-        L1b["Layer 1: G→C flagged<br/>OOS-UNVALIDATED<br/>0 of 7 OOS episodes"]
-        L2b["Layer 2: any G→C prediction<br/>INHERITS OOS-UNVALIDATED"]
+        L1b["Layer 1: V→R flagged<br/>OOS-UNVALIDATED<br/>0 of 7 OOS episodes"]
+        L2b["Layer 2: any V→R prediction<br/>INHERITS OOS-UNVALIDATED"]
         L1b -.->|"flag propagates"| L2b
     end
 
@@ -472,14 +472,14 @@ sequenceDiagram
     PNX->>DS: "DirectionScore(bb) — reads<br/>RAW bb (dual-input gap)"
     DS-->>PNX: "score [TBD-GATE-3 stub]"
 
-    alt "s.pivot_substate > 0 (G-tier)"
+    alt "s.pivot_substate > 0 (V-tier)"
         PNX->>GTR: "GTierResolve(s, bb) —<br/>pivot_substate + D1/W1"
         note over GTR : "OOS-UNVALIDATED"
         GTR-->>PNX: "reversal flag [TBD-GATE-3 stub]"
     end
 
     PNX->>NS: "NextScenario(s, bb) — reads<br/>scenario/phase/pivot_substate/<br/>cascade state + D1/W1 bias"
-    note over NS : "compression = design-firm<br/>G→F = OOS-VALIDATED<br/>G→C = HYPOTHESIS"
+    note over NS : "compression = design-firm<br/>V→F = OOS-VALIDATED<br/>V→R = HYPOTHESIS"
     NS-->>PNX: "next_scenario [TBD-GATE-3 stub]"
 
     PNX->>ASM: "Assemble(s, score, reversal,<br/>next_scenario)"
@@ -547,7 +547,7 @@ sequenceDiagram
     deactivate DS
     Note over DS: "TBD-GATE-3 stub:<br/>reads per-TF stage/mid from bb<br/>returns 0"
 
-    alt s.pivot_substate > 0 (G-tier)
+    alt s.pivot_substate > 0 (V-tier)
         Note over PredNext,GTR: "G-TIER BRANCH: OOS-UNVALIDATED"
         PredNext->>GTR: "ScenarioState s + BB_datas[] bb"
         activate GTR
@@ -562,7 +562,7 @@ sequenceDiagram
     activate NS
     NS-->>PredNext: "next_scenario (SCENARIO)"
     deactivate NS
-    Note over NS: "compression = design-firm<br/>G→F = OOS-VALIDATED 7/7<br/>G→C = HYPOTHESIS<br/>TBD-GATE-3 stub:<br/>returns SC_NONE"
+    Note over NS: "compression = design-firm<br/>V→F = OOS-VALIDATED 7/7<br/>V→R = HYPOTHESIS<br/>TBD-GATE-3 stub:<br/>returns SC_NONE"
 
     PredNext->>ASM: "s, total, reversal, next_scenario, fill Prediction p"
     activate ASM
@@ -586,7 +586,7 @@ sequenceDiagram
 - **HANDOFF POINT:** ScenarioState `s` flows from IdentifyScenario → PredictNext → ScenarioGate. This is the exact interface boundary between L1 and L2.
 - **DUAL INPUT:** PredictNext receives both `s` (ScenarioGate reads it) and `bb` (DirectionScore reads it). The gap-resolution is visible: ScenarioGate reads `s.scenario`, `s.phase`, `s.b2_pink`; DirectionScore reads raw `bb[]` per-TF stage/mid.
 - **G-TIER BRANCH:** GTierResolve fires only when `s.pivot_substate > 0`. Marked OOS-UNVALIDATED.
-- **NEXT SCENARIO:** NextScenario produces `next_scenario` (predicted regime transition) from current scenario/phase, cascade state, pivot_substate, and D1/W1 bias. Compression transitions = design-firm; G→F = OOS-VALIDATED; G→C = HYPOTHESIS. Flows into Assemble → `Prediction.next_scenario`.
+- **NEXT SCENARIO:** NextScenario produces `next_scenario` (predicted regime transition) from current scenario/phase, cascade state, pivot_substate, and D1/W1 bias. Compression transitions = design-firm; V→F = OOS-VALIDATED; V→R = HYPOTHESIS. Flows into Assemble → `Prediction.next_scenario`.
 - **STUB MARKERS:** Every L2 sub-function is annotated as TBD-GATE-3. No rule values are present — structure only.
 - **LAYER 3 NOT WIRED:** DecideAction receives Prediction `p` but does not consume it yet. Phase 4 work.
 
@@ -620,7 +620,7 @@ classDiagram
         int timeline_bars coarse, in M5 bars
         SCENARIO next_scenario
         int confidence    0-100
-        bool reversal     G→C reversal flag
+        bool reversal     V→R reversal flag
         string info       logging
     }
 
@@ -665,7 +665,7 @@ sequenceDiagram
     Tick->>L2: "ScenarioState s + BB_datas[]"
     L2->>L2: Scenario-gate (PH_4/G4→None)
     L2->>L2: Direction score (per-TF)
-    L2->>L2: G-tier: D1/W1 predicts G→F vs G→C
+    L2->>L2: V-tier: D1/W1 predicts V→F vs V→R
     L2-->>Tick: Prediction p
 
     Tick->>L3: "ScenarioState s + Prediction p + BB_datas[]"
@@ -699,7 +699,7 @@ sequenceDiagram
     activate SG
     SG-->>PNX: "suppress (bool)"
     deactivate SG
-    Note over SG: "TBD-GATE-3:<br/>PH_4 / G4 / E2 suppression<br/>Returns true = suppress all"
+    Note over SG: "TBD-GATE-3:<br/>PH_4 / V4 / C2 suppression<br/>Returns true = suppress all"
 
     alt suppress == true
         PNX->>PNX: "Set p.confidence=0, p.direction=0<br/>Skip scoring (optional optimization)"
@@ -718,7 +718,7 @@ sequenceDiagram
         activate GTR
         GTR-->>PNX: "reversal (bool)"
         deactivate GTR
-        Note over GTR: "OOS-UNVALIDATED:<br/>D1/W1 bias → G→F vs G→C<br/>TBD-GATE-3:<br/>Returns false (safe default)"
+        Note over GTR: "OOS-UNVALIDATED:<br/>D1/W1 bias → V→F vs V→R<br/>TBD-GATE-3:<br/>Returns false (safe default)"
     else pivot_substate == 0
         PNX->>PNX: "reversal = false (default)"
     end
@@ -751,7 +751,7 @@ Flow only — no weights, thresholds, or formulas. All values TBD — GATE 3.
 flowchart TD
     Start["Start: ScenarioState s + BB_datas[]"] --> Init["Initialize Prediction defaults<br/>direction=0, confidence=0, target_tf=-1"]
 
-    Init --> Gate["Scenario-gate<br/>PH_4 or G4 or E2 → confidence=0, direction=0"]
+    Init --> Gate["Scenario-gate<br/>PH_4 or V4 or C2 → confidence=0, direction=0"]
 
     Gate --> HTFEnv["HTF bias envelope [DESIGN — Phase 3]<br/>H4/D1/W1 set directional constraint<br/>HTF alignment → high confidence<br/>HTF divergence → low confidence<br/>Weight: HTF > M30 > H1"]
 
@@ -759,8 +759,8 @@ flowchart TD
 
     Score --> Aggregate["Aggregate scores<br/>LTF + MTF + HTF totals → direction<br/>Magnitude → confidence"]
 
-    Aggregate --> GTier{"G-tier?<br/>pivot_substate > 0"}
-    GTier -->|yes| GPredict["D1/W1 bias predicts G→F vs G→C<br/>D1 same direction as H4 → F (continuation)<br/>D1 opposite → C (reversal)<br/>Set reversal flag if D1 opposes H4<br/>OOS-UNVALIDATED — 0 reversal episodes"]
+    Aggregate --> GTier{"V-tier?<br/>pivot_substate > 0"}
+    GTier -->|yes| GPredict["D1/W1 bias predicts V→F vs V→R<br/>D1 same direction as H4 → F (continuation)<br/>D1 opposite → C (reversal)<br/>Set reversal flag if D1 opposes H4<br/>OOS-UNVALIDATED — 0 reversal episodes"]
     GTier -->|no| Target["Target TF (Rule 2)<br/>container_tf if > 0 else scenario fallback<br/>REQ-P4-TARGET [DESIGN — Phase 3]"]
 
     GPredict --> Target
@@ -783,7 +783,7 @@ flowchart TD
 - Confidence thresholds (magnitude → confidence mapping)
 - Timeline bar estimates per phase
 - Next-scenario edge transitions
-- G→F vs G→C discrimination thresholds
+- V→F vs V→R discrimination thresholds
 
 ### 4.3a HTF-as-Constraint and Divergence as EARLYSIGNAL Candidate
 
@@ -846,16 +846,16 @@ Consumes ScenarioState (Part 3) + Prediction (Part 4) + raw BB_datas → outputs
 | ScenarioState field (from Part 3 §3.1) | How DecideAction uses it |
 |---|---|
 | `scenario` | Firing-matrix ROW key — selects which row of the matrix arms triggers |
-| `phase` | Firing-matrix ROW key (combined with scenario); gates entry path (E3 in zigzag vs E1/E2 in trend) |
+| `phase` | Firing-matrix ROW key (combined with scenario); gates entry path (C3 in zigzag vs C1/C2 in trend) |
 | `b1_block` | Entry gating — M15 sideways block (M15 mid ≥ 3 → no flip-entries) |
 | `b2_pink` | X4-PINK exit trigger — M15+M30 both SQZ → forced exit all |
-| `priceloc` | E3 boundary entry (at container band), VETO-at-target (no entry at target), X1 (price at target_tf band) |
+| `priceloc` | C3 boundary entry (at container band), VETO-at-target (no entry at target), X1 (price at target_tf band) |
 | `container_tf` | Exit target boundary — which TF band triggers X1 |
-| `container_dir` | E3 counter-trend sizing (3B-INTO: counter side 0.25× max) |
+| `container_dir` | C3 counter-trend sizing (3B-INTO: counter side 0.25× max) |
 | `container_diffbbw` | X2 qualification — container cracking (diffBBW ≤ 0 → qualified exit) |
 | `cas_shrinkTF` | Decoder size — compression depth → size multiplier |
 | `cas_sqzCount` | Decoder size — B4 block (≥3 → no entries), combined with cas_shrinkTF |
-| `pivot_substate` | G-tier routing — 1=PIVOT-PENDING (arm cautiously, exit-only on reversal), 2=G-REVERSAL (reversal_flag → EXIT branch) |
+| `pivot_substate` | V-tier routing — 1=PIVOT-PENDING (arm cautiously, exit-only on reversal), 2=G-REVERSAL (reversal_flag → EXIT branch) |
 | `info` | Not used — logging field from Part 3 |
 
 **Table B — Prediction (Part 4) consumption:**
@@ -871,9 +871,9 @@ Consumes ScenarioState (Part 3) + Prediction (Part 4) + raw BB_datas → outputs
 
 **Impact — how the two upstream layers constrain Part 5:**
 
-1. **Nothing fires unless armed.** Both ScenarioState (scenario+phase row) AND Prediction (direction+confidence) must arm the trigger. An M15 flip with ceiling=0 (E1/E2/E4) → WAIT. A prediction with direction=0 → no entry. This is the inversion of TofyTrade4 (which fired unless a gate blocked).
+1. **Nothing fires unless armed.** Both ScenarioState (scenario+phase row) AND Prediction (direction+confidence) must arm the trigger. An M15 flip with ceiling=0 (C1/C2/C4) → WAIT. A prediction with direction=0 → no entry. This is the inversion of TofyTrade4 (which fired unless a gate blocked).
 2. **Counter-H4 reversal routing.** A counter-H4 M15 trigger + reversal=True → EXIT route (close existing longs), NOT a new entry (don't open counter-shorts). This branch is explicit in the activity diagram.
-3. **OOS-UNVALIDATED propagation.** G→C transition is OOS-UNVALIDATED (Part 3) and G-reversal prediction is OOS-UNVALIDATED (Part 4). Any Part 5 action depending on G-reversal resolution inherits the flag — pivot_substate=2 → exit-only, arm cautiously.
+3. **OOS-UNVALIDATED propagation.** V→R transition is OOS-UNVALIDATED (Part 3) and G-reversal prediction is OOS-UNVALIDATED (Part 4). Any Part 5 action depending on G-reversal resolution inherits the flag — pivot_substate=2 → exit-only, arm cautiously.
 4. **Store-vs-recompute.** b1_block, b2_pink come from ScenarioState (MQL5 stores these on the struct). Python harness recomputes from raw BB data — must match bar-for-bar (per CLAUDE.md and validation_status.md Phase 4 verification item).
 5. **Fields consumed but not by Part 5.** Part 3's info field is logging-only; Part 4's timeline_bars and next_scenario are advisory (re-evaluate triggers, not firing conditions).
 
@@ -924,7 +924,7 @@ flowchart LR
         Inv["Invariant checks"]
         Exi["Exit checks<br/>(before entries)"]
         X2bNode["X2b: pullback-vs-top<br/>[HYPOTHESIS]"]
-        E4Node["E4: VETO-AT-TARGET<br/>(entry gate)"]
+        E4Node["C4: VETO-AT-TARGET<br/>(entry gate)"]
         Arm["Entry arming"]
         E6Node["E6: real-vs-fakeout<br/>[HYPOTHESIS]"]
         Siz["E5: Size stage<br/>(flows to order)"]
@@ -976,18 +976,18 @@ flowchart TD
     end
 
     subgraph B["b) CONFIDENCE as ONE of THREE size inputs"]
-        B1["Matrix ceiling<br/>(scenario-based)"]
-        B2["ConfSize<br/>(Prediction.confidence)"]
-        B3["DecoderSize<br/>(cascade state)"]
+        S1["Matrix ceiling<br/>(scenario-based)"]
+        S2["ConfSize<br/>(Prediction.confidence)"]
+        S3["DecoderSize<br/>(cascade state)"]
         B4["size_mult = min<br/>(ceiling, conf_size, decoder_size)"]
-        B1 --> B4
-        B2 --> B4
-        B3 --> B4
+        S1 --> B4
+        S2 --> B4
+        S3 --> B4
     end
 
     subgraph C["c) OOS-UNVALIDATED PROPAGATION"]
-        P4c["Prediction.reversal from G→C<br/>OOS-UNVALIDATED flag<br/>(0 OOS episodes)"]
-        P5c["Any DecideAction on G→C<br/>inherits OOS-UNVALIDATED<br/>arm cautiously, exit-only"]
+        P4c["Prediction.reversal from V→R<br/>OOS-UNVALIDATED flag<br/>(0 OOS episodes)"]
+        P5c["Any DecideAction on V→R<br/>inherits OOS-UNVALIDATED<br/>arm cautiously, exit-only"]
         P4c -.->|"flag propagates"| P5c
     end
 
@@ -1017,7 +1017,7 @@ sequenceDiagram
     participant Exi as "CheckExits<br/>[DESIGN — Phase 4]"
     participant X2bRead as "X2b Data Reads<br/>[HYPOTHESIS]"
     participant E6Read as "E6 Data Reads<br/>[HYPOTHESIS]"
-    participant E4Veto as "E4 Veto (entry gate)<br/>[design-firm]"
+    participant E4Veto as "C4 Veto (entry gate)<br/>[design-firm]"
     participant Arm as "ArmEntry<br/>[DESIGN — Phase 4]"
     participant Siz as "Size (E5)<br/>[design-firm]"
     participant Stp as "SetStop<br/>[design-firm]"
@@ -1048,7 +1048,7 @@ sequenceDiagram
     DA->>E4Veto: "Block entry if price at target<br/>(prevents buying at resistance — 03.03)"
     E4Veto-->>DA: "blocked or clear"
 
-    alt "E4 blocks"
+    alt "C4 blocks"
         DA-->>Caller: "TradeAction act=0 WAIT"
     end
 
@@ -1072,7 +1072,7 @@ sequenceDiagram
     Note over DA: "X2c: p.reversal from PredictNext<br/>→ marked [INERT until Phase 3]<br/>reversal routing not wired yet"
 ```
 
-*Review criterion: I can follow one bar from DecideAction entry through invariants, exits (including X2b reads), E4 veto, arming (including E6 reads), E5 sizing (flows to order), and stop — and see where X2c is marked inert.*
+*Review criterion: I can follow one bar from DecideAction entry through invariants, exits (including X2b reads), C4 veto, arming (including E6 reads), E5 sizing (flows to order), and stop — and see where X2c is marked inert.*
 
 ### 5.1 Interface — Class Diagram
 
@@ -1116,7 +1116,7 @@ classDiagram
     class TradeAction {
         <<final EA output — drives OrderSend/OrderClose>>
         int act           0=hold / 1=BUY / 2=SELL / 7=exit_all
-        string condition_id  E1-E6 / X1-X4 / VETO / WAIT
+        string condition_id  C1-E6 / X1-X4 / VETO / WAIT
         double size_mult    0.0-1.0
         double stop_price   ATRSL-based
         string info         logging
@@ -1137,7 +1137,7 @@ classDiagram
 | Field | Type | Meaning | Consumed by |
 |---|---|---|---|
 | `act` | int | 0=hold, 1=BUY, 2=SELL, 7=exit_all | OrderSend / OrderClose |
-| `condition_id` | string | E1-E6 (entry), X1-X4 (exit), VETO, WAIT | Logging, benchmark verification |
+| `condition_id` | string | C1-E6 (entry), X1-X4 (exit), VETO, WAIT | Logging, benchmark verification |
 | `size_mult` | double | 0.0–1.0, final = min(ceiling, conf_size, decoder_size) | Lot size |
 | `stop_price` | double | ATRSL stop at entry | OrderSend SL |
 | `info` | string | Debug string | Logging |
@@ -1192,20 +1192,20 @@ flowchart TD
     Ceil0 -->|yes| Wait1["act=0 WAIT — ceiling blocks"]
     Ceil0 -->|no| E4Check
 
-    E4EntryVeto["E4 VETO-AT-TARGET (entry gate)<br/>Block entry if price at target<br/>(prevents buying at resistance — 03.03)<br/>[design-firm]"]
+    E4EntryVeto["C4 VETO-AT-TARGET (entry gate)<br/>Block entry if price at target<br/>(prevents buying at resistance — 03.03)<br/>[design-firm]"]
     E4Check --> E4EntryVeto
     E4EntryVeto -->|blocked| Wait1
     E4EntryVeto -->|clear| Arming
 
     subgraph ARMING["ENTRY ARMING (scenario,phase row + Prediction)"]
-        EntryPath["Which entry path?<br/>Zigzag → E3 boundary<br/>PH_1/2/5 → flip-path E1/E2/E5"]
+        EntryPath["Which entry path?<br/>Zigzag → C3 boundary<br/>PH_1/2/5 → flip-path C1/C2/E5"]
 
-        E3{"E3: priceloc at band?<br/>+ 6 confinement checks<br/>[design-firm]"}
-        E3pass["E3 entry fired<br/>[design-firm]"]
-        E3fail["E3 check failed → WAIT"]
+        C3{"C3: priceloc at band?<br/>+ 6 confinement checks<br/>[design-firm]"}
+        E3pass["C3 entry fired<br/>[design-firm]"]
+        E3fail["C3 check failed → WAIT"]
 
         Flip{"Flip: DetectFlip +<br/>dir == p.direction<br/>[design-firm]"}
-        FlipYes["Flip entry E1/E2/E5<br/>[design-firm]"]
+        FlipYes["Flip entry C1/C2/E5<br/>[design-firm]"]
         FlipNo["No flip → WAIT"]
 
         E6Dec["E6: REAL vs FAKEOUT?<br/>M30 confirming fly vs flat?<br/>diffBBW expanding vs near-zero?<br/>quality threshold (≥90/75/60/45)?<br/>[HYPOTHESIS — GATE 4 two-sided:<br/>real entries must FIRE, fakeouts must SKIP]"]
@@ -1215,9 +1215,9 @@ flowchart TD
     end
 
     Arming --> EntryPath
-    EntryPath --> E3
-    E3 -->|pass| E3pass
-    E3 -->|fail| E3fail
+    EntryPath --> C3
+    C3 -->|pass| E3pass
+    C3 -->|fail| E3fail
     E3pass --> E6Dec
     E3fail --> Flip
     Flip -->|yes| E6Dec
@@ -1250,10 +1250,10 @@ flowchart TD
     Wait2 --> Return
 ```
 
-**Contract established:** The evaluation order is **INVARIANTS → EXIT CHECKS → MATRIX CEILING → E4 VETO-AT-TARGET (entry gate) → ENTRY ARMING → SIZE → STOP**. Exits fire before entries. Invariants fire unconditionally (EMERGENCY, X4-PINK, VETO). X2 detects multi-bar M15 reversal (trend-dir → mid≥3 → counter-dir over N bars); the old 1→3-only condition is **SUPERSEDED**. X2b pullback-vs-top is a HYPOTHESIS discriminator — validates at GATE 4 two-sided (April 1 must EXIT, 03.17 must HOLD). E4 VETO-AT-TARGET blocks entry when price is at target (03.03: no BUY at D1 upper). E6 real-vs-fakeout is a HYPOTHESIS discriminator — validates at GATE 4 two-sided (real entries must FIRE, fakeouts must SKIP). E5 size flows compute → order, not dropped. Stop at entry (INVARIANT 1).
+**Contract established:** The evaluation order is **INVARIANTS → EXIT CHECKS → MATRIX CEILING → C4 VETO-AT-TARGET (entry gate) → ENTRY ARMING → SIZE → STOP**. Exits fire before entries. Invariants fire unconditionally (EMERGENCY, X4-PINK, VETO). X2 detects multi-bar M15 reversal (trend-dir → mid≥3 → counter-dir over N bars); the old 1→3-only condition is **SUPERSEDED**. X2b pullback-vs-top is a HYPOTHESIS discriminator — validates at GATE 4 two-sided (April 1 must EXIT, 03.17 must HOLD). C4 VETO-AT-TARGET blocks entry when price is at target (03.03: no BUY at D1 upper). E6 real-vs-fakeout is a HYPOTHESIS discriminator — validates at GATE 4 two-sided (real entries must FIRE, fakeouts must SKIP). E5 size flows compute → order, not dropped. Stop at entry (INVARIANT 1).
 
 **Validation flagging:**
-- **design-firm** (draw as decided): X1, X2 multi-bar detection, X4-PINK, E1 arming, E2 trigger, E3 boundary, E4 VETO-AT-TARGET, E5 size, exit-before-entry order, B3 block
+- **design-firm** (draw as decided): X1, X2 multi-bar detection, X4-PINK, C1 arming, C2 trigger, C3 boundary, C4 VETO-AT-TARGET, E5 size, exit-before-entry order, S3 block
 - **HYPOTHESIS**: X2b discriminator + inputs, E6 discriminator + inputs — both GATE 4 two-sided
 - **BLOCKED**: X2c reversal routing [inert until Phase 3]
 
@@ -1268,21 +1268,21 @@ Three implementation gaps prevented the exit:
 (b) Zigzag qualification required the H4 container to crack, which didn't happen until after the crash — the pullback-vs-top tension, motivates **REQ-X2b** (pullback-vs-top HYPOTHESIS discriminator). **X2b consumes PredictNext's `next_scenario`/`reversal_flag` — the discrimination lives in Part 4, not Part 5.** Phase-order consequence: Phase 3 (PredictNext + NextScenario) must precede the Phase 4 X2b exit logic, because X2b consumes the prediction.
 (c) Reversal routing inert — PredictNext stubbed until Phase 3 (**X2c**, BLOCKED).
 
-**What worked:** B3 H4-OPPOSE correctly blocked a counter-H4 short — no wrong short was opened. The design is correct; the implementation has gaps.
+**What worked:** S3 H4-OPPOSE correctly blocked a counter-H4 short — no wrong short was opened. The design is correct; the implementation has gaps.
 
 This is OLD scaffold behavior — the 03.03 failure mode reproduced. DecideAction was not yet built when this chart was captured; the fix is designed in §5.2 (REQ-X2a/X2b), to be built in Phase 4, and validated at GATE 4 two-sided (April 1 must EXIT, 03.17 must HOLD). This chart documents the PROBLEM the redesign fixes, NOT correct strategy behavior.
 
 **April 1 use cases — what the chart shows (final investigation):**
 
 **UC1 — Circle 1: Pullback, held correctly.**
-- Part 3: A2, PH_3BI (zigzag). H4 flying (512, diffBBW=22).
+- Part 3: F2, PH_3BI (zigzag). H4 flying (512, diffBBW=22).
 - Part 4: PREDICT continuation BECAUSE H4+M30 flying, M15 never compressed (diffMid_Trend stayed 1.0). TARGET D1 BBmid. CONFIDENCE high. IMPACT → hold.
 - Part 5: HOLD. M15 never confirmed reversal (stayed 1.0), cascade didn't propagate → genuine pullback, correctly held.
 
 **UC2 — Circle 2: The top, but looked like pullback at the time.**
-- Part 3: A2, PH_1 (trend). H4 flying (512, diffBBW=19.5).
+- Part 3: F2, PH_1 (trend). H4 flying (512, diffBBW=19.5).
 - Part 4: PREDICT mostly-continuation BUT FLAG risk BECAUSE H4 still flying (+19 diffBBW) + price below D1-mid target (not reached). RISK: M15 compressed deep (to 5) but RECOVERED (5→1). CONFIDENCE medium. IMPACT → hold by prediction, watch M15.
-- Part 5: NO sell entry — M15 never hit 521+diffMid=2 (only reached 5 then recovered), target not reached, H4 flying (B3 blocks short). At most exit-long if X2b acted on the deep-M15 signal [HYPOTHESIS]. Correct action: HOLD (the un-clean case).
+- Part 5: NO sell entry — M15 never hit 521+diffMid=2 (only reached 5 then recovered), target not reached, H4 flying (S3 blocks short). At most exit-long if X2b acted on the deep-M15 signal [HYPOTHESIS]. Correct action: HOLD (the un-clean case).
 
 **UC3 — Sell entry: 04.02 ~04:30, M15 confirms down.**
 - Part 3: M15 confirmed down (BBW_stage 521, diffMid_Trend=2). Price reached D1 mid target.
@@ -1306,7 +1306,7 @@ This is OLD scaffold behavior — the 03.03 failure mode reproduced. DecideActio
 - **M15 521+diffMid=2 as fire condition:** Candidate, validate across dataset (false-fire in pullbacks?).
 - **X2a multi-bar:** Design, supersedes 1→3-only, Phase 3.
 - **X2b early exit (M15 deep compression):** HYPOTHESIS, validate across dataset.
-- **DO NOT reintroduce:** Scenario D (circle 1 = A2/PH_3BI, not D-tier), HTF-intact discriminator (falsified — H4 flying at both circles), "un-catchable" (superseded — M15-confirm + Part4-prediction distinguish circle 1 from circle 2).
+- **DO NOT reintroduce:** Scenario P (circle 1 = F2/PH_3BI, not D-tier), HTF-intact discriminator (falsified — H4 flying at both circles), "un-catchable" (superseded — M15-confirm + Part4-prediction distinguish circle 1 from circle 2).
 
 ### 5.2a M15 Trigger State Machine — sub-state transitions
 
@@ -1318,7 +1318,7 @@ This diagram defines the M15 sub-states precisely so "gradual reversal" and "wit
 - **COUNTER** (mid=2 or 521 counter-fly): M15 has committed to opposite direction
 
 **Transitions define both triggers:**
-- **WITH-H4 entry (REQ-E2, design-firm):** FLAT/FADING → UP in H4 direction = ENTRY trigger. The M15 flip to H4 direction fires entry.
+- **WITH-H4 entry (REQ-C2, design-firm):** FLAT/FADING → UP in H4 direction = ENTRY trigger. The M15 flip to H4 direction fires entry.
 - **AGAINST-H4 exit (REQ-X2a, design-firm):** UP → FADING → COUNTER over N bars = EXIT trigger. Fires at COUNTER state, NOT at first FADING bar (the 1→3-only condition is SUPERSEDED).
 
 ```mermaid
@@ -1347,7 +1347,7 @@ stateDiagram-v2
     end note
 
     note right of UP
-        E2 ENTRY fires on transition:
+        C2 ENTRY fires on transition:
         FLAT/FADING → UP in H4 direction
         = with-H4 flip entry.
         design-firm.
@@ -1358,11 +1358,11 @@ stateDiagram-v2
 ```
 
 **Key design decisions visible:**
-1. **Gradual reversal (X2a):** UP→FADING→COUNTER over N bars. Exit fires at COUNTER, not FADING. This is the fix for the old 1→3-only condition — a M15 wobble to mid=3 doesn't exit, only a committed counter-direction does.
-2. **With-H4 entry (E2):** FLAT/FADING→UP in H4 direction. The M15 flip aligns with H4 — entry fires.
-3. **Same machine, two traversals:** Entry and exit share the same state machine but traverse different paths. Entry = FADING→UP (with H4). Exit = UP→FADING→COUNTER (against H4).
+1. **Gradual reversal (X2a):** UP→FADINV→ROUNTER over N bars. Exit fires at COUNTER, not FADING. This is the fix for the old 1→3-only condition — a M15 wobble to mid=3 doesn't exit, only a committed counter-direction does.
+2. **With-H4 entry (C2):** FLAT/FADING→UP in H4 direction. The M15 flip aligns with H4 — entry fires.
+3. **Same machine, two traversals:** Entry and exit share the same state machine but traverse different paths. Entry = FADING→UP (with H4). Exit = UP→FADINV→ROUNTER (against H4).
 
-**Validation flagging:** State transitions (UP⇄FADING⇄COUNTER) and triggers (E2 entry, X2a exit) are **design-firm**. The X2b discriminator at the COUNTER state (pullback vs top) is **HYPOTHESIS** — designed in §5.2 activity diagram.
+**Validation flagging:** State transitions (UP⇄FADING⇄COUNTER) and triggers (C2 entry, X2a exit) are **design-firm**. The X2b discriminator at the COUNTER state (pullback vs top) is **HYPOTHESIS** — designed in §5.2 activity diagram.
 
 ### 5.3 Firing Matrix — Structure (the shape, not the cells)
 
@@ -1371,17 +1371,17 @@ The matrix defines which triggers are armed per (scenario, phase) row. Cell VALU
 ```mermaid
 flowchart LR
     subgraph MATRIX["FIRING MATRIX — structure only"]
-        Rows["ROWS: scenario × phase<br/>(e.g. A1/PH_1, B2/PH_3A, G3/PH_4)"]
-        C1["COL 1: armed triggers<br/>E1/E2/E3/E4/E5/E6"]
-        C2["COL 2: size ceiling<br/>(0.0–1.0, scenario-based)"]
-        C3["COL 3: target_tf<br/>(which TF band for X1)"]
+        Rows["ROWS: scenario × phase<br/>(e.g. F1/PH_1, S2/PH_3A, V3/PH_4)"]
+        R1["COL 1: armed triggers<br/>C1/C2/C3/C4/E5/E6"]
+        R2["COL 2: size ceiling<br/>(0.0–1.0, scenario-based)"]
+        R3["COL 3: target_tf<br/>(which TF band for X1)"]
         C4["COL 4: allowed entry conditions<br/>(which E-conditions fire)"]
         C5["COL 5: entry mode<br/>(entry / exit-only / blocked)"]
     end
 
-    Rows --> C1
-    Rows --> C2
-    Rows --> C3
+    Rows --> R1
+    Rows --> R2
+    Rows --> R3
     Rows --> C4
     Rows --> C5
 ```
@@ -1392,18 +1392,18 @@ flowchart LR
 - Ceiling > 0.0 → entries possible if triggers armed
 - PH_4 rows → exit-only (X4-PINK or WAIT, no entries)
 - PH_5 rows → E5/E6 only (expansion entries)
-- G-tier rows (G1-G4) → arm cautiously; pivot_substate=2 → exit-only
+- V-tier rows (V1-V4) → arm cautiously; pivot_substate=2 → exit-only
 - C-tier rows → OOS-UNVALIDATED — cells TBD — no OOS episodes to validate
-- E4 VETO-AT-TARGET blocks entry per row when price at target (03.03: no BUY at D1 upper)
+- C4 VETO-AT-TARGET blocks entry per row when price at target (03.03: no BUY at D1 upper)
 - E6 real-vs-fakeout discriminator filters armed entries [HYPOTHESIS — GATE 4 two-sided]
 - X2b pullback-vs-top discriminator in exit path [HYPOTHESIS — GATE 4 two-sided: Apr 1/03.17]
 - Cell values (which specific triggers fire per row) = TBD — GATE 4
 
-**Existing code status:** The MQL5 DecideAction (lines 731-828 of TofyTrade5.mqh) is implemented with the control flow matching the activity diagram: invariants (b2_pink, VETO), exits (X1, X2 qualified), ceiling check, E3 in zigzag, flip-path E1/E2/E5. The replay_harness.py `decide_action()` mirrors this (lines 706-847). Matrix ceiling values are hardcoded from backtest_chart_analysis.md Part 5 — not yet GATE-4-validated.
+**Existing code status:** The MQL5 DecideAction (lines 731-828 of TofyTrade5.mqh) is implemented with the control flow matching the activity diagram: invariants (b2_pink, VETO), exits (X1, X2 qualified), ceiling check, C3 in zigzag, flip-path C1/C2/E5. The replay_harness.py `decide_action()` mirrors this (lines 706-847). Matrix ceiling values are hardcoded from backtest_chart_analysis.md Part 5 — not yet GATE-4-validated.
 
 **Staleness report:**
-- TofyTrade5 DecideAction — **CURRENT**: implements the three-layer design with firing matrix. Condition IDs (E1-E6, X1-X4, VETO, WAIT) match the v31 signal taxonomy. No old G0b/G4x gate names in control flow — those are in the gate decoder table only (for log parsing).
-- TofyTrade4 gate-based model — **STALE**: fire-unless-blocked model replaced by nothing-fires-unless-armed. Old gate names (G0b-TOUCH → E3, G8-BNDTGT → X1, G5-FADE → X2, G0b-PINK → X4) documented in gate decoder table.
+- TofyTrade5 DecideAction — **CURRENT**: implements the three-layer design with firing matrix. Condition IDs (C1-E6, X1-X4, VETO, WAIT) match the v31 signal taxonomy. No old G0b/G4x gate names in control flow — those are in the gate decoder table only (for log parsing).
+- TofyTrade4 gate-based model — **STALE**: fire-unless-blocked model replaced by nothing-fires-unless-armed. Old gate names (G0b-TOUCH → C3, G8-BNDTGT → X1, G5-FADE → X2, G0b-PINK → X4) documented in gate decoder table.
 - Matrix ceiling values — **UNVALIDATED**: hardcoded from doc rules, no GATE 4 run against benchmark.
 
 ### 5.4 GATE 4 — what validates this layer

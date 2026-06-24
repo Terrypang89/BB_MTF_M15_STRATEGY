@@ -1,3 +1,5 @@
+> **NOTE:** This file references the PRE-REMAP scenario letter scheme (A=fly, B=shallow, C=reversal, D=rest, E=compression, F=breakout, G=pivot). See backtest_chart_analysis.md for the new scheme (F=fly, S=shallow, R=reversal, P=rest, C=compression, B=breakout, V=pivot).
+
 # EDIT_INSTRUCTIONS.md
 # Target file: references/backtest_chart_analysis.md
 # Branch: tofy5

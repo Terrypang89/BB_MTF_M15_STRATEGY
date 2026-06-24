@@ -11,7 +11,7 @@
 
 ## Recurring Lessons
 - **STORE-vs-RECOMPUTE**: MQL5 stores values on structs; Python recomputes. NOT auto-equivalent — verify bar-for-bar. (Hit on prev_h1_sqz, b1_block/b2_pink, veto_priceloc.)
-- **VALIDATED ≠ committed**. G-reversal = HYPOTHESIS (0 OOS episodes); flag OOS-UNVALIDATED in code/doc/chart. Don't tune rules to fit test data.
+- **VALIDATED ≠ committed**. V-reversal = HYPOTHESIS (0 OOS episodes); flag OOS-UNVALIDATED in code/doc/chart. Don't tune rules to fit test data.
 - **GATES**: GATE 2 = port faithfulness (100% expected). GATE 3 = prediction hit-rate (NOT 100% — forecasting; report real accuracy, don't tune). GATE 4 = firing benchmark.
 
 ## Current Blocker

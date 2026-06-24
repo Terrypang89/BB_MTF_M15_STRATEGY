@@ -67,24 +67,24 @@ void SigEvt(string evt, string kvs)
 // ENUMS & STATE STRUCTS
 //═══════════════════════════════════════════════════════════════════
 enum SCENARIO { SC_NONE=0,
-   SC_A1, SC_A2, SC_A3,                       // Tier 1            // Part 3
-   SC_B1, SC_B2, SC_B3,                       // Tier 2 shallow
-   SC_E1, SC_E2, SC_E3L, SC_E4,               // Tier 2 deep (E3L=loading)
-   SC_G1, SC_G2, SC_G3, SC_G4,                // Tier 2 direction pivot
-   SC_D1s, SC_D2s, SC_D3s,                    // Tier 3 rest
-   SC_F1, SC_F2, SC_F3,                       // Tier 3 release
-   SC_C1, SC_C2, SC_C3 };                     // Tier 3 reversal
+   SC_F1, SC_F2, SC_F3,           // Tier 1            // Part 3
+   SC_S1, SC_S2, SC_S3,           // Tier 2 shallow
+   SC_C1, SC_C2, SC_C3L, SC_C4,               // Tier 2 deep (C3L=loading)
+   SC_V1, SC_V2, SC_V3, SC_V4,                // Tier 2 direction pivot
+   SC_P1s, SC_P2s, SC_P3s,                    // Tier 3 rest
+   SC_B1, SC_B2, SC_B3,                       // Tier 3 release
+   SC_R1, SC_R2, SC_R3 };                     // Tier 3 reversal
 
 enum PHASE { PH_NONE=0, PH_1, PH_2, PH_3A, PH_3B_INTO, PH_3B_OUT, PH_4, PH_5, PH_6 };
 
 string ScenarioName(SCENARIO s) {
-   switch(s){ case SC_A1:return"A1";case SC_A2:return"A2";case SC_A3:return"A3";
+   switch(s){ case SC_F1:return"F1";case SC_F2:return"F2";case SC_F3:return"F3";
+   case SC_S1:return"S1";case SC_S2:return"S2";case SC_S3:return"S3";
+   case SC_C1:return"C1";case SC_C2:return"C2";case SC_C3L:return"C3";case SC_C4:return"C4";
+   case SC_V1:return"V1";case SC_V2:return"V2";case SC_V3:return"V3";case SC_V4:return"V4";
+   case SC_P1s:return"P1";case SC_P2s:return"P2";case SC_P3s:return"P3";
    case SC_B1:return"B1";case SC_B2:return"B2";case SC_B3:return"B3";
-   case SC_E1:return"E1";case SC_E2:return"E2";case SC_E3L:return"E3";case SC_E4:return"E4";
-   case SC_G1:return"G1";case SC_G2:return"G2";case SC_G3:return"G3";case SC_G4:return"G4";
-   case SC_D1s:return"D1";case SC_D2s:return"D2";case SC_D3s:return"D3";
-   case SC_F1:return"F1";case SC_F2:return"F2";case SC_F3:return"F3";
-   case SC_C1:return"C1";case SC_C2:return"C2";case SC_C3:return"C3";
+   case SC_R1:return"R1";case SC_R2:return"R2";case SC_R3:return"R3";
    default:return"NA";} }
 string PhaseName(PHASE p) {
    switch(p){ case PH_1:return"1";case PH_2:return"2";case PH_3A:return"3A";
@@ -105,7 +105,7 @@ struct ScenarioState {
    int      container_dir;      // its diffMid (1/2), 0 if none
    double   container_diffbbw;  // health: >0 room, <=0 aging
    int      priceloc;           // vs container: -2 below_lower -1 at_lower 0 inside +1 at_upper +2 above_upper
-   int      pivot_substate;     // G-tier display: 0=N/A 1=PIVOT-PENDING(m5 not broken) 2=G-REVERSAL(m5 broken)
+   int      pivot_substate;     // V-tier display: 0=N/A 1=PIVOT-PENDING(m5 not broken) 2=V-REVERSAL(m5 broken)
    string   info;
 };
 
@@ -164,12 +164,12 @@ double GetATRSLStop(ATRSLBUF_struct &ATRSL1BUF, int direction) {  // kept verbat
 
 //── Tier colors for scenario labels (display only, non-chart colors)
 // 4 colors × 4 groups — label text disambiguates within group ─
-#define TIER_CLR_A        clrTurquoise   // Trend group
-#define TIER_CLR_B        clrDeepSkyBlue // Compression group
-#define TIER_CLR_E        clrDeepSkyBlue // Compression group
-#define TIER_CLR_G        clrWhite       // Pivot/waiting group (has "?" suffix)
-#define TIER_CLR_F        clrDeepPink    // Expansion group
-#define TIER_CLR_C        clrDeepPink    // Expansion group
+#define TIER_CLR_F        clrTurquoise   // Trend group
+#define TIER_CLR_S        clrDeepSkyBlue // Compression group
+#define TIER_CLR_C        clrDeepSkyBlue // Compression group
+#define TIER_CLR_V        clrWhite       // Pivot/waiting group (has "?" suffix)
+#define TIER_CLR_B        clrDeepPink    // Expansion group
+#define TIER_CLR_R        clrDeepPink    // Expansion group
 #define TIER_CLR_PIVOT    clrWhite       // Pivot/waiting group
 
 void DrawGateLabel(string tag, double price, BB_MTF_Data_struct &BB_datas[],
@@ -196,13 +196,13 @@ bool IsShrink(int stg) { return (stg==513||stg==523); }
 //── Scenario label helpers (display only — read IdentifyScenario output) ──
 color ScenarioLabelColor(SCENARIO sc) {
    switch(sc){
-      case SC_A1:case SC_A2:case SC_A3: return TIER_CLR_A;
-      case SC_B1:case SC_B2:case SC_B3: return TIER_CLR_B;
-      case SC_E1:case SC_E2:case SC_E3L:case SC_E4: return TIER_CLR_E;
-      case SC_G1:case SC_G2:case SC_G3:case SC_G4: return TIER_CLR_G;
       case SC_F1:case SC_F2:case SC_F3: return TIER_CLR_F;
-      case SC_C1:case SC_C2:case SC_C3: return TIER_CLR_C;
-      case SC_D1s:case SC_D2s:case SC_D3s: return TIER_CLR_B;
+      case SC_S1:case SC_S2:case SC_S3: return TIER_CLR_S;
+      case SC_C1:case SC_C2:case SC_C3L:case SC_C4: return TIER_CLR_C;
+      case SC_V1:case SC_V2:case SC_V3:case SC_V4: return TIER_CLR_V;
+      case SC_B1:case SC_B2:case SC_B3: return TIER_CLR_B;
+      case SC_R1:case SC_R2:case SC_R3: return TIER_CLR_R;
+      case SC_P1s:case SC_P2s:case SC_P3s: return TIER_CLR_S;
       default: return clrWhite; } }
 
 //═══════════════════════════════════════════════════════════════════
@@ -307,7 +307,7 @@ ScenarioState IdentifyScenario(BB_MTF_Data_struct &bb[], double &close_prices[])
    s.cas_shrinkTF=-1;  s.cas_sqzCount=0;
    s.b1_block=false;   s.b2_pink=false;
    s.container_tf=-1;  s.container_dir=0; s.container_diffbbw=0; s.priceloc=0;
-   s.pivot_substate=0; // 0=N/A 1=PIVOT-PENDING 2=G-REVERSAL
+   s.pivot_substate=0; // 0=N/A 1=PIVOT-PENDING 2=V-REVERSAL
 
    // ── Capture prior-bar H1-SQZ for Decision 5/6 (current-vs-prior) ───
    bool h1sqz_prior = s_prevH1Sqz;                    // capture prior before update
@@ -378,7 +378,7 @@ ScenarioState IdentifyScenario(BB_MTF_Data_struct &bb[], double &close_prices[])
    bool d1_fly    = IsFly(d1stg) && (d1mid==1||d1mid==2||d1mid==4||d1mid==5);
 
    // ── Step 3: Early F-tier — H4 exiting compression ─────────────────
-   // Fires before G/E4 — H4 may still be in SQZ/shrink stage but bands
+   // Fires before V/C4 — H4 may still be in SQZ/shrink stage but bands
    // are expanding. OOS-validated: 7/7 episodes in Jan-Apr OOS.
    if(s_dbbwH4_hist_n >= 2) {
       double recent_dbbw = s_dbbwH4_hist[0];
@@ -388,24 +388,24 @@ ScenarioState IdentifyScenario(BB_MTF_Data_struct &bb[], double &close_prices[])
          if(d1dir=="bullish" && h4_bull) {
             // F3 if 3+ consecutive bars positive diffBBW
             if(g_dbbw_n >= 3 && g_dbbw_ring[0]>0 && g_dbbw_ring[1]>0 && g_dbbw_ring[2]>0) {
-               s.scenario = SC_F3; s.info = "F3 — HTF confirmed expansion";
+               s.scenario = SC_B3; s.info = "B3 — HTF confirmed expansion";
                return s;
             }
             // F2 if M30 confirms
             if(bb[2].BBUpDn_state[LA] == 1) {
-               s.scenario = SC_F2; s.info = "F2 — MTF confirmed expansion";
+               s.scenario = SC_B2; s.info = "B2 — MTF confirmed expansion";
                return s;
             }
             // F1 — LTF expansion only
-            s.scenario = SC_F1; s.info = "F1 — LTF expansion";
+            s.scenario = SC_B1; s.info = "B1 — LTF expansion";
             return s;
          }
       }
    }
 
-   // ── Step 4: H4 SQZ → G-tier (Direction pivot) ─────────────────────
+   // ── Step 4: H4 SQZ → V-tier (Direction pivot) ─────────────────────
    // OOS-UNVALIDATED: G-reversal — fired 0 times on Jan-Apr OOS
-   // (7 F, 0 G episodes). Provisional until a reversal-episode dataset
+   // (7 B, 0 V episodes). Provisional until a reversal-episode dataset
    // validates it. Do not trust the G-resolution branch live.
    if(h4_sqz) {
       // OOS-UNVALIDATED: G-reversal/discriminator
@@ -413,32 +413,32 @@ ScenarioState IdentifyScenario(BB_MTF_Data_struct &bb[], double &close_prices[])
       bool m5_ud_break = (m5db > 0.3);                                // M5 expansion proxy (Python: > 0.3, abs formula)
       if(!m5_ud_break) {
          if(d1_fly && d1dir=="bearish" && (h4mid==2||h4mid==4))
-            s.scenario = SC_G1;                                       // OOS-UNVALIDATED
+            s.scenario = SC_V1;                                       // OOS-UNVALIDATED
          else if(d1_fly)
-            s.scenario = SC_G2;                                       // OOS-UNVALIDATED
+            s.scenario = SC_V2;                                       // OOS-UNVALIDATED
          else
-            s.scenario = SC_G3;                                       // OOS-UNVALIDATED
+            s.scenario = SC_V3;                                       // OOS-UNVALIDATED
       } else {
          int m5mid = bb[0].BB_diffMid_Trend[LA];
          bool sameAsD1 = ((d1mid==1||d1mid==5) && (m5mid==1||m5mid==5)) ||
                          ((d1mid==2||d1mid==4) && (m5mid==2||m5mid==4));
          if(d1_fly) {
-            s.scenario = sameAsD1 ? SC_G1 : SC_G2;                    // OOS-UNVALIDATED
+            s.scenario = sameAsD1 ? SC_V1 : SC_V2;                    // OOS-UNVALIDATED
          } else
-            s.scenario = SC_G3;                                       // OOS-UNVALIDATED
+            s.scenario = SC_V3;                                       // OOS-UNVALIDATED
       }
-      if(s.phase==PH_6) s.scenario = SC_G4;                           // OOS-UNVALIDATED, extended whipsaw
-      // G-tier sub-state for display (one-place computation — label reads this)
-      s.pivot_substate = m5_ud_break ? 2 : 1;                         // 1=PIVOT-PENDING 2=G-REVERSAL
+      if(s.phase==PH_6) s.scenario = SC_V4;                           // OOS-UNVALIDATED, extended whipsaw
+      // V-tier sub-state for display (one-place computation — label reads this)
+      s.pivot_substate = m5_ud_break ? 2 : 1;                         // 1=PIVOT-PENDING 2=V-REVERSAL
       // Update prev H1-SQZ for next call
       s.cas_shrinkTF = s.cas_shrinkTF; s.cas_sqzCount = s.cas_sqzCount;
       return s;
    }
 
-   // ── Step 5: H4 shrink → E4 (after G-tier, since SQZ takes priority) ──
+   // ── Step 5: H4 shrink → C4 (after V-tier, since SQZ takes priority) ──
    if(h4_shrink) {
-      s.scenario = SC_E4;
-      s.info = "E4 — HTF compressing";
+      s.scenario = SC_C4;
+      s.info = "C4 — HTF compressing";
       return s;
    }
 
@@ -447,33 +447,33 @@ ScenarioState IdentifyScenario(BB_MTF_Data_struct &bb[], double &close_prices[])
    bool confirmed_compression = (s.cas_sqzCount >= 1 ||
                                 (ltf_shrinkTF >= 1 && dbbw_h4 < 30));
    if(confirmed_compression) {
-      // ── Decision 5: H1-SQZ prior-bar → E/B-tier ────────────────────
+      // ── Decision 5: H1-SQZ prior-bar → C/S-tier ────────────────────
       bool h1_sqz_now = IsSQZ(bb[3].BBW_stage[LA]);
 
       // Established (2+ bars H1-SQZ) → E-tier
       if(h1_sqz_now && h1sqz_prior) {
          if(m15sqz && m30sqz) {
-            s.scenario = SC_E2; s.info = "E2 — H1-SQZ established, M15+M30 SQZ";
+            s.scenario = SC_C2; s.info = "C2 — H1-SQZ established, M15+M30 SQZ";
             return s;
          }
-         s.scenario = SC_E1; s.info = "E1 — H1-SQZ established";
+         s.scenario = SC_C1; s.info = "C1 — H1-SQZ established";
          return s;
       }
 
       // ── Decision 6: H1-SQZ recovery → E1 ───────────────────────────
       // H1 just exited SQZ but prior bar was SQZ, compression persists
       if(h1sqz_prior && !h1_sqz_now && ltf_shrinkTF >= 1) {
-         s.scenario = SC_E1; s.info = "E1 — H1-SQZ recovery, compression persists";
+         s.scenario = SC_C1; s.info = "C1 — H1-SQZ recovery, compression persists";
          return s;
       }
 
       // Onset — H1 first-bar SQZ → B3
       if(h1_sqz_now) {
-         s.scenario = SC_B3; s.info = "B3 — H1-SQZ onset";
+         s.scenario = SC_S3; s.info = "S3 — H1-SQZ onset";
          return s;
       }
 
-      // ── Decision 2: transient mid-TF SQZ, H4 flying → A-tier ───────
+      // ── Decision 2: transient mid-TF SQZ, H4 flying → F-tier ───────
       if(h4_fly && dbbw_h4 > 5 && ltf_shrinkTF == -1 && !h1sqz_prior) {
          int m5stg = bb[0].BBW_stage[LA];
          if(s.cas_sqzCount == 1 && !m15sqz && !IsSQZ(m5stg)) {
@@ -482,26 +482,26 @@ ScenarioState IdentifyScenario(BB_MTF_Data_struct &bb[], double &close_prices[])
                bool h4_up = (h4_dir == 1);
                bool d1_up = (d1dir == "bullish");
                if(h4_up == d1_up) {
-                  s.scenario = SC_A1; s.info = "A1 — mid-TF SQZ, M15+M5 flying, D1 aligned";
+                  s.scenario = SC_F1; s.info = "F1 — mid-TF SQZ, M15+M5 flying, D1 aligned";
                   return s;
                }
             }
-            s.scenario = SC_A2; s.info = "A2 — mid-TF SQZ, M15+M5 flying, D1 not aligned";
+            s.scenario = SC_F2; s.info = "F2 — mid-TF SQZ, M15+M5 flying, D1 not aligned";
             return s;
          }
       }
 
-      // ── E-tier: cas_sqzCount>=2 ────────────────────────────────────
+      // ── C-tier: cas_sqzCount>=2 ────────────────────────────────────
       if(s.cas_sqzCount >= 2) {
          if(s.b2_pink) {
-            s.scenario = SC_E2; s.info = "E2 — M15+M30 both SQZ";
+            s.scenario = SC_C2; s.info = "C2 — M15+M30 both SQZ";
             return s;
          }
-         s.scenario = SC_E1; s.info = "E1 — LTF SQZ";
+         s.scenario = SC_C1; s.info = "C1 — LTF SQZ";
          return s;
       }
 
-      // ── B-tier: ltf_shrinkTF>=1, keyed by max(shrink, sqz) depth ───
+      // ── S-tier: ltf_shrinkTF>=1, keyed by max(shrink, sqz) depth ───
       if(ltf_shrinkTF >= 1) {
          int deepest_sqz_TF = -1;
          for(int tf=0; tf<=3; tf++)
@@ -509,36 +509,36 @@ ScenarioState IdentifyScenario(BB_MTF_Data_struct &bb[], double &close_prices[])
          int max_depth = (ltf_shrinkTF > deepest_sqz_TF) ? ltf_shrinkTF : deepest_sqz_TF;
 
          // B-tier decoder lookup table
-         if(max_depth==1 && s.cas_sqzCount<=1) { s.scenario=SC_B1; return s; }
-         if(max_depth==2 && s.cas_sqzCount<=1) { s.scenario=SC_B2; return s; }
-         if(max_depth==3 && s.cas_sqzCount<=1) { s.scenario=SC_B3; return s; }
-         s.scenario = SC_B3; s.info = "B3 — LTF shrink";
+         if(max_depth==1 && s.cas_sqzCount<=1) { s.scenario=SC_S1; return s; }
+         if(max_depth==2 && s.cas_sqzCount<=1) { s.scenario=SC_S2; return s; }
+         if(max_depth==3 && s.cas_sqzCount<=1) { s.scenario=SC_S3; return s; }
+         s.scenario = SC_S3; s.info = "S3 — LTF shrink";
          return s;
       }
 
       // ── A2: SQZ without LTF shrink (safety net) ────────────────────
-      s.scenario = SC_A2; s.info = "A2 — SQZ without LTF shrink";
+      s.scenario = SC_F2; s.info = "F2 — SQZ without LTF shrink";
       return s;
    }
 
-   // ── Step 7: H4 flying → A-tier (no-compression cases only) ────────
+   // ── Step 7: H4 flying → F-tier (no-compression cases only) ────────
    if(h4_fly) {
       // A1: D1 aligned
       if(d1stg >= 500 && d1dir != "neutral") {
          bool h4_up = (h4_dir == 1);
          bool d1_up = (d1dir == "bullish");
          if(h4_up == d1_up) {
-            s.scenario = SC_A1; s.info = "A1 — H4+D1 fly aligned";
+            s.scenario = SC_F1; s.info = "F1 — H4+D1 fly aligned";
             return s;
          }
       }
-      // A2: D1 not aligned
-      s.scenario = SC_A2; s.info = "A2 — H4 fly, D1 not aligned";
+      // F2: D1 not aligned
+      s.scenario = SC_F2; s.info = "F2 — H4 fly, D1 not aligned";
       return s;
    }
 
    // ── Step 8: Default fallback ─────────────────────────────────────
-   s.scenario = SC_A2; s.info = "default — conservative";
+   s.scenario = SC_F2; s.info = "default — conservative";
 
    return s;
 }
@@ -574,11 +574,11 @@ int TF_DirectionScore(int stage, int mid, int prev_stage, int prev_mid)   // kep
 
 // ── Sub-function stubs (TBD-GATE-3 — no rule values) ─────────────────
 
-// ScenarioGate: PH_4/G4/E2 → suppress confidence + direction
+// ScenarioGate: PH_4/V4/C2 → suppress confidence + direction
 // Consumes ScenarioState only (scenario, phase, b2_pink)
 bool ScenarioGate(ScenarioState &s)   // TBD-GATE-3: suppression rules
 {
-   // TBD-GATE-3: PH_4 / G4 / E2 suppression — rules from Part 4 Rule 5
+   // TBD-GATE-3: PH_4 / V4 / C2 suppression — rules from Part 4 Rule 5
    // Current stub: always suppress (safe default)
    return true;
 }
@@ -593,12 +593,12 @@ int DirectionScore(BB_MTF_Data_struct &bb[])   // TBD-GATE-3: weights, threshold
    return 0;
 }
 
-// GTierResolve: D1/W1 bias → G→F vs G→C prediction
+// GTierResolve: D1/W1 bias → V→B vs V→R prediction
 // Consumes ScenarioState + raw bb[] (pivot_substate + D1/W1 per-TF data)
 bool GTierResolve(ScenarioState &s, BB_MTF_Data_struct &bb[])   // OOS-UNVALIDATED
 {
-   // OOS-UNVALIDATED: 0 of 7 OOS H4-SQZ episodes resolved as reversal (G→C)
-   // TBD-GATE-3: D1/W1 direction bias → continuation (F) vs reversal (C)
+   // OOS-UNVALIDATED: 0 of 7 OOS H4-SQZ episodes resolved as reversal (V→R)
+   // TBD-GATE-3: D1/W1 direction bias → continuation (B) vs reversal (R)
    // Current stub: no reversal (safe default)
    return false;
 }
@@ -656,15 +656,15 @@ Prediction PredictNext(ScenarioState &s, BB_MTF_Data_struct &bb[])
 double MatrixCeiling(SCENARIO sc, PHASE ph)
 {
    switch(sc){
-      case SC_A1: return 1.00;  case SC_A2: return 0.75;  case SC_A3: return 0.0;
-      case SC_B1: return 0.75;  case SC_B2: return 0.50;  case SC_B3: return 0.25;
-      case SC_E1: return 0.0;   case SC_E2: return 0.0;
-      case SC_E3L:return 0.50;  case SC_E4: return 0.0;
-      case SC_G1: return 0.75;  case SC_G2: return 0.25;
-      case SC_G3: return 0.0;   case SC_G4: return 0.25;          // PH_6 legs
-      case SC_D1s:return 0.0;   case SC_D2s:return 0.75;  case SC_D3s:return 1.00;
-      case SC_F1: return 0.0;   case SC_F2: return 0.75;  case SC_F3: return 1.00;
-      case SC_C1: return 0.25;  case SC_C2: return 1.00;  case SC_C3: return 0.50;
+      case SC_F1: return 1.00;  case SC_F2: return 0.75;  case SC_F3: return 0.0;
+      case SC_S1: return 0.75;  case SC_S2: return 0.50;  case SC_S3: return 0.25;
+      case SC_C1: return 0.0;   case SC_C2: return 0.0;
+      case SC_C3L:return 0.50;  case SC_C4: return 0.0;
+      case SC_V1: return 0.75;  case SC_V2: return 0.25;
+      case SC_V3: return 0.0;   case SC_V4: return 0.25;          // PH_6 legs
+      case SC_P1s:return 0.0;   case SC_P2s:return 0.75;  case SC_P3s:return 1.00;
+      case SC_B1: return 0.0;   case SC_B2: return 0.75;  case SC_B3: return 1.00;
+      case SC_R1: return 0.25;  case SC_R2: return 1.00;  case SC_R3: return 0.50;
       default:    return 0.0;
    }
 }
@@ -782,7 +782,7 @@ TradeAction DecideAction(ScenarioState &s, Prediction &p, BB_MTF_Data_struct &bb
 
    // ASSERTIONS (gate-rewrite: log+suppress, never control flow)
    if(s.b2_pink)        { SigEvt("ASSERT",KV("rule","B2")+KV("sc",ScenarioName(s.scenario))); return a; }
-   if(s.cas_sqzCount>=3 && s.scenario!=SC_E3L)
+   if(s.cas_sqzCount>=3 && s.scenario!=SC_C3L)
                         { SigEvt("ASSERT",KV("rule","B4")+KV("sc",ScenarioName(s.scenario))); return a; }
 
    bool zigzagPh = (s.phase==PH_2||s.phase==PH_3A||s.phase==PH_3B_INTO||s.phase==PH_3B_OUT||s.phase==PH_6);
@@ -809,9 +809,9 @@ TradeAction DecideAction(ScenarioState &s, Prediction &p, BB_MTF_Data_struct &bb
    if(flipArmed && !s.b1_block) {                            // B1: flips need a flip — M15 mid<3 by definition
       int q=0; int dir = DetectFlip(bb, 1, q);
       if(dir!=0 && dir==p.direction && p.confidence>=45) {
-         string id = (s.scenario==SC_F3||s.scenario==SC_C2) ? "E6" :
+         string id = (s.scenario==SC_B3||s.scenario==SC_R2) ? "E6" :
                      (s.phase==PH_5) ? "E5" :
-                     (s.scenario==SC_A2) ? "E2" : "E1";
+                     (s.scenario==SC_F2) ? "E2" : "E1";
          a.act=(dir==1)?1:2; a.condition_id=id;
          a.size_mult = MathMin(MathMin(ceiling, ConfSize(p.confidence)), DecoderSize(s));               // V5
          a.stop_price= GetATRSLStop(ATRSL1BUF, dir);
@@ -820,7 +820,7 @@ TradeAction DecideAction(ScenarioState &s, Prediction &p, BB_MTF_Data_struct &bb
       }
    }
    // E4-ARM informational (E3 loading state)                          // Part 5 E4
-   if(s.scenario==SC_E3L) {
+   if(s.scenario==SC_C3L) {
       int m30mid=bb[2].BB_diffMid_Trend[LA];
       SigEvt("E4ARM", KV("dir",(m30mid==1||m30mid==5)?"BUY":(m30mid==2||m30mid==4)?"SELL":"NEUTRAL"));
    }
@@ -960,12 +960,12 @@ void Trade_Strategy(
 
    //── Scenario change detection (display-only labels) ─────────────
    // PIVOT-PENDING tracker: during H4 SQZ, show PIVOT-PENDING until
-   // the scenario exits G-tier (resolved to F or C).
-   // G-reversal (G? with M5 break) shown distinctly in red.
+   // the scenario exits V-tier (resolved to B or R).
+   // V-reversal (V? with M5 break) shown distinctly in red.
    // Reads s.pivot_substate — computed ONCE inside IdentifyScenario.
    {
-      bool gTier = (s.scenario==SC_G1||s.scenario==SC_G2||
-                    s.scenario==SC_G3||s.scenario==SC_G4);
+      bool gTier = (s.scenario==SC_V1||s.scenario==SC_V2||
+                    s.scenario==SC_V3||s.scenario==SC_V4);
       bool pivotNow = (s.pivot_substate == 1); // read from struct, no recompute
       bool gReversal = (s.pivot_substate == 2); // read from struct, no recompute
 
@@ -988,21 +988,21 @@ void Trade_Strategy(
          // PIVOT-PENDING cleared — resolve to G? or new scenario
          s_pivotPending = false;
          if(gTier && gReversal) {
-            // G-reversal branch — OOS-UNVALIDATED, shown distinctly
+            // V-reversal branch — OOS-UNVALIDATED, shown distinctly
             SigEvt("SC", KV("sc",ScenarioName(s.scenario)+"?")+KV("ph",PhaseName(s.phase))
                         +KVi("pivot",s.pivot_substate)+KVi("casShr",s.cas_shrinkTF)+KVi("casSqz",s.cas_sqzCount)
                         +KV("cont",TFName(s.container_tf))+KVi("loc",s.priceloc)
                         +KVd("dbbwH4",BB_datas[4].BB_diffBBW[LA],1));
             DrawGateLabel(ScenarioName(s.scenario)+"?  ph:"+PhaseName(s.phase),
-                          BB_datas[2].BB_Mid[LA], BB_datas, TIER_CLR_G, 2);
+                          BB_datas[2].BB_Mid[LA], BB_datas, TIER_CLR_V, 2);
             if(LOG_VERBOSE)
                DrawGateLabel("casShr:"+IntegerToString(s.cas_shrinkTF)
                              +" casSqz:"+IntegerToString(s.cas_sqzCount)
                              +" cont:"+TFName(s.container_tf)
                              +" dbbwH4:"+DoubleToString(BB_datas[4].BB_diffBBW[LA],1),
-                             BB_datas[2].BB_Mid[LA]-20, BB_datas, TIER_CLR_G, 2);
+                             BB_datas[2].BB_Mid[LA]-20, BB_datas, TIER_CLR_V, 2);
          } else if(s.scenario!=s_prevSc || s.phase!=s_prevPh) {
-            // Resolved to non-G scenario (F/C/etc) — draw new label
+            // Resolved to non-V scenario (B/R/etc) — draw new label
             SigEvt("SC", KV("sc",ScenarioName(s.scenario))+KV("ph",PhaseName(s.phase))
                         +KVi("pivot",s.pivot_substate)+KVi("casShr",s.cas_shrinkTF)+KVi("casSqz",s.cas_sqzCount)
                         +KV("cont",TFName(s.container_tf))+KVi("loc",s.priceloc)

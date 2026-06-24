@@ -6,7 +6,7 @@ Most blocks are `[TO BE FILLED]` skeletons — work in progress.
 
 ---
 
-## Scenario A
+## Scenario F
 
 #### Image Analysis — backtested_EA_fly_scenario.jpg
 
@@ -56,18 +56,18 @@ Most blocks are `[TO BE FILLED]` skeletons — work in progress.
 
 ##### Step 6: Concluded Analysis
 
-Scenario A — Normal Fly. All TFs from W1 through M5 in fly 511/512 with mid=1. Full macro tailwind, no compression. Price target is H4 outer band then D1 outer band. Key observable: any TF entering shrink (513) signals D1 compression beginning → transition to Scenario B.
+Scenario F — Normal Fly. All TFs from W1 through M5 in fly 511/512 with mid=1. Full macro tailwind, no compression. Price target is H4 outer band then D1 outer band. Key observable: any TF entering shrink (513) signals D1 compression beginning → transition to Scenario S.
 
 ##### Step 7: Identification Flowchart
 
 ```mermaid
 flowchart TD
-    A["Current state: All TFs fly 511/512 mid=1 — Scenario A"]
+    A["Current state: All TFs fly 511/512 mid=1 — Scenario F"]
     A --> B{"Any TF entering shrink 513?"}
     B -->|Yes| C["Next scenario: B (Fly → Shrink) — D1 compression begins"]
     B -->|No| D{"Any TF entering SQZ 400-499?"}
     D -->|Yes| E["Next scenario: C/E (Cascade/Compression)"]
-    D -->|No| F["Remains Scenario A — hold"]
+    D -->|No| F["Remains Scenario F — hold"]
 ```
 
 **Prediction rules:**
@@ -77,7 +77,7 @@ flowchart TD
 
 ---
 
-## Scenario B
+## Scenario S
 
 #### Image 1 Analysis — backtested_EA_fly_2_fly_shrink.jpg
 
@@ -127,18 +127,18 @@ flowchart TD
 
 ##### Step 6: Concluded Analysis
 
-Scenario B — Fly → Shrink, early D1 compression. H4/H1 remain in fly providing direction. M30 has entered shrink (513) with midtrend labels (3,4,5) appearing. M15 and M5 follow. Price resting inside H4 band. Key observable: M30 BBW_stage — if it returns to 511/512, D2 expansion resumes (Scenario D); if it deepens to 400-499, D1 continues (Scenario E).
+Scenario S — Fly → Shrink, early D1 compression. H4/H1 remain in fly providing direction. M30 has entered shrink (513) with midtrend labels (3,4,5) appearing. M15 and M5 follow. Price resting inside H4 band. Key observable: M30 BBW_stage — if it returns to 511/512, D2 expansion resumes (Scenario P); if it deepens to 400-499, D1 continues (Scenario C).
 
 ##### Step 7: Identification Flowchart
 
 ```mermaid
 flowchart TD
-    A["Current state: H4/H1 fly, M30/M15/M5 shrink — Scenario B"]
+    A["Current state: H4/H1 fly, M30/M15/M5 shrink — Scenario S"]
     A --> B{"M30 returns to fly 511/512?"}
     B -->|Yes| C["Next scenario: D (Rest Pattern) — D2 resumes"]
     B -->|No| D{"M30 enters SQZ 400-499?"}
     D -->|Yes| E["Next scenario: E (Confined Compression) — D1 deepens"]
-    D -->|No| F["Remains Scenario B — shrink continues"]
+    D -->|No| F["Remains Scenario S — shrink continues"]
 ```
 
 **Prediction rules:**
@@ -194,18 +194,18 @@ flowchart TD
 
 ##### Step 6: Concluded Analysis
 
-Scenario B zoom — confirms D1 compression at M30→M15→M5. H4/H1 fly unchanged. M15 midtrend transitions are valid entry triggers. Key observable: M15 FLAT→UP/DN for shrink path entry, or M30 513→511/512 for rest pattern resumption.
+Scenario S zoom — confirms D1 compression at M30→M15→M5. H4/H1 fly unchanged. M15 midtrend transitions are valid entry triggers. Key observable: M15 FLAT→UP/DN for shrink path entry, or M30 513→511/512 for rest pattern resumption.
 
 ##### Step 7: Identification Flowchart
 
 ```mermaid
 flowchart TD
-    A["Current state: H4/H1 fly, M30/M15/M5 shrink — Scenario B zoom"]
+    A["Current state: H4/H1 fly, M30/M15/M5 shrink — Scenario S zoom"]
     A --> B{"M15 FLAT→UP/DN transition?"}
     B -->|Yes| C["Shrink path entry — G6-BUY/SELL"]
     B -->|No| D{"M30 returns to fly?"}
     D -->|Yes| E["Next scenario: D (Rest Pattern)"]
-    D -->|No| F["Remains Scenario B — wait"]
+    D -->|No| F["Remains Scenario S — wait"]
 ```
 
 **Prediction rules:**
@@ -215,7 +215,7 @@ flowchart TD
 
 ---
 
-## Scenario D
+## Scenario P
 
 #### Image 1 Analysis — backtested_EA_fly_2_shrink_2_fly.jpg
 
@@ -265,23 +265,23 @@ flowchart TD
 
 ##### Step 6: Concluded Analysis
 
-Scenario D — Rest Pattern, D1→D2 transition confirmed. W1/D1/H4/H1 fly unchanged throughout. M30/M15/M5 briefly compressed (shrink→SQZ) then re-expanded in same direction. M5 broke SQZ first (REVUP) driving D2 expansion. Key observable: H1 step direction maintained — if it breaks, becomes reversal (Scenario G2).
+Scenario P — Rest Pattern, D1→D2 transition confirmed. W1/D1/H4/H1 fly unchanged throughout. M30/M15/M5 briefly compressed (shrink→SQZ) then re-expanded in same direction. M5 broke SQZ first (REVUP) driving D2 expansion. Key observable: H1 step direction maintained — if it breaks, becomes reversal (Scenario V2).
 
 ##### Step 7: Identification Flowchart
 
 ```mermaid
 flowchart TD
-    A["Current state: D1→D2 transition, M5 broke SQZ — Scenario D"]
+    A["Current state: D1→D2 transition, M5 broke SQZ — Scenario P"]
     A --> B{"H1 maintaining step direction?"}
     B -->|Yes| C{"M30 re-expanding to fly?"}
     C -->|Yes| D["Rest pattern confirmed — full entry G6-BUY"]
     C -->|No| E["D2 incomplete — wait for M30"]
-    B -->|No| F["Reversal forming — Scenario G2"]
+    B -->|No| F["Reversal forming — Scenario V2"]
 ```
 
 **Prediction rules:**
-- IF H1 maintains step → rest pattern → Scenario A
-- IF H1 reverses → Scenario G2 (reversal)
+- IF H1 maintains step → rest pattern → Scenario F
+- IF H1 reverses → Scenario V2 (reversal)
 - Watch: H1 BBW_stage + M30 re-expansion
 
 #### Image 2 Analysis — backtested_EA_fly_2_shrink_2_fly_zoomin.jpg
@@ -332,26 +332,26 @@ flowchart TD
 
 ##### Step 6: Concluded Analysis
 
-Scenario D zoom — confirms D2 expansion from M5 SQZ break. All lower TFs re-expanded to fly in same direction. H4/H1 fly unchanged. Key observable: M30 fly confirmation = full entry. Next: watch for new D1 compression if M30 enters shrink again.
+Scenario P zoom — confirms D2 expansion from M5 SQZ break. All lower TFs re-expanded to fly in same direction. H4/H1 fly unchanged. Key observable: M30 fly confirmation = full entry. Next: watch for new D1 compression if M30 enters shrink again.
 
 ##### Step 7: Identification Flowchart
 
 ```mermaid
 flowchart TD
-    A["Current state: D2 complete, fly resumed — Scenario D zoom"]
+    A["Current state: D2 complete, fly resumed — Scenario P zoom"]
     A --> B{"M30 fly confirmed?"}
-    B -->|Yes| C["Full entry G6-BUY — Scenario A"]
+    B -->|Yes| C["Full entry G6-BUY — Scenario F"]
     B -->|No| D["D2 incomplete — wait"]
 ```
 
 **Prediction rules:**
-- IF M30 fly 511/512 → Scenario A
-- IF M30 enters shrink → Scenario B
+- IF M30 fly 511/512 → Scenario F
+- IF M30 enters shrink → Scenario S
 - Watch: M30 BBW_stage
 
 ---
 
-## Scenario F
+## Scenario B
 
 #### Image 1 Analysis — backtested_EA_sideway_2_fly.jpg
 
@@ -401,22 +401,22 @@ flowchart TD
 
 ##### Step 6: Concluded Analysis
 
-Scenario F — SQZ → Fly breakout. All TFs in SQZ (400-499) transitioning to fly. M5 broke SQZ first (REVUP/REVDN), driving D2 expansion. D1 direction determines breakout sustainability. Key observable: M30 SQZ break confirms full entry.
+Scenario B — SQZ → Fly breakout. All TFs in SQZ (400-499) transitioning to fly. M5 broke SQZ first (REVUP/REVDN), driving D2 expansion. D1 direction determines breakout sustainability. Key observable: M30 SQZ break confirms full entry.
 
 ##### Step 7: Identification Flowchart
 
 ```mermaid
 flowchart TD
-    A["Current state: All SQZ, M5 broke — Scenario F"]
+    A["Current state: All SQZ, M5 broke — Scenario B"]
     A --> B{"M30 breaking SQZ?"}
-    B -->|Yes| C["Full entry — Scenario A forming"]
+    B -->|Yes| C["Full entry — Scenario F forming"]
     B -->|No| D{"M15 breaking SQZ?"}
     D -->|Yes| E["Pioneer entry 0.75×"]
     D -->|No| F["D2 incomplete — wait"]
 ```
 
 **Prediction rules:**
-- IF M30 400→511/512 → Scenario A
+- IF M30 400→511/512 → Scenario F
 - IF only M15 breaks → pioneer entry 0.75×
 - Watch: M30 BBW_stage
 
@@ -468,28 +468,28 @@ flowchart TD
 
 ##### Step 6: Concluded Analysis
 
-Scenario F zoom — D2 expansion confirmed. M5/M15/M30 all re-expanded to fly. H4 decompressing from SQZ. Key observable: M30 fly confirmation = full entry. Next: Scenario A if H4 also flies.
+Scenario B zoom — D2 expansion confirmed. M5/M15/M30 all re-expanded to fly. H4 decompressing from SQZ. Key observable: M30 fly confirmation = full entry. Next: Scenario F if H4 also flies.
 
 ##### Step 7: Identification Flowchart
 
 ```mermaid
 flowchart TD
-    A["Current state: D2 advancing, M5/M15/M30 fly — Scenario F zoom"]
+    A["Current state: D2 advancing, M5/M15/M30 fly — Scenario B zoom"]
     A --> B{"H4 breaking SQZ to fly?"}
-    B -->|Yes| C["Scenario A — full alignment"]
+    B -->|Yes| C["Scenario F — full alignment"]
     B -->|No| D{"H4 entering shrink?"}
-    D -->|Yes| E["Scenario B — fly with shrink"]
-    D -->|No| F["Scenario E — H4 SQZ + lower fly"]
+    D -->|Yes| E["Scenario S — fly with shrink"]
+    D -->|No| F["Scenario C — H4 SQZ + lower fly"]
 ```
 
 **Prediction rules:**
-- IF H4 400→511/512 → Scenario A
-- IF H4 400→513 → Scenario B
+- IF H4 400→511/512 → Scenario F
+- IF H4 400→513 → Scenario S
 - Watch: H4 BBW_stage
 
 ---
 
-## Scenario G
+## Scenario V
 
 #### Image 1 Analysis — backtested_EA_trend_reversal.jpg
 
@@ -695,7 +695,7 @@ flowchart TD
 
 ---
 
-## Scenario E
+## Scenario C
 
 #### Image 1 Analysis — backtested_EA_fly_shrink_2_sideway.jpg
 
@@ -746,18 +746,18 @@ flowchart TD
 
 ##### Step 6: Concluded Analysis
 
-Scenario E — Fly expand + confined compression, Image 1. H4/H1 fly expand maintained throughout. Multiple compression zones visible: yellow rectangles (shrink phase) and red rectangles (full SQZ). Compression localized to M30/M15/M5 — H4/H1 provide directional context. Sequential compression: M5 first, M15 second, M30 third. G0c-SQZLOCK and G0b-PINK active. Key observable: M5 SQZ break (REVUP/REVDN) initiates D2 expansion.
+Scenario C — Fly expand + confined compression, Image 1. H4/H1 fly expand maintained throughout. Multiple compression zones visible: yellow rectangles (shrink phase) and red rectangles (full SQZ). Compression localized to M30/M15/M5 — H4/H1 provide directional context. Sequential compression: M5 first, M15 second, M30 third. G0c-SQZLOCK and G0b-PINK active. Key observable: M5 SQZ break (REVUP/REVDN) initiates D2 expansion.
 
 ##### Step 7: Identification Flowchart
 
 ```mermaid
 flowchart TD
-    A["Current state: H4/H1 fly, M30/M15/M5 SQZ — Scenario E"]
+    A["Current state: H4/H1 fly, M30/M15/M5 SQZ — Scenario C"]
     A --> B{"M5 breaks SQZ (REVUP/REVDN)?"}
     B -->|Yes| C["D2 initiated — M15 follows → M30 follows"]
     B -->|No| D{"H4 enters shrink?"}
-    D -->|Yes| E["D1 deepens — E4 (H4 also compressing) → G (Direction pivot)"]
-    D -->|No| F["Remains Scenario E — wait"]
+    D -->|Yes| E["D1 deepens — C4 (H4 also compressing) → G (Direction pivot)"]
+    D -->|No| F["Remains Scenario C — wait"]
 ```
 
 **Prediction rules:**
@@ -813,13 +813,13 @@ flowchart TD
 
 ##### Step 6: Concluded Analysis
 
-Scenario E zoom — confirms D2 expansion from M5 SQZ break. H4/H1 fly unchanged. M5 broke SQZ first (REVUP/REVDN), M15 and M30 follow. Touch evolution: L touches building → balanced oscillation → U touches increasing (pre-breakout). Gate sequence: G0b-M5OPP → G4c-M15OPP → G0c-SQZLOCK → G0b-PINK → G6-LOAD → G6-BUY/SELL. Key observable: M15 re-expansion to fly confirms D2.
+Scenario C zoom — confirms D2 expansion from M5 SQZ break. H4/H1 fly unchanged. M5 broke SQZ first (REVUP/REVDN), M15 and M30 follow. Touch evolution: L touches building → balanced oscillation → U touches increasing (pre-breakout). Gate sequence: G0b-M5OPP → G4c-M15OPP → G0c-SQZLOCK → G0b-PINK → G6-LOAD → G6-BUY/SELL. Key observable: M15 re-expansion to fly confirms D2.
 
 ##### Step 7: Identification Flowchart
 
 ```mermaid
 flowchart TD
-    A["Current state: M5 broke SQZ, D2 initiated — Scenario E zoom"]
+    A["Current state: M5 broke SQZ, D2 initiated — Scenario C zoom"]
     A --> B{"M15 re-expanding to fly?"}
     B -->|Yes| C["D2 confirmed — G6-BUY/SELL entry"]
     B -->|No| D{"M30 still SQZ?"}
@@ -882,22 +882,22 @@ flowchart TD
 
 ##### Step 6: Concluded Analysis
 
-Scenario E Image 3 — comprehensive 6-zone view of H4/H1 fly expand + lower TF confined compression. Core finding: H4/H1 fly expand MAINTAINED throughout all compression zones (1-6). Compression localized to M30/M15/M5 only. Zone progression: fly (1) → shrink (2) → SQZ peak (3-5) → shrink release (6). Touch evolution: L touches (entry) → L persistent (compression) → balanced (loading) → U touches (pre-breakout). Gate sequence: G0b-M5OPP → G0c-SQZLOCK → G0b-PINK → G0 → G6-LOAD → G6-BUY/SELL. Range trade at H4 band boundaries: sell upper, buy lower.
+Scenario C Image 3 — comprehensive 6-zone view of H4/H1 fly expand + lower TF confined compression. Core finding: H4/H1 fly expand MAINTAINED throughout all compression zones (1-6). Compression localized to M30/M15/M5 only. Zone progression: fly (1) → shrink (2) → SQZ peak (3-5) → shrink release (6). Touch evolution: L touches (entry) → L persistent (compression) → balanced (loading) → U touches (pre-breakout). Gate sequence: G0b-M5OPP → G0c-SQZLOCK → G0b-PINK → G0 → G6-LOAD → G6-BUY/SELL. Range trade at H4 band boundaries: sell upper, buy lower.
 
 ##### Step 7: Identification Flowchart
 
 ```mermaid
 flowchart TD
-    A["Current state: 6-zone D1 cycle, zone 6 recovery — Scenario E"]
+    A["Current state: 6-zone D1 cycle, zone 6 recovery — Scenario C"]
     A --> B{"Zone 6: M5 broke SQZ?"}
     B -->|Yes| C{"M15+M30 re-expanding?"}
-    C -->|Yes| D["D2 complete — Scenario A resuming"]
+    C -->|Yes| D["D2 complete — Scenario F resuming"]
     C -->|No| E["Partial D2 — wait for M30"]
     B -->|No| F["Remains SQZ — G0b-PINK active"]
 ```
 
 **Prediction rules:**
-- IF M15+M30 400→511/512 → Scenario A
-- IF M30 remains 513 → Scenario B
-- IF H4 enters 513 → Scenario E4 risk (H4 compressing → Direction pivot)
+- IF M15+M30 400→511/512 → Scenario F
+- IF M30 remains 513 → Scenario S
+- IF H4 enters 513 → Scenario C4 risk (H4 compressing → Direction pivot)
 - Watch: M30 BBW_stage + M15 midtrend
