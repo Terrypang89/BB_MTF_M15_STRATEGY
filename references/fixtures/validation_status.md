@@ -1,21 +1,33 @@
 # Validation Status — Decision 8 Freeze (Corrected)
 
-> Generated: 2026-06-14 | Corrected: 2026-06-14
+> Generated: 2026-06-14 | Corrected: 2026-06-14 | **Scenario remap: 2026-06-23**
 > In-sample period: March 2-20, 2026 (78 snapshots) — 83.3% parent-level match
 > OOS period: Jan 1 - Feb 27 + Apr 1 - Apr 29, 2026 (349 snapshots)
+>
+> **REMAP NOTE:** Scenario letters remapped on 2026-06-23. Old scheme: A=fly, B=shallow, C=reversal, D=rest, E=compression, F=breakout, G=pivot. New scheme: F=fly, S=shallow, R=reversal, P=rest, C=compression, B=breakout, V=pivot. Historical logs before this date use old letters.
+
+---
+
+## Remap Cutover
+
+Old C (reversal) → R; New C = compression (was E). Old C and new C are different scenarios.
+Old G (pivot) → V; G-tier → V-tier. Gate names (G1-OK, G4-BLOCK, etc.) unchanged.
+Condition IDs (E1-E6, X1-X4) unchanged. Timeframe D1 unchanged.
+
+**EA LOCKSTEP:** The fixtures and code now use NEW scenario letters (F/S/C/P/B/R/V). The EA source must be updated to emit NEW letters and recompiled BEFORE running validation — otherwise the EA emits OLD letters and validation will FALSE-FAIL on label mismatch.
 
 ## Terminology Clarification
 
 | Term | Meaning |
 |------|---------|
-| G-tier on SQZ bars | "Compression detected, pivot pending" — NOT "this will resolve as G reversal" |
-| G-vs-F discrimination | Predicting whether compression resolves as G (reversal) or F (continuation) |
-| G reversal resolution | H4-SQZ resolves with directional pivot opposite to prior trend |
+| V-tier on SQZ bars | "Compression detected, pivot pending" — NOT "this will resolve as R reversal" |
+| R-vs-F discrimination | Predicting whether compression resolves as R (reversal) or F (continuation) |
+| R reversal resolution | H4-SQZ resolves with directional pivot opposite to prior trend |
 | F continuation resolution | H4-SQZ resolves with explosive expansion in same direction |
 
-The 36/36 "G-tier detection" in OOS = **compression-state detection**, not G-vs-F discrimination.
-Every H4-SQZ bar was correctly flagged as G2/G3 (pivot-pending). But none of the 7 OOS episodes
-actually reversed — all 7 continued in F direction. The G-vs-F discriminator was never tested.
+The 36/36 "V-tier detection" in OOS = **compression-state detection**, not R-vs-F discrimination.
+Every H4-SQZ bar was correctly flagged as V2/V3 (pivot-pending). But none of the 7 OOS episodes
+actually reversed — all 7 continued in F direction. The R-vs-F discriminator was never tested.
 
 ---
 
@@ -25,29 +37,29 @@ These rules have been tested on both in-sample (March) and out-of-sample (Jan-Fe
 
 | Rule | Description | In-Sample | OOS |
 |------|-------------|-----------|-----|
-| A-tier | H4-fly, no compression, D1-aligned → A1; D1-not-aligned → A2 | Multiple episodes | 74/349 snapshots (21.2%) |
+| F-tier | H4-fly, no compression, D1-aligned → F1; D1-not-aligned → F2 | Multiple episodes | 74/349 snapshots (21.2%) |
 | B-tier | LTF shrink keyed by max(shrink, sqz) depth → B1/B2/B3 | Multiple episodes | 81/349 snapshots (23.2%) |
-| E-tier | cas_sqzCount>=2 → E1/E2; H4-shrink → E4 | Multiple episodes | 153/349 snapshots (43.8%) |
-| G-tier compression entry | H4-SQZ detected → G2/G3 (pivot-pending state) | 03.09-03.10 | 36/36 SQZ bars (100%) |
+| C-tier | cas_sqzCount>=2 → C1/C2; H4-shrink → C4 | Multiple episodes | 153/349 snapshots (43.8%) |
+| V-tier compression entry | H4-SQZ detected → V2/V3 (pivot-pending state) | 03.09-03.10 | 36/36 SQZ bars (100%) |
 | F continuation resolution | H4-SQZ resolves with explosive expansion | 03.10-03.18 | 7/7 episodes (100%) |
-| Onset/Established | H1-SQZ first bar → B3; H1-SQZ 2+ bars → E1 | Decision 5 cascade | Consistent on OOS |
+| Onset/Established | H1-SQZ first bar → S3; H1-SQZ 2+ bars → C1 | Decision 5 cascade | Consistent on OOS |
 | D1-D6 | Decision cascade (priority routing, transient exemption, B-depth, B-decoder, H1-SQZ tracking, D2-vs-D5 resolution) | Full March replay | Full OOS replay |
 | VETO-AT-TARGET | BUY-at-upper-band / SELL-at-lower-band veto | 03.03 07:45 — item 5 PASS | Architecture-enforced |
 | Matrix ceilings | Scenario → ceiling mapping | Enforced | Enforced |
 | Decoder size | cas_sqzCount + cas_shrinkTF → size multiplier | Enforced | Enforced |
 | ASSERT-B1/B3/B4 | Invariant checks on flip-entries | 2 ASSERT-B3 in March | Architecture-enforced |
 
-## STILL HYPOTHESIS — G Reversal Branch
+## STILL HYPOTHESIS — R Reversal Branch
 
-The G reversal branch has never fired on OOS data.
+The R reversal branch has never fired on OOS data.
 
 | Rule | Description | Why Untested | Risk |
 |------|-------------|--------------|------|
-| G reversal resolution | H4-SQZ resolves with directional pivot opposite to prior trend | 0 of 7 OOS episodes resolved G — the reversal branch never executed | If G episodes are rare (<1 per quarter), this branch may remain unvalidated for months |
-| G-vs-F discriminator | Predicting G (reversal) vs F (continuation) during PIVOT-PENDING | Requires episodes that resolve both ways — not available in current data | The discriminator may be correct or wrong; there's no way to tell without a G-resolving episode |
-| 2-bar interlude threshold | "2 consecutive bars" for H1-SQZ established vs onset at G/F boundary | Never stressed during G→F transitions in OOS (no G→F transitions existed) | Threshold may be too short (noise) or too long (misses entries) |
+| R reversal resolution | H4-SQZ resolves with directional pivot opposite to prior trend | 0 of 7 OOS episodes resolved R — the reversal branch never executed | If R episodes are rare (<1 per quarter), this branch may remain unvalidated for months |
+| R-vs-F discriminator | Predicting R (reversal) vs F (continuation) during PIVOT-PENDING | Requires episodes that resolve both ways — not available in current data | The discriminator may be correct or wrong; there's no way to tell without an R-resolving episode |
+| 2-bar interlude threshold | "2 consecutive bars" for H1-SQZ established vs onset at R/F boundary | Never stressed during R→F transitions in OOS (no R→F transitions existed) | Threshold may be too short (noise) or too long (misses entries) |
 
-**This is INSUFFICIENT-DATA, not a rule failure.** The G reversal branch is structurally
+**This is INSUFFICIENT-DATA, not a rule failure.** The R reversal branch is structurally
 defined in the code but has no OOS evidence.
 
 ### Data Finding: Jan-Apr 2026 Resolution Mix
@@ -55,9 +67,9 @@ defined in the code but has no OOS evidence.
 | Resolution | Count | Episodes |
 |------------|-------|----------|
 | F (continuation) | 7 | Ep1 (Jan 5), Ep2 (Jan 8-12), Ep3 (Jan 15-19), Ep4 (Jan 30-Feb 2), Ep5 (Feb 19-20), Ep6 (Apr 13-14), Ep7 (Apr 20-22) |
-| G (reversal) | 0 | — |
+| R (reversal) | 0 | — |
 
-**G (reversal) is the rare case.** Jan-Apr 2026 contained 7 H4-SQZ episodes and all resolved
+**R (reversal) is the rare case.** Jan-Apr 2026 contained 7 H4-SQZ episodes and all resolved
 as F (expansion continuation). No reversal occurred.
 
 ---
@@ -112,17 +124,17 @@ move-to-top was a partial fix that traded one bug for another.** The harness
 (replay_harness.py:1383-1385, 1412-1415) updates `prev_h1_sqz` on every bar
 AFTER reading it (read-then-update = current-vs-prior). The MQL5 code had
 the update at the bottom of IdentifyScenario where it was unreachable — every
-scenario path (B3, E1, E2, G-tier, etc.) returns before reaching it. The
+scenario path (S3, C1, C2, V-tier, etc.) returns before reaching it. The
 move-to-top fix (V31.03) made the update reachable but introduced a new bug:
 update-then-read with LA=current means both the update and the read access the
 same bar → current-vs-current. The prior-bar check collapses to a tautology.
 Decision 6 (recovery: `h1sqz_prior && !h1_sqz_now`) was dead code — can't be
 SQZ and not-SQZ on the same bar.
 
-**Impact:** Bug 3 caused B3 (H1-SQZ onset) to fire on every bar where H1 was
-in SQZ, instead of E1 (H1-SQZ established) after the first bar. Decision 6
+**Impact:** Bug 3 caused S3 (H1-SQZ onset) to fire on every bar where H1 was
+in SQZ, instead of C1 (H1-SQZ established) after the first bar. Decision 6
 (recovery) never fired — H1 exiting SQZ with compression persisting could not
-route to E1. This explains 6 of 10 V31.04 scenario mismatches (84.6% →
+route to C1. This explains 6 of 10 V31.04 scenario mismatches (84.6% →
 expected ~94.9% after fix).
 
 **Lesson (committed → fixed):** Moving a state update to the top of a function
@@ -134,10 +146,10 @@ The `sh` parameter pattern (Bugs 1+2) is misleading — default `sh=0`
 reads slot [0] which is the OLDEST bar, not the current one. All helpers with
 this pattern should be inlined with explicit `[LA]` indices.
 
-### Candidate Periods for G-Reversal Validation
+### Candidate Periods for R-Reversal Validation
 
-To validate the G reversal branch, a data period is needed containing at least 1 H4-SQZ episode
-that resolves as a directional pivot (G).
+To validate the R reversal branch, a data period is needed containing at least 1 H4-SQZ episode
+that resolves as a directional pivot (R).
 
 | Candidate | Rationale | Status |
 |-----------|-----------|--------|
@@ -150,38 +162,38 @@ that resolves as a directional pivot (G).
 
 **Episode 2 — Jan 8-12, 2026**
 ```
-01.08 16:00  G2  H4=423  SQZ *   ← entry: H4 enters compression
-01.08 20:00  G2  H4=423  SQZ *   ← pivot-pending
-01.09 04:00  G2  H4=423  SQZ *   ← pivot-pending
-01.09 08:00  G2  H4=423  SQZ *   ← pivot-pending
-01.09 12:00  G2  H4=423  SQZ *   ← pivot-pending
-01.09 16:00  G2  H4=423  SQZ *   ← pivot-pending (8 bars total)
+01.08 16:00  V2  H4=423  SQZ *   ← entry: H4 enters compression
+01.08 20:00  V2  H4=423  SQZ *   ← pivot-pending
+01.09 04:00  V2  H4=423  SQZ *   ← pivot-pending
+01.09 08:00  V2  H4=423  SQZ *   ← pivot-pending
+01.09 12:00  V2  H4=423  SQZ *   ← pivot-pending
+01.09 16:00  V2  H4=423  SQZ *   ← pivot-pending (8 bars total)
 01.12 04:00  F3  H4=511  diffBBW=+67.8  ← resolution: F continuation
 ```
 
 **Episode 5 — Feb 19-20, 2026**
 ```
-02.19 16:00  G3  H4=423  SQZ *   ← entry: H4 enters compression
-02.19 20:00  G3  H4=423  SQZ *   ← pivot-pending
-02.20 04:00  G2  H4=423  SQZ *   ← pivot-pending
-02.20 08:00  G2  H4=423  SQZ *   ← pivot-pending (8 bars total)
-02.20 20:00  A2  H4=512  ← resolution: F continuation (F-tier missed)
+02.19 16:00  V3  H4=423  SQZ *   ← entry: H4 enters compression
+02.19 20:00  V3  H4=423  SQZ *   ← pivot-pending
+02.20 04:00  V2  H4=423  SQZ *   ← pivot-pending
+02.20 08:00  V2  H4=423  SQZ *   ← pivot-pending (8 bars total)
+02.20 20:00  F2  H4=512  ← resolution: F continuation (F-tier missed)
 ```
 
-### Harness Gap: G2→C1→C2/C3 forward transition not implemented
+### Harness Gap: V2→R1→R2/R3 forward transition not implemented
 
-The G-tier returns G2 (reversal signal, pivot_substate=2) but does NOT
-implement the G2→C1→C2/C3 forward transition. The reversal-confirmed states
-(C1 = MTF reversal only, C2 = H4 confirmed new direction, C3 = H4 flipped
+The V-tier returns V2 (reversal signal, pivot_substate=2) but does NOT
+implement the V2→R1→R2/R3 forward transition. The reversal-confirmed states
+(R1 = MTF reversal only, R2 = H4 confirmed new direction, R3 = H4 flipped
 but W1/D1 still original) are doc-only, unimplemented in identify_scenario.
-Must be built before the G-reversal branch can be validated on
+Must be built before the V-reversal branch can be validated on
 reversal-containing data.
 
-- **Affected tier:** G (Direction Pivot)
-- **Affected sub-states:** G2, C1, C2, C3
-- **Doc location:** Scenario G → Post-G2 Reversal Resolution Progression
+- **Affected tier:** V (Direction Pivot)
+- **Affected sub-states:** V2, R1, R2, R3
+- **Doc location:** Scenario V → Post-V2 Reversal Resolution Progression
 - **Status:** OOS-UNVALIDATED — cannot validate until harness supports
-  the G2→C1→C2/C3 state transitions
+  the V2→R1→R2/R3 state transitions
 
 ### Known Divergence: veto_priceloc (MQL5 vs Python, Layer 3 only)
 
@@ -236,18 +248,22 @@ prev_h1_sqz divergence (assumed equivalent until timing differed).
 
 ### Scenario Distribution (OOS — 349 snapshots)
 
-| Scenario | Count | Pct |
+> **STALE:** This table was generated from `oos_results.json` using old scenario labels.
+> It will regenerate correctly after the EA is remapped and `run_oos.py` is re-run.
+> Old→New mapping: E4→C4, B3→S3, A2→F2, A1→F1, G2→V2, B2→B2, G3→V3, E1→C1, B1→B1, E2→C2, F3→F3, F1→F1, F2→F2.
+
+| Scenario (old labels) | Count | Pct |
 |----------|-------|-----|
-| E4 | 140 | 40.1% |
-| B3 | 55 | 15.8% |
-| A2 | 45 | 12.9% |
-| A1 | 29 | 8.3% |
-| G2 | 22 | 6.3% |
-| B2 | 22 | 6.3% |
-| G3 | 15 | 4.3% |
-| E1 | 10 | 2.9% |
-| B1 | 4 | 1.1% |
-| E2 | 3 | 0.9% |
-| F3 | 2 | 0.6% |
-| F1 | 1 | 0.3% |
-| F2 | 1 | 0.3% |
+| E4 (→C4) | 140 | 40.1% |
+| B3 (→S3) | 55 | 15.8% |
+| A2 (→F2) | 45 | 12.9% |
+| A1 (→F1) | 29 | 8.3% |
+| G2 (→V2) | 22 | 6.3% |
+| B2 (→B2) | 22 | 6.3% |
+| G3 (→V3) | 15 | 4.3% |
+| E1 (→C1) | 10 | 2.9% |
+| B1 (→B1) | 4 | 1.1% |
+| E2 (→C2) | 3 | 0.9% |
+| F3 (→F3) | 2 | 0.6% |
+| F1 (→F1) | 1 | 0.3% |
+| F2 (→F2) | 1 | 0.3% |
