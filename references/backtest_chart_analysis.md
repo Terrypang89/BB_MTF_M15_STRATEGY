@@ -25,9 +25,9 @@ Work through: **Part 1** (read the chart) → **Part 2** (HTF context) → **Par
 | Cascade state decoder | Part 1 Section 12d |
 | HTF cascade rules | Part 2 — HTF Compression Cascade |
 | Scenario matching | Part 2 — Scenario Identification Flowchart |
-| Scenario details | Part 3 — Tier 1 (F) / Tier 2 (S, C, V) / Tier 3 (P, B, R) |
+| Scenario details | Part 3 — Tier 1 ([F](#scenario-f-full-fly-alignment)) / Tier 2 ([S](#scenario-s-fly-shrink-inner-tfs-contracting), [C](#scenario-c-deep-compression), [V](#scenario-v-direction-pivot-formerly-scenario-h)) / Tier 3 ([P](#scenario-p-rest-recovery), [B](#scenario-b-compression-release), [R](#scenario-r-trend-reversal-consolidated-under-scenario-v)) |
 | Scenario cycle sequence | Part 3 — Cycle sequence (top of Part 3) |
-| Direction pivot / BOTTOM state | Part 3 — Scenario V |
+| Direction pivot / BOTTOM state | [Part 3 — Scenario V](#scenario-v-direction-pivot-formerly-scenario-h) |
 | Trend prediction | Part 4 — Direction, Target, Timeline, Confidence |
 | Trade action rules | Part 5 — Entry/Exit/Block/Size/Stop |
 | Common misreads | Part 7 — Common Misreads |
@@ -1841,7 +1841,7 @@ resolves it).
   (full → new F); R3 = D1 still original (counter-trend).
 
 Full sub-state tables, discriminators, and the cascade sequence: see
-[Scenario V — Reversal Progression](#scenario-g---direction-pivot-formerly-scenario-h).
+[Scenario V — Reversal Progression](#scenario-v-direction-pivot-formerly-scenario-h).
 
 [OOS-UNVALIDATED, UNIMPLEMENTED — DESIGN Phase 3]
 
