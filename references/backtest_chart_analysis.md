@@ -3137,9 +3137,9 @@ Which boundary depends on the current scenario and which TFs are still flying.
 | S3 (H1 shrink) | H4 outer band | H4 mid or H4 lower | H4 — confinement ceiling |
 | C1-C3 (deep compression) | H4 outer band (confined) | H4 lower band | H4 — hard ceiling/floor |
 | C4 (H4 compressing) | D1 mid or D1 outer band | D1 lower band | D1 — next level up |
-| G (direction pivot) | Unknown until M5 breaks SQZ | Unknown until M5 breaks SQZ | Wait — no target yet |
-| D1 (M5 break) | M30 outer band (arm — not confirmed) | M30 mid | M30 — wait for confirm |
-| D2 (M15 confirm) | H1 outer band → H4 outer band | M30 mid (brief pullback) | Escalates as TFs confirm |
+| V (direction pivot) | Unknown until M5 breaks SQZ | Unknown until M5 breaks SQZ | Wait — no target yet |
+| P1 (M5 break) | M30 outer band (arm — not confirmed) | M30 mid | M30 — wait for confirm |
+| P2 (M15 confirm) | H1 outer band → H4 outer band | M30 mid (brief pullback) | Escalates as TFs confirm |
 | P3 (MTF re-align) | H4 outer band → D1 outer band | M30 mid | → Scenario F target |
 | B1 (LTF only) | M30 outer band (weak — wait) | M15 mid | M30 — not confirmed yet |
 | B2 (MTF confirmed) | H4 outer band | M30 mid | H4 — MTF backing the move |
@@ -3325,11 +3325,11 @@ Part 3 identification to Part 4 prediction:
 
 | Part 3 result | Direction | Target | Timeline | Next scenario | Confidence |
 |---|---|---|---|---|---|
-| A + Phase 1 | Same as H4 fly | D1 outer band | Days | F continues until M15 shrinks → S | High |
-| S1 + Phase 2 | Each leg: M30 dir | M30 outer band per leg | 4-12h per leg | D (if H4 fly) or E (if H4 shrink) | Medium |
-| S2 + Phase 3a | Opposite to current leg | H1 outer band (shrinking) | 3-8h per leg | E if depth increases | Low-Medium |
-| S3 + Phase 3b-INTO | Trending side favoured | H4 outer band (dropping) | 3-8h per leg | E (H4 about to SQZ) | Medium for trend side |
-| C2 + Phase 4 | UNKNOWN | None — noise | Hours to 1 day | G (direction pivot) | None |
+| F + Phase 1 | Same as H4 fly | D1 outer band | Days | F continues until M15 shrinks → S | High |
+| S1 + Phase 2 | Each leg: M30 dir | M30 outer band per leg | 4-12h per leg | P (if H4 fly) or C (if H4 shrink) | Medium |
+| S2 + Phase 3a | Opposite to current leg | H1 outer band (shrinking) | 3-8h per leg | C if depth increases | Low-Medium |
+| S3 + Phase 3b-INTO | Trending side favoured | H4 outer band (dropping) | 3-8h per leg | C (H4 about to SQZ) | Medium for trend side |
+| C2 + Phase 4 | UNKNOWN | None — noise | Hours to 1 day | V (direction pivot) | None |
 | C3 + Phase 4→5 | M5 expansion direction | H4 outer band → D1 | Hours | V → B or R \| Medium → High |
 | V1 + Phase 5 | Same as D1 | H4 → D1 outer band | Hours | B → F \| High |
 | V2 + Phase 5 | Opposite to D1 | H4 outer band (new dir) | Hours → days | C → new F | Low → Medium |
@@ -3533,8 +3533,8 @@ Stop is placed beyond the nearest confinement boundary AGAINST the trade directi
 | S1 (M15 shrink) | Below M30 lower band | Above M30 upper band | M30 ATR |
 | S2 (M30 shrink) | Below H1 lower band | Above H1 upper band | H1 ATR |
 | S3 (H1 shrink) | Below H4 lower band | Above H4 upper band | H4 ATR |
-| E (range trade) | Beyond H4 outer band | Beyond H4 outer band | H4 ATR |
-| D (rest recovery) | Below M30 lower band | Above M30 upper band | M30 ATR |
+| C (range trade) | Beyond H4 outer band | Beyond H4 outer band | H4 ATR |
+| P (rest recovery) | Below M30 lower band | Above M30 upper band | M30 ATR |
 | B1/B2 (compression release) | Below H1 lower band | Above H1 upper band | H1 ATR |
 | B3 (HTF confirmed) | Below M30 lower band (→ Scenario F) | Above M30 upper band | M30 ATR |
 | R1 (MTF reversal) | Beyond H4 outer band (tight — counter-trend) | Beyond H4 outer band | H4 ATR |
@@ -3580,9 +3580,9 @@ This is the master table. Read Part 3 scenario → Part 4 prediction → this ta
 
 | Scenario | Part 4 prediction | Action | Entry | Size | Stop | Target | Exit trigger |
 |---|---|---|---|---|---|---|---|
-| D1 M5 break | Direction: H4 fly dir, Confidence: Low | ARM only | C4: M5 BBUpDn 0→1 | — | — | — | Wait M15 confirm |
-| D2 M15 confirm | Direction: H4 fly dir, Confidence: Medium | ENTER | E5: M15 mid flips to direction | 0.75× | Below M30 lower (BUY) | H4 outer band | X1 or X2 |
-| D3 MTF re-align | Direction: H4 fly dir, Confidence: Med-High | HOLD / add | Add if quality ≥ 90 | → 1.0× | Tighten to M30 lower | H4 → D1 outer band | X1 or X2 |
+| P1 M5 break | Direction: H4 fly dir, Confidence: Low | ARM only | C4: M5 BBUpDn 0→1 | — | — | — | Wait M15 confirm |
+| P2 M15 confirm | Direction: H4 fly dir, Confidence: Medium | ENTER | E5: M15 mid flips to direction | 0.75× | Below M30 lower (BUY) | H4 outer band | X1 or X2 |
+| P3 MTF re-align | Direction: H4 fly dir, Confidence: Med-High | HOLD / add | Add if quality ≥ 90 | → 1.0× | Tighten to M30 lower | H4 → D1 outer band | X1 or X2 |
 | B1 LTF only | Direction: M5 dir, Confidence: Low | WAIT | Block X3 (quality < 60) | 0 | — | — | Wait M30 BBUpDn=1 |
 | B2 MTF confirmed | Direction: M30 expansion dir, Confidence: Medium | ENTER | E5: M15 mid confirms | 0.75× | Beyond H1 lower/upper | H4 outer band | X1 or X2 |
 | B3 HTF confirmed | Direction: H4 expansion dir, Confidence: High | ENTER (→ Scenario F) | E6: H4 BBUpDn=1 sustained | 1.0× | Below M30 lower (BUY) | D1 outer band | X1 or X2 |
