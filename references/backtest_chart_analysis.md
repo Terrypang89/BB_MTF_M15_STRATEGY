@@ -462,8 +462,8 @@ FIRST (warning of HTF reversal)?**
 | M30 added (H4 still fly) | Low-Medium — watch H1 | S2 |
 | H1 added (H4 still fly) | Medium — H4 likely to follow | S3 |
 | H4 enters shrink (D1 still fly) | High — HTF reversal warning | E/C4 |
-| H4 SQZ + D1 still fly | High for H4, D1 gives bias | G (D1 bias) |
-| H4 SQZ + D1 shrink/SQZ | Very high — full macro reversal | G (no bias) |
+| H4 SQZ + D1 still fly | High for H4, D1 gives bias | V (D1 bias) |
+| H4 SQZ + D1 shrink/SQZ | Very high — full macro reversal | V (no bias) |
 
 Shrink propagation (LTF leads — early warning of reversal):
   M15 BBUpDn→2 first (trend weakening at entry TF)
@@ -495,7 +495,7 @@ Same direction as shrink propagation — LTF always leads both shrink and expans
 
 | H4 state when M5 breaks SQZ | D1 state | Expansion meaning | Scenario |
 |------------------------------|----------|-------------------|----------|
-| Still fly (511/512) | Fly | High quality — macro intact, rest over | D (rest recovery) |
+| Still fly (511/512) | Fly | High quality — macro intact, rest over | P (rest recovery) |
 | Shrink (513) | Fly | Medium — H4 confined but D1 backing | F (compression release) |
 | SQZ (400-499) | Fly | Medium — H4 exhausted but D1 gives bias | V1→B (direction pivot same) |
 | SQZ (400-499) | Shrink/SQZ | Low until confirmed — no macro backing | V2→R (direction pivot opposite) |
@@ -513,14 +513,14 @@ M5 breaks SQZ (REVUP/REVDN) — G6-LOAD fires
 ```
 CHECK HTF FIRST at every step:
 
-A (full fly, all TFs aligned)
+F (full fly, all TFs aligned)
   → S (M15 shrinks: CHECK — is H4 still fly?)
     → H4 still fly + D1 fly: rest likely
       → S→P→F (rest recovery — H4 never broke, LTF pullback only)
     → H4 also shrinking: confinement
       → S→C (H4 caused LTF compression — LTF confined within H4 band)
       → CHECK D1: D1 still fly?
-        → Yes: E (deep compression, D1 may rescue H4)
+        → Yes: C (deep compression, D1 may rescue H4)
         → D1 also shrinking: C→R4 (HTF reversal warning — both H4 and D1 losing direction)
           → C4→V (all TFs SQZ: BOTTOM — old trend exhausted, direction resolving)
             → V1→B→F (M5 expands same direction: compression release → continuation)
@@ -537,8 +537,8 @@ The CHECK at each step determines whether LTF shrink is rest vs confinement vs r
 
 - **Circle (03.03 07:45):** H1 ESTABLISHED SQZ — in SQZ since 03.03 04:00. C-tier. Contrast with onset: same SQZ shape but different because it has been in SQZ for 3+ hours. [Decision 5 — validated]
 - **Rectangle left edge (03.04 16:00):** H1 ONSET SQZ — just entered SQZ. Same snapshot shape as the circle but different state: only prior-bar history distinguishes onset from established. [Decision 5 — validated]
-- **Rectangle through 03.06 14:30:** Compression deepening — H4 shrinking, then H4 goes flat (BBUpDn=0) = the PIVOT-PENDING / G-tier waiting state.
-- **G RESOLUTION** (which direction the pivot breaks): OOS-UNVALIDATED. This chart shows the progression INTO the pivot, not a validated G/F resolution rule. The pivot direction remains to be confirmed out-of-sample.
+- **Rectangle through 03.06 14:30:** Compression deepening — H4 shrinking, then H4 goes flat (BBUpDn=0) = the PIVOT-PENDING / V-tier waiting state.
+- **V RESOLUTION** (which direction the pivot breaks): OOS-UNVALIDATED. This chart shows the progression INTO the pivot, not a validated V/F resolution rule. The pivot direction remains to be confirmed out-of-sample.
 
 ---
 
@@ -578,11 +578,11 @@ is active up to that TF level. When = -1, the chain is not detected.
 |------|--------------------|-----------------|-----------------| 
 | H2L_flyUP | HTF→LTF fly uptrend chain confirmed | Expansion confirmed top-down — all TFs aligned UP | Scenario F (full fly up) |
 | H2L_flyDN | HTF→LTF fly downtrend chain confirmed | Expansion confirmed top-down — all TFs aligned DN | Scenario F (full fly dn) |
-| H2L_flyStrink | HTF→LTF shrink chain active | Shrink propagating — compression cascade in progress | Scenario S/E (compression) |
+| H2L_flyStrink | HTF→LTF shrink chain active | Shrink propagating — compression cascade in progress | Scenario S/C (compression) |
 | H2L_sideway | HTF→LTF sideway/SQZ chain | All TFs suppressed — compression complete | Scenario R4/V (BOTTOM) |
 | L2H_flyUP | LTF→HTF fly uptrend chain (bottom-up) | LTF leading expansion upward — D2 initiated | Scenario P/F (expansion up) |
 | L2H_flyDN | LTF→HTF fly downtrend chain (bottom-up) | LTF leading expansion downward — D2 initiated | Scenario P/F (expansion dn) |
-| L2H_sideway | LTF→HTF sideway chain | LTF being suppressed by HTF — D1 active | Scenario S/E (LTF confined) |
+| L2H_sideway | LTF→HTF sideway chain | LTF being suppressed by HTF — D1 active | Scenario S/C (LTF confined) |
 | All = -1 | No chains detected | Mixed/neutral — transitional state | Scenario V (direction pivot) |
 
 **TF index reference (used for all TRADEINFO and BBTFImpact flags):**
@@ -734,7 +734,7 @@ This maps to C2 (LTF full SQZ) or deeper.
 | 3 | 2 | H1 shrink, M5+M15 squeezed | C2 | EXIT — G0b-PINK |
 | -1 | 2 | No shrink but 2 TFs squeezed | C2/C3 transition | Wait — G6-LOAD may fire |
 | -1 | 3+ | No shrink, 3+ TFs squeezed | R4/V — BOTTOM | No entry — wait M5 expand |
-| -1 | 0 | No shrink, no squeeze | A (fly) or transition | Check TRADEINFO for direction |
+| -1 | 0 | No shrink, no squeeze | F (fly) or transition | Check TRADEINFO for direction |
 
 ### Journal Log Label Reference
 
@@ -1062,7 +1062,7 @@ SQZ bottom ╱
 - Favour RECOVERY direction (BUY in BUY recovery) while floor is rising
 - Size: 0.50× maximum — counter-trend to D1, lower confidence than normal 3b
 - Exit at D1 confinement boundary (G8-BNDTGT at D1 level)
-- If D1 mid also starts flipping → increase to 0.75× (G reversal progression developing: C1→E4→G2→R2/R3)
+- If D1 mid also starts flipping → increase to 0.75× (R reversal progression developing: C1→C4→V2→R2/R3)
 
 **BBTFImpact observable:** `HTF_Drive_LTF_Sideway` values increasing = deeper confinement.
 **cas_shrinkTF observable:** Value increasing (1→2→3) = shrink propagating upward through TFs.
@@ -1459,17 +1459,17 @@ Before looking at any H1/M30/M15/M5 entry, answer these questions:
 ```mermaid
 flowchart TD
     A["Is H4 in fly?"] -->|Yes| B["M30+M15 in fly?"]
-    B -->|Yes| C["SCENARIO A\nNormal Fly"]
+    B -->|Yes| C["SCENARIO F\nNormal Fly"]
     B -->|No| D["M30/M15 shrinking?"]
-    D -->|Yes| E["SCENARIO B\nShallow compression"]
+    D -->|Yes| E["SCENARIO S\nShallow compression"]
     D -->|No| F["M30/M15 in SQZ?"]
-    F -->|Yes| G["SCENARIO D\nRest recovery (D2 same dir)\nM5 BBUpDn 0→1, H4 fly intact"]
-    F -->|No| H["SCENARIO B\nShallow compression\nWatch M30 BBUpDn→2"]
+    F -->|Yes| G["SCENARIO P\nRest recovery (P2 same dir)\nM5 BBUpDn 0→1, H4 fly intact"]
+    F -->|No| H["SCENARIO S\nShallow compression\nWatch M30 BBUpDn→2"]
     A -->|No| I["H4 BBUpDn=2 (shrinking)?"]
     I -->|Yes| J["M30/M15 BBUpDn=0 (SQZ)?"]
-    J -->|Yes| K["SCENARIO E\nDeep compression\nLTF SQZ, HTF fly"]
-    J -->|No| L["SCENARIO B\nShallow compression\nWatch depth level"]
-    I -->|"No — H4 BBUpDn=0 (SQZ)"| M["SCENARIO E4→G\nH4 also compressing\nAll TFs SQZ — direction pivot"]
+    J -->|Yes| K["SCENARIO C\nDeep compression\nLTF SQZ, HTF fly"]
+    J -->|No| L["SCENARIO S\nShallow compression\nWatch depth level"]
+    I -->|"No — H4 BBUpDn=0 (SQZ)"| M["SCENARIO C4→V\nH4 also compressing\nAll TFs SQZ — direction pivot"]
     M --> N{"D1 BBUpDn=1/3 (fly bias)?"}
     N -->|Yes — bias exists| O{"H4 BBUpDn 0→1 same as D1?"}
  O -->|Yes sustained 3+ bars| P["SCENARIO V1→B\nCompression release\nHigh confidence — B2 rules"]
@@ -1570,7 +1570,7 @@ Chart-image analysis for Scenario F: see [IMAGE_ANALYSIS.md](./IMAGE_ANALYSIS.md
 | Leading TF | H4 (watch for shrink) |
 | Next scenario if D1 continues | B (Fly → Shrink) |
 | Next scenario if D2 initiates same direction | A remains (already at TOP) |
-| Next scenario if D2 initiates opposite direction | G (Direction pivot) via reversal |
+| Next scenario if D2 initiates opposite direction | V (Direction pivot) via reversal |
 | Discriminator observable | H4 BBW_stage 511→513 |
 
 > **Tier:** TIER 1 — EXPANSION COMPLETE (TOP)
@@ -1653,7 +1653,7 @@ flowchart TD
     B -->|Yes| C{"Mid-band labels absent (mid=1/2 suppressed)?"}
     C -->|Yes| D{"H4 stepping same direction?"}
     D -->|Yes| E{"Stage labels 511/512 or 521/522?"}
-    E -->|Yes| F["SCENARIO A CONFIRMED"]
+    E -->|Yes| F["SCENARIO F CONFIRMED"]
     F --> G{"[G6-BUY/SELL] labels visible?"}
     G -->|Yes| H["Full fly\nenter on M15 transition"]
     G -->|No| I["Wait for entry signal"]
@@ -1770,7 +1770,7 @@ flowchart TD
     B -->|Yes| C{"M30/M15 bands converging?"}
     C -->|Yes| D{"Stage labels 513/523 (shrink)?"}
     D -->|Yes| E{"Midtrend labels appearing (3,4,5)?"}
-    E -->|Yes| F["SCENARIO B CONFIRMED"]
+    E -->|Yes| F["SCENARIO S CONFIRMED"]
     F --> G{"How many TFs shrinking?"}
     G -->|Only M5| H["M5 noise, wait"]
     G -->|M15 only| I["Shrink path\nentry possible"]
@@ -1818,9 +1818,9 @@ SIZE: 0.75× (M15 or M30 shrink alone) → 0.50× (M30+H1 both) → 0.25× (all 
 | Cascade direction now | D1 (compression) |
 | Cascade depth | M5 (M30/M15/M5 shrinking) |
 | Leading TF | M30 (watch for SQZ or fly resume) |
-| Next scenario if D1 continues | E (Confined Compression) |
-| Next scenario if D2 initiates same direction | D (Rest Pattern) |
-| Next scenario if D2 initiates opposite direction | G (Direction pivot) via reversal |
+| Next scenario if D1 continues | C (Confined Compression) |
+| Next scenario if D2 initiates same direction | P (Rest Pattern) |
+| Next scenario if D2 initiates opposite direction | V (Direction pivot) via reversal |
 | Discriminator observable | M30 BBW_stage 513→511/512 or 513→400-499 |
 
 ---
@@ -1838,7 +1838,7 @@ resolves it).
   identify_scenario]
 - **C4 / V2** — H4 compresses (C4) then pivots opposite to D1 (V2).
 - **R2/R3** — post-pivot resolution: H4 flipped; R2 = D1 also reversed
-  (full → new A); R3 = D1 still original (counter-trend).
+  (full → new F); R3 = D1 still original (counter-trend).
 
 Full sub-state tables, discriminators, and the cascade sequence: see
 [Scenario V — Reversal Progression](#scenario-g---direction-pivot-formerly-scenario-h).
@@ -1920,7 +1920,7 @@ flowchart TD
     D -->|Yes| E{"H4 still flying same direction?"}
     E -->|Yes| F{"Compression brief (hours not days)?"}
     F -->|Yes| G{"[G6-LOAD] only (not [G0c-SQZLOCK])?"}
-    G -->|Yes| H["SCENARIO D CONFIRMED"]
+    G -->|Yes| H["SCENARIO P CONFIRMED"]
     H --> I{"Bands re-expand same direction?"}
     I -->|Yes| J["Fly resumed\nfull entry"]
     I -->|No| K["Still compressing\nwait"]
@@ -1979,8 +1979,8 @@ EXIT: ATRSL stop | M5 UP→FLAT (G5-FADE) | M30+M15 go sideway
 | Cascade depth | TOP — all fly again |
 | Leading TF | M30 (confirm fly = full entry) |
 | Next scenario if D1 continues | B (Fly → Shrink) |
-| Next scenario if D2 initiates same direction | A (Normal Fly) |
-| Next scenario if D2 initiates opposite direction | G (Direction pivot) via reversal |
+| Next scenario if D2 initiates same direction | F (Normal Fly) |
+| Next scenario if D2 initiates opposite direction | V (Direction pivot) via reversal |
 | Discriminator observable | H1 step direction maintained or reversed |
 
 ---
@@ -2059,7 +2059,7 @@ flowchart TD
     E -->|Yes| F{"M30 shrinking or SQZ (513/523 or 400-499)?"}
     F -->|Yes| G{"Mid-band labels (3,4,5) on multiple TFs?"}
     G -->|Yes| H{"[G0c-SQZLOCK] or [G6-LOAD] visible?"}
-    H -->|Yes| I["SCENARIO E CONFIRMED"]
+    H -->|Yes| I["SCENARIO C CONFIRMED"]
     I --> J{"Compression depth?"}
     J -->|Shallow| K["Range trade\nH4 band boundaries"]
     J -->|Moderate| L["Wait for\ndirection"]
@@ -2708,9 +2708,9 @@ SIZE: 0.75× (1-2 TFs compress) → 0.50× (3 TFs compress) → 0.25× (all 3 co
 | Cascade direction now | D1→BOTTOM→D2 (full cycle) |
 | Cascade depth | M5 (all lower TF SQZ) |
 | Leading TF | M5 (first to break SQZ) |
-| Next scenario if D1 continues | G (Direction pivot) |
-| Next scenario if D2 initiates same direction | A (Normal Fly) via D (Rest Pattern) |
-| Next scenario if D2 initiates opposite direction | G (Direction pivot) via reversal |
+| Next scenario if D1 continues | V (Direction pivot) |
+| Next scenario if D2 initiates same direction | F (Normal Fly) via P (Rest Pattern) |
+| Next scenario if D2 initiates opposite direction | V (Direction pivot) via reversal |
 | Discriminator observable | M5 REVUP/REVDN + H4 BBW_stage maintained |
 
 ---
@@ -2868,9 +2868,9 @@ TARGET: H4 outer band (if H4 also breaking) → D1 outer band
 | Cascade direction now | D2 (expansion from SQZ) |
 | Cascade depth | M5→M15 (D2 initiated) |
 | Leading TF | M30 (confirm fly = full entry) |
-| Next scenario if D1 continues | G (Direction pivot) |
-| Next scenario if D2 initiates same direction | A (Normal Fly) |
-| Next scenario if D2 initiates opposite direction | G (Direction pivot) via reversal |
+| Next scenario if D1 continues | V (Direction pivot) |
+| Next scenario if D2 initiates same direction | F (Normal Fly) |
+| Next scenario if D2 initiates opposite direction | V (Direction pivot) via reversal |
 | Discriminator observable | M30 BBW_stage 400→511/512 |
 
 
@@ -2878,12 +2878,12 @@ TARGET: H4 outer band (if H4 also breaking) → D1 outer band
 
 | Scenario | Key Identifier | Primary Action |
 |----------|---------------|----------------|
-| A: Full fly alignment | All TFs flying same direction | Enter on M15 transition, full size |
-| B: Shallow compression | HTF flying, LTF shrinking | Enter on LTF transition, reduce size |
-| G2→C: Trend reversal | R1 (pre-pivot divergence, H4 fly) → C4 (H4 compresses) → V2 (pivot) → R2/R3 (resolution) | Enter at H4 confirm (R2), 0.25× if R1 |
-| D: Rest recovery | Temporary compression, then resume | Enter at SQZ break, hold through rest |
-| E: Deep compression | H4/H1 fly, M30/M15/M5 compress within envelope | Range trade at H4 boundaries or enter on M15 transition |
-| F: Compression release | Breakout from deep compression | Enter on SQZ break, scale up |
+| F: Full fly alignment | All TFs flying same direction | Enter on M15 transition, full size |
+| S: Shallow compression | HTF flying, LTF shrinking | Enter on LTF transition, reduce size |
+| V2→R: Trend reversal | R1 (pre-pivot divergence, H4 fly) → C4 (H4 compresses) → V2 (pivot) → R2/R3 (resolution) | Enter at H4 confirm (R2), 0.25× if R1 |
+| P: Rest recovery | Temporary compression, then resume | Enter at SQZ break, hold through rest |
+| C: Deep compression | H4/H1 fly, M30/M15/M5 compress within envelope | Range trade at H4 boundaries or enter on M15 transition |
+| B: Compression release | Breakout from deep compression | Enter on SQZ break, scale up |
 | V: Direction pivot | All TFs at SQZ — D2 direction resolving | Enter B2 rules if V1, R2/R3 rules if V2 (R1 pre-pivot) |
 
 ---
@@ -2957,7 +2957,7 @@ V1: ENTER using B2 rules (MTF confirm needed before full size) **[OOS-UNVALIDATE
 
 V2: PIVOT STATE — H4 breaks opposite to D1 **[OOS-UNVALIDATED]**
     R1 pre-pivot already passed (H4 original, M30 opposite). Now H4 in SQZ.
-    Wait for D1 to also flip before adding size → then R2 → new A
+    Wait for D1 to also flip before adding size → then R2 → new F
     SIZE: 0.25× only until D1 confirms new direction
 
 V3: EXIT immediately — false breakout confirmed **[OOS-UNVALIDATED]**
@@ -2990,7 +2990,7 @@ R1 ("MTF reversal only, H4 original direction") exists in the scenario enum and 
 
 **R1 = fact-detection (late-but-visible):** R1 catches the reversal once M30 flies opposite to H4 — unambiguous, no prediction needed. This is NOT the early discriminator (predicting during M30's compression stays REQ-P4-EARLYSIGNAL, separate/open).
 
-**Cascade sequence:** A (all aligned) → M15 reverses (511→513→521) → M30 reverses (511→513→521, H4 STILL flying 511/512) = R1 [BRIEF] → H4 starts shrinking (513) = C4 → H4 enters SQZ = V2 → H4 breaks opposite = R2/R3.
+**Cascade sequence:** F (all aligned) → M15 reverses (511→513→521) → M30 reverses (511→513→521, H4 STILL flying 511/512) = R1 [BRIEF] → H4 starts shrinking (513) = C4 → H4 enters SQZ = V2 → H4 breaks opposite = R2/R3.
 
 R1 is a FORK — two exits:
 - R1 → C4 (reversal continues: H4 compresses, pivots)
@@ -2998,11 +2998,11 @@ R1 is a FORK — two exits:
 
 **Anchored example:** April 1, 2nd circle — H4 flew up (512, diffBBW=19.5). M30 pullback (511→411-422, never hit 521) — no R1 window on April 1 per log (M30 never opposed H4). The R1→F recovery fork IS validated: M30 compressed then recovered in H4 direction = pullback. The R1-before-C4 sequence is structurally correct but has no April 1 validation. [DESIGN — Phase 3.]
 
-### G Cascade — Reversal Progression: R1 → C4 → V2 → R2/R3 **[OOS-UNVALIDATED]**
+### R Cascade — Reversal Progression: R1 → C4 → V2 → R2/R3 **[OOS-UNVALIDATED]**
 
-> **Harness gap:** The G-tier returns V2 (reversal signal, pivot_substate=2) but does NOT
-> implement the C1→E4→G2→R2/R3 forward transition. The reversal states are
-> doc-only, unimplemented in identify_scenario. Must be built before the G-reversal branch
+> **Harness gap:** The V-tier returns V2 (reversal signal, pivot_substate=2) but does NOT
+> implement the C1→C4→V2→R2/R3 forward transition. The reversal states are
+> doc-only, unimplemented in identify_scenario. Must be built before the R-reversal branch
 > can be validated on reversal-containing data.
 
 The reversal progression flows through three phases:
@@ -3011,13 +3011,13 @@ The reversal progression flows through three phases:
 |-------|-----|------|----------|----------|-----------|-----------|-------|------|
 | Pre-Pivot (Tier 3, Tier-2-like timing) | R1 | MTF reversal only, H4 flying | 511/512 (flying, original direction) | Still original direction or reversing | Reversed 521/522 | Reversed 521/522 | Wait — H4 not confirmed, counter-trend risk | 0.25× |
 | Compression | C4 | H4 compressing | 513/400s (shrink/SQZ) | — | — | — | H4 compressing, M30 already opposite | — |
-| Pivot | V2 | H4 breaks opposite to D1 | 400s (SQZ) | — | — | — | G-tier pivot, pivot_substate=2 | — |
-| Post-Pivot (Tier 3, resolution) | R2 | H4 confirmed — new A begins | H4 flipped to new direction 511/512 | New direction | New direction | New direction | ENTER — treat as new Scenario F1/F2 | 1.0× or 0.75× |
+| Pivot | V2 | H4 breaks opposite to D1 | 400s (SQZ) | — | — | — | V-tier pivot, pivot_substate=2 | — |
+| Post-Pivot (Tier 3, resolution) | R2 | H4 confirmed — new F begins | H4 flipped to new direction 511/512 | New direction | New direction | New direction | ENTER — treat as new Scenario F1/F2 | 1.0× or 0.75× |
 | Post-Pivot (Tier 3, resolution) | R3 | Counter-trend (W1/D1 still original) | H4 reversed BUT W1/D1 still original direction | New direction | New direction | New direction | SHORT hold — W1/D1 will eventually pull back | 0.50× |
 
 **Discriminator C1→C4:** H4 BBW_stage 512→513 (shrink) — H4 starts compressing
-**Discriminator E4→V2:** H4 BBW_stage enters SQZ (400s) — H4 stops flying in original direction
-**Discriminator G2→R2:** H4 BBW_stage flips from SQZ to new direction fly (511/512)
+**Discriminator C4→V2:** H4 BBW_stage enters SQZ (400s) — H4 stops flying in original direction
+**Discriminator V2→R2:** H4 BBW_stage flips from SQZ to new direction fly (511/512)
 **Discriminator R2 vs R3:** Check W1+D1 — if both also reversed = R2 full (→ F1). If W1/D1 still original = R3 counter-trend
 
 **Key rule:** Do NOT enter at R1. Wait for H4 confirmation (R2) unless deliberately taking
@@ -3131,7 +3131,7 @@ Which boundary depends on the current scenario and which TFs are still flying.
 
 | Scenario | UP target | DN target | Target TF (confinement) |
 |---|---|---|---|
-| A (full fly) | D1 outer band (furthest target) | Brief pullback to M30 mid then resume | D1 — highest confinement |
+| F (full fly) | D1 outer band (furthest target) | Brief pullback to M30 mid then resume | D1 — highest confinement |
 | S1 (M15 shrink) | M30 outer band | M30 mid or M30 lower | M30 — highest still-flying MTF |
 | S2 (M30 shrink) | H1 outer band | H1 mid or H1 lower | H1 — highest still-flying MTF |
 | S3 (H1 shrink) | H4 outer band | H4 mid or H4 lower | H4 — confinement ceiling |
@@ -3250,7 +3250,7 @@ CHECK: H4 BBUpDn sustaining 1 for 3+ bars?
     → Timeline: M15 confirms in 2–5 bars
 
   YES, opposite direction to D1:
-    → Next: G reversal progression C1→E4→G2→R2/R3 (trend reversal)
+    → Next: R reversal progression C1→C4→V2→R2/R3 (trend reversal)
     → Confidence: LOW until D1 also confirms
     → Timeline: days until D1 flips
 
@@ -3332,11 +3332,11 @@ Part 3 identification to Part 4 prediction:
 | C2 + Phase 4 | UNKNOWN | None — noise | Hours to 1 day | G (direction pivot) | None |
 | C3 + Phase 4→5 | M5 expansion direction | H4 outer band → D1 | Hours | V → B or R \| Medium → High |
 | V1 + Phase 5 | Same as D1 | H4 → D1 outer band | Hours | B → F \| High |
-| V2 + Phase 5 | Opposite to D1 | H4 outer band (new dir) | Hours → days | C → new A | Low → Medium |
+| V2 + Phase 5 | Opposite to D1 | H4 outer band (new dir) | Hours → days | C → new F | Low → Medium |
 | V4 + Phase 6 | Each leg opposite | H4 boundaries | 12-24h per leg | Eventually F or C or Scenario I | Low |
-| D2 + Phase 5 | Same as H4 fly | H4 outer band | Hours | A (full fly restored) | Medium-High |
+| D2 + Phase 5 | Same as H4 fly | H4 outer band | Hours | F (full fly restored) | Medium-High |
 | B2 | Same as M30 expansion | H4 outer band | Hours | B3 → F or back to V | Medium |
-| R2 | New direction confirmed | D1 outer band (new dir) | Days | New A | High |
+| R2 | New direction confirmed | D1 outer band (new dir) | Days | New F | High |
 | Phase 3b-OUT | Recovery direction | D1 confinement boundary | Days | D1 boundary → Phase 3a or C | Medium |
 
 ---
@@ -3529,7 +3529,7 @@ Stop is placed beyond the nearest confinement boundary AGAINST the trade directi
 
 | Scenario | BUY stop placement | SELL stop placement | ATR TF |
 |---|---|---|---|
-| A (full fly) | Below M30 lower band | Above M30 upper band | M30 ATR |
+| F (full fly) | Below M30 lower band | Above M30 upper band | M30 ATR |
 | S1 (M15 shrink) | Below M30 lower band | Above M30 upper band | M30 ATR |
 | S2 (M30 shrink) | Below H1 lower band | Above H1 upper band | H1 ATR |
 | S3 (H1 shrink) | Below H4 lower band | Above H4 upper band | H4 ATR |
@@ -3538,7 +3538,7 @@ Stop is placed beyond the nearest confinement boundary AGAINST the trade directi
 | B1/B2 (compression release) | Below H1 lower band | Above H1 upper band | H1 ATR |
 | B3 (HTF confirmed) | Below M30 lower band (→ Scenario F) | Above M30 upper band | M30 ATR |
 | R1 (MTF reversal) | Beyond H4 outer band (tight — counter-trend) | Beyond H4 outer band | H4 ATR |
-| R2 (H4 confirmed) | Below M30 lower band (→ new A) | Above M30 upper band | M30 ATR |
+| R2 (H4 confirmed) | Below M30 lower band (→ new F) | Above M30 upper band | M30 ATR |
 | Phase 6 (legs) | Beyond H4 boundary that was just touched (tight) | Same — tight to boundary | H4 ATR |
 
 **ATRSL reference:** Stop levels use `ATRSL1buf` values from EA.
@@ -3587,7 +3587,7 @@ This is the master table. Read Part 3 scenario → Part 4 prediction → this ta
 | B2 MTF confirmed | Direction: M30 expansion dir, Confidence: Medium | ENTER | E5: M15 mid confirms | 0.75× | Beyond H1 lower/upper | H4 outer band | X1 or X2 |
 | B3 HTF confirmed | Direction: H4 expansion dir, Confidence: High | ENTER (→ Scenario F) | E6: H4 BBUpDn=1 sustained | 1.0× | Below M30 lower (BUY) | D1 outer band | X1 or X2 |
 | R1 MTF reversal | Direction: opposite to previous, Confidence: Low | ENTER small | E5: M15 mid confirms (small) | 0.25× | Beyond H4 outer band | H4 outer band new dir | X1 or X2 |
-| R2 H4 confirmed | Direction: new direction confirmed, Confidence: High | ENTER (→ new A) | E6: H4 BBUpDn=1 new dir | 1.0× | Below M30 lower (new dir) | D1 outer band new dir | X1 or X2 |
+| R2 H4 confirmed | Direction: new direction confirmed, Confidence: High | ENTER (→ new F) | E6: H4 BBUpDn=1 new dir | 1.0× | Below M30 lower (new dir) | D1 outer band new dir | X1 or X2 |
 | R3 Counter-trend | Direction: opposite to W1/D1, Confidence: Medium | ENTER limited | E5: M15 mid confirms | 0.50× | Beyond H4 outer band (tight) | H4 outer band | X1 or X2 |
 
 ### Phase-Based Trade Rules (Section 13 Phases)
@@ -3698,7 +3698,7 @@ v31 signal taxonomy, for cross-version log verification.
 | B2 | PH_5 | E5 | X1(H4 band) | 0.75 | |
 | B3 | PH_5→1 | E6 | X1(D1 band), X2 | 1.00 | → F |
 | R1 | PH_5 | E5 | X1(H4 band new dir), tight | 0.25 | until H4 confirms |
-| R2 | PH_5→1 | E6 | X1(D1 band new dir), X2 | 1.00 | → new A |
+| R2 | PH_5→1 | E6 | X1(D1 band new dir), X2 | 1.00 | → new F |
 | R3 | any | E5 | X1(H4 band), tight | 0.50 | W1/D1 opposing |
 
 Final size = MathMin(matrix ceiling, confidence size, §12d decoder size)
