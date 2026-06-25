@@ -143,44 +143,44 @@ flowchart TD
     ConfComp -->|yes| D5{"Decision 5:<br/>H1-SQZ this bar<br/>AND prior-bar?"}
 
     D5 -->|"established<br/>(2+ bars H1-SQZ)"| D5Sub{"M15+M30 both SQZ?"}
-    D5Sub -->|yes| E2a["C2 — H1-SQZ established,<br/>M15+M30 SQZ"]
-    D5Sub -->|no| E1a["C1 — H1-SQZ established"]
-    E2a --> Return
-    E1a --> Return
+    D5Sub -->|yes| C2a["C2 — H1-SQZ established,<br/>M15+M30 SQZ"]
+    D5Sub -->|no| C1a["C1 — H1-SQZ established"]
+    C2a --> Return
+    C1a --> Return
 
-    D5 -->|"recovery<br/>(H1 exited SQZ,<br/>compression persists)"| E1b["C1 — H1-SQZ recovery"]
-    E1b --> Return
+    D5 -->|"recovery<br/>(H1 exited SQZ,<br/>compression persists)"| C1b["C1 — H1-SQZ recovery"]
+    C1b --> Return
 
     D5 -->|"onset<br/>(first bar H1-SQZ)"| B3onset["S3 — H1-SQZ onset"]
     B3onset --> Return
 
     D5 -->|none of above| D2{"Decision 2:<br/>h4_fly + diffBBW > 5<br/>+ no ltf_shrink + no prev H1-SQZ<br/>+ cas_sqzCount==1"}
     D2 -->|"D1 aligned<br/>(D1 fly + same dir as H4)?"| D2Sub{"D1 aligned<br/>(D1 fly + same dir as H4)?"}
-    D2Sub -->|yes| A1c["F1 — transient SQZ,<br/>D1 aligned"]
-    D2Sub -->|no| A2c["F2 — transient SQZ,<br/>D1 not aligned"]
-    A1c --> Return
-    A2c --> Return
+    D2Sub -->|yes| F1c["F1 — transient SQZ,<br/>D1 aligned"]
+    D2Sub -->|no| F2c["F2 — transient SQZ,<br/>D1 not aligned"]
+    F1c --> Return
+    F2c --> Return
 
     D2 -->|no| Ecomp{"cas_sqzCount >= 2?"}
     Ecomp -->|yes| EcompSub{"b2_pink?"}
-    EcompSub -->|yes| E2b["C2 — M15+M30 both SQZ"]
+    EcompSub -->|yes| C2b["C2 — M15+M30 both SQZ"]
     EcompSub -->|no| E1b2["C1 — LTF SQZ"]
-    E2b --> Return
+    C2b --> Return
     E1b2 --> Return
 
     Ecomp -->|no| Bcomp{"ltf_shrinkTF >= 1?"}
     Bcomp -->|yes| BDecode["S-tier decoder:<br/>max(shrink_depth, sqz_depth)<br/>+ cas_sqzCount → S1/S2/S3"]
     BDecode --> Return
 
-    Bcomp -->|no| A2safe["F2 — SQZ without LTF shrink<br/>(safety net)"]
-    A2safe --> Return
+    Bcomp -->|no| F2safe["F2 — SQZ without LTF shrink<br/>(safety net)"]
+    F2safe --> Return
 
     ConfComp -->|no| H4Fly{"h4_fly?"}
-    H4Fly -->|yes| A1Sub{"D1 aligned<br/>(D1 fly + same dir as H4)?"}
-    A1Sub -->|yes| A1a["F1 — H4+D1 fly aligned"]
-    A1Sub -->|no| A2a["F2 — H4 fly, D1 not aligned"]
-    A1a --> Return
-    A2a --> Return
+    H4Fly -->|yes| F1Sub{"D1 aligned<br/>(D1 fly + same dir as H4)?"}
+    F1Sub -->|yes| F1a["F1 — H4+D1 fly aligned"]
+    F1Sub -->|no| F2a["F2 — H4 fly, D1 not aligned"]
+    F1a --> Return
+    F2a --> Return
 
     H4Fly -->|no| Default["Default: F2 — conservative"]
     Default --> UpdatePrev["Capture h1sqz_prior → update s_prevH1Sqz<br/>[FIXED V31.06: capture-prior-then-update]"]
@@ -408,7 +408,7 @@ flowchart LR
 **Why next_scenario is needed beyond direction:** `direction` says up/down; `next_scenario` says WHICH REGIME (fly / squeeze / pivot / reversal). DecideAction needs the regime to decide enter-vs-wait, the target band, and the size ceiling. The two-circle case proves it: the 1st circle has `next_scenario = continuation (A/B)` → HOLD; the 2nd circle has `next_scenario = reversal (V→R)` → EXIT. `direction` alone can't separate these (M15 points down at both); the next scenario does. See the test chart at `references/Backtest_data/extras/backtested_EA_test_phase_April_01.jpg` — the two-circle test pair (1st = predict continuation/HOLD, 2nd = predict reversal/EXIT) is the test for NextScenario's output.
 
 **Validation flagging — NextScenario transitions (granular split):**
-- **Compression-deepening transitions (A→B→E→G)** = follow the validated bottom-up cascade (§12d, Decision 4) → **[design-firm, validatable]**
+- **Compression-deepening transitions (F→S→C→V)** = follow the validated bottom-up cascade (§12d, Decision 4) → **[design-firm, validatable]**
 - **V→F continuation** = **[OOS-VALIDATED 7/7]**
 - **V→R reversal** = **[HYPOTHESIS — OOS-UNVALIDATED, 0 episodes; validates at GATE 4 / when reversal data exists]**
 

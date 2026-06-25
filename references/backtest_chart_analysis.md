@@ -697,7 +697,7 @@ vs which TFs are showing independent fly energy (D2 pressure).
 
 [BBTFImpact] HTF_Drive_LTF_Sideway:[M30_1] LTF_Drive_HTF_Fly:[M30_1, H1_1]
   → CONFLICT — M30 being suppressed AND showing fly energy simultaneously
-  → Volatile transition state — Scenario C3 or G territory
+  → Volatile transition state — Scenario C3 or V territory
 ```
 
 **Scenario S sub-scenario mapping:**
@@ -709,7 +709,7 @@ vs which TFs are showing independent fly energy (D2 pressure).
 | `HTF_Drive_LTF_Sideway:[M15_1, M30_1, H1_1]` | S3 — H1 shrink | 0.25× |
 | `HTF_Drive_LTF_Sideway:[M15_1, M30_1, H1_1, H4_1]` | C4 — H4 also compressing | No entry |
 
-**Scenario C/G transition mapping:**
+**Scenario C/V transition mapping:**
 
 | BBTFImpact pattern | Scenario | Action |
 |-------------------|----------|--------|
@@ -1643,10 +1643,10 @@ Chart-image analysis for Scenario F: see [IMAGE_ANALYSIS.md](./IMAGE_ANALYSIS.md
 ```mermaid
 flowchart TD
     A["Scenario F confirmed"] --> B{"M15/M5 brief squeeze (513/400-499)?"}
-    B -->|Yes| A3s["F3 — Noise squeeze\nHOLD through — Type 1\nSize: 1.0×"]
+    B -->|Yes| F3s["F3 — Noise squeeze\nHOLD through — Type 1\nSize: 1.0×"]
     B -->|No| C{"W1 + D1 both 511/512 same direction?"}
-    C -->|Yes| A1s["F1 — Strong fly\nFull trend — hold to D1 outer\nSize: 1.0×"]
-    C -->|No| A2s["F2 — Partial fly\nShorter hold — exit at H4\nSize: 0.75×"]
+    C -->|Yes| F1s["F1 — Strong fly\nFull trend — hold to D1 outer\nSize: 1.0×"]
+    C -->|No| F2s["F2 — Partial fly\nShorter hold — exit at H4\nSize: 0.75×"]
 ```
 
 **F-tier priority rule:** When cas_sqzCount=0 AND no diffBBW-confirmed shrink
