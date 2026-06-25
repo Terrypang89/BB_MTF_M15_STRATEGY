@@ -12,25 +12,72 @@ Work through: **Part 1** (read the chart) → **Part 2** (HTF context) → **Par
 
 | Looking for... | Go to... |
 |----------------|----------|
-| Gate label colors | Part 1 Section 6 |
-| Entry triggers | Part 1 Section 7 |
-| Compression zones | Part 1 Section 8 |
-| Compression → reversal or continuation | Part 1 Section 9 |
-| Block gates | Part 1 Section 10 |
-| Position sizing | Part 1 Section 11 |
-| Cascade direction model | Part 1 Section 12 |
-| Touch classification | Part 1 Section 12 — Touch Type Classification |
-| TRADEINFO chain flags | Part 1 Section 12b |
-| BBTFImpact pressure indicators | Part 1 Section 12c |
-| Cascade state decoder | Part 1 Section 12d |
-| HTF cascade rules | Part 2 — HTF Compression Cascade |
-| Scenario matching | Part 2 — Scenario Identification Flowchart |
-| Scenario details | Part 3 — Tier 1 ([F](#scenario-f--full-fly-alignment)) / Tier 2 ([S](#scenario-s--fly-shrink-inner-tfs-contracting), [C](#scenario-c--deep-compression), [V](#scenario-v--direction-pivot-formerly-scenario-h)) / Tier 3 ([P](#scenario-p--rest-recovery), [B](#scenario-b--compression-release), [R](#scenario-r--trend-reversal-consolidated-under-scenario-v)) |
-| Scenario cycle sequence | Part 3 — Cycle sequence (top of Part 3) |
-| Direction pivot / BOTTOM state | [Part 3 — Scenario V](#scenario-v--direction-pivot-formerly-scenario-h) |
-| Trend prediction | Part 4 — Direction, Target, Timeline, Confidence |
-| Trade action rules | Part 5 — Entry/Exit/Block/Size/Stop |
-| Common misreads | Part 7 — Common Misreads |
+| **HOW TO TRADE** | |
+| How to Trade — Summary | [How to Trade — Summary](#how-to-trade--summary) |
+| **PART 1 — CHART BASICS** | |
+| Chart Layers | [Chart Layers](#1-chart-layers) |
+| BB Color Reference | [BB Color Reference](#2-bollinger-band-color-reference) |
+| Upper Band Labels | [Upper Band Labels](#3-upper-band-labels--bbw_stage-codes) |
+| Middle Band Labels | [Middle Band Labels](#4-middle-band-labels--bb_diffmid_trend) |
+| diffBBW | [diffBBW](#4b-bbw-velocity--diffbbw) |
+| ATRSL | [ATRSL](#5-atrsl-state) |
+| Gate label colors | [Gate Label Colors](#6-gate-label-colors) |
+| Entry triggers | [Entry Trigger Identification](#7-visual-entry-trigger-identification) |
+| Compression zones | [Compression Zone Identification](#8-compression-zone-identification) |
+| Compression → reversal or continuation | [Compression Resolution](#9-compression-resolution--reversal-vs-continuation) |
+| Block gates | [Block Gate Reference Table](#10-block-gate-reference-table) |
+| Position sizing | [Position Sizing Matrix](#11-position-sizing-matrix) |
+| Cascade direction model | [Cascade Direction Model](#12-cascade-direction-model) |
+| Touch classification | [Touch Type Classification](#touch-type-classification) |
+| TRADEINFO chain flags | [TRADEINFO Chain Flags](#12b-tradeinfo-chain-flags--cascade-direction-observable) |
+| BBTFImpact pressure indicators | [BBTFImpact Flags](#12c-bbtfimpact-flags--cascade-pressure-indicators) |
+| Cascade state decoder | [Cascade State Decoder](#12d-cascade-state-decoder--cas_shrinktf-and-cas_sqzcount) |
+| Candlestick Behavior | [Candlestick Behavior](#13-candlestick-behavior-during-fly--shrink--sqz-transition) |
+| Risk Management | [Risk Management](#14-risk-management-guidelines) |
+| **PART 2 — HTF REFERENCE** | |
+| W1 context | [W1 — Ultra-Macro Context](#w1--ultra-macro-context) |
+| D1 context | [D1 — Daily Macro](#d1--daily-macro) |
+| H4 context | [H4 — Macro Bias Filter](#h4--macro-bias-filter) |
+| HTF → MTF cascade rule | [HTF → MTF Cascade Rule](#the-core-htf--mtf-cascade-rule) |
+| HTF step-by-step | [HTF Analysis Step-by-Step](#htf-analysis-step-by-step) |
+| Scenario matching flowchart | [Scenario Identification Flowchart](#scenario-identification-flowchart) |
+| **PART 3 — SCENARIOS** | |
+| Scenarios overview (Tier 1/2/3) | Tier 1 ([F](#scenario-f--full-fly-alignment)) / Tier 2 ([S](#scenario-s--fly--shrink-inner-tfs-contracting), [C](#scenario-c--deep-compression), [V](#scenario-v--direction-pivot-formerly-scenario-h)) / Tier 3 ([P](#scenario-p--rest-recovery), [B](#scenario-b--compression-release), [R](#scenario-r--trend-reversal-consolidated-under-scenario-v)) |
+| Scenario F (Full Fly) | [Scenario F](#scenario-f--full-fly-alignment) |
+| Scenario S (Shrink) | [Scenario S](#scenario-s--fly--shrink-inner-tfs-contracting) |
+| Scenario C (Deep Compression) | [Scenario C](#scenario-c--deep-compression) |
+| Scenario V (Direction Pivot) | [Scenario V](#scenario-v--direction-pivot-formerly-scenario-h) |
+| Scenario P (Rest Recovery) | [Scenario P](#scenario-p--rest-recovery) |
+| Scenario B (Compression Release) | [Scenario B](#scenario-b--compression-release) |
+| Scenario R (Trend Reversal) | [Scenario R](#scenario-r--trend-reversal-consolidated-under-scenario-v) |
+| Scenario cycle sequence | [Cycle sequence (top of Part 3)](#part-3--middle-and-lower-timeframe-scenario-analysis) |
+| **PART 4 — TREND PREDICTION** | |
+| Trend prediction overview | [Trend Prediction](#part-4--trend-prediction) |
+| Rule 1 — Direction | [Rule 1](#rule-1--direction-prediction) |
+| Rule 2 — Target | [Rule 2](#rule-2--target-prediction) |
+| Rule 3 — Timeline | [Rule 3](#rule-3--timeline-prediction) |
+| Rule 4 — Next Scenario | [Rule 4](#rule-4--next-scenario-prediction) |
+| Rule 5 — Confidence | [Rule 5](#rule-5--confidence-matrix) |
+| **PART 5 — TRADE ACTION** | |
+| Trade action overview | [Trade Action](#part-5--trade-action-via-trend-prediction) |
+| Entry conditions | [Entry Conditions](#entry-conditions) |
+| Exit conditions | [Exit Conditions](#exit-conditions) |
+| Block conditions | [Block Conditions](#block-conditions-no-entry-allowed) |
+| Size matrix | [Size Matrix](#size-matrix) |
+| Stop loss | [Stop Loss Placement](#stop-loss-placement) |
+| Decision table | [Trade Action Decision Table](#trade-action-by-scenario--complete-decision-table) |
+| Gate decoder | [Gate Decoder](#gate-decoder--ea-implementation-reference) |
+| **PART 6 — ANALYSIS WORKFLOW** | |
+| Analysis workflow overview | [Analysis Workflow](#part-6--analysis-workflow) |
+| Step 1 — Read Chart Variables | [Step 1](#step-1--read-chart-variables-part-1) |
+| Step 2 — CHECK HTF | [Step 2](#step-2--check-htf-part-2) |
+| Step 2b — MTF Container Check | [Step 2b](#step-2b--mtf-container-check-h1-m30) |
+| Step 3 — Identify Scenario | [Step 3](#step-3--identify-scenario-part-3) |
+| Step 4 — Identify Phase | [Step 4](#step-4--identify-phase-section-13) |
+| Step 5 — Predict | [Step 5](#step-5--predict-part-4) |
+| Step 6 — Act | [Step 6](#step-6--act-part-5) |
+| **PART 7 — COMMON MISREADS** | |
+| Common misreads | [Common Misreads](#part-7--common-misreads) |
 
 ---
 
