@@ -6,6 +6,65 @@ Each block uses a 5-step + TIMELINE format. States are confirmed against the bac
 
 ---
 
+## HTF / MTF Two-Axis Reading — DESIGN REFERENCE
+
+> **STATUS: DESIGN — UNBUILT, UNVALIDATED.** This is a proposed framework for
+> reading each chart into two state axes (HTF + MTF). It is NOT implemented in
+> identify_scenario and NOT validated against backtest data. It is a reference
+> for the manual image analysis below, not a code spec. Depends on the EA
+> baseline (V31.06) blocker before any of it can be built. Rows marked ⚠ are
+> inferred — verify against backtest_chart_analysis.md before relying on them.
+
+**The two axes:**
+- **HTF-state** (H4/D1/W1): slow macro context (changes over days).
+- **MTF-state** (M15/M30/H1): fast cascade (changes bar-to-bar).
+- A scenario = (HTF-state × MTF-state). Existing labels are shorthand for
+  combinations.
+- **KEY: the MTF-state's most important attribute is DIRECTION-vs-H4.** "MTF
+  flying SAME as H4" = continuation (F); "MTF flying/reversed OPPOSITE to H4"
+  = reversal beginning (R1). Both look like "MTF active" — only direction-vs-H4
+  separates them. (This is the discriminator current code is blind to.)
+
+**Scenario → axis classification** (defs from backtest_chart_analysis.md):
+
+| Scenario | Sub-state meaning | MTF/HTF driven | Why |
+|----------|-------------------|----------------|-----|
+| F1/F2/F3 | D1/W1 alignment levels (macro/partial/weak) | HTF | sub-split is D1/W1 |
+| S1/S2/S3 | shrink @ M15 / M30 / H1 | MTF | which TF shrinks |
+| R1 | M30 reversed, H4 still flying (pre-pivot) | Both | genuinely 2-axis |
+| R2 | H4 flipped + D1 reversed (full) | HTF | D1 fork |
+| R3 | H4 flipped, D1 original (counter-trend) | HTF | D1 fork |
+| C1 | LTF partial SQZ (M15 peak, M30 noise) | MTF | SQZ progression |
+| C2 | LTF full SQZ (all LTF, G0b-PINK) | MTF | SQZ progression |
+| C3 | M5 loading (breaking SQZ, G6-LOAD) | MTF | SQZ progression |
+| C4 | H4 also compressing (→ V) | HTF | H4 state change |
+| B1 | release, LTF only (unconfirmed) | MTF | MTF leads |
+| B2 | release, MTF confirmed | Both | propagation |
+| B3 | release, HTF confirmed (→ F) | HTF | H4 confirms |
+| V1 | H4 breaks same as D1 (continuation → B) | HTF | H4 SQZ resolution |
+| V2 | H4 breaks opposite D1 (reversal → R2/R3) | HTF | H4 SQZ resolution |
+| V3 | false breakout (reverts ≤3 bars → C/V) | HTF | H4 SQZ resolution |
+| V4 | whipsaw (alternating, no resolution) | HTF | H4 SQZ resolution |
+| P1 | M5 break (G6-LOAD, arm) | MTF | re-expansion |
+| P2 | M15 confirm (entry trigger, 0.75×) | MTF | re-expansion |
+| P3 | MTF re-align (→ F, 1.0×) | MTF | re-expansion |
+
+**Pattern:** HTF-driven = F, R2/R3, C4, V (all), B3 (D1/W1/H4-state is the
+discriminator). MTF-driven = S, C1-C3, P, B1 (which-TF/depth/stage). Genuinely
+2-axis = R1, B2.
+
+**Sideways cascade:** "sideways" (diffMid=3) propagates up the TFs —
+LTF-sideways (M5/M15 flat, earliest/ambiguous) → MTF-sideways (M30/H1 flat,
+committed) → HTF-sideways (H4 flat = pivot/V). Propagating states (shrink,
+sideways, breakout) are TF-indexable; simultaneous states (fly) are not.
+
+**Split recommendation (when built):** expose HTF-state + MTF-state as two
+fields (additive), KEEP existing labels, share HTF-state with Part 4. Do NOT
+do a uniform 2-digit rename — most scenarios are single-axis (one field empty);
+only R1/B2 are genuinely 2-axis.
+
+---
+
 ## Scenario F
 
 #### Image Analysis — backtested_EA_fly_scenario.jpg
