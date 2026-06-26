@@ -65,12 +65,12 @@ only R1/B2 are genuinely 2-axis.
 
 ---
 
-## Scenario F
+## Scenario F (Full Fly)
 
 #### Image Analysis — backtested_EA_fly_scenario.jpg
 ![backtested_EA_fly_scenario](./Backtest_data/extras/backtested_EA_fly_scenario.jpg)
 
-**Period:** 2026.01.02 01:00 → 2026.01.03 04:00
+**Period:** 2026.02.01 01:00 → 2026.02.03 04:00
 
 ##### Step 1: State Read (evidence first — one table, all 7 TFs)
 | TF group | TF | BBW_stage | diffMid | BBUpDn | Source (img/log) |
@@ -94,18 +94,18 @@ only R1/B2 are genuinely 2-axis.
 - key transition: Full fly alignment maintained; M5 brief SQZ noise resolves
 
 ##### Step 4: TIMELINE
-| From | To | Scenario | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|----------|--------------|-----------|-----------|--------|-------|
-| 260102 01:00 | 260102 03:00 | F1 | Up / Tier 1 | W1/D1/H4 fly 511 | M30/M15 fly 511, H1 SQZ 424 | log | H1 SQZ transient — Decision 6 not met (single-bar) |
-| 260102 03:00 | 260103 04:00 | F1 | Up / Tier 1 | W1/D1/H4 fly 511 | H1/M30/M15 fly 511, M5 brief 411 | img/log | Full fly restored; M5 noise resolves |
+| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
+|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
+| 260201 01:00 | 260201 03:00 | F-F1 | Up / Tier 1 | W1/D1/H4 fly 511 | M30/M15 fly 511, H1 SQZ 424 | img | H1 SQZ transient — Decision 6 not met (single-bar) |
+| 260201 03:00 | 260203 04:00 | F-F1 | Up / Tier 1 | W1/D1/H4 fly 511 | H1/M30/M15 fly 511, M5 brief 411 | img | Full fly restored; M5 noise resolves |
 
 ##### Step 5: Conclusion + Prediction
-- **Scenario: F1** (HTF=F × MTF=F). No divergence.
+- **Scenario: F-F1** (HTF=F × MTF=F1). No divergence.
 - **Next likely:** S if H4 enters 513. Watch: H4 BBW_stage for first sign of shrink.
 
 ---
 
-## Scenario S
+## Scenario S (Shrink)
 
 #### Image 1 Analysis — backtested_EA_fly_2_fly_shrink.jpg
 ![backtested_EA_fly_2_fly_shrink](./Backtest_data/extras/backtested_EA_fly_2_fly_shrink.jpg)
@@ -134,14 +134,14 @@ only R1/B2 are genuinely 2-axis.
 - key transition: M15 transitions 511→513; D1 compression deepens from S1 to S2
 
 ##### Step 4: TIMELINE
-| From | To | Scenario | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|----------|--------------|-----------|-----------|--------|-------|
-| 260330 13:00 | 260330 14:00 | S1 | Up / Tier 2 | H4 fly 511, D1 fly 511 | M30 fly 512, M15 fly 511→513 | log | M15 enters shrink first |
-| 260330 14:00 | 260330 14:30 | S2 | Up / Tier 2 | H4 fly 511 | M30 shrink 513, M15 shrink 513, M5 shrink | log | M30 also shrink — S2 confirmed |
-| 260330 14:30 | 260401 13:00 | S2 | Up / Tier 2 | H4 fly 511 | M30/M15/M5 shrink 513 | img | Sustained S2; M15 briefly SQZ 425 then back to 513 |
+| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
+|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
+| 260330 13:00 | 260330 14:00 | F-S1 | Up / Tier 2 | H4 fly 511, D1 fly 511 | M30 fly 512, M15 fly 511→513 | log | M15 enters shrink first |
+| 260330 14:00 | 260330 14:30 | F-S2 | Up / Tier 2 | H4 fly 511 | M30 shrink 513, M15 shrink 513, M5 shrink | log | M30 also shrink — S2 confirmed |
+| 260330 14:30 | 260401 13:00 | F-S2 | Up / Tier 2 | H4 fly 511 | M30/M15/M5 shrink 513 | img | Sustained S2; M15 briefly SQZ 425 then back to 513 |
 
 ##### Step 5: Conclusion + Prediction
-- **Scenario: S2** (HTF=F × MTF=S). No divergence.
+- **Scenario: F-S2** (HTF=F × MTF=S2). No divergence.
 - **Next likely:** C2 if M30 enters SQZ 400-499; P if M30 returns to 511/512. Watch: M30 BBW_stage + diffBBW.
 
 #### Image 2 Analysis — backtested_EA_fly_2_fly_shrink_zoomin.jpg
@@ -171,18 +171,18 @@ only R1/B2 are genuinely 2-axis.
 - key transition: M15 bands converging — shrink path entry possible
 
 ##### Step 4: TIMELINE
-| From | To | Scenario | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|----------|--------------|-----------|-----------|--------|-------|
-| 260330 14:30 | 260401 05:00 | S2 | Up / Tier 2 | H4 fly 511 | M30/M15 shrink 513, M5 shrink | img | D1 sustained; M15 SQZ 425 briefly then 513 |
-| 260401 05:00 | 260401 09:00 | S2 | Up / Tier 2 | H4 fly 511 | M30/M15 shrink 513 | img | M15 bands converging; entry on FLAT→UP/DN |
+| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
+|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
+| 260330 14:30 | 260401 05:00 | F-S2 | Up / Tier 2 | H4 fly 511 | M30/M15 shrink 513, M5 shrink | img | D1 sustained; M15 SQZ 425 briefly then 513 |
+| 260401 05:00 | 260401 09:00 | F-S2 | Up / Tier 2 | H4 fly 511 | M30/M15 shrink 513 | img | M15 bands converging; entry on FLAT→UP/DN |
 
 ##### Step 5: Conclusion + Prediction
-- **Scenario: S2** (HTF=F × MTF=S). No divergence.
+- **Scenario: F-S2** (HTF=F × MTF=S2). No divergence.
 - **Next likely:** P if M30 513→511/512; C2 if M30 513→400-499. Watch: M30 BBW_stage + M15 midtrend transition.
 
 ---
 
-## Scenario P
+## Scenario P (Rest Recovery / Pause)
 
 #### Image 1 Analysis — backtested_EA_fly_2_shrink_2_fly.jpg
 ![backtested_EA_fly_2_shrink_2_fly](./Backtest_data/extras/backtested_EA_fly_2_shrink_2_fly.jpg)
@@ -211,15 +211,15 @@ only R1/B2 are genuinely 2-axis.
 - key transition: D1→D2 — M5 REVUP drives full re-expansion
 
 ##### Step 4: TIMELINE
-| From | To | Scenario | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|----------|--------------|-----------|-----------|--------|-------|
-| 260403 03:00 | 260403 09:00 | S2 | Up / Tier 2 | H4/H1 fly 511 | M30/M15 shrink 513 | img | D1 compression begins |
-| 260403 09:00 | 260404 15:00 | C2 | Up / Tier 2 | H4/H1 fly 511 | M30/M15/M5 SQZ 400-499 | img | D1 reaches BOTTOM |
-| 260404 15:00 | 260404 21:00 | P2 | Up / Tier 3 | H4/H1 fly 511 | M5 fly 511, M15 confirms | img | M5 REVUP, D2 initiated |
-| 260404 21:00 | 260405 00:00 | P3 | Up / Tier 3 | H4/H1 fly 511 | M30 fly 511 | img | D2 complete |
+| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
+|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
+| 260403 03:00 | 260403 09:00 | F-S2 | Up / Tier 2 | H4/H1 fly 511 | M30/M15 shrink 513 | img | D1 compression begins |
+| 260403 09:00 | 260404 15:00 | F-C2 | Up / Tier 2 | H4/H1 fly 511 | M30/M15/M5 SQZ 400-499 | img | D1 reaches BOTTOM |
+| 260404 15:00 | 260404 21:00 | F-P2 | Up / Tier 3 | H4/H1 fly 511 | M5 fly 511, M15 confirms | img | M5 REVUP, D2 initiated |
+| 260404 21:00 | 260405 00:00 | F-P3 | Up / Tier 3 | H4/H1 fly 511 | M30 fly 511 | img | D2 complete |
 
 ##### Step 5: Conclusion + Prediction
-- **Scenario: P2→P3** (HTF=F × MTF=P). No divergence.
+- **Scenario: F-P2→F-P3** (HTF=F × MTF=P2→P3). No divergence.
 - **Next likely:** F if M30 fly confirmed; S if M30 enters shrink again. Watch: M30 BBW_stage.
 
 #### Image 2 Analysis — backtested_EA_fly_2_shrink_2_fly_zoomin.jpg
@@ -249,18 +249,18 @@ only R1/B2 are genuinely 2-axis.
 - key transition: M30 SQZ→fly — full D2 expansion confirmed
 
 ##### Step 4: TIMELINE
-| From | To | Scenario | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|----------|--------------|-----------|-----------|--------|-------|
-| 260404 15:00 | 260404 18:00 | P2 | Up / Tier 3 | H4/H1 fly 511 | M5 fly 511, M15 fly 511 | img | M5 REVUP, M15 confirms |
-| 260404 18:00 | 260405 00:00 | P3 | Up / Tier 3 | H4/H1 fly 511 | M30 fly 511 | img | D2 complete — all fly |
+| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
+|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
+| 260404 15:00 | 260404 18:00 | F-P2 | Up / Tier 3 | H4/H1 fly 511 | M5 fly 511, M15 fly 511 | img | M5 REVUP, M15 confirms |
+| 260404 18:00 | 260405 00:00 | F-P3 | Up / Tier 3 | H4/H1 fly 511 | M30 fly 511 | img | D2 complete — all fly |
 
 ##### Step 5: Conclusion + Prediction
-- **Scenario: P3** (HTF=F × MTF=P3). No divergence.
+- **Scenario: F-P3** (HTF=F × MTF=P3). No divergence.
 - **Next likely:** F if M30 fly sustained; S if M30 enters shrink. Watch: M30 BBW_stage.
 
 ---
 
-## Scenario B
+## Scenario B (Compression Release / Breakout)
 
 #### Image 1 Analysis — backtested_EA_sideway_2_fly.jpg
 ![backtested_EA_sideway_2_fly](./Backtest_data/extras/backtested_EA_sideway_2_fly.jpg)
@@ -289,13 +289,13 @@ only R1/B2 are genuinely 2-axis.
 - key transition: All TF SQZ → M5 breaks SQZ → D2 expansion
 
 ##### Step 4: TIMELINE
-| From | To | Scenario | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|----------|--------------|-----------|-----------|--------|-------|
-| 260206 01:00 | 260206 09:00 | C4 | Down / Tier 2 | H4 shrink 513, D1 shrink 513 | H1 SQZ 402, M30 fly 521, M15 fly 522 | log | H1 SQZ blocks; M30/M15 already fly down |
-| 260206 09:00 | 260207 21:00 | B2 | Down / Tier 3 | H4 shrink 513 | M30 fly 521, M15 fly 522, H1 decompressing | img | D2 confirmed — M30 fly down |
+| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
+|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
+| 260206 01:00 | 260206 09:00 | S-C4 | Down / Tier 2 | H4 shrink 513, D1 shrink 513 | H1 SQZ 402, M30 fly 521, M15 fly 522 | img | H1 SQZ blocks; M30/M15 already fly down |
+| 260206 09:00 | 260207 21:00 | S-B2 | Down / Tier 3 | H4 shrink 513 | M30 fly 521, M15 fly 522, H1 decompressing | img | D2 confirmed — M30 fly down |
 
 ##### Step 5: Conclusion + Prediction
-- **Scenario: B2** (HTF=S × MTF=B2). Divergence: MTF direction (down) vs H4 direction (up).
+- **Scenario: S-B2** (HTF=S × MTF=B2). ⚠ DIVERGENCE: MTF direction (down) vs H4 direction (up).
 - **Next likely:** B3 if H4 breaks to fly 521/522; C4 if H4 remains 513. Watch: H4 BBW_stage.
 
 #### Image 2 Analysis — backtested_EA_sideway_2_fly_zoomin.jpg
@@ -325,18 +325,18 @@ only R1/B2 are genuinely 2-axis.
 - key transition: M5/M15/M30 fly 521 — D2 confirmed in down direction
 
 ##### Step 4: TIMELINE
-| From | To | Scenario | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|----------|--------------|-----------|-----------|--------|-------|
-| 260206 13:00 | 260207 01:00 | B2 | Down / Tier 3 | H4 shrink 513 | M30/M15 fly 521, H1 shrink 513 | img | D2 expanding down |
-| 260207 01:00 | 260207 09:00 | B2 | Down / Tier 3 | H4 shrink 513 | M30/M15 fly 521 | img | H4 still shrink — B2, not B3 |
+| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
+|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
+| 260206 13:00 | 260207 01:00 | S-B2 | Down / Tier 3 | H4 shrink 513 | M30/M15 fly 521, H1 shrink 513 | img | D2 expanding down |
+| 260207 01:00 | 260207 09:00 | S-B2 | Down / Tier 3 | H4 shrink 513 | M30/M15 fly 521 | img | H4 still shrink — B2, not B3 |
 
 ##### Step 5: Conclusion + Prediction
-- **Scenario: B2** (HTF=S × MTF=B2). Divergence: MTF down vs H4 up.
+- **Scenario: S-B2** (HTF=S × MTF=B2). ⚠ DIVERGENCE: MTF down vs H4 up.
 - **Next likely:** B3 if H4 513→521/522; S if H4 remains 513. Watch: H4 BBW_stage.
 
 ---
 
-## Scenario V
+## Scenario V (Direction Pivot)
 
 #### Image 1 Analysis — backtested_EA_trend_reversal.jpg
 ![backtested_EA_trend_reversal](./Backtest_data/extras/backtested_EA_trend_reversal.jpg)
@@ -365,15 +365,16 @@ only R1/B2 are genuinely 2-axis.
 - key transition: F2 → R1 progression — M30 compresses between fly states
 
 ##### Step 4: TIMELINE
-| From | To | Scenario | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|----------|--------------|-----------|-----------|--------|-------|
-| 260401 14:30 | 260401 23:00 | F2 | Up / Tier 1 | H4 fly 512, D1 fly 512 | M30 fly 511, M15 fly 511 | img | All aligned up |
-| 260402 00:00 | 260402 04:00 | C1 | Up / Tier 2 | H4 fly 512 | M30 SQZ 411, M15 fly 512 | log | M30 compresses — D1 deepens |
-| 260402 04:00 | 260402 05:00 | C1 | Up / Tier 2 | H4 fly 512 | M30 SQZ 411, M15 fly 512 | log | M30 still SQZ — waiting break |
+| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
+|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
+| 260401 14:30 | 260401 23:00 | F-F1 | Up / Tier 1 | H4 fly 512, D1 fly 512 | M30 fly 511, M15 fly 511 | img | All aligned up |
+| 260401 23:00 | 260402 00:00 | F-F1 → S-C1 | Up / Tier 1→2 | H4 fly 512, D1 512→513 | M30 511→411, M15 fly 512 | img | Transition: D1 shrinks, M30 enters SQZ |
+| 260402 00:00 | 260402 04:00 | S-C1 | Up / Tier 2 | H4 fly 512, D1 shrink 513 | M30 SQZ 411, M15 fly 512 | img | M30 compresses — D1 deepens |
+| 260402 04:00 | 260402 05:00 | S-C1 | Up / Tier 2 | H4 fly 512, D1 shrink 513 | M30 SQZ 411, M15 fly 512 | img | M30 still SQZ — waiting break |
 
 ##### Step 5: Conclusion + Prediction
-- **Scenario: C1** (HTF=S × MTF=C1). No divergence yet — M30 SQZ but diffMid=1 same as H4.
-- **Next likely:** R1 if M30 breaks 411→521 (opposite H4); F if M30 breaks 411→511 (same H4). Watch: M30 BBW_stage 411→511 vs 411→521.
+- **Scenario: S-C1** (HTF=S × MTF=C1). No divergence yet — M30 SQZ but diffMid=1 same as H4.
+- **Next likely:** S-R1 if M30 breaks 411→521 (opposite H4); F-F if M30 breaks 411→511 (same H4). Watch: M30 BBW_stage 411→511 vs 411→521.
 
 #### Image 2 Analysis — backtested_EA_fly_shrink_2_sideway2.jpg
 ![backtested_EA_fly_shrink_2_sideway2](./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway2.jpg)
@@ -402,18 +403,18 @@ only R1/B2 are genuinely 2-axis.
 - key transition: M30 513→411 — D1 deepens to C2
 
 ##### Step 4: TIMELINE
-| From | To | Scenario | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|----------|--------------|-----------|-----------|--------|-------|
-| 260402 05:00 | 260402 17:00 | S2 | Up / Tier 2 | H4 fly 512 | M30 shrink 513, M15 shrink 513 | img | D1 compression |
-| 260402 17:00 | 260403 03:00 | C2 | Up / Tier 2 | H4 fly 512 | M30 SQZ 411, M15 shrink 513 | img | M30 enters SQZ — C2 |
+| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
+|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
+| 260402 05:00 | 260402 17:00 | S-S2 | Up / Tier 2 | H4 fly 512 | M30 shrink 513, M15 shrink 513 | img | D1 compression |
+| 260402 17:00 | 260403 03:00 | S-C2 | Up / Tier 2 | H4 fly 512 | M30 SQZ 411, M15 shrink 513 | img | M30 enters SQZ — C2 |
 
 ##### Step 5: Conclusion + Prediction
-- **Scenario: C2** (HTF=S × MTF=C2). No divergence.
-- **Next likely:** P2 if M30 411→511 (same dir as H4); R1 if M30 411→521 (opposite). Watch: M30 BBW_stage.
+- **Scenario: S-C2** (HTF=S × MTF=C2). No divergence.
+- **Next likely:** S-P2 if M30 411→511 (same dir as H4); S-R1 if M30 411→521 (opposite). Watch: M30 BBW_stage.
 
 ---
 
-## Scenario C
+## Scenario C (Deep Compression)
 
 #### Image 1 Analysis — backtested_EA_fly_shrink_2_sideway.jpg
 ![backtested_EA_fly_shrink_2_sideway](./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway.jpg)
@@ -442,16 +443,16 @@ only R1/B2 are genuinely 2-axis.
 - key transition: Sequential compression — M5 first, M15 second, M30 third; G0c-SQZLOCK active
 
 ##### Step 4: TIMELINE
-| From | To | Scenario | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|----------|--------------|-----------|-----------|--------|-------|
-| 260401 13:00 | 260401 17:00 | S2 | Up / Tier 2 | H4 fly 512 | M30 shrink 513, M15 shrink 513 | img | D1 compression begins |
-| 260401 17:00 | 260402 01:00 | C2 | Up / Tier 2 | H4 fly 512 | M30/M15/M5 SQZ 400-499 | img | D1 reaches BOTTOM; G0c-SQZLOCK |
-| 260402 01:00 | 260402 04:00 | C2 | Up / Tier 2 | H4 fly 512 | M30 SQZ 411, M15 fly 512 | log | M30 SQZ 411 confirmed; M15 fly 512 |
-| 260402 04:00 | 260402 17:00 | C2 | Up / Tier 2 | H4 fly 512 | M30 SQZ 411, M15 fly 512 | log | Sustained C2; M30 still SQZ |
+| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
+|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
+| 260401 13:00 | 260401 17:00 | S-S2 | Up / Tier 2 | H4 fly 512 | M30 shrink 513, M15 shrink 513 | img | D1 compression begins |
+| 260401 17:00 | 260402 01:00 | S-C2 | Up / Tier 2 | H4 fly 512 | M30/M15/M5 SQZ 400-499 | img | D1 reaches BOTTOM; G0c-SQZLOCK |
+| 260402 01:00 | 260402 04:00 | S-C2 | Up / Tier 2 | H4 fly 512 | M30 SQZ 411, M15 fly 512 | img | M30 SQZ 411 confirmed; M15 fly 512 |
+| 260402 04:00 | 260402 17:00 | S-C2 | Up / Tier 2 | H4 fly 512 | M30 SQZ 411, M15 fly 512 | img | Sustained C2; M30 still SQZ |
 
 ##### Step 5: Conclusion + Prediction
-- **Scenario: C2** (HTF=S × MTF=C2). No divergence.
-- **Next likely:** P2 if M5 REVUP and M15 follows; R1 if M30 411→521 (opposite H4). Watch: M5 BBW_stage + M30 BBW_stage.
+- **Scenario: S-C2** (HTF=S × MTF=C2). No divergence.
+- **Next likely:** S-P2 if M5 REVUP and M15 follows; S-R1 if M30 411→521 (opposite H4). Watch: M5 BBW_stage + M30 BBW_stage.
 
 #### Image 2 Analysis — backtested_EA_fly_shrink_2_sideway_zoomin.jpg
 ![backtested_EA_fly_shrink_2_sideway_zoomin](./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway_zoomin.jpg)
@@ -480,14 +481,14 @@ only R1/B2 are genuinely 2-axis.
 - key transition: M5 SQZ break → M15 follows → M30 breaks SQZ 411→521
 
 ##### Step 4: TIMELINE
-| From | To | Scenario | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|----------|--------------|-----------|-----------|--------|-------|
-| 260402 09:00 | 260402 10:00 | P2 | Down / Tier 3 | H4 fly 512 | M5 fly 521, M15 fly 522, M30 SQZ 411 | img/log | M5 broke SQZ; M30 still SQZ |
-| 260402 10:00 | 260402 17:00 | P3 | Down / Tier 3 | H4 fly 512 | M30 fly 521, M15 fly 522 | log | M30 breaks SQZ 411→521; D2 confirmed |
+| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
+|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
+| 260402 09:00 | 260402 10:00 | S-P2 | Down / Tier 3 | H4 fly 512 | M5 fly 521, M15 fly 522, M30 SQZ 411 | img | M5 broke SQZ; M30 still SQZ |
+| 260402 10:00 | 260402 17:00 | S-P3 | Down / Tier 3 | H4 fly 512 | M30 fly 521, M15 fly 522 | img | M30 breaks SQZ 411→521; D2 confirmed |
 
 ##### Step 5: Conclusion + Prediction
-- **Scenario: P3** (HTF=S × MTF=P3). Divergence: MTF down (diffMid=2) vs H4 up (diffMid=1).
-- **Next likely:** B2 if M30 fly 521 sustained; S if M30 re-enters shrink. Watch: M30 BBW_stage.
+- **Scenario: S-P3** (HTF=S × MTF=P3). ⚠ DIVERGENCE: MTF down (diffMid=2) vs H4 up (diffMid=1).
+- **Next likely:** S-B2 if M30 fly 521 sustained; S-S if M30 re-enters shrink. Watch: M30 BBW_stage.
 
 #### Image 3 Analysis — backtested_EA_fly_shrink_2_sideway2.jpg
 ![backtested_EA_fly_shrink_2_sideway2](./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway2.jpg)
@@ -516,13 +517,13 @@ only R1/B2 are genuinely 2-axis.
 - key transition: 6-zone D1 cycle — fly(1)→shrink(2)→SQZ(3-5)→release(6)
 
 ##### Step 4: TIMELINE
-| From | To | Scenario | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|----------|--------------|-----------|-----------|--------|-------|
-| 260402 05:00 | 260402 09:00 | S2 | Up / Tier 2 | H4 fly 512 | M30/M15 shrink 513 | img | Zone 2 — D1 compression |
-| 260402 09:00 | 260402 15:00 | C2 | Up / Tier 2 | H4 fly 512 | M30/M15/M5 SQZ 411 | img | Zones 3-5 — SQZ peak |
-| 260402 15:00 | 260402 21:00 | P2 | Down / Tier 3 | H4 fly 512 | M5 fly 521, M15 fly 522 | img | Zone 6 — M5 breaks SQZ |
-| 260402 21:00 | 260403 03:00 | P3 | Down / Tier 3 | H4 fly 512 | M30 fly 521 | img | Zone 6 — M30 confirms |
+| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
+|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
+| 260402 05:00 | 260402 09:00 | S-S2 | Up / Tier 2 | H4 fly 512 | M30/M15 shrink 513 | img | Zone 2 — D1 compression |
+| 260402 09:00 | 260402 15:00 | S-C2 | Up / Tier 2 | H4 fly 512 | M30/M15/M5 SQZ 411 | img | Zones 3-5 — SQZ peak |
+| 260402 15:00 | 260402 21:00 | S-P2 | Down / Tier 3 | H4 fly 512 | M5 fly 521, M15 fly 522 | img | Zone 6 — M5 breaks SQZ |
+| 260402 21:00 | 260403 03:00 | S-P3 | Down / Tier 3 | H4 fly 512 | M30 fly 521 | img | Zone 6 — M30 confirms |
 
 ##### Step 5: Conclusion + Prediction
-- **Scenario: P3** (HTF=S × MTF=P3). Divergence: MTF down vs H4 up.
-- **Next likely:** B2 if M30 fly 521 sustained; S if M30 re-enters shrink. Watch: M30 BBW_stage + M15 midtrend.
+- **Scenario: S-P3** (HTF=S × MTF=P3). ⚠ DIVERGENCE: MTF down vs H4 up.
+- **Next likely:** S-B2 if M30 fly 521 sustained; S-S if M30 re-enters shrink. Watch: M30 BBW_stage + M15 midtrend.
