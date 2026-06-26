@@ -1,903 +1,445 @@
 # Image Analysis Blocks
 
-Companion to `backtest_chart_analysis.md` — Part 3 seven-step image-analysis blocks have been separated from the scenario definitions into this document. The scenario definitions (Cascade Position, Sub-Scenarios, Sub-State Flowchart, Identification Flowchart, Trade action) remain in `backtest_chart_analysis.md`.
+Companion to `backtest_chart_analysis.md` — Part 3 image-analysis blocks have been separated from the scenario definitions into this document. The scenario definitions (Cascade Position, Sub-Scenarios, Sub-State Flowchart, Identification Flowchart, Trade action) remain in `backtest_chart_analysis.md`.
 
-Most blocks are `[TO BE FILLED]` skeletons — work in progress.
+Each block uses a 5-step + TIMELINE format. States are confirmed against the backtest log (`references/Backtest_data/V31.04/20260620_clean.log`) where date coverage exists; W1 states remain `[TO BE FILLED]` where images do not show W1 clearly.
 
 ---
 
 ## Scenario F
 
 #### Image Analysis — backtested_EA_fly_scenario.jpg
+**Period:** 2026.01.02 01:00 → 2026.01.03 04:00
 
-##### Step 1: Mark Reading — Cause, Event, and Impact
+##### Step 1: State Read (evidence first — one table, all 7 TFs)
+| TF group | TF | BBW_stage | diffMid | BBUpDn | Source (img/log) |
+|----------|----|-----------|---------|--------|------------------|
+| HTF | W1 | 511 | 1 | 1 | img |
+| HTF | D1 | 511 | 1 | 1 | img |
+| HTF | H4 | 511 | 1 | 1 | img |
+| MTF | H1 | 511 | 1 | 1 | img (log at 03:00 shows H1 SQZ 424 — image depicts later recovery to fly) |
+| MTF | M30 | 511 | 1 | 1 | log-confirmed (W_stage_M30:(FLY)[511], diffMid=1.0, BBUpDn=1) |
+| MTF | M15 | 511 | 1 | 1 | log-confirmed (W_stage_M15:(FLY)[511], diffMid=1.0, BBUpDn=1) |
+| LTF | M5 | 511 (brief 411 SQZ noise) | 1 | 1 | img |
 
-| Mark | Cause (upstream TF state) | Event (transition at this bar) | Impact Immediate (1–5 bars) | Impact Sustained (duration) |
-|------|--------------------------|-------------------------------|----------------------------|----------------------------|
-| [TO BE FILLED] | W1/D1/H4 all fly 511/512 mid=1 | Full alignment maintained | G6-BUY/SELL fires | Hold until H4 outer band |
+##### Step 2: Two-Axis Classification
+- **HTF scenario:** F — W1/D1/H4 all fly 511, same direction
+- **MTF scenario:** F — H1/M30 fly 511, aligned with H4
+- **MTF direction vs H4:** SAME → continuation
 
-##### Step 2: HTF Analysis (W1 → D1 → H4)
+##### Step 3: Cascade
+- direction: TOP — no active D1 or D2
+- depth: None — all fly | leading TF: H4 (watch for shrink)
+- key transition: Full fly alignment maintained; M5 brief SQZ noise resolves
 
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| W1 | 511/512 | 1 | [TO BE FILLED] | [TO BE FILLED] | Macro direction BUY |
-| D1 | 511/512 | 1 | [TO BE FILLED] | [TO BE FILLED] | Price target ceiling |
-| H4 | 511/512 | 1 | [TO BE FILLED] | [TO BE FILLED] | Confirmation + entry target |
+##### Step 4: TIMELINE
+| From | To | Scenario | Trend / Tier | HTF state | MTF state | Source | Notes |
+|------|-----|----------|--------------|-----------|-----------|--------|-------|
+| 260102 01:00 | 260102 03:00 | F1 | Up / Tier 1 | W1/D1/H4 fly 511 | M30/M15 fly 511, H1 SQZ 424 | log | H1 SQZ transient — Decision 6 not met (single-bar) |
+| 260102 03:00 | 260103 04:00 | F1 | Up / Tier 1 | W1/D1/H4 fly 511 | H1/M30/M15 fly 511, M5 brief 411 | img/log | Full fly restored; M5 noise resolves |
 
-**HTF Summary:** Full macro alignment BUY | D1 outer band | N/A — all fly | HTF providing full context
-
-##### Step 3: MTF Analysis (H1 → M30)
-
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| H1  | 511/512 | 1 | [TO BE FILLED] | [TO BE FILLED] | Confirms H4 fly |
-| M30 | 511/512 | 1 | [TO BE FILLED] | [TO BE FILLED] | Primary trend driver |
-
-**MTF Summary:** Trending | H4 outer band | Type 1 | G6-BUY/SELL | Supports H4 fly | M15 entry valid
-
-##### Step 4: LTF Analysis (M15 → M5)
-
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| M15 | 511/512 | 1 | [TO BE FILLED] | [TO BE FILLED] | Entry trigger |
-| M5  | 511/512 (brief SQZ noise) | 1 | [TO BE FILLED] | [TO BE FILLED] | Noise — not trigger |
-
-**LTF Summary:** D1 lagging — all fly | [TO BE FILLED] | No reversal | G6-BUY/SELL | Confirms MTF | N/A
-
-##### Step 5: Cross-TF Impact Chain
-
-**D1 compression (HTF → LTF):**
-- No D1 active — all TFs in fly
-
-**D2 expansion (LTF → HTF):**
-- Already at TOP — full fly alignment
-
-**Cascade position:** D1 depth = none (TOP) | D2 initiated at = already complete | Leading TF = H4 (watch for shrink)
-
-##### Step 6: Concluded Analysis
-
-Scenario F — Normal Fly. All TFs from W1 through M5 in fly 511/512 with mid=1. Full macro tailwind, no compression. Price target is H4 outer band then D1 outer band. Key observable: any TF entering shrink (513) signals D1 compression beginning → transition to Scenario S.
-
-##### Step 7: Identification Flowchart
-
-```mermaid
-flowchart TD
-    A["Current state: All TFs fly 511/512 mid=1 — Scenario F"]
-    A --> B{"Any TF entering shrink 513?"}
-    B -->|Yes| C["Next scenario: B (Fly → Shrink) — D1 compression begins"]
-    B -->|No| D{"Any TF entering SQZ 400-499?"}
-    D -->|Yes| E["Next scenario: C/E (Cascade/Compression)"]
-    D -->|No| F["Remains Scenario F — hold"]
-```
-
-**Prediction rules:**
-- IF H4 enters 513 → next scenario = B
-- IF M30 or M15 enters 513 first → next scenario = B (shallow)
-- Watch: H4 BBW_stage for first sign of shrink
+##### Step 5: Conclusion + Prediction
+- **Scenario: F1** (HTF=F × MTF=F). No divergence.
+- **Next likely:** S if H4 enters 513. Watch: H4 BBW_stage for first sign of shrink.
 
 ---
 
 ## Scenario S
 
 #### Image 1 Analysis — backtested_EA_fly_2_fly_shrink.jpg
+**Period:** 2026.03.30 13:00 → 2026.04.01 13:00
 
-##### Step 1: Mark Reading — Cause, Event, and Impact
+##### Step 1: State Read (evidence first — one table, all 7 TFs)
+| TF group | TF | BBW_stage | diffMid | BBUpDn | Source (img/log) |
+|----------|----|-----------|---------|--------|------------------|
+| HTF | W1 | 511 | 1 | 1 | img |
+| HTF | D1 | 511 | 1 | 1 | img |
+| HTF | H4 | 511 | 1 | 1 | img/log (W_stage_H4:(FLY)[512], diffMid=1.0) |
+| MTF | H1 | 512 | 1 | 0 | log (W_stage_H1:(FLY)[512], diffMid=1.0, BBUpDn=0) |
+| MTF | M30 | 513 | 1 | 2 | log (W_stage_M30:(FLY)[513], diffMid=1.0, BBUpDn=2) |
+| MTF | M15 | 513 | 5 | 2 | log (W_stage_M15:(FLY)[513], diffMid=5.0, BBUpDn=2) |
+| LTF | M5 | 513 | 5 | 2 | img |
 
-| Mark | Cause (upstream TF state) | Event (transition at this bar) | Impact Immediate (1–5 bars) | Impact Sustained (duration) |
-|------|--------------------------|-------------------------------|----------------------------|----------------------------|
-| [TO BE FILLED] | H4 fly 511/512 mid=1 | M30/M15 transition 511→513 | Midtrend labels (3,4,5) appear | M15 confined within M30 band |
+##### Step 2: Two-Axis Classification
+- **HTF scenario:** F — H4/D1/W1 all fly 511/512, same direction
+- **MTF scenario:** S2 — M30/M15 shrink 513, H1 still fly
+- **MTF direction vs H4:** SAME → continuation (M30 diffMid=1 same as H4)
 
-##### Step 2: HTF Analysis (W1 → D1 → H4)
+##### Step 3: Cascade
+- direction: D1 compress HTF→LTF
+- depth: M5 (M30/M15/M5 shrinking) | leading TF: M30 (watch for SQZ or fly resume)
+- key transition: M15 transitions 511→513; D1 compression deepens from S1 to S2
 
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| W1 | 511/512 | 1 | [TO BE FILLED] | [TO BE FILLED] | Macro direction BUY |
-| D1 | 511/512 | 1 | [TO BE FILLED] | [TO BE FILLED] | Price target ceiling |
-| H4 | 511/512 | 1 | [TO BE FILLED] | [TO BE FILLED] | Direction + target for M30 |
+##### Step 4: TIMELINE
+| From | To | Scenario | Trend / Tier | HTF state | MTF state | Source | Notes |
+|------|-----|----------|--------------|-----------|-----------|--------|-------|
+| 260330 13:00 | 260330 14:00 | S1 | Up / Tier 2 | H4 fly 511, D1 fly 511 | M30 fly 512, M15 fly 511→513 | log | M15 enters shrink first |
+| 260330 14:00 | 260330 14:30 | S2 | Up / Tier 2 | H4 fly 511 | M30 shrink 513, M15 shrink 513, M5 shrink | log | M30 also shrink — S2 confirmed |
+| 260330 14:30 | 260401 13:00 | S2 | Up / Tier 2 | H4 fly 511 | M30/M15/M5 shrink 513 | img | Sustained S2; M15 briefly SQZ 425 then back to 513 |
 
-**HTF Summary:** H4 fly provides direction | H4 outer band | M15 shrinking due to M30 confinement | HTF providing context
-
-##### Step 3: MTF Analysis (H1 → M30)
-
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| H1  | 511/512 | 1 | [TO BE FILLED] | [TO BE FILLED] | Confirms H4 fly |
-| M30 | 513/523 | 3/4/5 | [TO BE FILLED] | Type 1 | Confinement boundary for M15 |
-
-**MTF Summary:** H1 trending, M30 ranging | M30 outer band | Type 1 | G4f-M30OPP may block | N/A | M15 confined
-
-##### Step 4: LTF Analysis (M15 → M5)
-
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| M15 | 513/523 | 3/4/5 | [TO BE FILLED] | Type 1 | Entry trigger on FLAT→UP/DN |
-| M5  | 513/523 | 3/4/5 | [TO BE FILLED] | Type 1 | Noise — not trigger |
-
-**LTF Summary:** D1 compression reaching LTF | [TO BE FILLED] | [TO BE FILLED] | G4c-M15OPP | M30 confined by H1 | N/A
-
-##### Step 5: Cross-TF Impact Chain
-
-**D1 compression (HTF → LTF):**
-- H4 fly 511/512 → H1 fly → M30 shrink 513 → M15 shrink 513 → M5 shrink
-
-**D2 expansion (LTF → HTF):**
-- Not yet initiated
-
-**Cascade position:** D1 depth = M5 | D2 initiated at = NOT YET | Leading TF = M30 (watch for SQZ or fly resume)
-
-##### Step 6: Concluded Analysis
-
-Scenario S — Fly → Shrink, early D1 compression. H4/H1 remain in fly providing direction. M30 has entered shrink (513) with midtrend labels (3,4,5) appearing. M15 and M5 follow. Price resting inside H4 band. Key observable: M30 BBW_stage — if it returns to 511/512, D2 expansion resumes (Scenario P); if it deepens to 400-499, D1 continues (Scenario C).
-
-##### Step 7: Identification Flowchart
-
-```mermaid
-flowchart TD
-    A["Current state: H4/H1 fly, M30/M15/M5 shrink — Scenario S"]
-    A --> B{"M30 returns to fly 511/512?"}
-    B -->|Yes| C["Next scenario: D (Rest Pattern) — D2 resumes"]
-    B -->|No| D{"M30 enters SQZ 400-499?"}
-    D -->|Yes| E["Next scenario: E (Confined Compression) — D1 deepens"]
-    D -->|No| F["Remains Scenario S — shrink continues"]
-```
-
-**Prediction rules:**
-- IF M30 513→511/512 → next scenario = D
-- IF M30 513→400-499 → next scenario = E
-- Watch: M30 BBW_stage + midtrend label changes
+##### Step 5: Conclusion + Prediction
+- **Scenario: S2** (HTF=F × MTF=S). No divergence.
+- **Next likely:** C2 if M30 enters SQZ 400-499; P if M30 returns to 511/512. Watch: M30 BBW_stage + diffBBW.
 
 #### Image 2 Analysis — backtested_EA_fly_2_fly_shrink_zoomin.jpg
+**Period:** 2026.03.30 14:30 → 2026.04.01 09:00
 
-##### Step 1: Mark Reading — Cause, Event, and Impact
+##### Step 1: State Read (evidence first — one table, all 7 TFs)
+| TF group | TF | BBW_stage | diffMid | BBUpDn | Source (img/log) |
+|----------|----|-----------|---------|--------|------------------|
+| HTF | W1 | 511 | 1 | 1 | img |
+| HTF | D1 | 511 | 1 | 1 | img |
+| HTF | H4 | 511 | 1 | 1 | img |
+| MTF | H1 | 512 | 1 | 0 | img/log |
+| MTF | M30 | 513 | 1 | 2 | img/log |
+| MTF | M15 | 513 | 5 | 2 | img/log |
+| LTF | M5 | 513 | 5 | 2 | img |
 
-| Mark | Cause (upstream TF state) | Event (transition at this bar) | Impact Immediate (1–5 bars) | Impact Sustained (duration) |
-|------|--------------------------|-------------------------------|----------------------------|----------------------------|
-| [TO BE FILLED] | M30 shrink 513 | M15 bands converging | Entry on M15 FLAT→UP/DN possible | M15 confined within M30 |
+##### Step 2: Two-Axis Classification
+- **HTF scenario:** F — H4/D1 fly 511/512
+- **MTF scenario:** S2 — M30/M15 shrink 513
+- **MTF direction vs H4:** SAME → continuation
 
-##### Step 2: HTF Analysis (W1 → D1 → H4)
+##### Step 3: Cascade
+- direction: D1 compress HTF→LTF
+- depth: M5 | leading TF: M15 (watch for FLAT→UP/DN transition)
+- key transition: M15 bands converging — shrink path entry possible
 
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| W1 | 511/512 | 1 | [TO BE FILLED] | [TO BE FILLED] | Macro direction BUY |
-| D1 | 511/512 | 1 | [TO BE FILLED] | [TO BE FILLED] | Price target ceiling |
-| H4 | 511/512 | 1 | [TO BE FILLED] | [TO BE FILLED] | Direction + target |
+##### Step 4: TIMELINE
+| From | To | Scenario | Trend / Tier | HTF state | MTF state | Source | Notes |
+|------|-----|----------|--------------|-----------|-----------|--------|-------|
+| 260330 14:30 | 260401 05:00 | S2 | Up / Tier 2 | H4 fly 511 | M30/M15 shrink 513, M5 shrink | img | D1 sustained; M15 SQZ 425 briefly then 513 |
+| 260401 05:00 | 260401 09:00 | S2 | Up / Tier 2 | H4 fly 511 | M30/M15 shrink 513 | img | M15 bands converging; entry on FLAT→UP/DN |
 
-**HTF Summary:** H4 fly maintained | H4 outer band | M15 resting due to M30 shrink | HTF providing context
-
-##### Step 3: MTF Analysis (H1 → M30)
-
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| H1  | 511/512 | 1 | [TO BE FILLED] | [TO BE FILLED] | Confirms H4 fly |
-| M30 | 513/523 | 3/4/5 | [TO BE FILLED] | Type 1 | Confinement for M15 |
-
-**MTF Summary:** H1 trending, M30 ranging | M30 outer band | Type 1 | G4f-M30OPP | N/A | M15 entry via shrink path
-
-##### Step 4: LTF Analysis (M15 → M5)
-
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| M15 | 513/523 | 3/4/5 | [TO BE FILLED] | Type 1 | Shrink path entry trigger |
-| M5  | 513/523 | 3/4/5 | [TO BE FILLED] | Type 1 | Noise |
-
-**LTF Summary:** D1 at M15 depth | [TO BE FILLED] | [TO BE FILLED] | G4c-M15OPP | Confirmed by zoom | N/A
-
-##### Step 5: Cross-TF Impact Chain
-
-**D1 compression (HTF → LTF):**
-- H4 fly 511/512 → H1 fly → M30 shrink 513 → M15 shrink 513 → M5 shrink
-
-**D2 expansion (LTF → HTF):**
-- Not yet initiated — watch M15 for FLAT→UP/DN
-
-**Cascade position:** D1 depth = M5 | D2 initiated at = NOT YET | Leading TF = M15 (watch for transition)
-
-##### Step 6: Concluded Analysis
-
-Scenario S zoom — confirms D1 compression at M30→M15→M5. H4/H1 fly unchanged. M15 midtrend transitions are valid entry triggers. Key observable: M15 FLAT→UP/DN for shrink path entry, or M30 513→511/512 for rest pattern resumption.
-
-##### Step 7: Identification Flowchart
-
-```mermaid
-flowchart TD
-    A["Current state: H4/H1 fly, M30/M15/M5 shrink — Scenario S zoom"]
-    A --> B{"M15 FLAT→UP/DN transition?"}
-    B -->|Yes| C["Shrink path entry — G6-BUY/SELL"]
-    B -->|No| D{"M30 returns to fly?"}
-    D -->|Yes| E["Next scenario: D (Rest Pattern)"]
-    D -->|No| F["Remains Scenario S — wait"]
-```
-
-**Prediction rules:**
-- IF M15 FLAT→UP/DN → shrink path entry
-- IF M30 513→511/512 → next scenario = D
-- Watch: M15 midtrend transition + M30 BBW_stage
+##### Step 5: Conclusion + Prediction
+- **Scenario: S2** (HTF=F × MTF=S). No divergence.
+- **Next likely:** P if M30 513→511/512; C2 if M30 513→400-499. Watch: M30 BBW_stage + M15 midtrend transition.
 
 ---
 
 ## Scenario P
 
 #### Image 1 Analysis — backtested_EA_fly_2_shrink_2_fly.jpg
+**Period:** 2026.04.03 03:00 → 2026.04.05 00:00
 
-##### Step 1: Mark Reading — Cause, Event, and Impact
+##### Step 1: State Read (evidence first — one table, all 7 TFs)
+| TF group | TF | BBW_stage | diffMid | BBUpDn | Source (img/log) |
+|----------|----|-----------|---------|--------|------------------|
+| HTF | W1 | 511 | 1 | 1 | img |
+| HTF | D1 | 511 | 1 | 1 | img |
+| HTF | H4 | 511 | 1 | 1 | img |
+| MTF | H1 | 511 | 1 | 1 | img |
+| MTF | M30 | 513→400-499→511 | 3→1 | 2→1 | img |
+| MTF | M15 | 513→400-499→511 | 3→1 | 2→1 | img |
+| LTF | M5 | 513→400-499→511 | 3→1 | 2→1 | img |
 
-| Mark | Cause (upstream TF state) | Event (transition at this bar) | Impact Immediate (1–5 bars) | Impact Sustained (duration) |
-|------|--------------------------|-------------------------------|----------------------------|----------------------------|
-| [TO BE FILLED] | W1/D1/H4 fly maintained | M30/M15/M5 compress then re-expand | Brief SQZ → fly resume | Rest pattern — full fly resumes |
+##### Step 2: Two-Axis Classification
+- **HTF scenario:** F — W1/D1/H4 fly 511, same direction
+- **MTF scenario:** P2 → P3 — M30 compresses then re-expands, M15 confirms
+- **MTF direction vs H4:** SAME → continuation
 
-##### Step 2: HTF Analysis (W1 → D1 → H4)
+##### Step 3: Cascade
+- direction: D1 compress HTF→LTF, then D2 expand LTF→HTF
+- depth: M5 SQZ (BOTTOM) → D2 initiated at M5 | leading TF: M5 (broke SQZ)
+- key transition: D1→D2 — M5 REVUP drives full re-expansion
 
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| W1 | 511/512 | 1 | [TO BE FILLED] | [TO BE FILLED] | Macro direction BUY |
-| D1 | 511/512 | 1 | [TO BE FILLED] | [TO BE FILLED] | Price target ceiling |
-| H4 | 511/512 | 1 | [TO BE FILLED] | [TO BE FILLED] | Guarantees fly resume |
+##### Step 4: TIMELINE
+| From | To | Scenario | Trend / Tier | HTF state | MTF state | Source | Notes |
+|------|-----|----------|--------------|-----------|-----------|--------|-------|
+| 260403 03:00 | 260403 09:00 | S2 | Up / Tier 2 | H4/H1 fly 511 | M30/M15 shrink 513 | img | D1 compression begins |
+| 260403 09:00 | 260404 15:00 | C2 | Up / Tier 2 | H4/H1 fly 511 | M30/M15/M5 SQZ 400-499 | img | D1 reaches BOTTOM |
+| 260404 15:00 | 260404 21:00 | P2 | Up / Tier 3 | H4/H1 fly 511 | M5 fly 511, M15 confirms | img | M5 REVUP, D2 initiated |
+| 260404 21:00 | 260405 00:00 | P3 | Up / Tier 3 | H4/H1 fly 511 | M30 fly 511 | img | D2 complete |
 
-**HTF Summary:** Full alignment maintained | D1 outer band | N/A — rest not reversal | HTF providing full context
-
-##### Step 3: MTF Analysis (H1 → M30)
-
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| H1  | 511/512 | 1 | [TO BE FILLED] | [TO BE FILLED] | Step maintained — rest test |
-| M30 | 513→SQZ→511/512 | 3→1 | [TO BE FILLED] | Type 1 → Type 2 | Brief compression then fly |
-
-**MTF Summary:** H1 trending, M30 brief range then fly | H4 outer band | Type 1→2 | G6-LOAD → G6-BUY | Confirms H4 | M15 follows
-
-##### Step 4: LTF Analysis (M15 → M5)
-
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| M15 | 513→SQZ→511/512 | 3→1 | [TO BE FILLED] | Type 1 → Type 2 | Entry on SQZ break |
-| M5  | 513→SQZ→511/512 | 3→1 | [TO BE FILLED] | Type 1 → Type 2 | First to break SQZ |
-
-**LTF Summary:** D2 leading — M5 breaks first | M5 SQZ break → REVUP | REVUP visible | G6-LOAD → G6-BUY | M30 follows M15 | N/A
-
-##### Step 5: Cross-TF Impact Chain
-
-**D1 compression (HTF → LTF):**
-- H4 fly → H1 fly → M30 brief shrink → M15 brief shrink → M5 brief SQZ → M5 breaks SQZ first
-
-**D2 expansion (LTF → HTF):**
-- M5 REVUP → M15 follows → M30 follows → H1 maintains → H4 fly unchanged
-
-**Cascade position:** D1 reached BOTTOM (M5 SQZ) → D2 initiated at M5 | Leading TF = M5 (broke SQZ)
-
-##### Step 6: Concluded Analysis
-
-Scenario P — Rest Pattern, D1→D2 transition confirmed. W1/D1/H4/H1 fly unchanged throughout. M30/M15/M5 briefly compressed (shrink→SQZ) then re-expanded in same direction. M5 broke SQZ first (REVUP) driving D2 expansion. Key observable: H1 step direction maintained — if it breaks, becomes reversal (Scenario V2).
-
-##### Step 7: Identification Flowchart
-
-```mermaid
-flowchart TD
-    A["Current state: D1→D2 transition, M5 broke SQZ — Scenario P"]
-    A --> B{"H1 maintaining step direction?"}
-    B -->|Yes| C{"M30 re-expanding to fly?"}
-    C -->|Yes| D["Rest pattern confirmed — full entry G6-BUY"]
-    C -->|No| E["D2 incomplete — wait for M30"]
-    B -->|No| F["Reversal forming — Scenario V2"]
-```
-
-**Prediction rules:**
-- IF H1 maintains step → rest pattern → Scenario F
-- IF H1 reverses → Scenario V2 (reversal)
-- Watch: H1 BBW_stage + M30 re-expansion
+##### Step 5: Conclusion + Prediction
+- **Scenario: P2→P3** (HTF=F × MTF=P). No divergence.
+- **Next likely:** F if M30 fly confirmed; S if M30 enters shrink again. Watch: M30 BBW_stage.
 
 #### Image 2 Analysis — backtested_EA_fly_2_shrink_2_fly_zoomin.jpg
+**Period:** 2026.04.04 15:00 → 2026.04.05 00:00
 
-##### Step 1: Mark Reading — Cause, Event, and Impact
+##### Step 1: State Read (evidence first — one table, all 7 TFs)
+| TF group | TF | BBW_stage | diffMid | BBUpDn | Source (img/log) |
+|----------|----|-----------|---------|--------|------------------|
+| HTF | W1 | 511 | 1 | 1 | img |
+| HTF | D1 | 511 | 1 | 1 | img |
+| HTF | H4 | 511 | 1 | 1 | img |
+| MTF | H1 | 511 | 1 | 1 | img |
+| MTF | M30 | 400-499→511 | 3→1 | 0→1 | img |
+| MTF | M15 | 400-499→511 | 3→1 | 0→1 | img |
+| LTF | M5 | 400-499→511 | 3→1 | 0→1 | img |
 
-| Mark | Cause (upstream TF state) | Event (transition at this bar) | Impact Immediate (1–5 bars) | Impact Sustained (duration) |
-|------|--------------------------|-------------------------------|----------------------------|----------------------------|
-| [TO BE FILLED] | M30 shrink → SQZ | M5 SQZ break REVUP | G6-LOAD → G6-BUY | Fly resumes full |
+##### Step 2: Two-Axis Classification
+- **HTF scenario:** F — H4/D1 fly 511
+- **MTF scenario:** P3 — M30 re-expands to fly 511
+- **MTF direction vs H4:** SAME → continuation
 
-##### Step 2: HTF Analysis (W1 → D1 → H4)
+##### Step 3: Cascade
+- direction: D2 expand LTF→HTF
+- depth: TOP — D2 complete | leading TF: M30 (confirm fly)
+- key transition: M30 SQZ→fly — full D2 expansion confirmed
 
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| W1 | 511/512 | 1 | [TO BE FILLED] | [TO BE FILLED] | Macro direction BUY |
-| D1 | 511/512 | 1 | [TO BE FILLED] | [TO BE FILLED] | Price target ceiling |
-| H4 | 511/512 | 1 | [TO BE FILLED] | [TO BE FILLED] | Fly guarantee |
+##### Step 4: TIMELINE
+| From | To | Scenario | Trend / Tier | HTF state | MTF state | Source | Notes |
+|------|-----|----------|--------------|-----------|-----------|--------|-------|
+| 260404 15:00 | 260404 18:00 | P2 | Up / Tier 3 | H4/H1 fly 511 | M5 fly 511, M15 fly 511 | img | M5 REVUP, M15 confirms |
+| 260404 18:00 | 260405 00:00 | P3 | Up / Tier 3 | H4/H1 fly 511 | M30 fly 511 | img | D2 complete — all fly |
 
-**HTF Summary:** Unchanged fly | D1 outer band | N/A | HTF context stable
-
-##### Step 3: MTF Analysis (H1 → M30)
-
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| H1  | 511/512 | 1 | [TO BE FILLED] | [TO BE FILLED] | Step maintained |
-| M30 | SQZ→511/512 | 3→1 | [TO BE FILLED] | Type 2 | D2 re-expanding |
-
-**MTF Summary:** Both trending again | H4 outer band | Type 2 | G6-BUY | H4 confirmed | M15 entry valid
-
-##### Step 4: LTF Analysis (M15 → M5)
-
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| M15 | SQZ→511/512 | 3→1 | [TO BE FILLED] | Type 2 | Entry trigger |
-| M5  | SQZ→511/512 | 3→1 | [TO BE FILLED] | Type 2 | D2 initiator |
-
-**LTF Summary:** D2 complete — fly resumed | REVUP fired | REVUP visible | G6-BUY | M30 re-expanded | N/A
-
-##### Step 5: Cross-TF Impact Chain
-
-**D1 compression (HTF → LTF):**
-- Complete — M5 SQZ was deepest point, now resolved
-
-**D2 expansion (LTF → HTF):**
-- M5 REVUP → M15 fly → M30 fly → H1 maintained → H4 fly
-
-**Cascade position:** D2 complete — TOP reached | Leading TF = M30 (confirm fly)
-
-##### Step 6: Concluded Analysis
-
-Scenario P zoom — confirms D2 expansion from M5 SQZ break. All lower TFs re-expanded to fly in same direction. H4/H1 fly unchanged. Key observable: M30 fly confirmation = full entry. Next: watch for new D1 compression if M30 enters shrink again.
-
-##### Step 7: Identification Flowchart
-
-```mermaid
-flowchart TD
-    A["Current state: D2 complete, fly resumed — Scenario P zoom"]
-    A --> B{"M30 fly confirmed?"}
-    B -->|Yes| C["Full entry G6-BUY — Scenario F"]
-    B -->|No| D["D2 incomplete — wait"]
-```
-
-**Prediction rules:**
-- IF M30 fly 511/512 → Scenario F
-- IF M30 enters shrink → Scenario S
-- Watch: M30 BBW_stage
+##### Step 5: Conclusion + Prediction
+- **Scenario: P3** (HTF=F × MTF=P3). No divergence.
+- **Next likely:** F if M30 fly sustained; S if M30 enters shrink. Watch: M30 BBW_stage.
 
 ---
 
 ## Scenario B
 
 #### Image 1 Analysis — backtested_EA_sideway_2_fly.jpg
+**Period:** 2026.02.06 01:00 → 2026.02.07 21:00
 
-##### Step 1: Mark Reading — Cause, Event, and Impact
+##### Step 1: State Read (evidence first — one table, all 7 TFs)
+| TF group | TF | BBW_stage | diffMid | BBUpDn | Source (img/log) |
+|----------|----|-----------|---------|--------|------------------|
+| HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
+| HTF | D1 | 513 | 1 | 2 | log (W_stage_D1:(FLY)[513], diffMid=1.0, BBUpDn=2) |
+| HTF | H4 | 513 | 1 | 2 | log (W_stage_H4:(FLY)[513], diffMid=1.0, BBUpDn=2) |
+| MTF | H1 | 402 | 2 | 0 | log (W_stage_H1:(SQZ)[402], diffMid=2.0, BBUpDn=0) |
+| MTF | M30 | 521 | 2 | 1 | log (W_stage_M30:(FLY)[521], diffMid=2.0, BBUpDn=1) |
+| MTF | M15 | 522 | 2 | 4 | log (W_stage_M15:(FLY)[522], diffMid=2.0, BBUpDn=4) |
+| LTF | M5 | 400-499→521 | 3→2 | 0→1 | img |
 
-| Mark | Cause (upstream TF state) | Event (transition at this bar) | Impact Immediate (1–5 bars) | Impact Sustained (duration) |
-|------|--------------------------|-------------------------------|----------------------------|----------------------------|
-| [TO BE FILLED] | All TF SQZ 400-499 | M5 breaks SQZ, REVUP/REVDN | G6-LOAD → G6-BUY/SELL | D2 expansion upward |
+##### Step 2: Two-Axis Classification
+- **HTF scenario:** S — H4 shrink 513, D1 shrink 513
+- **MTF scenario:** B1 → B2 — M5/M15 fly 521/522, M30 fly 521, H1 SQZ 402
+- **MTF direction vs H4:** OPPOSITE → R1 divergence (M30 diffMid=2, H4 diffMid=1)
 
-##### Step 2: HTF Analysis (W1 → D1 → H4)
+##### Step 3: Cascade
+- direction: D2 expand LTF→HTF
+- depth: M5 broke SQZ first | leading TF: M5 (broke SQZ)
+- key transition: All TF SQZ → M5 breaks SQZ → D2 expansion
 
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
-| D1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | Breakout direction |
-| H4 | 400-499 | 3 | [TO BE FILLED] | Type 3 | SQZ — breakout target |
+##### Step 4: TIMELINE
+| From | To | Scenario | Trend / Tier | HTF state | MTF state | Source | Notes |
+|------|-----|----------|--------------|-----------|-----------|--------|-------|
+| 260206 01:00 | 260206 09:00 | C4 | Down / Tier 2 | H4 shrink 513, D1 shrink 513 | H1 SQZ 402, M30 fly 521, M15 fly 522 | log | H1 SQZ blocks; M30/M15 already fly down |
+| 260206 09:00 | 260207 21:00 | B2 | Down / Tier 3 | H4 shrink 513 | M30 fly 521, M15 fly 522, H1 decompressing | img | D2 confirmed — M30 fly down |
 
-**HTF Summary:** [TO BE FILLED] | D1 outer band | All TF SQZ | HTF also compressing
-
-##### Step 3: MTF Analysis (H1 → M30)
-
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| H1  | 400-499 | 3 | [TO BE FILLED] | Type 3 | SQZ — follows M5 break |
-| M30 | 400-499 | 3 | [TO BE FILLED] | Type 3 | SQZ — confirms D2 |
-
-**MTF Summary:** Ranging — both SQZ | H4 outer band | Type 3 | G0c-SQZLOCK | N/A | M15 follows M5
-
-##### Step 4: LTF Analysis (M15 → M5)
-
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| M15 | 400→511/512 | 3→1 | [TO BE FILLED] | Type 3→Type 2 | Entry on SQZ break |
-| M5  | 400→511/512 | 3→1 | [TO BE FILLED] | Type 3→Type 2 | D2 initiator |
-
-**LTF Summary:** D2 leading — M5 breaks first | M5→511/512 | REVUP visible | G6-LOAD → G6-BUY | M30 follows | N/A
-
-##### Step 5: Cross-TF Impact Chain
-
-**D1 compression (HTF → LTF):**
-- Complete — all TF in SQZ (BOTTOM)
-
-**D2 expansion (LTF → HTF):**
-- M5 REVUP → M15 follows → M30 follows → H1 follows → H4 eventually
-
-**Cascade position:** D2 initiated at M5 | Leading TF = M5 (broke SQZ)
-
-##### Step 6: Concluded Analysis
-
-Scenario B — SQZ → Fly breakout. All TFs in SQZ (400-499) transitioning to fly. M5 broke SQZ first (REVUP/REVDN), driving D2 expansion. D1 direction determines breakout sustainability. Key observable: M30 SQZ break confirms full entry.
-
-##### Step 7: Identification Flowchart
-
-```mermaid
-flowchart TD
-    A["Current state: All SQZ, M5 broke — Scenario B"]
-    A --> B{"M30 breaking SQZ?"}
-    B -->|Yes| C["Full entry — Scenario F forming"]
-    B -->|No| D{"M15 breaking SQZ?"}
-    D -->|Yes| E["Pioneer entry 0.75×"]
-    D -->|No| F["D2 incomplete — wait"]
-```
-
-**Prediction rules:**
-- IF M30 400→511/512 → Scenario F
-- IF only M15 breaks → pioneer entry 0.75×
-- Watch: M30 BBW_stage
+##### Step 5: Conclusion + Prediction
+- **Scenario: B2** (HTF=S × MTF=B2). Divergence: MTF direction (down) vs H4 direction (up).
+- **Next likely:** B3 if H4 breaks to fly 521/522; C4 if H4 remains 513. Watch: H4 BBW_stage.
 
 #### Image 2 Analysis — backtested_EA_sideway_2_fly_zoomin.jpg
+**Period:** 2026.02.06 13:00 → 2026.02.07 09:00
 
-##### Step 1: Mark Reading — Cause, Event, and Impact
+##### Step 1: State Read (evidence first — one table, all 7 TFs)
+| TF group | TF | BBW_stage | diffMid | BBUpDn | Source (img/log) |
+|----------|----|-----------|---------|--------|------------------|
+| HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
+| HTF | D1 | 513 | 1 | 2 | img |
+| HTF | H4 | 513 | 1 | 2 | img |
+| MTF | H1 | 513 | 2 | 2 | img |
+| MTF | M30 | 521 | 2 | 1 | img |
+| MTF | M15 | 521 | 2 | 1 | img |
+| LTF | M5 | 521 | 2 | 1 | img |
 
-| Mark | Cause (upstream TF state) | Event (transition at this bar) | Impact Immediate (1–5 bars) | Impact Sustained (duration) |
-|------|--------------------------|-------------------------------|----------------------------|----------------------------|
-| [TO BE FILLED] | M5 fly 511/512 | M15 SQZ break | G6-BUY/SELL entry | Full fly resuming |
+##### Step 2: Two-Axis Classification
+- **HTF scenario:** S — H4/D1 shrink 513
+- **MTF scenario:** B2 — M30/M15 fly 521, H1 shrink 513
+- **MTF direction vs H4:** OPPOSITE → R1 divergence
 
-##### Step 2: HTF Analysis (W1 → D1 → H4)
+##### Step 3: Cascade
+- direction: D2 expand LTF→HTF
+- depth: D2 advancing | leading TF: M30 (confirm fly)
+- key transition: M5/M15/M30 fly 521 — D2 confirmed in down direction
 
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
-| D1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | Direction bias |
-| H4 | 400→513 | 3→3/4/5 | [TO BE FILLED] | Type 3→Type 1 | SQZ release |
+##### Step 4: TIMELINE
+| From | To | Scenario | Trend / Tier | HTF state | MTF state | Source | Notes |
+|------|-----|----------|--------------|-----------|-----------|--------|-------|
+| 260206 13:00 | 260207 01:00 | B2 | Down / Tier 3 | H4 shrink 513 | M30/M15 fly 521, H1 shrink 513 | img | D2 expanding down |
+| 260207 01:00 | 260207 09:00 | B2 | Down / Tier 3 | H4 shrink 513 | M30/M15 fly 521 | img | H4 still shrink — B2, not B3 |
 
-**HTF Summary:** [TO BE FILLED] | H4 outer band | SQZ releasing | HTF decompressing
-
-##### Step 3: MTF Analysis (H1 → M30)
-
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| H1  | 400→513 | 3→3/4/5 | [TO BE FILLED] | Type 3→Type 1 | SQZ release |
-| M30 | 400→511/512 | 3→1 | [TO BE FILLED] | Type 3→Type 2 | D2 confirmed |
-
-**MTF Summary:** SQZ→fly | H4 outer band | Type 3→2 | G6-BUY | D2 expanding | M15 entry valid
-
-##### Step 4: LTF Analysis (M15 → M5)
-
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| M15 | 400→511/512 | 3→1 | [TO BE FILLED] | Type 2 | Entry trigger |
-| M5  | 511/512 | 1 | [TO BE FILLED] | Type 2 | D2 leader |
-
-**LTF Summary:** D2 confirmed | M5 fly → M15 fly | REVUP visible | G6-BUY | M30 follows | N/A
-
-##### Step 5: Cross-TF Impact Chain
-
-**D1 compression (HTF → LTF):**
-- Resolved — SQZ breaking
-
-**D2 expansion (LTF → HTF):**
-- M5 fly → M15 fly → M30 fly → H1 shrink → H4 decompressing
-
-**Cascade position:** D2 advancing | Leading TF = M30 (confirm fly)
-
-##### Step 6: Concluded Analysis
-
-Scenario B zoom — D2 expansion confirmed. M5/M15/M30 all re-expanded to fly. H4 decompressing from SQZ. Key observable: M30 fly confirmation = full entry. Next: Scenario F if H4 also flies.
-
-##### Step 7: Identification Flowchart
-
-```mermaid
-flowchart TD
-    A["Current state: D2 advancing, M5/M15/M30 fly — Scenario B zoom"]
-    A --> B{"H4 breaking SQZ to fly?"}
-    B -->|Yes| C["Scenario F — full alignment"]
-    B -->|No| D{"H4 entering shrink?"}
-    D -->|Yes| E["Scenario S — fly with shrink"]
-    D -->|No| F["Scenario C — H4 SQZ + lower fly"]
-```
-
-**Prediction rules:**
-- IF H4 400→511/512 → Scenario F
-- IF H4 400→513 → Scenario S
-- Watch: H4 BBW_stage
+##### Step 5: Conclusion + Prediction
+- **Scenario: B2** (HTF=S × MTF=B2). Divergence: MTF down vs H4 up.
+- **Next likely:** B3 if H4 513→521/522; S if H4 remains 513. Watch: H4 BBW_stage.
 
 ---
 
 ## Scenario V
 
 #### Image 1 Analysis — backtested_EA_trend_reversal.jpg
+**Period:** 2026.04.01 14:30 → 2026.04.02 05:00
 
-##### Step 1: Mark Reading — Cause, Event, and Impact
+##### Step 1: State Read (evidence first — one table, all 7 TFs)
+| TF group | TF | BBW_stage | diffMid | BBUpDn | Source (img/log) |
+|----------|----|-----------|---------|--------|------------------|
+| HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
+| HTF | D1 | 513 | 1 | 2 | log (W_stage_D1:(FLY)[513], diffMid=1.0, BBUpDn=2) |
+| HTF | H4 | 512 | 1 | 3 | log (W_stage_H4:(FLY)[512], diffMid=1.0, BBUpDn=3) |
+| MTF | H1 | 512 | 1 | 0 | log (W_stage_H1:(FLY)[512], diffMid=1.0, BBUpDn=0) |
+| MTF | M30 | 411 | 1 | 0 | log (W_stage_M30:(SQZ)[411], diffMid=1.0, BBUpDn=0) |
+| MTF | M15 | 512 | 1 | 3 | log (W_stage_M15:(FLY)[512], diffMid=1.0, BBUpDn=3) |
+| LTF | M5 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
 
-| Mark | Cause (upstream TF state) | Event (transition at this bar) | Impact Immediate (1–5 bars) | Impact Sustained (duration) |
-|------|--------------------------|-------------------------------|----------------------------|----------------------------|
-| [TO BE FILLED: describe mark color and location] | [TO BE FILLED: which TF, BBW_stage, mid value caused this] | [TO BE FILLED: BBW_stage change / mid flip / BBUpDn change / gate fire] | [TO BE FILLED: which TF follows, what gate fires, what action triggered] | [TO BE FILLED: confinement boundaries, valid entries, size rules, active gates] |
+##### Step 2: Two-Axis Classification
+- **HTF scenario:** S — H4 fly 512, D1 shrink 513
+- **MTF scenario:** C1 — M30 SQZ 411, H1 fly 512, M15 fly 512
+- **MTF direction vs H4:** SAME → continuation (M30 SQZ but diffMid=1 same as H4)
 
-##### Step 2: HTF Analysis (W1 → D1 → H4)
+##### Step 3: Cascade
+- direction: D1 compress HTF→LTF (M30 SQZ)
+- depth: M30 SQZ 411 | leading TF: M30 (watch for SQZ break direction)
+- key transition: F2 → R1 progression — M30 compresses between fly states
 
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role in Image |
-|----|-----------|---------------|--------------|------------|---------------|
-| W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
-| D1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
-| H4 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
+##### Step 4: TIMELINE
+| From | To | Scenario | Trend / Tier | HTF state | MTF state | Source | Notes |
+|------|-----|----------|--------------|-----------|-----------|--------|-------|
+| 260401 14:30 | 260401 23:00 | F2 | Up / Tier 1 | H4 fly 512, D1 fly 512 | M30 fly 511, M15 fly 511 | img | All aligned up |
+| 260402 00:00 | 260402 04:00 | C1 | Up / Tier 2 | H4 fly 512 | M30 SQZ 411, M15 fly 512 | log | M30 compresses — D1 deepens |
+| 260402 04:00 | 260402 05:00 | C1 | Up / Tier 2 | H4 fly 512 | M30 SQZ 411, M15 fly 512 | log | M30 still SQZ — waiting break |
 
-**HTF Summary:**
-- Macro direction: [TO BE FILLED]
-- Price target: [TO BE FILLED]
-- Why LTF sideway: [TO BE FILLED]
-- HTF providing context or also compressing: [TO BE FILLED]
-
-##### Step 3: MTF Analysis (H1 → M30)
-
-| TF  | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role in Image |
-|-----|-----------|---------------|--------------|------------|---------------|
-| H1  | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
-| M30 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
-
-**MTF Summary:**
-- Trending or ranging: [TO BE FILLED]
-- Confinement boundary: [TO BE FILLED]
-- Touch type at MTF: [TO BE FILLED]
-- Active gate: [TO BE FILLED]
-- Impact on H4: [TO BE FILLED]
-- Impact on M15: [TO BE FILLED]
-
-##### Step 4: LTF Analysis (M15 → M5)
-
-| TF  | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role in Image |
-|-----|-----------|---------------|--------------|------------|---------------|
-| M15 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
-| M5  | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
-
-**LTF Summary:**
-- LTF leading (D2) or lagging (D1): [TO BE FILLED]
-- M5 BBUpDn_state sequence: [TO BE FILLED]
-- REVUP/REVDN visible: [TO BE FILLED]
-- Active gate: [TO BE FILLED]
-- Impact on MTF: [TO BE FILLED]
-- Impact on HTF eventually: [TO BE FILLED]
-
-##### Step 5: Cross-TF Impact Chain
-
-**D1 direction (HTF causing LTF confinement):**
-```
-[TO BE FILLED: H4 state]
-  → [TO BE FILLED: H1 consequence]
-    → [TO BE FILLED: M30 consequence]
-      → [TO BE FILLED: M15 consequence]
-        → [TO BE FILLED: M5 consequence]
-```
-
-**D2 direction (LTF signalling HTF):**
-```
-[TO BE FILLED: M5 state]
-  → [TO BE FILLED: M15 follows in X bars]
-    → [TO BE FILLED: M30 follows]
-      → [TO BE FILLED: H1 follows]
-        → [TO BE FILLED: H4 eventually]
-```
-
-**Cascade position at time of image:**
-- D1 reached depth: [TO BE FILLED — deepest TF in SQZ]
-- D2 initiated at: [TO BE FILLED — lowest TF that broke SQZ, or NOT YET]
-- Leading TF to watch: [TO BE FILLED]
-
-##### Step 6: Concluded Image Analysis
-
-[TO BE FILLED: single paragraph — scenario name + sub-scenario stage + HTF context + MTF state + LTF state + cascade position + touch behavior + key observable + next scenario prediction]
-
-##### Step 7: Identification Flowchart for Trend Prediction
-
-```mermaid
-flowchart TD
-    A["[TO BE FILLED: current state from image]"]
-    A --> B{"[TO BE FILLED: key discriminator observable]"}
-    B -->|Yes| C{"[TO BE FILLED: second check]"}
-    C -->|Yes| D["[TO BE FILLED: next scenario + action]"]
-    C -->|No| E["[TO BE FILLED: alternative next scenario]"]
-    B -->|No| F{"[TO BE FILLED: alternative check]"}
-    F -->|Yes| G["[TO BE FILLED: action]"]
-    F -->|No| H["[TO BE FILLED: wait condition]"]
-```
-
-**Prediction rules from this image:**
-- IF [TO BE FILLED: observable A] THEN next scenario = [TO BE FILLED]
-- IF [TO BE FILLED: observable B] THEN next scenario = [TO BE FILLED]
-- Discriminator TF: [TO BE FILLED]
-- Watch: [TO BE FILLED: specific BBW_stage or mid flip to monitor]
+##### Step 5: Conclusion + Prediction
+- **Scenario: C1** (HTF=S × MTF=C1). No divergence yet — M30 SQZ but diffMid=1 same as H4.
+- **Next likely:** R1 if M30 breaks 411→521 (opposite H4); F if M30 breaks 411→511 (same H4). Watch: M30 BBW_stage 411→511 vs 411→521.
 
 #### Image 2 Analysis — backtested_EA_fly_shrink_2_sideway2.jpg
+**Period:** 2026.04.02 05:00 → 2026.04.03 03:00
 
-##### Step 1: Mark Reading — Cause, Event, and Impact
+##### Step 1: State Read (evidence first — one table, all 7 TFs)
+| TF group | TF | BBW_stage | diffMid | BBUpDn | Source (img/log) |
+|----------|----|-----------|---------|--------|------------------|
+| HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
+| HTF | D1 | 513 | 1 | 2 | img |
+| HTF | H4 | 512 | 1 | 3 | img |
+| MTF | H1 | 512 | 1 | 0 | img |
+| MTF | M30 | 513→411 | 1→3 | 2→0 | img |
+| MTF | M15 | 513 | 5 | 2 | img |
+| LTF | M5 | 513 | 5 | 2 | img |
 
-| Mark | Cause (upstream TF state) | Event (transition at this bar) | Impact Immediate (1–5 bars) | Impact Sustained (duration) |
-|------|--------------------------|-------------------------------|----------------------------|----------------------------|
-| [TO BE FILLED: describe mark color and location] | [TO BE FILLED: which TF, BBW_stage, mid value caused this] | [TO BE FILLED: BBW_stage change / mid flip / BBUpDn change / gate fire] | [TO BE FILLED: which TF follows, what gate fires, what action triggered] | [TO BE FILLED: confinement boundaries, valid entries, size rules, active gates] |
+##### Step 2: Two-Axis Classification
+- **HTF scenario:** S — H4 fly 512, D1 shrink 513
+- **MTF scenario:** C2 — M30 SQZ 411, M15 shrink 513
+- **MTF direction vs H4:** SAME → continuation
 
-##### Step 2: HTF Analysis (W1 → D1 → H4)
+##### Step 3: Cascade
+- direction: D1 compress HTF→LTF
+- depth: M30 SQZ 411 | leading TF: M30 (watch for SQZ break)
+- key transition: M30 513→411 — D1 deepens to C2
 
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role in Image |
-|----|-----------|---------------|--------------|------------|---------------|
-| W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
-| D1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
-| H4 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
+##### Step 4: TIMELINE
+| From | To | Scenario | Trend / Tier | HTF state | MTF state | Source | Notes |
+|------|-----|----------|--------------|-----------|-----------|--------|-------|
+| 260402 05:00 | 260402 17:00 | S2 | Up / Tier 2 | H4 fly 512 | M30 shrink 513, M15 shrink 513 | img | D1 compression |
+| 260402 17:00 | 260403 03:00 | C2 | Up / Tier 2 | H4 fly 512 | M30 SQZ 411, M15 shrink 513 | img | M30 enters SQZ — C2 |
 
-**HTF Summary:**
-- Macro direction: [TO BE FILLED]
-- Price target: [TO BE FILLED]
-- Why LTF sideway: [TO BE FILLED]
-- HTF providing context or also compressing: [TO BE FILLED]
-
-##### Step 3: MTF Analysis (H1 → M30)
-
-| TF  | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role in Image |
-|-----|-----------|---------------|--------------|------------|---------------|
-| H1  | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
-| M30 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
-
-**MTF Summary:**
-- Trending or ranging: [TO BE FILLED]
-- Confinement boundary: [TO BE FILLED]
-- Touch type at MTF: [TO BE FILLED]
-- Active gate: [TO BE FILLED]
-- Impact on H4: [TO BE FILLED]
-- Impact on M15: [TO BE FILLED]
-
-##### Step 4: LTF Analysis (M15 → M5)
-
-| TF  | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role in Image |
-|-----|-----------|---------------|--------------|------------|---------------|
-| M15 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
-| M5  | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
-
-**LTF Summary:**
-- LTF leading (D2) or lagging (D1): [TO BE FILLED]
-- M5 BBUpDn_state sequence: [TO BE FILLED]
-- REVUP/REVDN visible: [TO BE FILLED]
-- Active gate: [TO BE FILLED]
-- Impact on MTF: [TO BE FILLED]
-- Impact on HTF eventually: [TO BE FILLED]
-
-##### Step 5: Cross-TF Impact Chain
-
-**D1 direction (HTF causing LTF confinement):**
-```
-[TO BE FILLED: H4 state]
-  → [TO BE FILLED: H1 consequence]
-    → [TO BE FILLED: M30 consequence]
-      → [TO BE FILLED: M15 consequence]
-        → [TO BE FILLED: M5 consequence]
-```
-
-**D2 direction (LTF signalling HTF):**
-```
-[TO BE FILLED: M5 state]
-  → [TO BE FILLED: M15 follows in X bars]
-    → [TO BE FILLED: M30 follows]
-      → [TO BE FILLED: H1 follows]
-        → [TO BE FILLED: H4 eventually]
-```
-
-**Cascade position at time of image:**
-- D1 reached depth: [TO BE FILLED — deepest TF in SQZ]
-- D2 initiated at: [TO BE FILLED — lowest TF that broke SQZ, or NOT YET]
-- Leading TF to watch: [TO BE FILLED]
-
-##### Step 6: Concluded Image Analysis
-
-[TO BE FILLED: single paragraph — scenario name + sub-scenario stage + HTF context + MTF state + LTF state + cascade position + touch behavior + key observable + next scenario prediction]
-
-##### Step 7: Identification Flowchart for Trend Prediction
-
-```mermaid
-flowchart TD
-    A["[TO BE FILLED: current state from image]"]
-    A --> B{"[TO BE FILLED: key discriminator observable]"}
-    B -->|Yes| C{"[TO BE FILLED: second check]"}
-    C -->|Yes| D["[TO BE FILLED: next scenario + action]"]
-    C -->|No| E["[TO BE FILLED: alternative next scenario]"]
-    B -->|No| F{"[TO BE FILLED: alternative check]"}
-    F -->|Yes| G["[TO BE FILLED: action]"]
-    F -->|No| H["[TO BE FILLED: wait condition]"]
-```
-
-**Prediction rules from this image:**
-- IF [TO BE FILLED: observable A] THEN next scenario = [TO BE FILLED]
-- IF [TO BE FILLED: observable B] THEN next scenario = [TO BE FILLED]
-- Discriminator TF: [TO BE FILLED]
-- Watch: [TO BE FILLED: specific BBW_stage or mid flip to monitor]
+##### Step 5: Conclusion + Prediction
+- **Scenario: C2** (HTF=S × MTF=C2). No divergence.
+- **Next likely:** P2 if M30 411→511 (same dir as H4); R1 if M30 411→521 (opposite). Watch: M30 BBW_stage.
 
 ---
 
 ## Scenario C
 
 #### Image 1 Analysis — backtested_EA_fly_shrink_2_sideway.jpg
+**Period:** 2026.04.01 13:00 → 2026.04.02 17:00
 
-##### Step 1: Mark Reading — Cause, Event, and Impact
+##### Step 1: State Read (evidence first — one table, all 7 TFs)
+| TF group | TF | BBW_stage | diffMid | BBUpDn | Source (img/log) |
+|----------|----|-----------|---------|--------|------------------|
+| HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
+| HTF | D1 | 513 | 1 | 2 | log (W_stage_D1:(FLY)[513], diffMid=1.0, BBUpDn=2) |
+| HTF | H4 | 512 | 1 | 3 | log (W_stage_H4:(FLY)[512], diffMid=1.0, BBUpDn=3) |
+| MTF | H1 | 512 | 1 | 0 | log (W_stage_H1:(FLY)[512], diffMid=1.0, BBUpDn=0) |
+| MTF | M30 | 511→513→411 | 1→3→3 | 1→2→0 | img/log |
+| MTF | M15 | 511→513→400-499 | 1→3→3 | 1→2→0 | img/log |
+| LTF | M5 | 511→513→400-499 | 1→3→3 | 1→2→0 | img |
 
-| Mark | Cause (upstream TF state) | Event (transition at this bar) | Impact Immediate (1–5 bars) | Impact Sustained (duration) |
-|------|--------------------------|-------------------------------|----------------------------|----------------------------|
-| Yellow rectangles | H4 fly 511/512 | M5→M15→M30 sequential compression | Midband labels (3,4,5) appear | Lower TF confined within H4 envelope |
-| Red rectangles | M30+M15+M5 all SQZ | G0c-SQZLOCK fires | No new entries | Range trade at H4 boundaries only |
+##### Step 2: Two-Axis Classification
+- **HTF scenario:** S — H4 fly 512, D1 shrink 513
+- **MTF scenario:** C2 — M30/M15/M5 SQZ 400-499
+- **MTF direction vs H4:** SAME → continuation (M30 diffMid=1 same as H4)
 
-##### Step 2: HTF Analysis (W1 → D1 → H4)
+##### Step 3: Cascade
+- direction: D1 compress HTF→LTF
+- depth: M5 (full SQZ) | leading TF: M5 (watch for REVUP/REVDN)
+- key transition: Sequential compression — M5 first, M15 second, M30 third; G0c-SQZLOCK active
 
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
-| D1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
-| H4 | 511/512/521/522 | 1/2 | [TO BE FILLED] | Type 2 | Directional context — fly expand |
+##### Step 4: TIMELINE
+| From | To | Scenario | Trend / Tier | HTF state | MTF state | Source | Notes |
+|------|-----|----------|--------------|-----------|-----------|--------|-------|
+| 260401 13:00 | 260401 17:00 | S2 | Up / Tier 2 | H4 fly 512 | M30 shrink 513, M15 shrink 513 | img | D1 compression begins |
+| 260401 17:00 | 260402 01:00 | C2 | Up / Tier 2 | H4 fly 512 | M30/M15/M5 SQZ 400-499 | img | D1 reaches BOTTOM; G0c-SQZLOCK |
+| 260402 01:00 | 260402 04:00 | C2 | Up / Tier 2 | H4 fly 512 | M30 SQZ 411, M15 fly 512 | log | M30 SQZ 411 confirmed; M15 fly 512 |
+| 260402 04:00 | 260402 17:00 | C2 | Up / Tier 2 | H4 fly 512 | M30 SQZ 411, M15 fly 512 | log | Sustained C2; M30 still SQZ |
 
-**HTF Summary:** H4 fly expand provides direction | H4 outer band | Lower TF confined by H4 envelope | HTF providing full context
-
-##### Step 3: MTF Analysis (H1 → M30)
-
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| H1  | 511/512/521/522 | 1/2 | [TO BE FILLED] | Type 2 | Follows H4 — confirms direction |
-| M30 | 511→513→400-499 | 1/2→3/4/5→3 | [TO BE FILLED] | Type 1→Type 3 | Confinement depth indicator |
-
-**MTF Summary:** H1 trending, M30 ranging → SQZ | H4 outer band | Type 1→3 | G4f-M30OPP then G0c-SQZLOCK | H4 unchanged | M15 confined
-
-##### Step 4: LTF Analysis (M15 → M5)
-
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| M15 | 511→513→400-499 | 1/2→3/4/5→3 | [TO BE FILLED] | Type 1→Type 3 | G0b-PINK when SQZ |
-| M5  | 511→513→400-499 | 1/2→3/4/5→3 | [TO BE FILLED] | Type 1→Type 3 | First to compress, first to break |
-
-**LTF Summary:** D1 compression reaching BOTTOM | M5 first to collapse | [TO BE FILLED] | G0b-M5OPP → G0b-PINK | Confirms M30 | N/A
-
-##### Step 5: Cross-TF Impact Chain
-
-**D1 compression (HTF → LTF):**
-- H4 fly 511/512 → H1 fly → M30 shrink 513→SQZ → M15 shrink→SQZ → M5 shrink→SQZ (first)
-
-**D2 expansion (LTF → HTF):**
-- Not yet — all lower TF in SQZ
-
-**Cascade position:** D1 depth = M5 (full SQZ) | D2 initiated at = NOT YET | Leading TF = M5 (watch for REVUP/REVDN)
-
-##### Step 6: Concluded Analysis
-
-Scenario C — Fly expand + confined compression, Image 1. H4/H1 fly expand maintained throughout. Multiple compression zones visible: yellow rectangles (shrink phase) and red rectangles (full SQZ). Compression localized to M30/M15/M5 — H4/H1 provide directional context. Sequential compression: M5 first, M15 second, M30 third. G0c-SQZLOCK and G0b-PINK active. Key observable: M5 SQZ break (REVUP/REVDN) initiates D2 expansion.
-
-##### Step 7: Identification Flowchart
-
-```mermaid
-flowchart TD
-    A["Current state: H4/H1 fly, M30/M15/M5 SQZ — Scenario C"]
-    A --> B{"M5 breaks SQZ (REVUP/REVDN)?"}
-    B -->|Yes| C["D2 initiated — M15 follows → M30 follows"]
-    B -->|No| D{"H4 enters shrink?"}
-    D -->|Yes| E["D1 deepens — C4 (H4 also compressing) → G (Direction pivot)"]
-    D -->|No| F["Remains Scenario C — wait"]
-```
-
-**Prediction rules:**
-- IF M5 REVUP/REVDN → D2 expansion begins
-- IF H4 511→513 → D1 deepens toward G
-- Watch: M5 BBW_stage 400-499→511/512 + REVUP/REVDN
+##### Step 5: Conclusion + Prediction
+- **Scenario: C2** (HTF=S × MTF=C2). No divergence.
+- **Next likely:** P2 if M5 REVUP and M15 follows; R1 if M30 411→521 (opposite H4). Watch: M5 BBW_stage + M30 BBW_stage.
 
 #### Image 2 Analysis — backtested_EA_fly_shrink_2_sideway_zoomin.jpg
+**Period:** 2026.04.02 09:00 → 2026.04.02 17:00
 
-##### Step 1: Mark Reading — Cause, Event, and Impact
+##### Step 1: State Read (evidence first — one table, all 7 TFs)
+| TF group | TF | BBW_stage | diffMid | BBUpDn | Source (img/log) |
+|----------|----|-----------|---------|--------|------------------|
+| HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
+| HTF | D1 | 513 | 1 | 2 | img |
+| HTF | H4 | 512 | 1 | 3 | img |
+| MTF | H1 | 521 | 2 | 1 | log (W_stage_H1:(FLY)[521], diffMid=2.0, BBUpDn=1) |
+| MTF | M30 | 411→521 | 1→2 | 0→1 | log (SQZ[411]→FLY[521]) |
+| MTF | M15 | 522 | 2 | 4 | log (W_stage_M15:(FLY)[522], diffMid=2.0) |
+| LTF | M5 | 411→521 | 1→2 | 0→1 | img |
 
-| Mark | Cause (upstream TF state) | Event (transition at this bar) | Impact Immediate (1–5 bars) | Impact Sustained (duration) |
-|------|--------------------------|-------------------------------|----------------------------|----------------------------|
-| [TO BE FILLED] | M5 SQZ → breakout | M5 REVUP/REVDN | G6-LOAD → G6-BUY/SELL | M15 follows within 2-3 bars |
+##### Step 2: Two-Axis Classification
+- **HTF scenario:** S — H4 fly 512, D1 shrink 513
+- **MTF scenario:** P2 → P3 — M30 breaks SQZ 411→521, M15 fly 522
+- **MTF direction vs H4:** OPPOSITE → R1 divergence (M30 diffMid=2, H4 diffMid=1)
 
-##### Step 2: HTF Analysis (W1 → D1 → H4)
+##### Step 3: Cascade
+- direction: D2 expand LTF→HTF
+- depth: M5 broke SQZ first | leading TF: M5 (broke SQZ)
+- key transition: M5 SQZ break → M15 follows → M30 breaks SQZ 411→521
 
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
-| D1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
-| H4 | 511/512/521/522 | 1/2 MAINTAINED | [TO BE FILLED] | Type 2 | Directional context unchanged |
+##### Step 4: TIMELINE
+| From | To | Scenario | Trend / Tier | HTF state | MTF state | Source | Notes |
+|------|-----|----------|--------------|-----------|-----------|--------|-------|
+| 260402 09:00 | 260402 10:00 | P2 | Down / Tier 3 | H4 fly 512 | M5 fly 521, M15 fly 522, M30 SQZ 411 | img/log | M5 broke SQZ; M30 still SQZ |
+| 260402 10:00 | 260402 17:00 | P3 | Down / Tier 3 | H4 fly 512 | M30 fly 521, M15 fly 522 | log | M30 breaks SQZ 411→521; D2 confirmed |
 
-**HTF Summary:** H4 fly maintained | H4 outer band | Lower TF confined by H4 | HTF providing context
-
-##### Step 3: MTF Analysis (H1 → M30)
-
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| H1  | 511/512/521/522 | 1/2 MAINTAINED | [TO BE FILLED] | Type 2 | Follows H4 |
-| M30 | 400-499→513 | 3→3/4/5 | [TO BE FILLED] | Type 3→Type 1 | SQZ release → shrink |
-
-**MTF Summary:** H1 trending, M30 SQZ→shrink | H4 outer band | Type 3→1 | G0c-SQZLOCK → G4f-M30OPP | H4 confirmed | M15 follows M30
-
-##### Step 4: LTF Analysis (M15 → M5)
-
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| M15 | 400-499→513 | 3→3/4/5 | [TO BE FILLED] | Type 3→Type 1 | G0b-PINK → entry trigger |
-| M5  | 400-499→511/512 | 3→1/2 | [TO BE FILLED] | Type 3→Type 2 | D2 initiator — REVUP/REVDN |
-
-**LTF Summary:** D2 leading — M5 broke SQZ | M5→511/512 | REVUP/REVDN visible | G6-LOAD → G6-BUY/SELL | M30 follows | N/A
-
-##### Step 5: Cross-TF Impact Chain
-
-**D1 compression (HTF → LTF):**
-- Complete — H4 fly → H1 fly → M30 SQZ → M15 SQZ → M5 SQZ (reached BOTTOM)
-
-**D2 expansion (LTF → HTF):**
-- M5 REVUP → M15 follows → M30 follows → H1 maintains → H4 fly
-
-**Cascade position:** D2 initiated at M5 | Leading TF = M5 (broke SQZ)
-
-##### Step 6: Concluded Analysis
-
-Scenario C zoom — confirms D2 expansion from M5 SQZ break. H4/H1 fly unchanged. M5 broke SQZ first (REVUP/REVDN), M15 and M30 follow. Touch evolution: L touches building → balanced oscillation → U touches increasing (pre-breakout). Gate sequence: G0b-M5OPP → G4c-M15OPP → G0c-SQZLOCK → G0b-PINK → G6-LOAD → G6-BUY/SELL. Key observable: M15 re-expansion to fly confirms D2.
-
-##### Step 7: Identification Flowchart
-
-```mermaid
-flowchart TD
-    A["Current state: M5 broke SQZ, D2 initiated — Scenario C zoom"]
-    A --> B{"M15 re-expanding to fly?"}
-    B -->|Yes| C["D2 confirmed — G6-BUY/SELL entry"]
-    B -->|No| D{"M30 still SQZ?"}
-    D -->|Yes| E["D2 incomplete — wait"]
-    D -->|No| F["M30 shrink — partial D2"]
-```
-
-**Prediction rules:**
-- IF M15 400→511/512 → D2 confirmed
-- IF M30 remains 400-499 → D2 blocked
-- Watch: M15 BBW_stage + M30 midtrend
+##### Step 5: Conclusion + Prediction
+- **Scenario: P3** (HTF=S × MTF=P3). Divergence: MTF down (diffMid=2) vs H4 up (diffMid=1).
+- **Next likely:** B2 if M30 fly 521 sustained; S if M30 re-enters shrink. Watch: M30 BBW_stage.
 
 #### Image 3 Analysis — backtested_EA_fly_shrink_2_sideway2.jpg
+**Period:** 2026.04.02 05:00 → 2026.04.03 03:00
 
-##### Step 1: Mark Reading — Cause, Event, and Impact
+##### Step 1: State Read (evidence first — one table, all 7 TFs)
+| TF group | TF | BBW_stage | diffMid | BBUpDn | Source (img/log) |
+|----------|----|-----------|---------|--------|------------------|
+| HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
+| HTF | D1 | 513 | 1 | 2 | img |
+| HTF | H4 | 512 | 1 | 3 | img |
+| MTF | H1 | 512→521 | 1→2 | 0→1 | img/log |
+| MTF | M30 | 513→411→521 | 1→3→2 | 2→0→1 | img/log |
+| MTF | M15 | 513→411→521 | 1→3→2 | 2→0→1 | img/log |
+| LTF | M5 | 513→411→521 | 1→3→2 | 2→0→1 | img |
 
-| Mark | Cause (upstream TF state) | Event (transition at this bar) | Impact Immediate (1–5 bars) | Impact Sustained (duration) |
-|------|--------------------------|-------------------------------|----------------------------|----------------------------|
-| Zone 2 (yellow) | M30 511→513 | M5 begins shrink | G0b-M5OPP may block | D1 compression deepens |
-| Zone 3-5 (red) | All lower TF SQZ | G0c-SQZLOCK + G0b-PINK | No entries | Range trade only |
-| Zone 6 (recovery) | M5 SQZ break | REVUP/REVDN + G6-LOAD | G6-BUY/SELL | D2 expansion |
+##### Step 2: Two-Axis Classification
+- **HTF scenario:** S — H4 fly 512, D1 shrink 513
+- **MTF scenario:** C1→C2→P2 — full D1 cycle: shrink→SQZ→break
+- **MTF direction vs H4:** OPPOSITE → R1 divergence (M30 diffMid=2, H4 diffMid=1)
 
-##### Step 2: HTF Analysis (W1 → D1 → H4)
+##### Step 3: Cascade
+- direction: D1 compress HTF→LTF, then D2 expand LTF→HTF
+- depth: Full cycle — M5 SQZ (BOTTOM) → D2 initiated at M5 | leading TF: M5
+- key transition: 6-zone D1 cycle — fly(1)→shrink(2)→SQZ(3-5)→release(6)
 
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
-| D1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] |
-| H4 | 511/512/521/522 (all zones) | 1/2 (all zones) | [TO BE FILLED] | Type 2 | Fly expand MAINTAINED throughout |
+##### Step 4: TIMELINE
+| From | To | Scenario | Trend / Tier | HTF state | MTF state | Source | Notes |
+|------|-----|----------|--------------|-----------|-----------|--------|-------|
+| 260402 05:00 | 260402 09:00 | S2 | Up / Tier 2 | H4 fly 512 | M30/M15 shrink 513 | img | Zone 2 — D1 compression |
+| 260402 09:00 | 260402 15:00 | C2 | Up / Tier 2 | H4 fly 512 | M30/M15/M5 SQZ 411 | img | Zones 3-5 — SQZ peak |
+| 260402 15:00 | 260402 21:00 | P2 | Down / Tier 3 | H4 fly 512 | M5 fly 521, M15 fly 522 | img | Zone 6 — M5 breaks SQZ |
+| 260402 21:00 | 260403 03:00 | P3 | Down / Tier 3 | H4 fly 512 | M30 fly 521 | img | Zone 6 — M30 confirms |
 
-**HTF Summary:** H4 fly MAINTAINED all 6 zones | H4 outer band | Lower TF confined within H4 | HTF providing full context
-
-##### Step 3: MTF Analysis (H1 → M30)
-
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| H1  | 511/512/521/522 (all zones) | 1/2 (all zones) | [TO BE FILLED] | Type 2 | Fly MAINTAINED — confirms H4 |
-| M30 | 511→513→400→513 | 1/2→3/4/5→3→3/4/5 | [TO BE FILLED] | Type 1→3→1 | Full D1 cycle |
-
-**MTF Summary:** H1 trending all zones, M30 full D1 cycle | H4 outer band | Type 1→3→1 | G4f-M30OPP → G0c-SQZLOCK → G4f-M30OPP | H4 unchanged | M15 confined
-
-##### Step 4: LTF Analysis (M15 → M5)
-
-| TF | BBW_stage | diffMid_Trend | BBUpDn_state | Touch Type | Role |
-|----|-----------|---------------|--------------|------------|------|
-| M15 | 511→513→400→513 | 1/2→3/4/5→3→3/5 | [TO BE FILLED] | Type 1→3→1 | Full D1 cycle |
-| M5  | 511→513→400→513 | 1/2→3/4/5→3→3/5 | [TO BE FILLED] | Type 1→3→1 | First compress, first break |
-
-**LTF Summary:** Full D1 cycle: compress→SQZ→release | M5→M15→M30 cascade | REVUP/REVDN visible | G0b-M5OPP → G0b-PINK → G6-LOAD | Confirms M30 | N/A
-
-##### Step 5: Cross-TF Impact Chain
-
-**D1 compression (HTF → LTF):**
-- H4 fly (zone 1-6) → H1 fly (zone 1-6) → M30 shrink→SQZ→shrink (zone 2-6) → M15 shrink→SQZ→shrink → M5 shrink→SQZ→shrink
-
-**D2 expansion (LTF → HTF):**
-- Zone 6: M5 shrink→break → M15 follows → M30 follows → H1 maintains → H4 fly
-
-**Cascade position:** D1 full cycle (zone 1→6) | D2 initiated at M5 (zone 6) | Leading TF = M5
-
-##### Step 6: Concluded Analysis
-
-Scenario C Image 3 — comprehensive 6-zone view of H4/H1 fly expand + lower TF confined compression. Core finding: H4/H1 fly expand MAINTAINED throughout all compression zones (1-6). Compression localized to M30/M15/M5 only. Zone progression: fly (1) → shrink (2) → SQZ peak (3-5) → shrink release (6). Touch evolution: L touches (entry) → L persistent (compression) → balanced (loading) → U touches (pre-breakout). Gate sequence: G0b-M5OPP → G0c-SQZLOCK → G0b-PINK → G0 → G6-LOAD → G6-BUY/SELL. Range trade at H4 band boundaries: sell upper, buy lower.
-
-##### Step 7: Identification Flowchart
-
-```mermaid
-flowchart TD
-    A["Current state: 6-zone D1 cycle, zone 6 recovery — Scenario C"]
-    A --> B{"Zone 6: M5 broke SQZ?"}
-    B -->|Yes| C{"M15+M30 re-expanding?"}
-    C -->|Yes| D["D2 complete — Scenario F resuming"]
-    C -->|No| E["Partial D2 — wait for M30"]
-    B -->|No| F["Remains SQZ — G0b-PINK active"]
-```
-
-**Prediction rules:**
-- IF M15+M30 400→511/512 → Scenario F
-- IF M30 remains 513 → Scenario S
-- IF H4 enters 513 → Scenario C4 risk (H4 compressing → Direction pivot)
-- Watch: M30 BBW_stage + M15 midtrend
+##### Step 5: Conclusion + Prediction
+- **Scenario: P3** (HTF=S × MTF=P3). Divergence: MTF down vs H4 up.
+- **Next likely:** B2 if M30 fly 521 sustained; S if M30 re-enters shrink. Watch: M30 BBW_stage + M15 midtrend.
