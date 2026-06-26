@@ -68,6 +68,8 @@ only R1/B2 are genuinely 2-axis.
 ## Scenario F
 
 #### Image Analysis — backtested_EA_fly_scenario.jpg
+![backtested_EA_fly_scenario](./Backtest_data/extras/backtested_EA_fly_scenario.jpg)
+
 **Period:** 2026.01.02 01:00 → 2026.01.03 04:00
 
 ##### Step 1: State Read (evidence first — one table, all 7 TFs)
@@ -106,6 +108,8 @@ only R1/B2 are genuinely 2-axis.
 ## Scenario S
 
 #### Image 1 Analysis — backtested_EA_fly_2_fly_shrink.jpg
+![backtested_EA_fly_2_fly_shrink](./Backtest_data/extras/backtested_EA_fly_2_fly_shrink.jpg)
+
 **Period:** 2026.03.30 13:00 → 2026.04.01 13:00
 
 ##### Step 1: State Read (evidence first — one table, all 7 TFs)
@@ -141,6 +145,8 @@ only R1/B2 are genuinely 2-axis.
 - **Next likely:** C2 if M30 enters SQZ 400-499; P if M30 returns to 511/512. Watch: M30 BBW_stage + diffBBW.
 
 #### Image 2 Analysis — backtested_EA_fly_2_fly_shrink_zoomin.jpg
+![backtested_EA_fly_2_fly_shrink_zoomin](./Backtest_data/extras/backtested_EA_fly_2_fly_shrink_zoomin.jpg)
+
 **Period:** 2026.03.30 14:30 → 2026.04.01 09:00
 
 ##### Step 1: State Read (evidence first — one table, all 7 TFs)
@@ -179,6 +185,8 @@ only R1/B2 are genuinely 2-axis.
 ## Scenario P
 
 #### Image 1 Analysis — backtested_EA_fly_2_shrink_2_fly.jpg
+![backtested_EA_fly_2_shrink_2_fly](./Backtest_data/extras/backtested_EA_fly_2_shrink_2_fly.jpg)
+
 **Period:** 2026.04.03 03:00 → 2026.04.05 00:00
 
 ##### Step 1: State Read (evidence first — one table, all 7 TFs)
@@ -215,6 +223,8 @@ only R1/B2 are genuinely 2-axis.
 - **Next likely:** F if M30 fly confirmed; S if M30 enters shrink again. Watch: M30 BBW_stage.
 
 #### Image 2 Analysis — backtested_EA_fly_2_shrink_2_fly_zoomin.jpg
+![backtested_EA_fly_2_shrink_2_fly_zoomin](./Backtest_data/extras/backtested_EA_fly_2_shrink_2_fly_zoomin.jpg)
+
 **Period:** 2026.04.04 15:00 → 2026.04.05 00:00
 
 ##### Step 1: State Read (evidence first — one table, all 7 TFs)
@@ -253,6 +263,8 @@ only R1/B2 are genuinely 2-axis.
 ## Scenario B
 
 #### Image 1 Analysis — backtested_EA_sideway_2_fly.jpg
+![backtested_EA_sideway_2_fly](./Backtest_data/extras/backtested_EA_sideway_2_fly.jpg)
+
 **Period:** 2026.02.06 01:00 → 2026.02.07 21:00
 
 ##### Step 1: State Read (evidence first — one table, all 7 TFs)
@@ -287,6 +299,8 @@ only R1/B2 are genuinely 2-axis.
 - **Next likely:** B3 if H4 breaks to fly 521/522; C4 if H4 remains 513. Watch: H4 BBW_stage.
 
 #### Image 2 Analysis — backtested_EA_sideway_2_fly_zoomin.jpg
+![backtested_EA_sideway_2_fly_zoomin](./Backtest_data/extras/backtested_EA_sideway_2_fly_zoomin.jpg)
+
 **Period:** 2026.02.06 13:00 → 2026.02.07 09:00
 
 ##### Step 1: State Read (evidence first — one table, all 7 TFs)
@@ -325,6 +339,8 @@ only R1/B2 are genuinely 2-axis.
 ## Scenario V
 
 #### Image 1 Analysis — backtested_EA_trend_reversal.jpg
+![backtested_EA_trend_reversal](./Backtest_data/extras/backtested_EA_trend_reversal.jpg)
+
 **Period:** 2026.04.01 14:30 → 2026.04.02 05:00
 
 ##### Step 1: State Read (evidence first — one table, all 7 TFs)
@@ -360,6 +376,8 @@ only R1/B2 are genuinely 2-axis.
 - **Next likely:** R1 if M30 breaks 411→521 (opposite H4); F if M30 breaks 411→511 (same H4). Watch: M30 BBW_stage 411→511 vs 411→521.
 
 #### Image 2 Analysis — backtested_EA_fly_shrink_2_sideway2.jpg
+![backtested_EA_fly_shrink_2_sideway2](./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway2.jpg)
+
 **Period:** 2026.04.02 05:00 → 2026.04.03 03:00
 
 ##### Step 1: State Read (evidence first — one table, all 7 TFs)
@@ -398,6 +416,8 @@ only R1/B2 are genuinely 2-axis.
 ## Scenario C
 
 #### Image 1 Analysis — backtested_EA_fly_shrink_2_sideway.jpg
+![backtested_EA_fly_shrink_2_sideway](./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway.jpg)
+
 **Period:** 2026.04.01 13:00 → 2026.04.02 17:00
 
 ##### Step 1: State Read (evidence first — one table, all 7 TFs)
@@ -434,6 +454,8 @@ only R1/B2 are genuinely 2-axis.
 - **Next likely:** P2 if M5 REVUP and M15 follows; R1 if M30 411→521 (opposite H4). Watch: M5 BBW_stage + M30 BBW_stage.
 
 #### Image 2 Analysis — backtested_EA_fly_shrink_2_sideway_zoomin.jpg
+![backtested_EA_fly_shrink_2_sideway_zoomin](./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway_zoomin.jpg)
+
 **Period:** 2026.04.02 09:00 → 2026.04.02 17:00
 
 ##### Step 1: State Read (evidence first — one table, all 7 TFs)
@@ -468,6 +490,8 @@ only R1/B2 are genuinely 2-axis.
 - **Next likely:** B2 if M30 fly 521 sustained; S if M30 re-enters shrink. Watch: M30 BBW_stage.
 
 #### Image 3 Analysis — backtested_EA_fly_shrink_2_sideway2.jpg
+![backtested_EA_fly_shrink_2_sideway2](./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway2.jpg)
+
 **Period:** 2026.04.02 05:00 → 2026.04.03 03:00
 
 ##### Step 1: State Read (evidence first — one table, all 7 TFs)
