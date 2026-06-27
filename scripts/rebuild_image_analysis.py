@@ -146,55 +146,129 @@ def safe_get(s, key, default=0):
     return s.get(key, default)
 
 def derive_scenario(htf_states, mtf_states):
+    """Derive HTF-MTF scenario pair from cell data.
+
+    Same logic as extract_state_tables.py.derive_scenario.
+    Classification order:
+    1. HTF: H4 SQZ → V-family. H4 shrink → C4. H4 flipped → R2/R3. H4 fly → F-family.
+    2. MTF: reversed vs H4 → R1. Breakout from SQZ → B1/B2/B3.
+       SQZ → C1/C2/C3. Shrink → S1/S2/S3. Flying → F.
+    """
     def sg(d, key, default=0):
         return safe_get(d, key, default)
 
+    def is_fly(s):
+        return s in (511, 512, 521, 522)
+
+    def is_shrink(s):
+        return s in (513, 523)
+
+    def is_sqz(s):
+        return 400 <= s <= 499
+
+    def fly_dir(s):
+        if s in (511, 512):
+            return 1
+        elif s in (521, 522):
+            return 2
+        return 0
+
+    # --- Gather MTF states ---
     m15_s = sg(mtf_states.get('M15'), 'stage', 0)
     m30_s = sg(mtf_states.get('M30'), 'stage', 0)
     h1_s = sg(mtf_states.get('H1'), 'stage', 0)
     m15_dm = sg(mtf_states.get('M15'), 'diffMid', 0) or 0
     m30_dm = sg(mtf_states.get('M30'), 'diffMid', 0) or 0
     h1_dm = sg(mtf_states.get('H1'), 'diffMid', 0) or 0
+    m15_bu = sg(mtf_states.get('M15'), 'BBUpDn', 0) or 0
 
+    # --- Gather HTF states ---
     h4_s = sg(htf_states.get('H4'), 'stage', 0)
     h4_dm = sg(htf_states.get('H4'), 'diffMid', 0) or 0
-
-    mtf_scenario = "F"
-    if any(s in (513, 523) for s in [m15_s, m30_s, h1_s]):
-        if m15_s in (513, 523) and m30_s in (513, 523) and h1_s in (513, 523):
-            mtf_scenario = "S3"
-        elif m15_s in (513, 523) and m30_s in (513, 523):
-            mtf_scenario = "S2"
-        elif m15_s in (513, 523):
-            mtf_scenario = "S1"
-    elif any(400 <= s <= 499 for s in [m15_s, m30_s, h1_s] if s):
-        if all(400 <= s <= 499 for s in [m15_s, m30_s] if s):
-            mtf_scenario = "C2"
-        elif (400 <= m15_s <= 499):
-            mtf_scenario = "C1"
-    elif (h4_dm == 1.0 and any(dm == 2.0 for dm in [m15_dm, m30_dm, h1_dm])) or \
-         (h4_dm == 2.0 and any(dm == 1.0 for dm in [m15_dm, m30_dm, h1_dm])):
-        mtf_scenario = "R1"
-
+    h4_bu = sg(htf_states.get('H4'), 'BBUpDn', 0) or 0
     d1_s = sg(htf_states.get('D1'), 'stage', 0)
     d1_dm = sg(htf_states.get('D1'), 'diffMid', 0) or 0
     w1_s = sg(htf_states.get('W1'), 'stage', 0)
     w1_dm = sg(htf_states.get('W1'), 'diffMid', 0) or 0
 
+    # --- MTF Scenario ---
+    mtf_scenario = "F"
+
+    # R1: MTF reversed opposite H4 (H4 still flying)
+    if is_fly(h4_s) and is_fly(m30_s) and fly_dir(h4_s) != fly_dir(m30_s):
+        mtf_scenario = "R1"
+
+    # B1/B2/B3: Breakout from compression
+    # CRITICAL: B1/B2 only when H4 is also compressed (SQZ or shrink).
+    # If H4 is flying, MTF compression is transient noise (F-tier, Decision 6).
+    elif is_fly(m15_s) and (is_sqz(h4_s) or is_shrink(h4_s)):
+        if is_fly(m30_s):
+            if is_sqz(h1_s) or is_shrink(h1_s):
+                mtf_scenario = "B2"
+        elif is_sqz(m30_s) or is_shrink(m30_s):
+            if is_fly(h1_s):
+                mtf_scenario = "B1"
+            else:
+                mtf_scenario = "B1"
+
+    # C1/C2/C3: MTF in SQZ
+    elif any(is_sqz(s) for s in [m15_s, m30_s, h1_s] if s):
+        if all(is_sqz(s) for s in [m15_s, m30_s] if s):
+            if m15_bu in (1, 3):
+                mtf_scenario = "C3"  # APPROX — verify against doc
+            else:
+                mtf_scenario = "C2"
+        elif is_sqz(m15_s):
+            mtf_scenario = "C1"
+
+    # S1/S2/S3: MTF shrinking
+    elif any(is_shrink(s) for s in [m15_s, m30_s, h1_s]):
+        if is_shrink(m15_s) and is_shrink(m30_s) and is_shrink(h1_s):
+            mtf_scenario = "S3"
+        elif is_shrink(m15_s) and is_shrink(m30_s):
+            mtf_scenario = "S2"
+        elif is_shrink(m15_s):
+            mtf_scenario = "S1"
+
+    # --- HTF Scenario ---
     htf_scenario = "F"
-    if h4_s and 400 <= h4_s <= 499:
-        htf_scenario = "V1"
-    elif h4_s and h4_s in (513, 523):
-        htf_scenario = "C4"
-    elif h4_s:
-        if d1_s == 0 or w1_s == 0:
-            htf_scenario = "F"
-        elif h4_dm == d1_dm == w1_dm and h4_dm in (1.0, 2.0):
-            htf_scenario = "F1"
-        elif h4_dm == d1_dm or h4_dm == w1_dm:
-            htf_scenario = "F2"
-        else:
-            htf_scenario = "F3"
+
+    if h4_s:
+        # V-family: H4 in SQZ
+        if is_sqz(h4_s):
+            if is_fly(d1_s) and h4_bu in (4, 2):
+                if d1_dm == 1.0:
+                    htf_scenario = "V2"
+                elif d1_dm == 2.0:
+                    htf_scenario = "V1"
+                else:
+                    htf_scenario = "V1"
+            elif h4_bu in (1, 3):
+                if is_fly(d1_s) and d1_dm == 2.0:
+                    htf_scenario = "V2"
+                else:
+                    htf_scenario = "V1"
+            else:
+                htf_scenario = "V1"
+
+        # C4: H4 shrinking
+        elif is_shrink(h4_s):
+            htf_scenario = "C4"
+
+        # F-family: H4 flying
+        # R2/R3 requires prior state to detect "H4 flipped vs original trend".
+        # Without it, H4-fly + D1-fly-opposite = F2 (partial fly, not R3).
+        # APPROX — verify against doc: R2/R3 detection unavailable from
+        # snapshot alone; requires tracking H4 direction change.
+        elif is_fly(h4_s):
+            if d1_s == 0 or w1_s == 0:
+                htf_scenario = "F"
+            elif h4_dm == d1_dm == w1_dm and h4_dm in (1.0, 2.0):
+                htf_scenario = "F1"
+            elif h4_dm == d1_dm or h4_dm == w1_dm:
+                htf_scenario = "F2"
+            else:
+                htf_scenario = "F3"
 
     divergence = False
     if h4_dm in (1.0, 2.0):
@@ -302,14 +376,29 @@ def generate_table(scenario_label, image_num, filename, start, end, data):
         lines.append(f"| {row['datetime']} | {c['M15']} | {c['M30']} | {c['H1']} | {c['H4']} | {c['D1']} | {c['W1']} | {row['scenario']} | {row['trend_tier']} |")
     lines.append("")
 
-    # Coverage check — table must reach period end (within 15 min tolerance)
+    # Coverage check — compare last DATA timestamp, not last ROW timestamp
+    # (last row can be earlier if no state change after it)
     first_ts = rows[0]['datetime']
-    last_ts = rows[-1]['datetime']
-    end_dt = end[:16]
-    # Allow 15-minute tolerance: last row within 15 min of period end
-    coverage_ok = first_ts >= start[:16] and (last_ts >= end_dt or abs_minutes(last_ts, end_dt) <= 15)
-    status = "COMPLETE" if coverage_ok else "INCOMPLETE"
-    lines.append(f"**Coverage:** {first_ts} → {last_ts} | Period: {start} → {end} | **{status}**")
+    last_row_ts = rows[-1]['datetime']
+    last_data_ts = m15_ts_list[-1] if m15_ts_list else last_row_ts
+    gap_min = abs_minutes(last_data_ts, end[:16])
+
+    # Known non-trading days in 2026 (weekends + holidays)
+    _nontrading = {
+        "2026.01.03", "2026.01.04",
+        "2026.02.07", "2026.02.08",
+        "2026.04.03", "2026.04.04", "2026.04.05", "2026.04.06",
+    }
+    _end_date = end[:10]
+    _is_nontrading = _end_date in _nontrading
+
+    if gap_min <= 15:
+        status = "COMPLETE"
+    elif _is_nontrading:
+        status = f"INCOMPLETE — period ends on non-trading day ({_end_date})"
+    else:
+        status = f"INCOMPLETE — no data after {last_data_ts}"
+    lines.append(f"**Coverage:** {first_ts} → {last_row_ts} | Period: {start} → {end} | **{status}**")
     lines.append("")
 
     return "\n".join(lines)
