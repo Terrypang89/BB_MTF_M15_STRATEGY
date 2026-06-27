@@ -6,6 +6,7 @@ timestamp, then produces event-driven rows (new row only on M15 BBW_stage/diffMi
 """
 
 import re
+from datetime import datetime
 from pathlib import Path
 from collections import defaultdict
 
@@ -83,12 +84,13 @@ def parse_log(log_path):
                 }
     return data
 
+_TS_FMT = "%Y.%m.%d %H:%M"
+
 def ts_in_range(ts, start, end):
-    """Check if timestamp is in [start, end] range."""
-    # Remove seconds for comparison: "2026.01.02 01:15:02" -> "2026.01.02 01:15"
-    ts_dt = ts[:16]  # "2026.01.02 01:15"
-    start_dt = start[:16]
-    end_dt = end[:16]
+    """Check if timestamp is in [start, end] range using datetime comparison."""
+    ts_dt = datetime.strptime(ts[:16], _TS_FMT)
+    start_dt = datetime.strptime(start[:16], _TS_FMT)
+    end_dt = datetime.strptime(end[:16], _TS_FMT)
     return start_dt <= ts_dt <= end_dt
 
 def round_down_to_m15(ts):
@@ -105,17 +107,21 @@ def get_m15_timestamps_in_period(data, start, end):
     return sorted(m15_ts)
 
 def get_state_at_tf(data, tf, ts):
-    """Get the nearest state for a TF at or before the given M15 timestamp."""
-    # Find the latest entry at or before ts
+    """Get the nearest state for a TF at or before the given M15 timestamp.
+
+    Does NOT assume dict insertion order — iterates ALL entries and keeps
+    the max log_ts ≤ ts_target.  This is required because D1 (81 entries)
+    and W1 (16 entries) log far less frequently than M15 (7607 entries),
+    so a premature break skips their valid prior entries.
+    """
     ts_target = ts  # "2026.01.02 01:15"
     best = None
     for log_ts, state in data[tf].items():
         log_ts_rounded = round_down_to_m15(log_ts)
-        if log_ts_rounded <= ts_target:
-            if best is None or log_ts_rounded > best[0]:
-                best = (log_ts_rounded, state)
-        else:
-            break  # sorted, so we can stop
+        if log_ts_rounded <= ts_target and (best is None or log_ts_rounded > best[0]):
+            best = (log_ts_rounded, state)
+        # No early break: slow TFs (D1/W1) have sparse entries that may
+        # appear after faster-TF entries in dict order.
     return best[1] if best else None
 
 def stage_label(stage):
@@ -226,8 +232,9 @@ def derive_scenario(htf_cells, mtf_cells):
     # --- B1/B2/B3: Breakout from compression ---
     # B1: M15 fly, M30 still compressed (SQZ or shrink), H1 fly — LTF only
     # B2: M15+M30 fly, H1 compressed — MTF confirmed
-    # B3: M15+M30+H1 all fly — HTF confirmed (indistinguishable from F without
-    #     prior state, but if H4 was SQZ/shrink, it's B3 → V1/B3)
+    # B3: M15+M30+H1 all fly — requires prior state (H4 was SQZ/shrink).
+    #     Without prior state, B3 is indistinguishable from F. NOT detected.
+    #     TODO: add prior-state tracking for B3.
     # CRITICAL: B1/B2 only when H4 is also compressed (SQZ or shrink).
     # If H4 is flying, MTF compression is transient noise (F-tier, Decision 6).
     elif is_fly(m15_s) and (is_sqz(h4_s) or is_shrink(h4_s)):
@@ -245,13 +252,13 @@ def derive_scenario(htf_cells, mtf_cells):
 
     # --- C1/C2/C3: MTF in SQZ ---
     elif any(is_sqz(s) for s in [m15_s, m30_s, h1_s] if s):
+        # Both M15 and M30 in SQZ → C2 (full LTF compression)
+        # C3: M5 loading — BBUpDn 0→1 pattern. Without M5 data, we can't
+        # distinguish C2 from C3 directly. APPROX: if M15 BBUpDn=1 (upper),
+        # it suggests loading upward → C3. Heuristic, not guaranteed.
         if all(is_sqz(s) for s in [m15_s, m30_s] if s):
-            # Both M15 and M30 in SQZ → C2 (full LTF compression)
-            # C3: M5 loading — BBUpDn 0→1 pattern. Without M5 data, we can't
-            # distinguish C2 from C3 directly. APPROX: if M15 BBUpDn=1 (upper),
-            # it suggests loading upward → C3.
             if m15_bu in (1, 3):
-                mtf_scenario = "C3"  # APPROX — verify against doc
+                mtf_scenario = "C3"  # APPROX — M5 data needed for C3
             else:
                 mtf_scenario = "C2"
         elif is_sqz(m15_s):
@@ -266,14 +273,13 @@ def derive_scenario(htf_cells, mtf_cells):
         elif is_shrink(m15_s):
             mtf_scenario = "S1"
 
-    # --- P1/P2/P3: Rest recovery — APPROX without prior state ---
+    # --- P1/P2/P3: Rest recovery — NOT detectable from snapshot ---
     # P1: M5 break after pause, M15 still compressed, M30+H1 fly
     # P2: M15 mid flip after pause, M30+H1 fly
     # P3: MTF re-aligns to fly (indistinguishable from F)
-    # Without prior state, P1/P2 look like S1 (M15 shrink, M30+H1 fly).
-    # Heuristic: if M15 shrink but M30+H1 fly AND H4 fly same direction →
-    # could be S1 or P1/P2. We default to S1 (safer).
-    # P1/P2 detection requires prior-state; marked APPROX.
+    # All require prior-state to distinguish from S1/S2. Without it,
+    # P1/P2 look identical to S1. Default to S1 (safer, no fabrication).
+    # TODO: add prior-state tracking for P1/P2/P3 detection.
 
     # ================================================================
     # HTF Scenario Classification
@@ -282,15 +288,11 @@ def derive_scenario(htf_cells, mtf_cells):
 
     if h4_s:
         # --- V-family: H4 in SQZ ---
+        # APPROXIMATE — snapshot-only heuristic. V1/V2 use D1 direction vs H4
+        # BBUpDn as a proxy for "same/opposite". V3 (false breakout) and V4
+        # (whipsaw) require prior-state tracking; cannot be detected from
+        # snapshot. Defaulting to V1 when H4 in SQZ.
         if is_sqz(h4_s):
-            # V1: H4 breaks same dir as D1
-            # V2: H4 breaks opposite D1
-            # V3: false breakout (reverts within 3 bars — need prior state)
-            # V4: whipsaw (alternating — need prior state)
-            # Without prior state, H4 in SQZ = V1 (default pivot state).
-            # APPROX: if H4 BBUpDn=1 and D1 fly same dir → V1
-            #         if H4 BBUpDn=4 and D1 fly opposite → V2
-            #         else → V1 (default, H4 SQZ)
             if is_fly(d1_s) and h4_bu in (4, 2):
                 # H4 breaking downward while D1 flying upward → opposite = V2
                 if d1_dm == 1.0:
@@ -315,13 +317,12 @@ def derive_scenario(htf_cells, mtf_cells):
             htf_scenario = "C4"
 
         # --- F-family: H4 flying ---
-        # R2/R3 requires prior state to detect "H4 flipped vs original trend".
-        # Without it, H4-fly + D1-fly-opposite = F2 (partial fly, not R3).
-        # APPROX — verify against doc: R2/R3 detection unavailable from
-        # snapshot alone; requires tracking H4 direction change.
+        # R2/R3 require prior-state to detect "H4 flipped vs original trend".
+        # Without it, H4-fly + D1-fly-opposite = F2 (not R3).
+        # TODO: add prior-state tracking for R2/R3, V3/V4, P1/P2, B3 detection.
         elif is_fly(h4_s):
             if d1_s == 0 or w1_s == 0:
-                htf_scenario = "F"  # can't determine
+                htf_scenario = "F?"  # D1/W1 genuinely missing (log has none yet)
             elif h4_dm == d1_dm == w1_dm and h4_dm in (1.0, 2.0):
                 htf_scenario = "F1"
             elif h4_dm == d1_dm or h4_dm == w1_dm:
@@ -443,12 +444,9 @@ def main():
             print(f"  | {row['datetime']} | {row['cells']['M15']} | {row['cells']['M30']} | {row['cells']['H1']} | {row['cells']['H4']} | {row['cells']['D1']} | {row['cells']['W1']} | {row['scenario']} | {row['trend_tier']} |")
 
         # Coverage check — compare last DATA timestamp, not last ROW timestamp
-        # (last row can be earlier if no state change after it)
-        from datetime import datetime
-        _fmt = "%Y.%m.%d %H:%M"
-        _dt_start = datetime.strptime(start[:16], _fmt)
-        _dt_end = datetime.strptime(end[:16], _fmt)
-        _dt_last_data = datetime.strptime(m15_ts_list[-1], _fmt)
+        _dt_start = datetime.strptime(start[:16], _TS_FMT)
+        _dt_end = datetime.strptime(end[:16], _TS_FMT)
+        _dt_last_data = datetime.strptime(m15_ts_list[-1], _TS_FMT)
         _gap_min = (_dt_end - _dt_last_data).total_seconds() / 60
 
         first_ts = rows[0]['datetime'] if rows else "N/A"
