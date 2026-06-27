@@ -2,7 +2,7 @@
 
 Companion to `backtest_chart_analysis.md` — Part 3 image-analysis blocks have been separated from the scenario definitions into this document. The scenario definitions (Cascade Position, Sub-Scenarios, Sub-State Flowchart, Identification Flowchart, Trade action) remain in `backtest_chart_analysis.md`.
 
-Each block uses a 5-step + TIMELINE format. States are confirmed against the backtest log (`references/Backtest_data/V31.04/20260620_clean.log`) where date coverage exists; `[TO BE FILLED]` where images do not show values clearly.
+Each block contains an event-driven state table derived from the backtest log (`references/Backtest_data/V31.04/20260620_clean.log`). States are `[TO BE FILLED]` where the log has no data for that TF at the given time.
 
 ---
 
@@ -72,106 +72,96 @@ only R1/B2 are genuinely 2-axis.
 
 **Period:** 2026.01.02 01:00 → 2026.01.03 04:00 (log-ground-truth: Jan 2-3 log shows M30=511 FLY matching chart; Feb 1-3 log shows M30=522 FLY DN — opposite state. Chart x-axis too small to read definitively; log is unambiguous.)
 
-##### Step 1: State Read
-| From | To | TF group | TF | BBW_stage | diffMid | BBUpDn | Source |
-|------|-----|----------|----|-----------|---------|--------|--------|
-| 260102 01:00 | 260103 04:00 | HTF | W1 | 511 | 1 | 1 | img |
-| 260102 01:00 | 260103 04:00 | HTF | D1 | 511 | 1 | 1 | img |
-| 260102 01:00 | 260103 04:00 | HTF | H4 | 511 | 1 | 1 | img |
-| 260102 01:00 | 260103 04:00 | MTF | H1 | 511 (brief 424 SQZ) | 1 | 1 | img |
-| 260102 01:00 | 260103 04:00 | MTF | M30 | 511 | 1 | 1 | log-confirmed (W_stage_M30:(FLY)[511], diffMid=1.0, BBUpDn=1) |
-| 260102 01:00 | 260103 04:00 | MTF | M15 | 511 | 1 | 1 | log-confirmed (W_stage_M15:(FLY)[511], diffMid=1.0, BBUpDn=1) |
-| 260102 01:00 | 260103 04:00 | LTF | M5 | 511 (brief 411 SQZ) | 1 | 1 | img |
+> **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
+> 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
+> 3=sideways, 5=deep-sideways. BBUpDn: 0=between, 1=upper, 2=lower,
+> 3=sideways. A new row is added only when M15 BBW_stage or diffMid changes.
+> All rows fall within the user-defined period.
 
-##### Step 2: Two-Axis Classification
-- **HTF scenario:** F1 — W1/D1/H4 all fly 511, D1+W1 aligned
-- **MTF scenario:** F — H1/M30 fly 511, aligned with H4
-- **MTF direction vs H4:** SAME  continuation
+| datetime | M15 | M30 | H1 | H4 | D1 | W1 | Scenario (HTF-MTF) | Trend / Tier |
+|----------|-----|-----|----|----|----|----|--------------------|------------|
+| 2026.01.02 01:45 | 511-1-1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
+| 2026.01.02 03:30 | 512-1-3 | 511-5-1 | 424-4-0 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
+| 2026.01.02 09:00 | 513-1-2 | 512-1-3 | 511-1-0 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-S1 | Sideways / Tier 3 |
+| 2026.01.02 10:15 | 421-1-3 | 512-1-0 | 512-1-3 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-C1 | Sideways / Tier 3 |
+| 2026.01.02 10:30 | 511-1-3 | 513-1-2 | 512-1-3 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
+| 2026.01.02 11:30 | 512-1-3 | 512-1-3 | 512-1-3 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
+| 2026.01.02 12:00 | 512-5-3 | 512-1-3 | 512-1-3 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
+| 2026.01.02 12:15 | 512-1-3 | 512-1-3 | 512-1-3 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
+| 2026.01.02 12:30 | 512-5-3 | 512-1-3 | 512-1-3 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
+| 2026.01.02 12:45 | 512-1-0 | 512-1-3 | 512-1-3 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
+| 2026.01.02 14:30 | 513-1-2 | 513-1-2 | 512-1-0 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-S2 | Sideways / Tier 3 |
+| 2026.01.02 14:45 | 513-5-2 | 513-1-2 | 512-1-0 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-S2 | Sideways / Tier 3 |
+| 2026.01.02 15:00 | 513-1-0 | 513-1-0 | 512-1-3 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-S2 | Sideways / Tier 3 |
+| 2026.01.02 15:15 | 421-1-3 | 513-1-0 | 512-1-3 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
+| 2026.01.02 15:30 | 421-3-0 | 513-3-2 | 512-1-3 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
+| 2026.01.02 15:45 | 521-2-1 | 513-3-2 | 512-1-3 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
+| 2026.01.02 18:00 | 522-2-4 | 521-2-1 | 513-1-2 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
+| 2026.01.02 21:15 | 523-2-2 | 522-2-4 | 412-2-0 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-S1 | Sideways / Tier 3 |
+| 2026.01.02 23:00 | 423-3-0 | 522-2-0 | 521-2-1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-C1 | Sideways / Tier 3 |
+| 2026.01.02 23:15 | 511-5-0 | 522-2-0 | 521-2-1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
+| 2026.01.02 23:30 | 512-5-3 | 523-2-2 | 521-2-1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
 
-##### Step 3: Cascade
-- direction: TOP — no active D1 or D2
-- depth: None — all fly | leading TF: H4 (watch for shrink)
-- key transition: Full fly alignment maintained; M5 brief SQZ noise resolves
-
-##### Step 4: TIMELINE
-| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
-| 260102 01:00 | 260102 03:00 | F1-F | Up / Tier 1 | W1/D1/H4 fly 511 | M30/M15 fly 511, H1 SQZ 424 | log | H1 SQZ transient — Decision 6 not met (single-bar) |
-| 260102 03:00 | 260103 04:00 | F1-F | Up / Tier 1 | W1/D1/H4 fly 511 | H1/M30/M15 fly 511, M5 brief 411 | log | Full fly restored; M5 noise resolves |
-
-##### Step 5: Conclusion + Prediction
-- **Scenario: F1-F** (HTF=F1 MTF=F). No divergence.
-- **Next likely:** F1-S if H4 enters 513. Watch: H4 BBW_stage for first sign of shrink.
+**Coverage:** 2026.01.02 01:45 → 2026.01.02 23:30 | Period: 2026.01.02 01:00 → 2026.01.03 04:00 | **INCOMPLETE**
 
 #### Image 2 Analysis — backtested_EA_predict_trend_1.jpg
 ![backtested_EA_predict_trend_1](./Backtest_data/extras/backtested_EA_predict_trend_1.jpg)
 
 **Period:** 2026.04.01 13:00 → 2026.04.01 17:00 (chart x-axis: "01.04.2026" labels, DD.MM.YYYY = Apr 1)
 
-##### Step 1: State Read
-| From | To | TF group | TF | BBW_stage | diffMid | BBUpDn | Source |
-|------|-----|----------|----|-----------|---------|--------|--------|
-| 260401 13:00 | 260401 17:00 | HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
-| 260401 13:00 | 260401 17:00 | HTF | D1 | 513 | 1 | 2 | img |
-| 260401 13:00 | 260401 17:00 | HTF | H4 | 512 | 1 | 3 | img |
-| 260401 13:00 | 260401 17:00 | MTF | H1 | 512 | 1 | 0 | img |
-| 260401 13:00 | 260401 17:00 | MTF | M30 | 511 | 1 | 1 | img |
-| 260401 13:00 | 260401 17:00 | MTF | M15 | 511 | 1 | 1 | img |
-| 260401 13:00 | 260401 17:00 | LTF | M5 | 511 | 1 | 1 | img |
+> **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
+> 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
+> 3=sideways, 5=deep-sideways. BBUpDn: 0=between, 1=upper, 2=lower,
+> 3=sideways. A new row is added only when M15 BBW_stage or diffMid changes.
+> All rows fall within the user-defined period.
 
-##### Step 2: Two-Axis Classification
-- **HTF scenario:** S — H4 fly 512, D1 shrink 513 (pre-pivot)
-- **MTF scenario:** F — M30/M15 fly 511, aligned with H4
-- **MTF direction vs H4:** SAME  continuation
+| datetime | M15 | M30 | H1 | H4 | D1 | W1 | Scenario (HTF-MTF) | Trend / Tier |
+|----------|-----|-----|----|----|----|----|--------------------|------------|
+| 2026.04.01 13:00 | 513-1-2 | 512-1-0 | 512-1-0 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S1 | Up (div) / Tier 1 |
+| 2026.04.01 14:30 | 512-1-3 | 511-1-1 | 512-1-0 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 14:45 | 511-1-1 | 511-1-1 | 512-1-0 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 15:15 | 512-1-3 | 511-1-0 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 15:30 | 512-3-3 | 512-1-3 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 16:15 | 512-5-0 | 512-1-3 | 513-1-2 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
 
-##### Step 3: Cascade
-- direction: D1 compress HTF  LTF (D1 shrinking)
-- depth: D1 only | leading TF: M30 (watch for shrink or SQZ)
-- key transition: D1 compression while MTF still flying — early pre-pivot
-
-##### Step 4: TIMELINE
-| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
-| 260401 13:00 | 260401 17:00 | S-F | Up / Tier 2 | H4 fly 512, D1 shrink 513 | M30/M15 fly 511 | img | D1 compressing but MTF still flying |
-
-##### Step 5: Conclusion + Prediction
-- **Scenario: S-F** (HTF=S MTF=F). No divergence yet — MTF same direction as H4.
-- **Next likely:** S-S2 if M30 enters shrink; S-C1 if M30 enters SQZ. Watch: M30 BBW_stage.
+**Coverage:** 2026.04.01 13:00 → 2026.04.01 16:15 | Period: 2026.04.01 13:00 → 2026.04.01 17:00 | **INCOMPLETE**
 
 #### Image 3 Analysis — LTH_drive_fly.jpg
 ![LTH_drive_fly](./Backtest_data/extras/LTH_drive_fly.jpg)
 
 **Period:** 2026.01.02 01:00 → 2026.01.03 04:00 (chart x-axis: "02.01.2026" / "03.01.2026", DD.MM.YYYY = Jan 2-3)
 
-##### Step 1: State Read
-| From | To | TF group | TF | BBW_stage | diffMid | BBUpDn | Source |
-|------|-----|----------|----|-----------|---------|--------|--------|
-| 260102 01:00 | 260103 04:00 | HTF | W1 | 511 | 1 | 1 | img |
-| 260102 01:00 | 260103 04:00 | HTF | D1 | 511 | 1 | 1 | img |
-| 260102 01:00 | 260103 04:00 | HTF | H4 | 511 | 1 | 1 | img |
-| 260102 01:00 | 260103 04:00 | MTF | H1 | 511 | 1 | 1 | img |
-| 260102 01:00 | 260103 04:00 | MTF | M30 | 511 | 1 | 1 | img |
-| 260102 01:00 | 260103 04:00 | MTF | M15 | 511 | 1 | 1 | img |
-| 260102 01:00 | 260103 04:00 | LTF | M5 | 511 | 1 | 1 | img |
+> **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
+> 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
+> 3=sideways, 5=deep-sideways. BBUpDn: 0=between, 1=upper, 2=lower,
+> 3=sideways. A new row is added only when M15 BBW_stage or diffMid changes.
+> All rows fall within the user-defined period.
 
-##### Step 2: Two-Axis Classification
-- **HTF scenario:** F1 — W1/D1/H4 all fly 511, D1+W1 aligned
-- **MTF scenario:** F — H1/M30/M15 fly 511, aligned with H4
-- **MTF direction vs H4:** SAME  continuation
+| datetime | M15 | M30 | H1 | H4 | D1 | W1 | Scenario (HTF-MTF) | Trend / Tier |
+|----------|-----|-----|----|----|----|----|--------------------|------------|
+| 2026.01.02 01:45 | 511-1-1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
+| 2026.01.02 03:30 | 512-1-3 | 511-5-1 | 424-4-0 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
+| 2026.01.02 09:00 | 513-1-2 | 512-1-3 | 511-1-0 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-S1 | Sideways / Tier 3 |
+| 2026.01.02 10:15 | 421-1-3 | 512-1-0 | 512-1-3 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-C1 | Sideways / Tier 3 |
+| 2026.01.02 10:30 | 511-1-3 | 513-1-2 | 512-1-3 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
+| 2026.01.02 11:30 | 512-1-3 | 512-1-3 | 512-1-3 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
+| 2026.01.02 12:00 | 512-5-3 | 512-1-3 | 512-1-3 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
+| 2026.01.02 12:15 | 512-1-3 | 512-1-3 | 512-1-3 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
+| 2026.01.02 12:30 | 512-5-3 | 512-1-3 | 512-1-3 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
+| 2026.01.02 12:45 | 512-1-0 | 512-1-3 | 512-1-3 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
+| 2026.01.02 14:30 | 513-1-2 | 513-1-2 | 512-1-0 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-S2 | Sideways / Tier 3 |
+| 2026.01.02 14:45 | 513-5-2 | 513-1-2 | 512-1-0 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-S2 | Sideways / Tier 3 |
+| 2026.01.02 15:00 | 513-1-0 | 513-1-0 | 512-1-3 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-S2 | Sideways / Tier 3 |
+| 2026.01.02 15:15 | 421-1-3 | 513-1-0 | 512-1-3 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
+| 2026.01.02 15:30 | 421-3-0 | 513-3-2 | 512-1-3 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
+| 2026.01.02 15:45 | 521-2-1 | 513-3-2 | 512-1-3 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
+| 2026.01.02 18:00 | 522-2-4 | 521-2-1 | 513-1-2 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
+| 2026.01.02 21:15 | 523-2-2 | 522-2-4 | 412-2-0 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-S1 | Sideways / Tier 3 |
+| 2026.01.02 23:00 | 423-3-0 | 522-2-0 | 521-2-1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-C1 | Sideways / Tier 3 |
+| 2026.01.02 23:15 | 511-5-0 | 522-2-0 | 521-2-1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
+| 2026.01.02 23:30 | 512-5-3 | 523-2-2 | 521-2-1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | F-F | Sideways / Tier 3 |
 
-##### Step 3: Cascade
-- direction: TOP — no active D1 or D2
-- depth: None — all fly | leading TF: H4 (watch for shrink)
-- key transition: Full fly alignment — LTH (long-term high) driving fly state
-
-##### Step 4: TIMELINE
-| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
-| 260102 01:00 | 260103 04:00 | F1-F | Up / Tier 1 | W1/D1/H4 fly 511 | H1/M30/M15 fly 511 | img | Sustained full fly — LTH-driven |
-
-##### Step 5: Conclusion + Prediction
-- **Scenario: F1-F** (HTF=F1 MTF=F). No divergence.
-- **Next likely:** F1-S if H4 enters 513. Watch: H4 BBW_stage.
+**Coverage:** 2026.01.02 01:45 → 2026.01.02 23:30 | Period: 2026.01.02 01:00 → 2026.01.03 04:00 | **INCOMPLETE**
 
 ---
 
@@ -182,131 +172,243 @@ only R1/B2 are genuinely 2-axis.
 
 **Period:** 2026.03.30 13:00 → 2026.04.01 13:00 (chart x-axis: "30.03.2026" / "01.04.2026", log-confirmed)
 
-##### Step 1: State Read
-| From | To | TF group | TF | BBW_stage | diffMid | BBUpDn | Source |
-|------|-----|----------|----|-----------|---------|--------|--------|
-| 260330 13:00 | 260330 14:00 | HTF | W1 | 511 | 1 | 1 | img |
-| 260330 13:00 | 260330 14:00 | HTF | D1 | 511 | 1 | 1 | img |
-| 260330 13:00 | 260330 14:00 | HTF | H4 | 511→512 | 1 | 1 | log |
-| 260330 13:00 | 260330 14:00 | MTF | H1 | 512 | 1 | 0 | log |
-| 260330 13:00 | 260330 14:00 | MTF | M30 | 512 | 1 | 2 | log |
-| 260330 13:00 | 260330 14:00 | MTF | M15 | 511→513 | 1→5 | 1→2 | log |
-| 260330 13:00 | 260330 14:00 | LTF | M5 | 513 | 5 | 2 | img |
-| 260330 14:00 | 260401 13:00 | HTF | W1 | 511 | 1 | 1 | img |
-| 260330 14:00 | 260401 13:00 | HTF | D1 | 511 | 1 | 1 | img |
-| 260330 14:00 | 260401 13:00 | HTF | H4 | 511 | 1 | 1 | img |
-| 260330 14:00 | 260401 13:00 | MTF | H1 | 512 | 1 | 0 | log |
-| 260330 14:00 | 260401 13:00 | MTF | M30 | 513 | 1 | 2 | log |
-| 260330 14:00 | 260401 13:00 | MTF | M15 | 513 | 5 | 2 | log |
-| 260330 14:00 | 260401 13:00 | LTF | M5 | 513 | 5 | 2 | img |
+> **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
+> 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
+> 3=sideways, 5=deep-sideways. BBUpDn: 0=between, 1=upper, 2=lower,
+> 3=sideways. A new row is added only when M15 BBW_stage or diffMid changes.
+> All rows fall within the user-defined period.
 
-##### Step 2: Two-Axis Classification
-- **HTF scenario:** F1 — H4/D1/W1 all fly 511/512, D1+W1 aligned
-- **MTF scenario:** S2 — M30/M15 shrink 513, H1 still fly
-- **MTF direction vs H4:** SAME  continuation (M30 diffMid=1 same as H4)
+| datetime | M15 | M30 | H1 | H4 | D1 | W1 | Scenario (HTF-MTF) | Trend / Tier |
+|----------|-----|-----|----|----|----|----|--------------------|------------|
+| 2026.03.30 13:00 | 513-1-2 | 512-1-3 | 512-1-0 | 513-4-0 | 522-2-4 | 513-1-2 | C4-S1 | Sideways / Tier 2 |
+| 2026.03.30 14:00 | 513-5-2 | 513-1-2 | 512-1-0 | 513-4-0 | 522-2-4 | 513-1-2 | C4-S2 | Sideways / Tier 2 |
+| 2026.03.30 14:15 | 425-5-0 | 513-1-2 | 512-1-0 | 513-4-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 14:30 | 511-5-1 | 513-1-2 | 512-1-0 | 513-4-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 14:45 | 511-1-1 | 513-1-2 | 512-1-0 | 513-4-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 16:00 | 512-1-3 | 512-1-3 | 511-1-1 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 16:45 | 512-5-3 | 512-1-3 | 511-1-1 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 17:00 | 511-5-1 | 512-1-0 | 511-1-0 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 17:30 | 521-2-1 | 513-1-2 | 511-1-0 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 18:00 | 521-3-0 | 513-1-2 | 512-1-3 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 19:00 | 512-1-3 | 513-1-0 | 512-1-0 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 19:15 | 512-5-0 | 513-1-0 | 512-1-0 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 19:45 | 512-2-0 | 513-3-0 | 512-1-0 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 20:15 | 522-2-4 | 513-3-3 | 512-1-3 | 513-3-2 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 21:15 | 523-2-2 | 521-2-1 | 512-1-3 | 513-3-2 | 522-2-4 | 513-1-2 | C4-S1 | Sideways / Tier 2 |
+| 2026.03.30 21:45 | 412-2-0 | 521-2-1 | 512-1-3 | 513-3-2 | 522-2-4 | 513-1-2 | C4-C1 | Sideways / Tier 2 |
+| 2026.03.30 22:00 | 521-2-1 | 521-2-1 | 512-1-0 | 513-3-2 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 23:00 | 522-2-4 | 521-2-1 | 513-1-2 | 513-3-2 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.31 01:00 | 523-2-2 | 521-2-0 | 513-1-2 | 513-4-2 | 522-2-4 | 513-1-2 | C4-S1 | Sideways / Tier 2 |
+| 2026.03.31 02:45 | 523-3-2 | 522-2-0 | 513-1-2 | 513-4-2 | 522-2-4 | 513-1-2 | C4-S1 | Sideways / Tier 2 |
+| 2026.03.31 03:00 | 523-4-2 | 523-2-2 | 513-1-2 | 513-4-2 | 522-2-4 | 513-1-2 | C4-S3 | Sideways / Tier 2 |
+| 2026.03.31 03:15 | 423-3-1 | 523-2-2 | 513-1-2 | 513-4-2 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.31 03:30 | 423-4-0 | 523-2-2 | 513-1-2 | 513-4-2 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.31 03:45 | 521-4-1 | 523-2-2 | 513-1-2 | 513-4-2 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.31 04:00 | 511-1-1 | 413-3-0 | 513-1-0 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.31 05:30 | 512-1-3 | 511-1-1 | 411-1-0 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.31 07:15 | 513-1-2 | 511-1-0 | 511-1-0 | 513-3-0 | 522-2-4 | 513-1-2 | C4-S1 | Sideways / Tier 2 |
+| 2026.03.31 09:15 | 513-3-0 | 512-1-3 | 512-1-3 | 511-1-1 | 522-2-4 | 513-1-2 | F2-S1 | Up (div) / Tier 1 |
+| 2026.03.31 09:45 | 513-2-2 | 512-1-3 | 512-1-3 | 511-1-1 | 522-2-4 | 513-1-2 | F2-S1 [divergence] | Up (div) / Tier 1 |
+| 2026.03.31 11:00 | 513-4-2 | 513-1-2 | 512-5-0 | 511-1-1 | 522-2-4 | 513-1-2 | F2-S2 | Up (div) / Tier 1 |
+| 2026.03.31 11:15 | 424-4-0 | 513-1-2 | 512-5-0 | 511-1-1 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.03.31 11:30 | 521-4-1 | 512-1-3 | 512-5-0 | 511-1-1 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.03.31 11:45 | 521-1-0 | 512-1-3 | 512-5-0 | 511-1-1 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.03.31 12:00 | 512-1-3 | 512-1-0 | 512-3-1 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 12:15 | 512-5-3 | 512-1-0 | 512-3-1 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 12:30 | 512-3-0 | 513-1-2 | 512-3-1 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 12:45 | 512-4-0 | 513-1-2 | 512-3-1 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 13:15 | 521-4-1 | 513-1-2 | 512-3-0 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 13:45 | 521-2-0 | 513-1-2 | 512-3-0 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 14:15 | 521-4-0 | 413-3-0 | 512-1-0 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 14:45 | 511-1-1 | 413-2-0 | 512-1-0 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 15:30 | 512-1-3 | 413-3-0 | 512-1-0 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 16:00 | 512-5-3 | 511-5-1 | 512-1-0 | 511-1-1 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.03.31 16:15 | 512-1-0 | 511-5-1 | 512-1-0 | 511-1-1 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.03.31 16:45 | 511-1-1 | 511-1-0 | 512-1-0 | 511-1-1 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.03.31 18:00 | 512-1-3 | 511-1-0 | 511-1-0 | 511-1-1 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.03.31 23:45 | 513-1-2 | 512-1-3 | 512-1-3 | 511-1-1 | 522-2-4 | 513-1-2 | F2-S1 | Up (div) / Tier 1 |
+| 2026.04.01 02:45 | 512-1-3 | 512-1-3 | 511-1-1 | 511-1-0 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 03:30 | 511-1-1 | 512-1-3 | 511-1-0 | 511-1-0 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 04:00 | 512-1-3 | 512-1-3 | 511-1-0 | 511-1-0 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 05:30 | 512-5-3 | 512-1-0 | 512-1-3 | 511-1-0 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 05:45 | 512-3-0 | 512-1-0 | 512-1-3 | 511-1-0 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 06:00 | 513-5-2 | 513-1-2 | 512-1-3 | 511-1-0 | 522-2-4 | 513-1-2 | F2-S2 | Up (div) / Tier 1 |
+| 2026.04.01 06:30 | 513-1-2 | 513-1-2 | 512-1-3 | 511-1-0 | 522-2-4 | 513-1-2 | F2-S2 | Up (div) / Tier 1 |
+| 2026.04.01 07:00 | 513-5-2 | 513-1-2 | 512-1-3 | 511-1-0 | 522-2-4 | 513-1-2 | F2-S2 | Up (div) / Tier 1 |
+| 2026.04.01 07:15 | 415-5-1 | 513-1-2 | 512-1-3 | 511-1-0 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 07:30 | 422-2-1 | 513-1-2 | 512-1-3 | 511-1-0 | 522-2-4 | 513-1-2 | F2-F [divergence] | Up (div) / Tier 1 |
+| 2026.04.01 07:45 | 521-2-1 | 513-1-2 | 512-1-3 | 511-1-0 | 522-2-4 | 513-1-2 | F2-F [divergence] | Up (div) / Tier 1 |
+| 2026.04.01 08:38 | 523-2-2 | 513-1-0 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S2 [divergence] | Up (div) / Tier 1 |
+| 2026.04.01 08:45 | 523-4-2 | 513-1-0 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S2 | Up (div) / Tier 1 |
+| 2026.04.01 09:00 | 523-2-2 | 513-1-2 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S2 [divergence] | Up (div) / Tier 1 |
+| 2026.04.01 09:30 | 413-3-1 | 411-1-3 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-C2 | Up (div) / Tier 1 |
+| 2026.04.01 09:45 | 421-1-1 | 411-1-3 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-C2 | Up (div) / Tier 1 |
+| 2026.04.01 10:00 | 511-1-1 | 511-1-1 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 11:00 | 512-1-3 | 511-1-0 | 512-1-0 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 12:30 | 513-1-2 | 512-1-3 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S1 | Up (div) / Tier 1 |
 
-##### Step 3: Cascade
-- direction: D1 compress HTF  LTF
-- depth: M5 (M30/M15/M5 shrinking) | leading TF: M30 (watch for SQZ or fly resume)
-- key transition: M15 transitions 511→513; D1 compression deepens from S1 to S2
-
-##### Step 4: TIMELINE
-| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
-| 260330 13:00 | 260330 14:00 | F1-S1 | Up / Tier 2 | H4 fly 511, D1 fly 511 | M30 fly 512, M15 511→513 | log | M15 enters shrink first |
-| 260330 14:00 | 260330 14:30 | F1-S2 | Up / Tier 2 | H4 fly 511 | M30 shrink 513, M15 shrink 513, M5 shrink | log | M30 also shrink — S2 confirmed |
-| 260330 14:30 | 260401 13:00 | F1-S2 | Up / Tier 2 | H4 fly 511 | M30/M15/M5 shrink 513 | img | Sustained S2; M15 briefly SQZ 425 then back to 513 |
-
-##### Step 5: Conclusion + Prediction
-- **Scenario: F1-S2** (HTF=F1 MTF=S2). No divergence.
-- **Next likely:** F1-C2 if M30 enters SQZ 400-499; F1-P if M30 returns to 511/512. Watch: M30 BBW_stage + diffBBW.
+**Coverage:** 2026.03.30 13:00 → 2026.04.01 12:30 | Period: 2026.03.30 13:00 → 2026.04.01 13:00 | **INCOMPLETE**
 
 #### Image 2 Analysis — backtested_EA_fly_2_fly_shrink_zoomin.jpg
 ![backtested_EA_fly_2_fly_shrink_zoomin](./Backtest_data/extras/backtested_EA_fly_2_fly_shrink_zoomin.jpg)
 
 **Period:** 2026.03.30 14:30 → 2026.04.01 09:00 (chart x-axis: "30.03.2026" / "01.04.2026", log-confirmed)
 
-##### Step 1: State Read
-| From | To | TF group | TF | BBW_stage | diffMid | BBUpDn | Source |
-|------|-----|----------|----|-----------|---------|--------|--------|
-| 260330 14:30 | 260401 09:00 | HTF | W1 | 511 | 1 | 1 | img |
-| 260330 14:30 | 260401 09:00 | HTF | D1 | 511 | 1 | 1 | img |
-| 260330 14:30 | 260401 09:00 | HTF | H4 | 511 | 1 | 1 | img |
-| 260330 14:30 | 260401 09:00 | MTF | H1 | 512 | 1 | 0 | img |
-| 260330 14:30 | 260401 09:00 | MTF | M30 | 513 | 1 | 2 | img |
-| 260330 14:30 | 260401 09:00 | MTF | M15 | 513 | 5 | 2 | img |
-| 260330 14:30 | 260401 09:00 | LTF | M5 | 513 | 5 | 2 | img |
+> **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
+> 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
+> 3=sideways, 5=deep-sideways. BBUpDn: 0=between, 1=upper, 2=lower,
+> 3=sideways. A new row is added only when M15 BBW_stage or diffMid changes.
+> All rows fall within the user-defined period.
 
-##### Step 2: Two-Axis Classification
-- **HTF scenario:** F1 — H4/D1/W1 fly 511/512
-- **MTF scenario:** S2 — M30/M15 shrink 513
-- **MTF direction vs H4:** SAME  continuation
+| datetime | M15 | M30 | H1 | H4 | D1 | W1 | Scenario (HTF-MTF) | Trend / Tier |
+|----------|-----|-----|----|----|----|----|--------------------|------------|
+| 2026.03.30 14:30 | 511-5-1 | 513-1-2 | 512-1-0 | 513-4-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 14:45 | 511-1-1 | 513-1-2 | 512-1-0 | 513-4-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 16:00 | 512-1-3 | 512-1-3 | 511-1-1 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 16:45 | 512-5-3 | 512-1-3 | 511-1-1 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 17:00 | 511-5-1 | 512-1-0 | 511-1-0 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 17:30 | 521-2-1 | 513-1-2 | 511-1-0 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 18:00 | 521-3-0 | 513-1-2 | 512-1-3 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 19:00 | 512-1-3 | 513-1-0 | 512-1-0 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 19:15 | 512-5-0 | 513-1-0 | 512-1-0 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 19:45 | 512-2-0 | 513-3-0 | 512-1-0 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 20:15 | 522-2-4 | 513-3-3 | 512-1-3 | 513-3-2 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 21:15 | 523-2-2 | 521-2-1 | 512-1-3 | 513-3-2 | 522-2-4 | 513-1-2 | C4-S1 | Sideways / Tier 2 |
+| 2026.03.30 21:45 | 412-2-0 | 521-2-1 | 512-1-3 | 513-3-2 | 522-2-4 | 513-1-2 | C4-C1 | Sideways / Tier 2 |
+| 2026.03.30 22:00 | 521-2-1 | 521-2-1 | 512-1-0 | 513-3-2 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 23:00 | 522-2-4 | 521-2-1 | 513-1-2 | 513-3-2 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.31 01:00 | 523-2-2 | 521-2-0 | 513-1-2 | 513-4-2 | 522-2-4 | 513-1-2 | C4-S1 | Sideways / Tier 2 |
+| 2026.03.31 02:45 | 523-3-2 | 522-2-0 | 513-1-2 | 513-4-2 | 522-2-4 | 513-1-2 | C4-S1 | Sideways / Tier 2 |
+| 2026.03.31 03:00 | 523-4-2 | 523-2-2 | 513-1-2 | 513-4-2 | 522-2-4 | 513-1-2 | C4-S3 | Sideways / Tier 2 |
+| 2026.03.31 03:15 | 423-3-1 | 523-2-2 | 513-1-2 | 513-4-2 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.31 03:30 | 423-4-0 | 523-2-2 | 513-1-2 | 513-4-2 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.31 03:45 | 521-4-1 | 523-2-2 | 513-1-2 | 513-4-2 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.31 04:00 | 511-1-1 | 413-3-0 | 513-1-0 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.31 05:30 | 512-1-3 | 511-1-1 | 411-1-0 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.31 07:15 | 513-1-2 | 511-1-0 | 511-1-0 | 513-3-0 | 522-2-4 | 513-1-2 | C4-S1 | Sideways / Tier 2 |
+| 2026.03.31 09:15 | 513-3-0 | 512-1-3 | 512-1-3 | 511-1-1 | 522-2-4 | 513-1-2 | F2-S1 | Up (div) / Tier 1 |
+| 2026.03.31 09:45 | 513-2-2 | 512-1-3 | 512-1-3 | 511-1-1 | 522-2-4 | 513-1-2 | F2-S1 [divergence] | Up (div) / Tier 1 |
+| 2026.03.31 11:00 | 513-4-2 | 513-1-2 | 512-5-0 | 511-1-1 | 522-2-4 | 513-1-2 | F2-S2 | Up (div) / Tier 1 |
+| 2026.03.31 11:15 | 424-4-0 | 513-1-2 | 512-5-0 | 511-1-1 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.03.31 11:30 | 521-4-1 | 512-1-3 | 512-5-0 | 511-1-1 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.03.31 11:45 | 521-1-0 | 512-1-3 | 512-5-0 | 511-1-1 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.03.31 12:00 | 512-1-3 | 512-1-0 | 512-3-1 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 12:15 | 512-5-3 | 512-1-0 | 512-3-1 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 12:30 | 512-3-0 | 513-1-2 | 512-3-1 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 12:45 | 512-4-0 | 513-1-2 | 512-3-1 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 13:15 | 521-4-1 | 513-1-2 | 512-3-0 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 13:45 | 521-2-0 | 513-1-2 | 512-3-0 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 14:15 | 521-4-0 | 413-3-0 | 512-1-0 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 14:45 | 511-1-1 | 413-2-0 | 512-1-0 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 15:30 | 512-1-3 | 413-3-0 | 512-1-0 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 16:00 | 512-5-3 | 511-5-1 | 512-1-0 | 511-1-1 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.03.31 16:15 | 512-1-0 | 511-5-1 | 512-1-0 | 511-1-1 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.03.31 16:45 | 511-1-1 | 511-1-0 | 512-1-0 | 511-1-1 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.03.31 18:00 | 512-1-3 | 511-1-0 | 511-1-0 | 511-1-1 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.03.31 23:45 | 513-1-2 | 512-1-3 | 512-1-3 | 511-1-1 | 522-2-4 | 513-1-2 | F2-S1 | Up (div) / Tier 1 |
+| 2026.04.01 02:45 | 512-1-3 | 512-1-3 | 511-1-1 | 511-1-0 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 03:30 | 511-1-1 | 512-1-3 | 511-1-0 | 511-1-0 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 04:00 | 512-1-3 | 512-1-3 | 511-1-0 | 511-1-0 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 05:30 | 512-5-3 | 512-1-0 | 512-1-3 | 511-1-0 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 05:45 | 512-3-0 | 512-1-0 | 512-1-3 | 511-1-0 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 06:00 | 513-5-2 | 513-1-2 | 512-1-3 | 511-1-0 | 522-2-4 | 513-1-2 | F2-S2 | Up (div) / Tier 1 |
+| 2026.04.01 06:30 | 513-1-2 | 513-1-2 | 512-1-3 | 511-1-0 | 522-2-4 | 513-1-2 | F2-S2 | Up (div) / Tier 1 |
+| 2026.04.01 07:00 | 513-5-2 | 513-1-2 | 512-1-3 | 511-1-0 | 522-2-4 | 513-1-2 | F2-S2 | Up (div) / Tier 1 |
+| 2026.04.01 07:15 | 415-5-1 | 513-1-2 | 512-1-3 | 511-1-0 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 07:30 | 422-2-1 | 513-1-2 | 512-1-3 | 511-1-0 | 522-2-4 | 513-1-2 | F2-F [divergence] | Up (div) / Tier 1 |
+| 2026.04.01 07:45 | 521-2-1 | 513-1-2 | 512-1-3 | 511-1-0 | 522-2-4 | 513-1-2 | F2-F [divergence] | Up (div) / Tier 1 |
+| 2026.04.01 08:38 | 523-2-2 | 513-1-0 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S2 [divergence] | Up (div) / Tier 1 |
+| 2026.04.01 08:45 | 523-4-2 | 513-1-0 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S2 | Up (div) / Tier 1 |
+| 2026.04.01 09:00 | 523-2-2 | 513-1-2 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S2 [divergence] | Up (div) / Tier 1 |
 
-##### Step 3: Cascade
-- direction: D1 compress HTF  LTF
-- depth: M5 | leading TF: M15 (watch for FLAT UP/DN transition)
-- key transition: M15 bands converging — shrink path entry possible
-
-##### Step 4: TIMELINE
-| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
-| 260330 14:30 | 260401 05:00 | F1-S2 | Up / Tier 2 | H4 fly 511 | M30/M15 shrink 513, M5 shrink | img | D1 sustained; M15 SQZ 425 briefly then 513 |
-| 260401 05:00 | 260401 09:00 | F1-S2 | Up / Tier 2 | H4 fly 511 | M30/M15 shrink 513 | img | M15 bands converging; entry on FLAT→UP/DN |
-
-##### Step 5: Conclusion + Prediction
-- **Scenario: F1-S2** (HTF=F1 MTF=S2). No divergence.
-- **Next likely:** F1-P if M30 513→511/512; F1-C2 if M30 513→400-499. Watch: M30 BBW_stage + M15 midtrend transition.
+**Coverage:** 2026.03.30 14:30 → 2026.04.01 09:00 | Period: 2026.03.30 14:30 → 2026.04.01 09:00 | **COMPLETE**
 
 #### Image 3 Analysis — backtested_EA_b_to_e_to_g_progression.jpg
 ![backtested_EA_b_to_e_to_g_progression](./Backtest_data/extras/backtested_EA_b_to_e_to_g_progression.jpg)
 
 **Period:** 2026.03.30 13:00 → 2026.04.01 17:00 (chart x-axis: "30.03.2026" / "01.04.2026", extended view)
 
-##### Step 1: State Read
-| From | To | TF group | TF | BBW_stage | diffMid | BBUpDn | Source |
-|------|-----|----------|----|-----------|---------|--------|--------|
-| 260330 13:00 | 260330 17:00 | HTF | W1 | 511 | 1 | 1 | img |
-| 260330 13:00 | 260330 17:00 | HTF | D1 | 511 | 1 | 1 | img |
-| 260330 13:00 | 260330 17:00 | HTF | H4 | 511 | 1 | 1 | img |
-| 260330 13:00 | 260330 17:00 | MTF | H1 | 512 | 1 | 0 | img |
-| 260330 13:00 | 260330 17:00 | MTF | M30 | 512→513 | 1→1 | 2→2 | img |
-| 260330 13:00 | 260330 17:00 | MTF | M15 | 511→513 | 1→5 | 1→2 | img |
-| 260330 13:00 | 260330 17:00 | LTF | M5 | 513 | 5 | 2 | img |
-| 260330 17:00 | 260401 13:00 | HTF | W1 | 511 | 1 | 1 | img |
-| 260330 17:00 | 260401 13:00 | HTF | D1 | 511 | 1 | 1 | img |
-| 260330 17:00 | 260401 13:00 | HTF | H4 | 511 | 1 | 1 | img |
-| 260330 17:00 | 260401 13:00 | MTF | H1 | 512 | 1 | 0 | img |
-| 260330 17:00 | 260401 13:00 | MTF | M30 | 513 | 1 | 2 | img |
-| 260330 17:00 | 260401 13:00 | MTF | M15 | 513 | 5 | 2 | img |
-| 260330 17:00 | 260401 13:00 | LTF | M5 | 513 | 5 | 2 | img |
-| 260401 13:00 | 260401 17:00 | HTF | W1 | 511 | 1 | 1 | img |
-| 260401 13:00 | 260401 17:00 | HTF | D1 | 513 | 1 | 2 | img |
-| 260401 13:00 | 260401 17:00 | HTF | H4 | 512 | 1 | 3 | img |
-| 260401 13:00 | 260401 17:00 | MTF | H1 | 512→411 | 1→3 | 0→0 | img |
-| 260401 13:00 | 260401 17:00 | MTF | M30 | 513→411 | 1→3 | 2→0 | img |
-| 260401 13:00 | 260401 17:00 | MTF | M15 | 513→411 | 5→3 | 2→0 | img |
-| 260401 13:00 | 260401 17:00 | LTF | M5 | 411 | 3 | 0 | img |
+> **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
+> 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
+> 3=sideways, 5=deep-sideways. BBUpDn: 0=between, 1=upper, 2=lower,
+> 3=sideways. A new row is added only when M15 BBW_stage or diffMid changes.
+> All rows fall within the user-defined period.
 
-##### Step 2: Two-Axis Classification
-- **HTF scenario:** F1 → S — W1/D1 fly initially, then D1 shrinks 513 (pre-pivot)
-- **MTF scenario:** S1 → S2 → C2 — M15 shrink first, M30 follows, then full SQZ
-- **MTF direction vs H4:** SAME  continuation through S-phase, then SQZ
+| datetime | M15 | M30 | H1 | H4 | D1 | W1 | Scenario (HTF-MTF) | Trend / Tier |
+|----------|-----|-----|----|----|----|----|--------------------|------------|
+| 2026.03.30 13:00 | 513-1-2 | 512-1-3 | 512-1-0 | 513-4-0 | 522-2-4 | 513-1-2 | C4-S1 | Sideways / Tier 2 |
+| 2026.03.30 14:00 | 513-5-2 | 513-1-2 | 512-1-0 | 513-4-0 | 522-2-4 | 513-1-2 | C4-S2 | Sideways / Tier 2 |
+| 2026.03.30 14:15 | 425-5-0 | 513-1-2 | 512-1-0 | 513-4-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 14:30 | 511-5-1 | 513-1-2 | 512-1-0 | 513-4-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 14:45 | 511-1-1 | 513-1-2 | 512-1-0 | 513-4-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 16:00 | 512-1-3 | 512-1-3 | 511-1-1 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 16:45 | 512-5-3 | 512-1-3 | 511-1-1 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 17:00 | 511-5-1 | 512-1-0 | 511-1-0 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 17:30 | 521-2-1 | 513-1-2 | 511-1-0 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 18:00 | 521-3-0 | 513-1-2 | 512-1-3 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 19:00 | 512-1-3 | 513-1-0 | 512-1-0 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 19:15 | 512-5-0 | 513-1-0 | 512-1-0 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 19:45 | 512-2-0 | 513-3-0 | 512-1-0 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 20:15 | 522-2-4 | 513-3-3 | 512-1-3 | 513-3-2 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 21:15 | 523-2-2 | 521-2-1 | 512-1-3 | 513-3-2 | 522-2-4 | 513-1-2 | C4-S1 | Sideways / Tier 2 |
+| 2026.03.30 21:45 | 412-2-0 | 521-2-1 | 512-1-3 | 513-3-2 | 522-2-4 | 513-1-2 | C4-C1 | Sideways / Tier 2 |
+| 2026.03.30 22:00 | 521-2-1 | 521-2-1 | 512-1-0 | 513-3-2 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.30 23:00 | 522-2-4 | 521-2-1 | 513-1-2 | 513-3-2 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.31 01:00 | 523-2-2 | 521-2-0 | 513-1-2 | 513-4-2 | 522-2-4 | 513-1-2 | C4-S1 | Sideways / Tier 2 |
+| 2026.03.31 02:45 | 523-3-2 | 522-2-0 | 513-1-2 | 513-4-2 | 522-2-4 | 513-1-2 | C4-S1 | Sideways / Tier 2 |
+| 2026.03.31 03:00 | 523-4-2 | 523-2-2 | 513-1-2 | 513-4-2 | 522-2-4 | 513-1-2 | C4-S3 | Sideways / Tier 2 |
+| 2026.03.31 03:15 | 423-3-1 | 523-2-2 | 513-1-2 | 513-4-2 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.31 03:30 | 423-4-0 | 523-2-2 | 513-1-2 | 513-4-2 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.31 03:45 | 521-4-1 | 523-2-2 | 513-1-2 | 513-4-2 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.31 04:00 | 511-1-1 | 413-3-0 | 513-1-0 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.31 05:30 | 512-1-3 | 511-1-1 | 411-1-0 | 513-3-0 | 522-2-4 | 513-1-2 | C4-F | Sideways / Tier 2 |
+| 2026.03.31 07:15 | 513-1-2 | 511-1-0 | 511-1-0 | 513-3-0 | 522-2-4 | 513-1-2 | C4-S1 | Sideways / Tier 2 |
+| 2026.03.31 09:15 | 513-3-0 | 512-1-3 | 512-1-3 | 511-1-1 | 522-2-4 | 513-1-2 | F2-S1 | Up (div) / Tier 1 |
+| 2026.03.31 09:45 | 513-2-2 | 512-1-3 | 512-1-3 | 511-1-1 | 522-2-4 | 513-1-2 | F2-S1 [divergence] | Up (div) / Tier 1 |
+| 2026.03.31 11:00 | 513-4-2 | 513-1-2 | 512-5-0 | 511-1-1 | 522-2-4 | 513-1-2 | F2-S2 | Up (div) / Tier 1 |
+| 2026.03.31 11:15 | 424-4-0 | 513-1-2 | 512-5-0 | 511-1-1 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.03.31 11:30 | 521-4-1 | 512-1-3 | 512-5-0 | 511-1-1 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.03.31 11:45 | 521-1-0 | 512-1-3 | 512-5-0 | 511-1-1 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.03.31 12:00 | 512-1-3 | 512-1-0 | 512-3-1 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 12:15 | 512-5-3 | 512-1-0 | 512-3-1 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 12:30 | 512-3-0 | 513-1-2 | 512-3-1 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 12:45 | 512-4-0 | 513-1-2 | 512-3-1 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 13:15 | 521-4-1 | 513-1-2 | 512-3-0 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 13:45 | 521-2-0 | 513-1-2 | 512-3-0 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 14:15 | 521-4-0 | 413-3-0 | 512-1-0 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 14:45 | 511-1-1 | 413-2-0 | 512-1-0 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 15:30 | 512-1-3 | 413-3-0 | 512-1-0 | 511-5-1 | 522-2-4 | 513-1-2 | F3-F | Sideways / Tier 1 |
+| 2026.03.31 16:00 | 512-5-3 | 511-5-1 | 512-1-0 | 511-1-1 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.03.31 16:15 | 512-1-0 | 511-5-1 | 512-1-0 | 511-1-1 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.03.31 16:45 | 511-1-1 | 511-1-0 | 512-1-0 | 511-1-1 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.03.31 18:00 | 512-1-3 | 511-1-0 | 511-1-0 | 511-1-1 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.03.31 23:45 | 513-1-2 | 512-1-3 | 512-1-3 | 511-1-1 | 522-2-4 | 513-1-2 | F2-S1 | Up (div) / Tier 1 |
+| 2026.04.01 02:45 | 512-1-3 | 512-1-3 | 511-1-1 | 511-1-0 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 03:30 | 511-1-1 | 512-1-3 | 511-1-0 | 511-1-0 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 04:00 | 512-1-3 | 512-1-3 | 511-1-0 | 511-1-0 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 05:30 | 512-5-3 | 512-1-0 | 512-1-3 | 511-1-0 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 05:45 | 512-3-0 | 512-1-0 | 512-1-3 | 511-1-0 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 06:00 | 513-5-2 | 513-1-2 | 512-1-3 | 511-1-0 | 522-2-4 | 513-1-2 | F2-S2 | Up (div) / Tier 1 |
+| 2026.04.01 06:30 | 513-1-2 | 513-1-2 | 512-1-3 | 511-1-0 | 522-2-4 | 513-1-2 | F2-S2 | Up (div) / Tier 1 |
+| 2026.04.01 07:00 | 513-5-2 | 513-1-2 | 512-1-3 | 511-1-0 | 522-2-4 | 513-1-2 | F2-S2 | Up (div) / Tier 1 |
+| 2026.04.01 07:15 | 415-5-1 | 513-1-2 | 512-1-3 | 511-1-0 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 07:30 | 422-2-1 | 513-1-2 | 512-1-3 | 511-1-0 | 522-2-4 | 513-1-2 | F2-F [divergence] | Up (div) / Tier 1 |
+| 2026.04.01 07:45 | 521-2-1 | 513-1-2 | 512-1-3 | 511-1-0 | 522-2-4 | 513-1-2 | F2-F [divergence] | Up (div) / Tier 1 |
+| 2026.04.01 08:38 | 523-2-2 | 513-1-0 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S2 [divergence] | Up (div) / Tier 1 |
+| 2026.04.01 08:45 | 523-4-2 | 513-1-0 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S2 | Up (div) / Tier 1 |
+| 2026.04.01 09:00 | 523-2-2 | 513-1-2 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S2 [divergence] | Up (div) / Tier 1 |
+| 2026.04.01 09:30 | 413-3-1 | 411-1-3 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-C2 | Up (div) / Tier 1 |
+| 2026.04.01 09:45 | 421-1-1 | 411-1-3 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-C2 | Up (div) / Tier 1 |
+| 2026.04.01 10:00 | 511-1-1 | 511-1-1 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 11:00 | 512-1-3 | 511-1-0 | 512-1-0 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 12:30 | 513-1-2 | 512-1-3 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S1 | Up (div) / Tier 1 |
+| 2026.04.01 14:30 | 512-1-3 | 511-1-1 | 512-1-0 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 14:45 | 511-1-1 | 511-1-1 | 512-1-0 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 15:15 | 512-1-3 | 511-1-0 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 15:30 | 512-3-3 | 512-1-3 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 16:15 | 512-5-0 | 512-1-3 | 513-1-2 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
 
-##### Step 3: Cascade
-- direction: D1 compress HTF  LTF throughout
-- depth: Full — M5 SQZ (BOTTOM) | leading TF: M30 (watch for SQZ break direction)
-- key transition: Complete S C progression — shrink deepens to full compression
-
-##### Step 4: TIMELINE
-| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
-| 260330 13:00 | 260330 17:00 | F1-S1 | Up / Tier 2 | H4/D1 fly 511 | M30 fly 512, M15 511→513 | img | M15 enters shrink first |
-| 260330 17:00 | 260401 13:00 | F1-S2 | Up / Tier 2 | H4/D1 fly 511 | M30/M15/M5 shrink 513 | img | M30 also shrink — S2 confirmed |
-| 260401 13:00 | 260401 17:00 | S-C2 | Up / Tier 2 | H4 fly 512, D1 shrink 513 | M30/M15/M5 SQZ 411 | img | D1 also shrinks; full SQZ — C2 |
-
-##### Step 5: Conclusion + Prediction
-- **Scenario: S-C2** (HTF=S MTF=C2). No divergence yet — SQZ but diffMid=1 same as H4.
-- **Next likely:** S-P2 if M5 REVUP and M15 follows; S-R1 if M30 breaks 411→521 (opposite H4). Watch: M5 BBW_stage + M30 BBW_stage.
+**Coverage:** 2026.03.30 13:00 → 2026.04.01 16:15 | Period: 2026.03.30 13:00 → 2026.04.01 17:00 | **INCOMPLETE**
 
 ---
 
@@ -317,88 +419,14 @@ only R1/B2 are genuinely 2-axis.
 
 **Period:** 2026.04.03 03:00 → 2026.04.05 00:00 (chart x-axis: "03.04.2026" / "04.04.2026" / "05.04.2026")
 
-##### Step 1: State Read
-| From | To | TF group | TF | BBW_stage | diffMid | BBUpDn | Source |
-|------|-----|----------|----|-----------|---------|--------|--------|
-| 260403 03:00 | 260403 09:00 | HTF | W1 | 511 | 1 | 1 | img |
-| 260403 03:00 | 260403 09:00 | HTF | D1 | 511 | 1 | 1 | img |
-| 260403 03:00 | 260403 09:00 | HTF | H4 | 511 | 1 | 1 | img |
-| 260403 03:00 | 260403 09:00 | MTF | H1 | 511 | 1 | 1 | img |
-| 260403 03:00 | 260403 09:00 | MTF | M30 | 513 | 3 | 2 | img |
-| 260403 03:00 | 260403 09:00 | MTF | M15 | 513 | 3 | 2 | img |
-| 260403 03:00 | 260403 09:00 | LTF | M5 | 513 | 3 | 2 | img |
-| 260403 09:00 | 260404 15:00 | HTF | W1 | 511 | 1 | 1 | img |
-| 260403 09:00 | 260404 15:00 | HTF | D1 | 511 | 1 | 1 | img |
-| 260403 09:00 | 260404 15:00 | HTF | H4 | 511 | 1 | 1 | img |
-| 260403 09:00 | 260404 15:00 | MTF | H1 | 511 | 1 | 1 | img |
-| 260403 09:00 | 260404 15:00 | MTF | M30 | 400-499 | 3 | 0 | img |
-| 260403 09:00 | 260404 15:00 | MTF | M15 | 400-499 | 3 | 0 | img |
-| 260403 09:00 | 260404 15:00 | LTF | M5 | 400-499 | 3 | 0 | img |
-| 260404 15:00 | 260405 00:00 | HTF | W1 | 511 | 1 | 1 | img |
-| 260404 15:00 | 260405 00:00 | HTF | D1 | 511 | 1 | 1 | img |
-| 260404 15:00 | 260405 00:00 | HTF | H4 | 511 | 1 | 1 | img |
-| 260404 15:00 | 260405 00:00 | MTF | H1 | 511 | 1 | 1 | img |
-| 260404 15:00 | 260405 00:00 | MTF | M30 | 511 | 1 | 1 | img |
-| 260404 15:00 | 260405 00:00 | MTF | M15 | 511 | 1 | 1 | img |
-| 260404 15:00 | 260405 00:00 | LTF | M5 | 511 | 1 | 1 | img |
-
-##### Step 2: Two-Axis Classification
-- **HTF scenario:** F1 — W1/D1/H4 fly 511, D1+W1 aligned
-- **MTF scenario:** P2 P3 — M30 compresses then re-expands, M15 confirms
-- **MTF direction vs H4:** SAME  continuation
-
-##### Step 3: Cascade
-- direction: D1 compress HTF  LTF, then D2 expand LTF  HTF
-- depth: M5 SQZ (BOTTOM)  D2 initiated at M5 | leading TF: M5 (broke SQZ)
-- key transition: D1→D2 — M5 REVUP drives full re-expansion
-
-##### Step 4: TIMELINE
-| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
-| 260403 03:00 | 260403 09:00 | F1-S2 | Up / Tier 2 | H4/H1 fly 511 | M30/M15 shrink 513 | img | D1 compression begins |
-| 260403 09:00 | 260404 15:00 | F1-C2 | Up / Tier 2 | H4/H1 fly 511 | M30/M15/M5 SQZ 400-499 | img | D1 reaches BOTTOM |
-| 260404 15:00 | 260404 21:00 | F1-P2 | Up / Tier 3 | H4/H1 fly 511 | M5 fly 511, M15 confirms | img | M5 REVUP, D2 initiated |
-| 260404 21:00 | 260405 00:00 | F1-P3 | Up / Tier 3 | H4/H1 fly 511 | M30 fly 511 | img | D2 complete |
-
-##### Step 5: Conclusion + Prediction
-- **Scenario: F1-P2→F1-P3** (HTF=F1 MTF=P2→P3). No divergence.
-- **Next likely:** F1-F if M30 fly confirmed; F1-S if M30 enters shrink again. Watch: M30 BBW_stage.
+  > **No log data available for this period.**
 
 #### Image 2 Analysis — backtested_EA_fly_2_shrink_2_fly_zoomin.jpg
 ![backtested_EA_fly_2_shrink_2_fly_zoomin](./Backtest_data/extras/backtested_EA_fly_2_shrink_2_fly_zoomin.jpg)
 
 **Period:** 2026.04.04 15:00 → 2026.04.05 00:00 (chart x-axis: "04.04.2026" / "05.04.2026")
 
-##### Step 1: State Read
-| From | To | TF group | TF | BBW_stage | diffMid | BBUpDn | Source |
-|------|-----|----------|----|-----------|---------|--------|--------|
-| 260404 15:00 | 260405 00:00 | HTF | W1 | 511 | 1 | 1 | img |
-| 260404 15:00 | 260405 00:00 | HTF | D1 | 511 | 1 | 1 | img |
-| 260404 15:00 | 260405 00:00 | HTF | H4 | 511 | 1 | 1 | img |
-| 260404 15:00 | 260405 00:00 | MTF | H1 | 511 | 1 | 1 | img |
-| 260404 15:00 | 260405 00:00 | MTF | M30 | 400-499→511 | 3→1 | 0→1 | img |
-| 260404 15:00 | 260405 00:00 | MTF | M15 | 400-499→511 | 3→1 | 0→1 | img |
-| 260404 15:00 | 260405 00:00 | LTF | M5 | 400-499→511 | 3→1 | 0→1 | img |
-
-##### Step 2: Two-Axis Classification
-- **HTF scenario:** F1 — H4/D1/W1 fly 511
-- **MTF scenario:** P3 — M30 re-expands to fly 511
-- **MTF direction vs H4:** SAME  continuation
-
-##### Step 3: Cascade
-- direction: D2 expand LTF  HTF
-- depth: TOP — D2 complete | leading TF: M30 (confirm fly)
-- key transition: M30 SQZ→fly — full D2 expansion confirmed
-
-##### Step 4: TIMELINE
-| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
-| 260404 15:00 | 260404 18:00 | F1-P2 | Up / Tier 3 | H4/H1 fly 511 | M5 fly 511, M15 fly 511 | img | M5 REVUP, M15 confirms |
-| 260404 18:00 | 260405 00:00 | F1-P3 | Up / Tier 3 | H4/H1 fly 511 | M30 fly 511 | img | D2 complete — all fly |
-
-##### Step 5: Conclusion + Prediction
-- **Scenario: F1-P3** (HTF=F1 MTF=P3). No divergence.
-- **Next likely:** F1-F if M30 fly sustained; F1-S if M30 enters shrink. Watch: M30 BBW_stage.
+  > **No log data available for this period.**
 
 ---
 
@@ -409,97 +437,79 @@ only R1/B2 are genuinely 2-axis.
 
 **Period:** 2026.04.01 14:30 → 2026.04.02 05:00 (chart x-axis: "01.04.2026" / "02.04.2026", log-confirmed)
 
-##### Step 1: State Read
-| From | To | TF group | TF | BBW_stage | diffMid | BBUpDn | Source |
-|------|-----|----------|----|-----------|---------|--------|--------|
-| 260401 14:30 | 260401 23:00 | HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
-| 260401 14:30 | 260401 23:00 | HTF | D1 | 512 | 1 | 2 | img |
-| 260401 14:30 | 260401 23:00 | HTF | H4 | 512 | 1 | 3 | log |
-| 260401 14:30 | 260401 23:00 | MTF | H1 | 512 | 1 | 0 | log |
-| 260401 14:30 | 260401 23:00 | MTF | M30 | 511 | 1 | 1 | img |
-| 260401 14:30 | 260401 23:00 | MTF | M15 | 511 | 1 | 1 | img |
-| 260401 14:30 | 260401 23:00 | LTF | M5 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
-| 260402 00:00 | 260402 05:00 | HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
-| 260402 00:00 | 260402 05:00 | HTF | D1 | 513 | 1 | 2 | log |
-| 260402 00:00 | 260402 05:00 | HTF | H4 | 512 | 1 | 3 | log |
-| 260402 00:00 | 260402 05:00 | MTF | H1 | 512 | 1 | 0 | log |
-| 260402 00:00 | 260402 05:00 | MTF | M30 | 411 | 1 | 0 | log |
-| 260402 00:00 | 260402 05:00 | MTF | M15 | 512 | 1 | 3 | log |
-| 260402 00:00 | 260402 05:00 | LTF | M5 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
+> **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
+> 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
+> 3=sideways, 5=deep-sideways. BBUpDn: 0=between, 1=upper, 2=lower,
+> 3=sideways. A new row is added only when M15 BBW_stage or diffMid changes.
+> All rows fall within the user-defined period.
 
-##### Step 2: Two-Axis Classification
-- **HTF scenario:** S — H4 fly 512, D1 shrink 513 (pre-pivot reversal)
-- **MTF scenario:** C1 — M30 SQZ 411, H1 fly 512, M15 fly 512
-- **MTF direction vs H4:** SAME  continuation (M30 SQZ but diffMid=1 same as H4)
+| datetime | M15 | M30 | H1 | H4 | D1 | W1 | Scenario (HTF-MTF) | Trend / Tier |
+|----------|-----|-----|----|----|----|----|--------------------|------------|
+| 2026.04.01 14:30 | 512-1-3 | 511-1-1 | 512-1-0 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 14:45 | 511-1-1 | 511-1-1 | 512-1-0 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 15:15 | 512-1-3 | 511-1-0 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 15:30 | 512-3-3 | 512-1-3 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 16:15 | 512-5-0 | 512-1-3 | 513-1-2 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 17:15 | 512-1-3 | 512-1-0 | 513-1-0 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 18:45 | 511-1-1 | 411-1-3 | 411-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 20:30 | 512-1-3 | 512-1-0 | 511-1-0 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 21:15 | 513-1-2 | 512-1-3 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S1 | Up (div) / Tier 1 |
+| 2026.04.01 22:45 | 513-5-2 | 513-1-2 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S2 | Up (div) / Tier 1 |
+| 2026.04.01 23:00 | 513-3-0 | 513-1-0 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S2 | Up (div) / Tier 1 |
+| 2026.04.01 23:30 | 513-2-4 | 513-1-2 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S2 [divergence] | Up (div) / Tier 1 |
+| 2026.04.01 23:45 | 523-2-4 | 513-1-2 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S2 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 01:00 | 522-2-4 | 513-1-2 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 01:30 | 522-4-0 | 411-1-0 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.02 01:45 | 523-4-2 | 411-1-0 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-S1 | Up (div) / Tier 1 |
+| 2026.04.02 02:00 | 523-2-2 | 411-1-3 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-S1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 02:15 | 523-3-0 | 411-1-3 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-S1 | Up (div) / Tier 1 |
+| 2026.04.02 02:45 | 511-1-1 | 411-1-3 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.02 03:45 | 512-1-3 | 411-1-0 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.02 04:15 | 512-3-1 | 411-1-0 | 512-1-0 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.02 04:30 | 521-2-1 | 413-3-1 | 512-1-0 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F [divergence] | Up (div) / Tier 1 |
 
-##### Step 3: Cascade
-- direction: D1 compress HTF  LTF (M30 SQZ)
-- depth: M30 SQZ 411 | leading TF: M30 (watch for SQZ break direction)
-- key transition: F1  R1 progression — M30 compresses between fly states, reversal beginning
-
-##### Step 4: TIMELINE
-| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
-| 260401 14:30 | 260401 23:00 | F?-F | Up / Tier 1 | H4 fly 512, D1 fly 512 | M30 fly 511, M15 fly 511 | img | All aligned up — W1 unreadable so F? |
-| 260401 23:00 | 260402 00:00 | F?-F  S-C1 | Up / Tier 1→2 | H4 fly 512, D1 512→513 | M30 511→411, M15 fly 512 | img | Transition: D1 shrinks, M30 enters SQZ |
-| 260402 00:00 | 260402 04:00 | S-C1 | Up / Tier 2 | H4 fly 512, D1 shrink 513 | M30 SQZ 411, M15 fly 512 | log | M30 compresses — D1 deepens |
-| 260402 04:00 | 260402 05:00 | S-C1 | Up / Tier 2 | H4 fly 512, D1 shrink 513 | M30 SQZ 411, M15 fly 512 | log | M30 still SQZ — waiting break |
-
-##### Step 5: Conclusion + Prediction
-- **Scenario: S-C1** (HTF=S MTF=C1). No divergence yet — M30 SQZ but diffMid=1 same as H4.
-- **Next likely:** S-R1 if M30 breaks 411→521 (opposite H4); F?-F if M30 breaks 411→511 (same H4). Watch: M30 BBW_stage 411→511 vs 411→521.
+**Coverage:** 2026.04.01 14:30 → 2026.04.02 04:30 | Period: 2026.04.01 14:30 → 2026.04.02 05:00 | **INCOMPLETE**
 
 #### Image 2 Analysis — backtested_EA_test_phase_April_01.jpg
 ![backtested_EA_test_phase_April_01](./Backtest_data/extras/backtested_EA_test_phase_April_01.jpg)
 
 **Period:** 2026.04.01 14:30 → 2026.04.02 09:00 (chart x-axis: "01.04.2026" / "02.04.2026", extended view of reversal)
 
-##### Step 1: State Read
-| From | To | TF group | TF | BBW_stage | diffMid | BBUpDn | Source |
-|------|-----|----------|----|-----------|---------|--------|--------|
-| 260401 14:30 | 260401 23:00 | HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
-| 260401 14:30 | 260401 23:00 | HTF | D1 | 512 | 1 | 2 | img |
-| 260401 14:30 | 260401 23:00 | HTF | H4 | 512 | 1 | 3 | img |
-| 260401 14:30 | 260401 23:00 | MTF | H1 | 512 | 1 | 0 | img |
-| 260401 14:30 | 260401 23:00 | MTF | M30 | 511→411 | 1→3 | 1→0 | img |
-| 260401 14:30 | 260401 23:00 | MTF | M15 | 511→512 | 1→1 | 1→3 | img |
-| 260401 14:30 | 260401 23:00 | LTF | M5 | 511 | 1 | 1 | img |
-| 260402 00:00 | 260402 05:00 | HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
-| 260402 00:00 | 260402 05:00 | HTF | D1 | 513 | 1 | 2 | img |
-| 260402 00:00 | 260402 05:00 | HTF | H4 | 512 | 1 | 3 | img |
-| 260402 00:00 | 260402 05:00 | MTF | H1 | 512 | 1 | 0 | img |
-| 260402 00:00 | 260402 05:00 | MTF | M30 | 411 | 1 | 0 | img |
-| 260402 00:00 | 260402 05:00 | MTF | M15 | 512 | 1 | 3 | img |
-| 260402 00:00 | 260402 05:00 | LTF | M5 | 512 | 1 | 3 | img |
-| 260402 05:00 | 260402 09:00 | HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
-| 260402 05:00 | 260402 09:00 | HTF | D1 | 513 | 1 | 2 | img |
-| 260402 05:00 | 260402 09:00 | HTF | H4 | 512 | 1 | 3 | img |
-| 260402 05:00 | 260402 09:00 | MTF | H1 | 521 | 2 | 1 | img |
-| 260402 05:00 | 260402 09:00 | MTF | M30 | 411→521 | 1→2 | 0→1 | img |
-| 260402 05:00 | 260402 09:00 | MTF | M15 | 522 | 2 | 4 | img |
-| 260402 05:00 | 260402 09:00 | LTF | M5 | 521 | 2 | 1 | img |
+> **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
+> 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
+> 3=sideways, 5=deep-sideways. BBUpDn: 0=between, 1=upper, 2=lower,
+> 3=sideways. A new row is added only when M15 BBW_stage or diffMid changes.
+> All rows fall within the user-defined period.
 
-##### Step 2: Two-Axis Classification
-- **HTF scenario:** S — H4 fly 512, D1 shrink 513 (reversal in progress)
-- **MTF scenario:** R1 — M30 reversed 521, H4 still flying 512 (pre-pivot)
-- **MTF direction vs H4:** OPPOSITE  R1 divergence (M30 diffMid=2, H4 diffMid=1)
+| datetime | M15 | M30 | H1 | H4 | D1 | W1 | Scenario (HTF-MTF) | Trend / Tier |
+|----------|-----|-----|----|----|----|----|--------------------|------------|
+| 2026.04.01 14:30 | 512-1-3 | 511-1-1 | 512-1-0 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 14:45 | 511-1-1 | 511-1-1 | 512-1-0 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 15:15 | 512-1-3 | 511-1-0 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 15:30 | 512-3-3 | 512-1-3 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 16:15 | 512-5-0 | 512-1-3 | 513-1-2 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 17:15 | 512-1-3 | 512-1-0 | 513-1-0 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 18:45 | 511-1-1 | 411-1-3 | 411-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 20:30 | 512-1-3 | 512-1-0 | 511-1-0 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 21:15 | 513-1-2 | 512-1-3 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S1 | Up (div) / Tier 1 |
+| 2026.04.01 22:45 | 513-5-2 | 513-1-2 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S2 | Up (div) / Tier 1 |
+| 2026.04.01 23:00 | 513-3-0 | 513-1-0 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S2 | Up (div) / Tier 1 |
+| 2026.04.01 23:30 | 513-2-4 | 513-1-2 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S2 [divergence] | Up (div) / Tier 1 |
+| 2026.04.01 23:45 | 523-2-4 | 513-1-2 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S2 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 01:00 | 522-2-4 | 513-1-2 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 01:30 | 522-4-0 | 411-1-0 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.02 01:45 | 523-4-2 | 411-1-0 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-S1 | Up (div) / Tier 1 |
+| 2026.04.02 02:00 | 523-2-2 | 411-1-3 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-S1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 02:15 | 523-3-0 | 411-1-3 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-S1 | Up (div) / Tier 1 |
+| 2026.04.02 02:45 | 511-1-1 | 411-1-3 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.02 03:45 | 512-1-3 | 411-1-0 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.02 04:15 | 512-3-1 | 411-1-0 | 512-1-0 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.02 04:30 | 521-2-1 | 413-3-1 | 512-1-0 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 06:30 | 522-2-4 | 521-2-0 | 512-3-1 | 512-1-3 | 523-2-0 | 513-1-2 | F2-R1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 08:15 | 523-2-2 | 522-2-4 | 521-2-1 | 512-1-0 | 523-2-0 | 513-1-2 | F2-S1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 09:00 | 412-2-4 | 521-2-1 | 521-2-1 | 512-1-0 | 523-2-0 | 513-1-2 | F2-C1 [divergence] | Up (div) / Tier 1 |
 
-##### Step 3: Cascade
-- direction: D1 compress HTF  LTF, then D2 expand LTF  HTF (reversal)
-- depth: Full — M5 SQZ break  M30 reversal | leading TF: M30 (reversed)
-- key transition: Complete reversal sequence — fly  SQZ  reverse
-
-##### Step 4: TIMELINE
-| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
-| 260401 14:30 | 260401 23:00 | F?-F | Up / Tier 1 | H4 fly 512, D1 fly 512 | M30 fly 511, M15 fly 511 | img | All aligned up — W1 unreadable |
-| 260401 23:00 | 260402 00:00 | F?-C1  S-C1 | Up / Tier 1→2 | H4 fly 512, D1 512→513 | M30 511→411, M15 fly 512 | img | D1 shrinks, M30 enters SQZ |
-| 260402 00:00 | 260402 05:00 | S-C1 | Up / Tier 2 | H4 fly 512, D1 shrink 513 | M30 SQZ 411, M15 fly 512 | img | M30 SQZ — waiting break |
-| 260402 05:00 | 260402 09:00 | S-R1 | Down / Tier 3 | H4 fly 512, D1 shrink 513 | M30 fly 521, M15 fly 522 | img | M30 breaks SQZ 521 — R1 reversal |
-
-##### Step 5: Conclusion + Prediction
-- **Scenario: S-R1** (HTF=S MTF=R1). DIVERGENCE: MTF down (diffMid=2) vs H4 up (diffMid=1).
-- **Next likely:** S-R2 if H4 flips to 521; S-C1 if M30 re-enters SQZ. Watch: H4 BBW_stage for flip.
+**Coverage:** 2026.04.01 14:30 → 2026.04.02 09:00 | Period: 2026.04.01 14:30 → 2026.04.02 09:00 | **COMPLETE**
 
 ---
 
@@ -510,115 +520,97 @@ only R1/B2 are genuinely 2-axis.
 
 **Period:** 2026.02.06 01:00 → 2026.02.07 21:00 (chart x-axis: "06.02.2026" / "07.02.2026", log-confirmed)
 
-##### Step 1: State Read
-| From | To | TF group | TF | BBW_stage | diffMid | BBUpDn | Source |
-|------|-----|----------|----|-----------|---------|--------|--------|
-| 260206 01:00 | 260206 09:00 | HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
-| 260206 01:00 | 260206 09:00 | HTF | D1 | 513 | 1 | 2 | log |
-| 260206 01:00 | 260206 09:00 | HTF | H4 | 513 | 1 | 2 | log |
-| 260206 01:00 | 260206 09:00 | MTF | H1 | 402 | 2 | 0 | log |
-| 260206 01:00 | 260206 09:00 | MTF | M30 | 521 | 2 | 1 | log |
-| 260206 01:00 | 260206 09:00 | MTF | M15 | 522 | 2 | 4 | log |
-| 260206 01:00 | 260206 09:00 | LTF | M5 | 400-499→521 | 3→2 | 0→1 | img |
-| 260206 09:00 | 260207 21:00 | HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
-| 260206 09:00 | 260207 21:00 | HTF | D1 | 513 | 1 | 2 | img |
-| 260206 09:00 | 260207 21:00 | HTF | H4 | 513 | 1 | 2 | img |
-| 260206 09:00 | 260207 21:00 | MTF | H1 | 513→521 | 2→2 | 2→1 | img |
-| 260206 09:00 | 260207 21:00 | MTF | M30 | 521 | 2 | 1 | img |
-| 260206 09:00 | 260207 21:00 | MTF | M15 | 522 | 2 | 4 | img |
-| 260206 09:00 | 260207 21:00 | LTF | M5 | 521 | 2 | 1 | img |
+> **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
+> 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
+> 3=sideways, 5=deep-sideways. BBUpDn: 0=between, 1=upper, 2=lower,
+> 3=sideways. A new row is added only when M15 BBW_stage or diffMid changes.
+> All rows fall within the user-defined period.
 
-##### Step 2: Two-Axis Classification
-- **HTF scenario:** S — H4 shrink 513, D1 shrink 513
-- **MTF scenario:** B1 → B2 — M5/M15 fly 521/522, M30 fly 521, H1 SQZ then decompress
-- **MTF direction vs H4:** OPPOSITE  R1 divergence (M30 diffMid=2, H4 diffMid=1)
+| datetime | M15 | M30 | H1 | H4 | D1 | W1 | Scenario (HTF-MTF) | Trend / Tier |
+|----------|-----|-----|----|----|----|----|--------------------|------------|
+| 2026.02.06 01:00 | 522-2-4 | 521-2-1 | 402-2-0 | 513-1-2 | 513-1-2 | 401-1-0 | C4-F [divergence] | Up / Tier 2 |
+| 2026.02.06 02:15 | 521-2-1 | 521-2-1 | 521-2-1 | 513-1-2 | 513-1-2 | 401-1-0 | C4-R1 [divergence] | Up / Tier 2 |
+| 2026.02.06 02:30 | 522-2-4 | 521-2-1 | 521-2-1 | 513-1-2 | 513-1-2 | 401-1-0 | C4-R1 [divergence] | Up / Tier 2 |
+| 2026.02.06 04:00 | 523-2-2 | 522-2-4 | 521-2-0 | 513-1-2 | 513-1-2 | 401-1-0 | C4-S1 [divergence] | Up / Tier 2 |
+| 2026.02.06 04:30 | 523-3-2 | 522-3-4 | 521-2-0 | 513-1-2 | 513-1-2 | 401-1-0 | C4-S1 [divergence] | Up / Tier 2 |
+| 2026.02.06 04:45 | 403-3-1 | 522-3-4 | 521-2-0 | 513-1-2 | 513-1-2 | 401-1-0 | C4-C1 [divergence] | Up / Tier 2 |
+| 2026.02.06 05:30 | 403-1-1 | 522-2-0 | 522-2-4 | 513-1-2 | 513-1-2 | 401-1-0 | C4-C1 [divergence] | Up / Tier 2 |
+| 2026.02.06 07:45 | 511-1-3 | 523-2-2 | 523-2-2 | 513-1-2 | 513-1-2 | 401-1-0 | C4-F [divergence] | Up / Tier 2 |
+| 2026.02.06 08:00 | 512-1-3 | 403-3-1 | 403-3-0 | 513-1-2 | 513-1-2 | 401-1-0 | C4-F | Up / Tier 2 |
+| 2026.02.06 08:30 | 513-1-2 | 403-3-1 | 403-3-0 | 513-1-2 | 513-1-2 | 401-1-0 | C4-S1 | Up / Tier 2 |
+| 2026.02.06 09:30 | 411-1-3 | 403-1-1 | 403-3-2 | 513-1-2 | 513-1-2 | 401-1-0 | C4-C2 | Up / Tier 2 |
+| 2026.02.06 12:30 | 411-3-0 | 403-1-2 | 403-3-1 | 513-1-2 | 513-1-2 | 401-1-0 | C4-C2 | Up / Tier 2 |
+| 2026.02.06 12:45 | 411-5-0 | 403-1-2 | 403-3-1 | 513-1-2 | 513-1-2 | 401-1-0 | C4-C2 | Up / Tier 2 |
+| 2026.02.06 13:00 | 411-4-2 | 403-1-2 | 403-1-1 | 513-1-2 | 513-1-2 | 401-1-0 | C4-C2 | Up / Tier 2 |
+| 2026.02.06 13:15 | 521-4-0 | 403-1-2 | 403-1-1 | 513-1-2 | 513-1-2 | 401-1-0 | C4-F | Up / Tier 2 |
+| 2026.02.06 13:30 | 511-1-1 | 403-1-2 | 403-1-1 | 513-1-2 | 513-1-2 | 401-1-0 | C4-F | Up / Tier 2 |
+| 2026.02.06 14:00 | 512-1-3 | 403-1-0 | 403-1-1 | 513-1-2 | 513-1-2 | 401-1-0 | C4-F | Up / Tier 2 |
+| 2026.02.06 15:30 | 511-1-1 | 512-1-3 | 511-1-1 | 513-1-2 | 513-1-2 | 401-1-0 | C4-F | Up / Tier 2 |
+| 2026.02.06 16:15 | 512-1-3 | 512-1-3 | 511-1-1 | 513-1-0 | 513-1-2 | 401-1-0 | C4-F | Up / Tier 2 |
+| 2026.02.06 19:45 | 513-1-2 | 512-1-3 | 511-1-1 | 513-1-0 | 513-1-2 | 401-1-0 | C4-S1 | Up / Tier 2 |
+| 2026.02.06 20:00 | 512-1-3 | 512-1-3 | 511-1-0 | 512-1-3 | 513-1-2 | 401-1-0 | F1-F | Up / Tier 1 |
+| 2026.02.06 21:30 | 513-1-2 | 512-1-3 | 512-1-3 | 512-1-3 | 513-1-2 | 401-1-0 | F1-S1 | Up / Tier 1 |
+| 2026.02.06 22:00 | 512-5-3 | 512-1-3 | 512-1-0 | 512-1-3 | 513-1-2 | 401-1-0 | F1-F | Up / Tier 1 |
+| 2026.02.06 23:00 | 513-5-2 | 513-1-2 | 513-1-2 | 512-1-3 | 513-1-2 | 401-1-0 | F1-S3 | Up / Tier 1 |
+| 2026.02.06 23:30 | 513-1-2 | 513-1-2 | 513-1-2 | 512-1-3 | 513-1-2 | 401-1-0 | F1-S3 | Up / Tier 1 |
 
-##### Step 3: Cascade
-- direction: D2 expand LTF  HTF
-- depth: M5 broke SQZ first | leading TF: M5 (broke SQZ)
-- key transition: All TF SQZ  M5 breaks SQZ  D2 expansion
-
-##### Step 4: TIMELINE
-| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
-| 260206 01:00 | 260206 09:00 | S-C4 | Down / Tier 2 | H4 shrink 513, D1 shrink 513 | H1 SQZ 402, M30 fly 521, M15 fly 522 | log | H1 SQZ blocks; M30/M15 already fly down |
-| 260206 09:00 | 260207 21:00 | S-B2 | Down / Tier 3 | H4 shrink 513 | M30 fly 521, M15 fly 522, H1 decompressing | img | D2 confirmed — M30 fly down |
-
-##### Step 5: Conclusion + Prediction
-- **Scenario: S-B2** (HTF=S MTF=B2).  DIVERGENCE: MTF direction (down) vs H4 direction (up).
-- **Next likely:** S-B3 if H4 breaks to fly 521/522; S-C4 if H4 remains 513. Watch: H4 BBW_stage.
+**Coverage:** 2026.02.06 01:00 → 2026.02.06 23:30 | Period: 2026.02.06 01:00 → 2026.02.07 21:00 | **INCOMPLETE**
 
 #### Image 2 Analysis — backtested_EA_sideway_2_fly_zoomin.jpg
 ![backtested_EA_sideway_2_fly_zoomin](./Backtest_data/extras/backtested_EA_sideway_2_fly_zoomin.jpg)
 
 **Period:** 2026.02.06 13:00 → 2026.02.07 09:00 (chart x-axis: "06.02.2026" / "07.02.2026")
 
-##### Step 1: State Read
-| From | To | TF group | TF | BBW_stage | diffMid | BBUpDn | Source |
-|------|-----|----------|----|-----------|---------|--------|--------|
-| 260206 13:00 | 260207 09:00 | HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
-| 260206 13:00 | 260207 09:00 | HTF | D1 | 513 | 1 | 2 | img |
-| 260206 13:00 | 260207 09:00 | HTF | H4 | 513 | 1 | 2 | img |
-| 260206 13:00 | 260207 09:00 | MTF | H1 | 513 | 2 | 2 | img |
-| 260206 13:00 | 260207 09:00 | MTF | M30 | 521 | 2 | 1 | img |
-| 260206 13:00 | 260207 09:00 | MTF | M15 | 521 | 2 | 1 | img |
-| 260206 13:00 | 260207 09:00 | LTF | M5 | 521 | 2 | 1 | img |
+> **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
+> 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
+> 3=sideways, 5=deep-sideways. BBUpDn: 0=between, 1=upper, 2=lower,
+> 3=sideways. A new row is added only when M15 BBW_stage or diffMid changes.
+> All rows fall within the user-defined period.
 
-##### Step 2: Two-Axis Classification
-- **HTF scenario:** S — H4/D1 shrink 513
-- **MTF scenario:** B2 — M30/M15 fly 521, H1 shrink 513
-- **MTF direction vs H4:** OPPOSITE  R1 divergence
+| datetime | M15 | M30 | H1 | H4 | D1 | W1 | Scenario (HTF-MTF) | Trend / Tier |
+|----------|-----|-----|----|----|----|----|--------------------|------------|
+| 2026.02.06 13:00 | 411-4-2 | 403-1-2 | 403-1-1 | 513-1-2 | 513-1-2 | 401-1-0 | C4-C2 | Up / Tier 2 |
+| 2026.02.06 13:15 | 521-4-0 | 403-1-2 | 403-1-1 | 513-1-2 | 513-1-2 | 401-1-0 | C4-F | Up / Tier 2 |
+| 2026.02.06 13:30 | 511-1-1 | 403-1-2 | 403-1-1 | 513-1-2 | 513-1-2 | 401-1-0 | C4-F | Up / Tier 2 |
+| 2026.02.06 14:00 | 512-1-3 | 403-1-0 | 403-1-1 | 513-1-2 | 513-1-2 | 401-1-0 | C4-F | Up / Tier 2 |
+| 2026.02.06 15:30 | 511-1-1 | 512-1-3 | 511-1-1 | 513-1-2 | 513-1-2 | 401-1-0 | C4-F | Up / Tier 2 |
+| 2026.02.06 16:15 | 512-1-3 | 512-1-3 | 511-1-1 | 513-1-0 | 513-1-2 | 401-1-0 | C4-F | Up / Tier 2 |
+| 2026.02.06 19:45 | 513-1-2 | 512-1-3 | 511-1-1 | 513-1-0 | 513-1-2 | 401-1-0 | C4-S1 | Up / Tier 2 |
+| 2026.02.06 20:00 | 512-1-3 | 512-1-3 | 511-1-0 | 512-1-3 | 513-1-2 | 401-1-0 | F1-F | Up / Tier 1 |
+| 2026.02.06 21:30 | 513-1-2 | 512-1-3 | 512-1-3 | 512-1-3 | 513-1-2 | 401-1-0 | F1-S1 | Up / Tier 1 |
+| 2026.02.06 22:00 | 512-5-3 | 512-1-3 | 512-1-0 | 512-1-3 | 513-1-2 | 401-1-0 | F1-F | Up / Tier 1 |
+| 2026.02.06 23:00 | 513-5-2 | 513-1-2 | 513-1-2 | 512-1-3 | 513-1-2 | 401-1-0 | F1-S3 | Up / Tier 1 |
+| 2026.02.06 23:30 | 513-1-2 | 513-1-2 | 513-1-2 | 512-1-3 | 513-1-2 | 401-1-0 | F1-S3 | Up / Tier 1 |
 
-##### Step 3: Cascade
-- direction: D2 expand LTF  HTF
-- depth: D2 advancing | leading TF: M30 (confirm fly)
-- key transition: M5/M15/M30 fly 521 — D2 confirmed in down direction
-
-##### Step 4: TIMELINE
-| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
-| 260206 13:00 | 260207 01:00 | S-B2 | Down / Tier 3 | H4 shrink 513 | M30/M15 fly 521, H1 shrink 513 | img | D2 expanding down |
-| 260207 01:00 | 260207 09:00 | S-B2 | Down / Tier 3 | H4 shrink 513 | M30/M15 fly 521 | img | H4 still shrink — B2, not B3 |
-
-##### Step 5: Conclusion + Prediction
-- **Scenario: S-B2** (HTF=S MTF=B2).  DIVERGENCE: MTF down vs H4 up.
-- **Next likely:** S-B3 if H4 513→521/522; S-S if H4 remains 513. Watch: H4 BBW_stage.
+**Coverage:** 2026.02.06 13:00 → 2026.02.06 23:30 | Period: 2026.02.06 13:00 → 2026.02.07 09:00 | **INCOMPLETE**
 
 #### Image 3 Analysis — backtest_EA_sideway_2_fly2_zoomin.jpg
 ![backtest_EA_sideway_2_fly2_zoomin](./Backtest_data/extras/backtest_EA_sideway_2_fly2_zoomin.jpg)
 
 **Period:** 2026.02.06 13:00 → 2026.02.07 09:00 (chart x-axis: "06.02.2026" / "07.02.2026")
 
-##### Step 1: State Read
-| From | To | TF group | TF | BBW_stage | diffMid | BBUpDn | Source |
-|------|-----|----------|----|-----------|---------|--------|--------|
-| 260206 13:00 | 260207 09:00 | HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
-| 260206 13:00 | 260207 09:00 | HTF | D1 | 513 | 1 | 2 | img |
-| 260206 13:00 | 260207 09:00 | HTF | H4 | 513 | 1 | 2 | img |
-| 260206 13:00 | 260207 09:00 | MTF | H1 | 513 | 2 | 2 | img |
-| 260206 13:00 | 260207 09:00 | MTF | M30 | 521 | 2 | 1 | img |
-| 260206 13:00 | 260207 09:00 | MTF | M15 | 521 | 2 | 1 | img |
-| 260206 13:00 | 260207 09:00 | LTF | M5 | 521 | 2 | 1 | img |
+> **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
+> 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
+> 3=sideways, 5=deep-sideways. BBUpDn: 0=between, 1=upper, 2=lower,
+> 3=sideways. A new row is added only when M15 BBW_stage or diffMid changes.
+> All rows fall within the user-defined period.
 
-##### Step 2: Two-Axis Classification
-- **HTF scenario:** S — H4/D1 shrink 513
-- **MTF scenario:** B2 — M30/M15 fly 521, H1 shrink 513
-- **MTF direction vs H4:** OPPOSITE  R1 divergence
+| datetime | M15 | M30 | H1 | H4 | D1 | W1 | Scenario (HTF-MTF) | Trend / Tier |
+|----------|-----|-----|----|----|----|----|--------------------|------------|
+| 2026.02.06 13:00 | 411-4-2 | 403-1-2 | 403-1-1 | 513-1-2 | 513-1-2 | 401-1-0 | C4-C2 | Up / Tier 2 |
+| 2026.02.06 13:15 | 521-4-0 | 403-1-2 | 403-1-1 | 513-1-2 | 513-1-2 | 401-1-0 | C4-F | Up / Tier 2 |
+| 2026.02.06 13:30 | 511-1-1 | 403-1-2 | 403-1-1 | 513-1-2 | 513-1-2 | 401-1-0 | C4-F | Up / Tier 2 |
+| 2026.02.06 14:00 | 512-1-3 | 403-1-0 | 403-1-1 | 513-1-2 | 513-1-2 | 401-1-0 | C4-F | Up / Tier 2 |
+| 2026.02.06 15:30 | 511-1-1 | 512-1-3 | 511-1-1 | 513-1-2 | 513-1-2 | 401-1-0 | C4-F | Up / Tier 2 |
+| 2026.02.06 16:15 | 512-1-3 | 512-1-3 | 511-1-1 | 513-1-0 | 513-1-2 | 401-1-0 | C4-F | Up / Tier 2 |
+| 2026.02.06 19:45 | 513-1-2 | 512-1-3 | 511-1-1 | 513-1-0 | 513-1-2 | 401-1-0 | C4-S1 | Up / Tier 2 |
+| 2026.02.06 20:00 | 512-1-3 | 512-1-3 | 511-1-0 | 512-1-3 | 513-1-2 | 401-1-0 | F1-F | Up / Tier 1 |
+| 2026.02.06 21:30 | 513-1-2 | 512-1-3 | 512-1-3 | 512-1-3 | 513-1-2 | 401-1-0 | F1-S1 | Up / Tier 1 |
+| 2026.02.06 22:00 | 512-5-3 | 512-1-3 | 512-1-0 | 512-1-3 | 513-1-2 | 401-1-0 | F1-F | Up / Tier 1 |
+| 2026.02.06 23:00 | 513-5-2 | 513-1-2 | 513-1-2 | 512-1-3 | 513-1-2 | 401-1-0 | F1-S3 | Up / Tier 1 |
+| 2026.02.06 23:30 | 513-1-2 | 513-1-2 | 513-1-2 | 512-1-3 | 513-1-2 | 401-1-0 | F1-S3 | Up / Tier 1 |
 
-##### Step 3: Cascade
-- direction: D2 expand LTF  HTF
-- depth: D2 advancing | leading TF: M30 (confirm fly)
-- key transition: M5/M15/M30 fly 521 — D2 confirmed in down direction
-
-##### Step 4: TIMELINE
-| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
-| 260206 13:00 | 260207 01:00 | S-B2 | Down / Tier 3 | H4 shrink 513 | M30/M15 fly 521, H1 shrink 513 | img | D2 expanding down |
-| 260207 01:00 | 260207 09:00 | S-B2 | Down / Tier 3 | H4 shrink 513 | M30/M15 fly 521 | img | H4 still shrink — B2, not B3 |
-
-##### Step 5: Conclusion + Prediction
-- **Scenario: S-B2** (HTF=S MTF=B2).  DIVERGENCE: MTF down vs H4 up.
-- **Next likely:** S-B3 if H4 513→521/522; S-S if H4 remains 513. Watch: H4 BBW_stage.
+**Coverage:** 2026.02.06 13:00 → 2026.02.06 23:30 | Period: 2026.02.06 13:00 → 2026.02.07 09:00 | **INCOMPLETE**
 
 ---
 
@@ -629,43 +621,39 @@ only R1/B2 are genuinely 2-axis.
 
 **Period:** 2026.04.02 05:00 → 2026.04.03 03:00 (chart x-axis: "02.04.2026" / "03.04.2026")
 
-##### Step 1: State Read
-| From | To | TF group | TF | BBW_stage | diffMid | BBUpDn | Source |
-|------|-----|----------|----|-----------|---------|--------|--------|
-| 260402 05:00 | 260402 17:00 | HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
-| 260402 05:00 | 260402 17:00 | HTF | D1 | 513 | 1 | 2 | img |
-| 260402 05:00 | 260402 17:00 | HTF | H4 | 512 | 1 | 3 | img |
-| 260402 05:00 | 260402 17:00 | MTF | H1 | 512 | 1 | 0 | img |
-| 260402 05:00 | 260402 17:00 | MTF | M30 | 513 | 1 | 2 | img |
-| 260402 05:00 | 260402 17:00 | MTF | M15 | 513 | 5 | 2 | img |
-| 260402 05:00 | 260402 17:00 | LTF | M5 | 513 | 5 | 2 | img |
-| 260402 17:00 | 260403 03:00 | HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
-| 260402 17:00 | 260403 03:00 | HTF | D1 | 513 | 1 | 2 | img |
-| 260402 17:00 | 260403 03:00 | HTF | H4 | 512 | 1 | 3 | img |
-| 260402 17:00 | 260403 03:00 | MTF | H1 | 512 | 1 | 0 | img |
-| 260402 17:00 | 260403 03:00 | MTF | M30 | 411 | 1 | 0 | img |
-| 260402 17:00 | 260403 03:00 | MTF | M15 | 513 | 5 | 2 | img |
-| 260402 17:00 | 260403 03:00 | LTF | M5 | 513 | 5 | 2 | img |
+> **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
+> 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
+> 3=sideways, 5=deep-sideways. BBUpDn: 0=between, 1=upper, 2=lower,
+> 3=sideways. A new row is added only when M15 BBW_stage or diffMid changes.
+> All rows fall within the user-defined period.
 
-##### Step 2: Two-Axis Classification
-- **HTF scenario:** S — H4 fly 512, D1 shrink 513
-- **MTF scenario:** C2 — M30 SQZ 411, M15 shrink 513
-- **MTF direction vs H4:** SAME  continuation
+| datetime | M15 | M30 | H1 | H4 | D1 | W1 | Scenario (HTF-MTF) | Trend / Tier |
+|----------|-----|-----|----|----|----|----|--------------------|------------|
+| 2026.04.02 05:00 | 521-2-1 | 422-2-1 | 512-3-2 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 06:30 | 522-2-4 | 521-2-0 | 512-3-1 | 512-1-3 | 523-2-0 | 513-1-2 | F2-R1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 08:15 | 523-2-2 | 522-2-4 | 521-2-1 | 512-1-0 | 523-2-0 | 513-1-2 | F2-S1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 09:00 | 412-2-4 | 521-2-1 | 521-2-1 | 512-1-0 | 523-2-0 | 513-1-2 | F2-C1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 09:15 | 521-2-0 | 521-2-1 | 521-2-1 | 512-1-0 | 523-2-0 | 513-1-2 | F2-R1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 10:00 | 522-2-4 | 521-2-0 | 521-2-1 | 512-1-0 | 523-2-0 | 513-1-2 | F2-R1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 11:15 | 523-2-2 | 522-2-4 | 521-2-0 | 512-1-0 | 523-2-0 | 513-1-2 | F2-S1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 13:45 | 523-3-0 | 523-2-2 | 521-2-1 | 513-1-2 | 523-2-0 | 513-1-2 | C4-S2 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 14:00 | 523-1-0 | 523-2-2 | 521-2-0 | 513-1-2 | 523-2-0 | 513-1-2 | C4-S2 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 14:45 | 523-5-2 | 523-2-0 | 521-2-0 | 513-1-2 | 523-2-0 | 513-1-2 | C4-S2 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 15:00 | 415-5-0 | 522-2-4 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-C1 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 15:15 | 521-4-1 | 522-2-4 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-R1 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 15:30 | 522-4-4 | 522-2-0 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-R1 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 15:45 | 522-2-0 | 522-2-0 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-R1 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 17:00 | 522-3-0 | 523-2-2 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-F [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 17:15 | 511-1-1 | 523-2-2 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-F [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 19:00 | 512-1-3 | 511-1-0 | 523-2-2 | 513-1-2 | 523-2-0 | 513-1-2 | C4-F [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 21:00 | 513-1-2 | 512-1-3 | 523-2-2 | 513-1-0 | 523-2-0 | 513-1-2 | C4-S1 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 22:15 | 411-1-3 | 512-1-3 | 523-2-2 | 513-1-0 | 523-2-0 | 513-1-2 | C4-F [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 22:30 | 411-3-0 | 512-1-3 | 523-2-2 | 513-1-0 | 523-2-0 | 513-1-2 | C4-F [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 22:45 | 411-2-2 | 512-1-3 | 523-2-2 | 513-1-0 | 523-2-0 | 513-1-2 | C4-F [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 23:15 | 413-3-0 | 512-1-3 | 523-2-2 | 513-1-0 | 523-2-0 | 513-1-2 | C4-F [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 23:45 | 413-5-0 | 512-1-3 | 523-2-2 | 513-1-0 | 523-2-0 | 513-1-2 | C4-F [divergence] | Up (div) / Tier 2 |
 
-##### Step 3: Cascade
-- direction: D1 compress HTF  LTF
-- depth: M30 SQZ 411 | leading TF: M30 (watch for SQZ break)
-- key transition: M30 513→411 — D1 deepens to C2
-
-##### Step 4: TIMELINE
-| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
-| 260402 05:00 | 260402 17:00 | S-S2 | Up / Tier 2 | H4 fly 512 | M30 shrink 513, M15 shrink 513 | img | D1 compression |
-| 260402 17:00 | 260403 03:00 | S-C2 | Up / Tier 2 | H4 fly 512 | M30 SQZ 411, M15 shrink 513 | img | M30 enters SQZ — C2 |
-
-##### Step 5: Conclusion + Prediction
-- **Scenario: S-C2** (HTF=S MTF=C2). No divergence.
-- **Next likely:** S-P2 if M30 411→511 (same dir as H4); S-R1 if M30 411→521 (opposite). Watch: M30 BBW_stage.
+**Coverage:** 2026.04.02 05:00 → 2026.04.02 23:45 | Period: 2026.04.02 05:00 → 2026.04.03 03:00 | **INCOMPLETE**
 
 ---
 
@@ -676,264 +664,204 @@ only R1/B2 are genuinely 2-axis.
 
 **Period:** 2026.04.01 13:00 → 2026.04.02 17:00 (chart x-axis: "01.04.2026" / "02.04.2026", log-confirmed)
 
-##### Step 1: State Read
-| From | To | TF group | TF | BBW_stage | diffMid | BBUpDn | Source |
-|------|-----|----------|----|-----------|---------|--------|--------|
-| 260401 13:00 | 260401 17:00 | HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
-| 260401 13:00 | 260401 17:00 | HTF | D1 | 513 | 1 | 2 | log |
-| 260401 13:00 | 260401 17:00 | HTF | H4 | 512 | 1 | 3 | log |
-| 260401 13:00 | 260401 17:00 | MTF | H1 | 512 | 1 | 0 | log |
-| 260401 13:00 | 260401 17:00 | MTF | M30 | 513 | 1 | 2 | img |
-| 260401 13:00 | 260401 17:00 | MTF | M15 | 513 | 5 | 2 | img |
-| 260401 13:00 | 260401 17:00 | LTF | M5 | 513 | 5 | 2 | img |
-| 260401 17:00 | 260402 17:00 | HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
-| 260401 17:00 | 260402 17:00 | HTF | D1 | 513 | 1 | 2 | img |
-| 260401 17:00 | 260402 17:00 | HTF | H4 | 512 | 1 | 3 | img |
-| 260401 17:00 | 260402 17:00 | MTF | H1 | 512 | 1 | 0 | img |
-| 260401 17:00 | 260402 17:00 | MTF | M30 | 411 | 1 | 0 | img |
-| 260401 17:00 | 260402 17:00 | MTF | M15 | 400-499→512 | 3→1 | 0→3 | img |
-| 260401 17:00 | 260402 17:00 | LTF | M5 | 400-499 | 3 | 0 | img |
+> **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
+> 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
+> 3=sideways, 5=deep-sideways. BBUpDn: 0=between, 1=upper, 2=lower,
+> 3=sideways. A new row is added only when M15 BBW_stage or diffMid changes.
+> All rows fall within the user-defined period.
 
-##### Step 2: Two-Axis Classification
-- **HTF scenario:** S — H4 fly 512, D1 shrink 513
-- **MTF scenario:** C2 — M30/M15/M5 SQZ 400-499
-- **MTF direction vs H4:** SAME  continuation (M30 diffMid=1 same as H4)
+| datetime | M15 | M30 | H1 | H4 | D1 | W1 | Scenario (HTF-MTF) | Trend / Tier |
+|----------|-----|-----|----|----|----|----|--------------------|------------|
+| 2026.04.01 13:00 | 513-1-2 | 512-1-0 | 512-1-0 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S1 | Up (div) / Tier 1 |
+| 2026.04.01 14:30 | 512-1-3 | 511-1-1 | 512-1-0 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 14:45 | 511-1-1 | 511-1-1 | 512-1-0 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 15:15 | 512-1-3 | 511-1-0 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 15:30 | 512-3-3 | 512-1-3 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 16:15 | 512-5-0 | 512-1-3 | 513-1-2 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 17:15 | 512-1-3 | 512-1-0 | 513-1-0 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 18:45 | 511-1-1 | 411-1-3 | 411-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 20:30 | 512-1-3 | 512-1-0 | 511-1-0 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 21:15 | 513-1-2 | 512-1-3 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S1 | Up (div) / Tier 1 |
+| 2026.04.01 22:45 | 513-5-2 | 513-1-2 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S2 | Up (div) / Tier 1 |
+| 2026.04.01 23:00 | 513-3-0 | 513-1-0 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S2 | Up (div) / Tier 1 |
+| 2026.04.01 23:30 | 513-2-4 | 513-1-2 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S2 [divergence] | Up (div) / Tier 1 |
+| 2026.04.01 23:45 | 523-2-4 | 513-1-2 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S2 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 01:00 | 522-2-4 | 513-1-2 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 01:30 | 522-4-0 | 411-1-0 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.02 01:45 | 523-4-2 | 411-1-0 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-S1 | Up (div) / Tier 1 |
+| 2026.04.02 02:00 | 523-2-2 | 411-1-3 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-S1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 02:15 | 523-3-0 | 411-1-3 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-S1 | Up (div) / Tier 1 |
+| 2026.04.02 02:45 | 511-1-1 | 411-1-3 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.02 03:45 | 512-1-3 | 411-1-0 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.02 04:15 | 512-3-1 | 411-1-0 | 512-1-0 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.02 04:30 | 521-2-1 | 413-3-1 | 512-1-0 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 06:30 | 522-2-4 | 521-2-0 | 512-3-1 | 512-1-3 | 523-2-0 | 513-1-2 | F2-R1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 08:15 | 523-2-2 | 522-2-4 | 521-2-1 | 512-1-0 | 523-2-0 | 513-1-2 | F2-S1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 09:00 | 412-2-4 | 521-2-1 | 521-2-1 | 512-1-0 | 523-2-0 | 513-1-2 | F2-C1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 09:15 | 521-2-0 | 521-2-1 | 521-2-1 | 512-1-0 | 523-2-0 | 513-1-2 | F2-R1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 10:00 | 522-2-4 | 521-2-0 | 521-2-1 | 512-1-0 | 523-2-0 | 513-1-2 | F2-R1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 11:15 | 523-2-2 | 522-2-4 | 521-2-0 | 512-1-0 | 523-2-0 | 513-1-2 | F2-S1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 13:45 | 523-3-0 | 523-2-2 | 521-2-1 | 513-1-2 | 523-2-0 | 513-1-2 | C4-S2 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 14:00 | 523-1-0 | 523-2-2 | 521-2-0 | 513-1-2 | 523-2-0 | 513-1-2 | C4-S2 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 14:45 | 523-5-2 | 523-2-0 | 521-2-0 | 513-1-2 | 523-2-0 | 513-1-2 | C4-S2 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 15:00 | 415-5-0 | 522-2-4 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-C1 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 15:15 | 521-4-1 | 522-2-4 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-R1 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 15:30 | 522-4-4 | 522-2-0 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-R1 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 15:45 | 522-2-0 | 522-2-0 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-R1 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 17:00 | 522-3-0 | 523-2-2 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-F [divergence] | Up (div) / Tier 2 |
 
-##### Step 3: Cascade
-- direction: D1 compress HTF  LTF
-- depth: M5 (full SQZ) | leading TF: M5 (watch for REVUP/REVDN)
-- key transition: Sequential compression — M5 first, M15 second, M30 third; G0c-SQZLOCK active
-
-##### Step 4: TIMELINE
-| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
-| 260401 13:00 | 260401 17:00 | S-S2 | Up / Tier 2 | H4 fly 512 | M30 shrink 513, M15 shrink 513 | img | D1 compression begins |
-| 260401 17:00 | 260402 01:00 | S-C2 | Up / Tier 2 | H4 fly 512 | M30/M15/M5 SQZ 400-499 | img | D1 reaches BOTTOM; G0c-SQZLOCK |
-| 260402 01:00 | 260402 04:00 | S-C2 | Up / Tier 2 | H4 fly 512 | M30 SQZ 411, M15 fly 512 | img | M30 SQZ 411 confirmed; M15 fly 512 |
-| 260402 04:00 | 260402 17:00 | S-C2 | Up / Tier 2 | H4 fly 512 | M30 SQZ 411, M15 fly 512 | img | Sustained C2; M30 still SQZ |
-
-##### Step 5: Conclusion + Prediction
-- **Scenario: S-C2** (HTF=S MTF=C2). No divergence.
-- **Next likely:** S-P2 if M5 REVUP and M15 follows; S-R1 if M30 411→521 (opposite H4). Watch: M5 BBW_stage + M30 BBW_stage.
+**Coverage:** 2026.04.01 13:00 → 2026.04.02 17:00 | Period: 2026.04.01 13:00 → 2026.04.02 17:00 | **COMPLETE**
 
 #### Image 2 Analysis — backtested_EA_fly_shrink_2_sideway_zoomin.jpg
 ![backtested_EA_fly_shrink_2_sideway_zoomin](./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway_zoomin.jpg)
 
 **Period:** 2026.04.02 09:00 → 2026.04.02 17:00 (chart x-axis: "02.04.2026")
 
-##### Step 1: State Read
-| From | To | TF group | TF | BBW_stage | diffMid | BBUpDn | Source |
-|------|-----|----------|----|-----------|---------|--------|--------|
-| 260402 09:00 | 260402 17:00 | HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
-| 260402 09:00 | 260402 17:00 | HTF | D1 | 513 | 1 | 2 | img |
-| 260402 09:00 | 260402 17:00 | HTF | H4 | 512 | 1 | 3 | img |
-| 260402 09:00 | 260402 17:00 | MTF | H1 | 521 | 2 | 1 | log |
-| 260402 09:00 | 260402 17:00 | MTF | M30 | 411→521 | 1→2 | 0→1 | log |
-| 260402 09:00 | 260402 17:00 | MTF | M15 | 522 | 2 | 4 | log |
-| 260402 09:00 | 260402 17:00 | LTF | M5 | 411→521 | 1→2 | 0→1 | img |
+> **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
+> 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
+> 3=sideways, 5=deep-sideways. BBUpDn: 0=between, 1=upper, 2=lower,
+> 3=sideways. A new row is added only when M15 BBW_stage or diffMid changes.
+> All rows fall within the user-defined period.
 
-##### Step 2: Two-Axis Classification
-- **HTF scenario:** S — H4 fly 512, D1 shrink 513
-- **MTF scenario:** P2 → P3 — M30 breaks SQZ 411→521, M15 fly 522
-- **MTF direction vs H4:** OPPOSITE  R1 divergence (M30 diffMid=2, H4 diffMid=1)
+| datetime | M15 | M30 | H1 | H4 | D1 | W1 | Scenario (HTF-MTF) | Trend / Tier |
+|----------|-----|-----|----|----|----|----|--------------------|------------|
+| 2026.04.02 09:00 | 412-2-4 | 521-2-1 | 521-2-1 | 512-1-0 | 523-2-0 | 513-1-2 | F2-C1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 09:15 | 521-2-0 | 521-2-1 | 521-2-1 | 512-1-0 | 523-2-0 | 513-1-2 | F2-R1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 10:00 | 522-2-4 | 521-2-0 | 521-2-1 | 512-1-0 | 523-2-0 | 513-1-2 | F2-R1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 11:15 | 523-2-2 | 522-2-4 | 521-2-0 | 512-1-0 | 523-2-0 | 513-1-2 | F2-S1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 13:45 | 523-3-0 | 523-2-2 | 521-2-1 | 513-1-2 | 523-2-0 | 513-1-2 | C4-S2 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 14:00 | 523-1-0 | 523-2-2 | 521-2-0 | 513-1-2 | 523-2-0 | 513-1-2 | C4-S2 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 14:45 | 523-5-2 | 523-2-0 | 521-2-0 | 513-1-2 | 523-2-0 | 513-1-2 | C4-S2 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 15:00 | 415-5-0 | 522-2-4 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-C1 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 15:15 | 521-4-1 | 522-2-4 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-R1 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 15:30 | 522-4-4 | 522-2-0 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-R1 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 15:45 | 522-2-0 | 522-2-0 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-R1 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 17:00 | 522-3-0 | 523-2-2 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-F [divergence] | Up (div) / Tier 2 |
 
-##### Step 3: Cascade
-- direction: D2 expand LTF  HTF
-- depth: M5 broke SQZ first | leading TF: M5 (broke SQZ)
-- key transition: M5 SQZ break  M15 follows  M30 breaks SQZ 411→521
-
-##### Step 4: TIMELINE
-| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
-| 260402 09:00 | 260402 10:00 | S-P2 | Down / Tier 3 | H4 fly 512 | M5 fly 521, M15 fly 522, M30 SQZ 411 | img | M5 broke SQZ; M30 still SQZ |
-| 260402 10:00 | 260402 17:00 | S-P3 | Down / Tier 3 | H4 fly 512 | M30 fly 521, M15 fly 522 | img | M30 breaks SQZ 411→521; D2 confirmed |
-
-##### Step 5: Conclusion + Prediction
-- **Scenario: S-P3** (HTF=S MTF=P3).  DIVERGENCE: MTF down (diffMid=2) vs H4 up (diffMid=1).
-- **Next likely:** S-B2 if M30 fly 521 sustained; S-S if M30 re-enters shrink. Watch: M30 BBW_stage.
+**Coverage:** 2026.04.02 09:00 → 2026.04.02 17:00 | Period: 2026.04.02 09:00 → 2026.04.02 17:00 | **COMPLETE**
 
 #### Image 3 Analysis — backtested_EA_phase_3a_symmetric.jpg
 ![backtested_EA_phase_3a_symmetric](./Backtest_data/extras/backtested_EA_phase_3a_symmetric.jpg)
 
 **Period:** 2026.04.01 17:00 → 2026.04.02 05:00 (chart x-axis: "01.04.2026" / "02.04.2026", symmetric SQZ phase)
 
-##### Step 1: State Read
-| From | To | TF group | TF | BBW_stage | diffMid | BBUpDn | Source |
-|------|-----|----------|----|-----------|---------|--------|--------|
-| 260401 17:00 | 260402 05:00 | HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
-| 260401 17:00 | 260402 05:00 | HTF | D1 | 513 | 1 | 2 | img |
-| 260401 17:00 | 260402 05:00 | HTF | H4 | 512 | 1 | 3 | img |
-| 260401 17:00 | 260402 05:00 | MTF | H1 | 512 | 1 | 0 | img |
-| 260401 17:00 | 260402 05:00 | MTF | M30 | 411 | 1 | 0 | img |
-| 260401 17:00 | 260402 05:00 | MTF | M15 | 411 | 1 | 0 | img |
-| 260401 17:00 | 260402 05:00 | LTF | M5 | 411 | 1 | 0 | img |
+> **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
+> 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
+> 3=sideways, 5=deep-sideways. BBUpDn: 0=between, 1=upper, 2=lower,
+> 3=sideways. A new row is added only when M15 BBW_stage or diffMid changes.
+> All rows fall within the user-defined period.
 
-##### Step 2: Two-Axis Classification
-- **HTF scenario:** S — H4 fly 512, D1 shrink 513
-- **MTF scenario:** C2 — M30/M15/M5 all SQZ 411 (symmetric compression)
-- **MTF direction vs H4:** SAME  continuation (SQZ but diffMid=1)
+| datetime | M15 | M30 | H1 | H4 | D1 | W1 | Scenario (HTF-MTF) | Trend / Tier |
+|----------|-----|-----|----|----|----|----|--------------------|------------|
+| 2026.04.01 17:00 | 512-5-0 | 512-1-0 | 513-1-0 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 17:15 | 512-1-3 | 512-1-0 | 513-1-0 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 18:45 | 511-1-1 | 411-1-3 | 411-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 20:30 | 512-1-3 | 512-1-0 | 511-1-0 | 512-1-3 | 522-2-4 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.01 21:15 | 513-1-2 | 512-1-3 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S1 | Up (div) / Tier 1 |
+| 2026.04.01 22:45 | 513-5-2 | 513-1-2 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S2 | Up (div) / Tier 1 |
+| 2026.04.01 23:00 | 513-3-0 | 513-1-0 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S2 | Up (div) / Tier 1 |
+| 2026.04.01 23:30 | 513-2-4 | 513-1-2 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S2 [divergence] | Up (div) / Tier 1 |
+| 2026.04.01 23:45 | 523-2-4 | 513-1-2 | 512-1-3 | 512-1-3 | 522-2-4 | 513-1-2 | F2-S2 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 01:00 | 522-2-4 | 513-1-2 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 01:30 | 522-4-0 | 411-1-0 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.02 01:45 | 523-4-2 | 411-1-0 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-S1 | Up (div) / Tier 1 |
+| 2026.04.02 02:00 | 523-2-2 | 411-1-3 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-S1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 02:15 | 523-3-0 | 411-1-3 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-S1 | Up (div) / Tier 1 |
+| 2026.04.02 02:45 | 511-1-1 | 411-1-3 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.02 03:45 | 512-1-3 | 411-1-0 | 512-1-3 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.02 04:15 | 512-3-1 | 411-1-0 | 512-1-0 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F | Up (div) / Tier 1 |
+| 2026.04.02 04:30 | 521-2-1 | 413-3-1 | 512-1-0 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F [divergence] | Up (div) / Tier 1 |
 
-##### Step 3: Cascade
-- direction: D1 compress HTF  LTF (BOTTOM)
-- depth: M5 (full SQZ) | leading TF: M5 (watch for REVUP/REVDN)
-- key transition: Symmetric SQZ — all LTF compressed equally, G0c-SQZLOCK
-
-##### Step 4: TIMELINE
-| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
-| 260401 17:00 | 260402 05:00 | S-C2 | Up / Tier 2 | H4 fly 512 | M30/M15/M5 SQZ 411 | img | Symmetric SQZ — all LTF compressed |
-
-##### Step 5: Conclusion + Prediction
-- **Scenario: S-C2** (HTF=S MTF=C2). No divergence.
-- **Next likely:** S-P2 if M5 REVUP; S-R1 if M30 411→521 (opposite H4). Watch: M5 BBW_stage.
+**Coverage:** 2026.04.01 17:00 → 2026.04.02 04:30 | Period: 2026.04.01 17:00 → 2026.04.02 05:00 | **INCOMPLETE**
 
 #### Image 4 Analysis — backtested_EA_phase_3a_to_3b.jpg
 ![backtested_EA_phase_3a_to_3b](./Backtest_data/extras/backtested_EA_phase_3a_to_3b.jpg)
 
 **Period:** 2026.04.02 05:00 → 2026.04.02 17:00 (chart x-axis: "02.04.2026", transition from symmetric to asymmetric SQZ)
 
-##### Step 1: State Read
-| From | To | TF group | TF | BBW_stage | diffMid | BBUpDn | Source |
-|------|-----|----------|----|-----------|---------|--------|--------|
-| 260402 05:00 | 260402 10:00 | HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
-| 260402 05:00 | 260402 10:00 | HTF | D1 | 513 | 1 | 2 | img |
-| 260402 05:00 | 260402 10:00 | HTF | H4 | 512 | 1 | 3 | img |
-| 260402 05:00 | 260402 10:00 | MTF | H1 | 512 | 1 | 0 | img |
-| 260402 05:00 | 260402 10:00 | MTF | M30 | 411 | 1 | 0 | img |
-| 260402 05:00 | 260402 10:00 | MTF | M15 | 411 | 1 | 0 | img |
-| 260402 05:00 | 260402 10:00 | LTF | M5 | 411→521 | 1→2 | 0→1 | img |
-| 260402 10:00 | 260402 17:00 | HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
-| 260402 10:00 | 260402 17:00 | HTF | D1 | 513 | 1 | 2 | img |
-| 260402 10:00 | 260402 17:00 | HTF | H4 | 512 | 1 | 3 | img |
-| 260402 10:00 | 260402 17:00 | MTF | H1 | 512 | 1 | 0 | img |
-| 260402 10:00 | 260402 17:00 | MTF | M30 | 411 | 1 | 0 | img |
-| 260402 10:00 | 260402 17:00 | MTF | M15 | 522 | 2 | 4 | img |
-| 260402 10:00 | 260402 17:00 | LTF | M5 | 521 | 2 | 1 | img |
+> **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
+> 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
+> 3=sideways, 5=deep-sideways. BBUpDn: 0=between, 1=upper, 2=lower,
+> 3=sideways. A new row is added only when M15 BBW_stage or diffMid changes.
+> All rows fall within the user-defined period.
 
-##### Step 2: Two-Axis Classification
-- **HTF scenario:** S — H4 fly 512, D1 shrink 513
-- **MTF scenario:** P2 — M5 breaks SQZ, M15 confirms, M30 still SQZ
-- **MTF direction vs H4:** OPPOSITE  R1 divergence (M5/M15 diffMid=2, H4 diffMid=1)
+| datetime | M15 | M30 | H1 | H4 | D1 | W1 | Scenario (HTF-MTF) | Trend / Tier |
+|----------|-----|-----|----|----|----|----|--------------------|------------|
+| 2026.04.02 05:00 | 521-2-1 | 422-2-1 | 512-3-2 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 06:30 | 522-2-4 | 521-2-0 | 512-3-1 | 512-1-3 | 523-2-0 | 513-1-2 | F2-R1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 08:15 | 523-2-2 | 522-2-4 | 521-2-1 | 512-1-0 | 523-2-0 | 513-1-2 | F2-S1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 09:00 | 412-2-4 | 521-2-1 | 521-2-1 | 512-1-0 | 523-2-0 | 513-1-2 | F2-C1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 09:15 | 521-2-0 | 521-2-1 | 521-2-1 | 512-1-0 | 523-2-0 | 513-1-2 | F2-R1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 10:00 | 522-2-4 | 521-2-0 | 521-2-1 | 512-1-0 | 523-2-0 | 513-1-2 | F2-R1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 11:15 | 523-2-2 | 522-2-4 | 521-2-0 | 512-1-0 | 523-2-0 | 513-1-2 | F2-S1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 13:45 | 523-3-0 | 523-2-2 | 521-2-1 | 513-1-2 | 523-2-0 | 513-1-2 | C4-S2 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 14:00 | 523-1-0 | 523-2-2 | 521-2-0 | 513-1-2 | 523-2-0 | 513-1-2 | C4-S2 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 14:45 | 523-5-2 | 523-2-0 | 521-2-0 | 513-1-2 | 523-2-0 | 513-1-2 | C4-S2 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 15:00 | 415-5-0 | 522-2-4 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-C1 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 15:15 | 521-4-1 | 522-2-4 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-R1 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 15:30 | 522-4-4 | 522-2-0 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-R1 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 15:45 | 522-2-0 | 522-2-0 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-R1 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 17:00 | 522-3-0 | 523-2-2 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-F [divergence] | Up (div) / Tier 2 |
 
-##### Step 3: Cascade
-- direction: D2 expand LTF  HTF (asymmetric — M5/M15 break, M30 still SQZ)
-- depth: M5 broke SQZ first | leading TF: M30 (watch for SQZ break)
-- key transition: Asymmetric break — M5/M15 out of SQZ but M30 remains compressed
-
-##### Step 4: TIMELINE
-| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
-| 260402 05:00 | 260402 10:00 | S-C2  S-P2 | Down / Tier 2→3 | H4 fly 512 | M5 411→521, M15 411→522, M30 SQZ 411 | img | M5 breaks SQZ first |
-| 260402 10:00 | 260402 17:00 | S-P2 | Down / Tier 3 | H4 fly 512 | M5 fly 521, M15 fly 522, M30 SQZ 411 | img | Asymmetric — M30 still SQZ |
-
-##### Step 5: Conclusion + Prediction
-- **Scenario: S-P2** (HTF=S MTF=P2).  DIVERGENCE: MTF down (diffMid=2) vs H4 up (diffMid=1).
-- **Next likely:** S-P3 if M30 411→521; S-C2 if M30 remains SQZ. Watch: M30 BBW_stage.
+**Coverage:** 2026.04.02 05:00 → 2026.04.02 17:00 | Period: 2026.04.02 05:00 → 2026.04.02 17:00 | **COMPLETE**
 
 #### Image 5 Analysis — backtested_EA_phase_3b_asymmetric.jpg
 ![backtested_EA_phase_3b_asymmetric](./Backtest_data/extras/backtested_EA_phase_3b_asymmetric.jpg)
 
 **Period:** 2026.04.02 10:00 → 2026.04.02 17:00 (chart x-axis: "02.04.2026", asymmetric SQZ — M5/M15 out, M30 still in)
 
-##### Step 1: State Read
-| From | To | TF group | TF | BBW_stage | diffMid | BBUpDn | Source |
-|------|-----|----------|----|-----------|---------|--------|--------|
-| 260402 10:00 | 260402 17:00 | HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
-| 260402 10:00 | 260402 17:00 | HTF | D1 | 513 | 1 | 2 | img |
-| 260402 10:00 | 260402 17:00 | HTF | H4 | 512 | 1 | 3 | img |
-| 260402 10:00 | 260402 17:00 | MTF | H1 | 512 | 1 | 0 | img |
-| 260402 10:00 | 260402 17:00 | MTF | M30 | 411 | 1 | 0 | img |
-| 260402 10:00 | 260402 17:00 | MTF | M15 | 522 | 2 | 4 | img |
-| 260402 10:00 | 260402 17:00 | LTF | M5 | 521 | 2 | 1 | img |
+> **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
+> 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
+> 3=sideways, 5=deep-sideways. BBUpDn: 0=between, 1=upper, 2=lower,
+> 3=sideways. A new row is added only when M15 BBW_stage or diffMid changes.
+> All rows fall within the user-defined period.
 
-##### Step 2: Two-Axis Classification
-- **HTF scenario:** S — H4 fly 512, D1 shrink 513
-- **MTF scenario:** P2 — M5 fly 521, M15 fly 522, M30 still SQZ 411
-- **MTF direction vs H4:** OPPOSITE  R1 divergence
+| datetime | M15 | M30 | H1 | H4 | D1 | W1 | Scenario (HTF-MTF) | Trend / Tier |
+|----------|-----|-----|----|----|----|----|--------------------|------------|
+| 2026.04.02 10:00 | 522-2-4 | 521-2-0 | 521-2-1 | 512-1-0 | 523-2-0 | 513-1-2 | F2-R1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 11:15 | 523-2-2 | 522-2-4 | 521-2-0 | 512-1-0 | 523-2-0 | 513-1-2 | F2-S1 [divergence] | Up (div) / Tier 1 |
+| 2026.04.02 13:45 | 523-3-0 | 523-2-2 | 521-2-1 | 513-1-2 | 523-2-0 | 513-1-2 | C4-S2 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 14:00 | 523-1-0 | 523-2-2 | 521-2-0 | 513-1-2 | 523-2-0 | 513-1-2 | C4-S2 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 14:45 | 523-5-2 | 523-2-0 | 521-2-0 | 513-1-2 | 523-2-0 | 513-1-2 | C4-S2 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 15:00 | 415-5-0 | 522-2-4 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-C1 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 15:15 | 521-4-1 | 522-2-4 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-R1 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 15:30 | 522-4-4 | 522-2-0 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-R1 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 15:45 | 522-2-0 | 522-2-0 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-R1 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 17:00 | 522-3-0 | 523-2-2 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-F [divergence] | Up (div) / Tier 2 |
 
-##### Step 3: Cascade
-- direction: D2 expand LTF  HTF (partial — M30 still compressed)
-- depth: M5/M15 broke SQZ | leading TF: M30 (watch for SQZ break)
-- key transition: Asymmetric D2 — M5/M15 expanded but M30 remains in SQZ
-
-##### Step 4: TIMELINE
-| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
-| 260402 10:00 | 260402 17:00 | S-P2 | Down / Tier 3 | H4 fly 512 | M5 fly 521, M15 fly 522, M30 SQZ 411 | img | Asymmetric D2 — M30 still SQZ |
-
-##### Step 5: Conclusion + Prediction
-- **Scenario: S-P2** (HTF=S MTF=P2).  DIVERGENCE: MTF down vs H4 up.
-- **Next likely:** S-P3 if M30 411→521; S-C2 if M30 remains SQZ. Watch: M30 BBW_stage.
+**Coverage:** 2026.04.02 10:00 → 2026.04.02 17:00 | Period: 2026.04.02 10:00 → 2026.04.02 17:00 | **COMPLETE**
 
 #### Image 6 Analysis — backtested_EA_phase_3b_out_recovery.jpg
 ![backtested_EA_phase_3b_out_recovery](./Backtest_data/extras/backtested_EA_phase_3b_out_recovery.jpg)
 
 **Period:** 2026.04.02 17:00 → 2026.04.03 03:00 (chart x-axis: "02.04.2026" / "03.04.2026", recovery from asymmetric SQZ)
 
-##### Step 1: State Read
-| From | To | TF group | TF | BBW_stage | diffMid | BBUpDn | Source |
-|------|-----|----------|----|-----------|---------|--------|--------|
-| 260402 17:00 | 260403 03:00 | HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
-| 260402 17:00 | 260403 03:00 | HTF | D1 | 513 | 1 | 2 | img |
-| 260402 17:00 | 260403 03:00 | HTF | H4 | 512 | 1 | 3 | img |
-| 260402 17:00 | 260403 03:00 | MTF | H1 | 521 | 2 | 1 | img |
-| 260402 17:00 | 260403 03:00 | MTF | M30 | 521 | 2 | 1 | img |
-| 260402 17:00 | 260403 03:00 | MTF | M15 | 522 | 2 | 4 | img |
-| 260402 17:00 | 260403 03:00 | LTF | M5 | 521 | 2 | 1 | img |
+> **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
+> 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
+> 3=sideways, 5=deep-sideways. BBUpDn: 0=between, 1=upper, 2=lower,
+> 3=sideways. A new row is added only when M15 BBW_stage or diffMid changes.
+> All rows fall within the user-defined period.
 
-##### Step 2: Two-Axis Classification
-- **HTF scenario:** S — H4 fly 512, D1 shrink 513
-- **MTF scenario:** P3 — M30 fly 521, M15 fly 522, full MTF re-alignment
-- **MTF direction vs H4:** OPPOSITE  R1 divergence (M30 diffMid=2, H4 diffMid=1)
+| datetime | M15 | M30 | H1 | H4 | D1 | W1 | Scenario (HTF-MTF) | Trend / Tier |
+|----------|-----|-----|----|----|----|----|--------------------|------------|
+| 2026.04.02 17:00 | 522-3-0 | 523-2-2 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-F [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 17:15 | 511-1-1 | 523-2-2 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-F [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 19:00 | 512-1-3 | 511-1-0 | 523-2-2 | 513-1-2 | 523-2-0 | 513-1-2 | C4-F [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 21:00 | 513-1-2 | 512-1-3 | 523-2-2 | 513-1-0 | 523-2-0 | 513-1-2 | C4-S1 [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 22:15 | 411-1-3 | 512-1-3 | 523-2-2 | 513-1-0 | 523-2-0 | 513-1-2 | C4-F [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 22:30 | 411-3-0 | 512-1-3 | 523-2-2 | 513-1-0 | 523-2-0 | 513-1-2 | C4-F [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 22:45 | 411-2-2 | 512-1-3 | 523-2-2 | 513-1-0 | 523-2-0 | 513-1-2 | C4-F [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 23:15 | 413-3-0 | 512-1-3 | 523-2-2 | 513-1-0 | 523-2-0 | 513-1-2 | C4-F [divergence] | Up (div) / Tier 2 |
+| 2026.04.02 23:45 | 413-5-0 | 512-1-3 | 523-2-2 | 513-1-0 | 523-2-0 | 513-1-2 | C4-F [divergence] | Up (div) / Tier 2 |
 
-##### Step 3: Cascade
-- direction: D2 expand LTF  HTF (complete — M30 confirms)
-- depth: TOP — D2 complete | leading TF: M30 (confirm fly)
-- key transition: M30 breaks SQZ 411→521 — full D2 expansion confirmed
-
-##### Step 4: TIMELINE
-| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
-| 260402 17:00 | 260403 03:00 | S-P3 | Down / Tier 3 | H4 fly 512 | M30 fly 521, M15 fly 522 | img | D2 complete — M30 confirms |
-
-##### Step 5: Conclusion + Prediction
-- **Scenario: S-P3** (HTF=S MTF=P3).  DIVERGENCE: MTF down vs H4 up.
-- **Next likely:** S-B2 if M30 fly 521 sustained; S-S if M30 re-enters shrink. Watch: M30 BBW_stage.
+**Coverage:** 2026.04.02 17:00 → 2026.04.02 23:45 | Period: 2026.04.02 17:00 → 2026.04.03 03:00 | **INCOMPLETE**
 
 #### Image 7 Analysis — backtested_EA_phase_6_post_sqz_oscillation.jpg
 ![backtested_EA_phase_6_post_sqz_oscillation](./Backtest_data/extras/backtested_EA_phase_6_post_sqz_oscillation.jpg)
 
 **Period:** 2026.04.03 03:00 → 2026.04.03 17:00 (chart x-axis: "03.04.2026", post-SQZ oscillation)
 
-##### Step 1: State Read
-| From | To | TF group | TF | BBW_stage | diffMid | BBUpDn | Source |
-|------|-----|----------|----|-----------|---------|--------|--------|
-| 260403 03:00 | 260403 17:00 | HTF | W1 | [TO BE FILLED] | [TO BE FILLED] | [TO BE FILLED] | img |
-| 260403 03:00 | 260403 17:00 | HTF | D1 | 513 | 1 | 2 | img |
-| 260403 03:00 | 260403 17:00 | HTF | H4 | 512 | 1 | 3 | img |
-| 260403 03:00 | 260403 17:00 | MTF | H1 | 521 | 2 | 1 | img |
-| 260403 03:00 | 260403 17:00 | MTF | M30 | 521 | 2 | 1 | img |
-| 260403 03:00 | 260403 17:00 | MTF | M15 | 522 | 2 | 4 | img |
-| 260403 03:00 | 260403 17:00 | LTF | M5 | 521 | 2 | 1 | img |
-
-##### Step 2: Two-Axis Classification
-- **HTF scenario:** S — H4 fly 512, D1 shrink 513
-- **MTF scenario:** P3 — M30 fly 521, M15 fly 522 (post-SQZ oscillation, MTF re-aligned)
-- **MTF direction vs H4:** OPPOSITE  R1 divergence
-
-##### Step 3: Cascade
-- direction: D2 complete — post-SQZ oscillation phase
-- depth: TOP — all MTF expanded | leading TF: H4 (watch for flip)
-- key transition: Post-SQZ — MTF fully re-expanded in down direction, waiting H4 response
-
-##### Step 4: TIMELINE
-| From | To | Scenario (HTF-MTF) | Trend / Tier | HTF state | MTF state | Source | Notes |
-|------|-----|--------------------|--------------|-----------|-----------|--------|-------|
-| 260403 03:00 | 260403 17:00 | S-P3 | Down / Tier 3 | H4 fly 512 | M30 fly 521, M15 fly 522 | img | Post-SQZ oscillation — D2 complete |
-
-##### Step 5: Conclusion + Prediction
-- **Scenario: S-P3** (HTF=S MTF=P3).  DIVERGENCE: MTF down vs H4 up.
-- **Next likely:** S-R2 if H4 flips to 521; S-S if M30 re-enters shrink. Watch: H4 BBW_stage for flip.
+  > **No log data available for this period.**
 
 ---
 
@@ -953,3 +881,17 @@ only R1/B2 are genuinely 2-axis.
 ![backtested_chart](./Backtest_data/extras/backtested_chart.jpg)
 
 **Illustrative:** General backtest overview chart. Multi-period view with trade markers and equity curve. Does not map to a single scenario — composite of multiple state transitions.
+
+## Scenario Coverage
+
+| Scenario | Sub-states | Present? | Image(s) | Missing sub-states |
+|----------|-----------|----------|----------|--------------------|
+| F (Fly) | F1, F2, F3 | Yes | F1, F2, F3 | — |
+| S (Shrink) | S1, S2, S3 | Yes | S1, S2, S3 | — |
+| C (Compress) | C1, C2, C3, C4 | Yes | C1, C2, C4 | C3 |
+| P (Pause) | P1, P2, P3 | No | — | P1, P2, P3 |
+| B (Breakout) | B1, B2, B3 | No | — | B1, B2, B3 |
+| R (Reversal) | R1, R2, R3 | Yes | R1 | R2, R3 |
+| V (Pivot) | V1, V2, V3, V4 | No | — | V1, V2, V3, V4 |
+
+**Gap summary:** Missing sub-states with no chart example: C3, P1, P2, P3, B1, B2, B3, R2, R3, V1, V2, V3, V4.
