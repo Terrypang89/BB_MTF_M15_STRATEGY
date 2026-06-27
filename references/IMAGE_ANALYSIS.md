@@ -70,7 +70,7 @@ only R1/B2 are genuinely 2-axis.
 #### Image 1 Analysis — backtested_EA_fly_scenario.jpg
 ![backtested_EA_fly_scenario](./Backtest_data/extras/backtested_EA_fly_scenario.jpg)
 
-**Period:** 2026.01.02 01:00 → 2026.01.03 04:00 (log-ground-truth: Jan 2-3 log shows M30=511 FLY matching chart; Feb 1-3 log shows M30=522 FLY DN — opposite state. Chart x-axis too small to read definitively; log is unambiguous.)
+**Period:** 2026.02.02 13:10 → 2026.02.10 08:10 
 
 > **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
 > 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
@@ -107,7 +107,7 @@ only R1/B2 are genuinely 2-axis.
 #### Image 2 Analysis — backtested_EA_predict_trend_1.jpg
 ![backtested_EA_predict_trend_1](./Backtest_data/extras/backtested_EA_predict_trend_1.jpg)
 
-**Period:** 2026.04.01 13:00 → 2026.04.01 17:00 (chart x-axis: "01.04.2026" labels, DD.MM.YYYY = Apr 1)
+**Period:** 2026.01.07 19:15 → 2026.01.09 19:15
 
 > **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
 > 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
@@ -129,7 +129,7 @@ only R1/B2 are genuinely 2-axis.
 #### Image 3 Analysis — LTH_drive_fly.jpg
 ![LTH_drive_fly](./Backtest_data/extras/LTH_drive_fly.jpg)
 
-**Period:** 2026.01.02 01:00 → 2026.01.03 04:00 (chart x-axis: "02.01.2026" / "03.01.2026", DD.MM.YYYY = Jan 2-3)
+**Period:** 2026.01.28 11:25 → 2026.01.29 04:20
 
 > **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
 > 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
@@ -170,7 +170,7 @@ only R1/B2 are genuinely 2-axis.
 #### Image 1 Analysis — backtested_EA_fly_2_fly_shrink.jpg
 ![backtested_EA_fly_2_fly_shrink](./Backtest_data/extras/backtested_EA_fly_2_fly_shrink.jpg)
 
-**Period:** 2026.03.30 13:00 → 2026.04.01 13:00 (chart x-axis: "30.03.2026" / "01.04.2026", log-confirmed)
+**Period:** 2026.01.09 22:25 → 2026.01.13 07:05
 
 > **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
 > 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
@@ -252,7 +252,7 @@ only R1/B2 are genuinely 2-axis.
 #### Image 2 Analysis — backtested_EA_fly_2_fly_shrink_zoomin.jpg
 ![backtested_EA_fly_2_fly_shrink_zoomin](./Backtest_data/extras/backtested_EA_fly_2_fly_shrink_zoomin.jpg)
 
-**Period:** 2026.03.30 14:30 → 2026.04.01 09:00 (chart x-axis: "30.03.2026" / "01.04.2026", log-confirmed)
+**Period:** 2026.01.12 02:55 → 2026.01.12 20:55
 
 > **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
 > 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
@@ -326,7 +326,7 @@ only R1/B2 are genuinely 2-axis.
 #### Image 3 Analysis — backtested_EA_b_to_e_to_g_progression.jpg
 ![backtested_EA_b_to_e_to_g_progression](./Backtest_data/extras/backtested_EA_b_to_e_to_g_progression.jpg)
 
-**Period:** 2026.03.30 13:00 → 2026.04.01 17:00 (chart x-axis: "30.03.2026" / "01.04.2026", extended view)
+**Period:** 2026.02.26 10:45 → 2026.03.11 11:45
 
 > **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
 > 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
@@ -417,14 +417,14 @@ only R1/B2 are genuinely 2-axis.
 #### Image 1 Analysis — backtested_EA_fly_2_shrink_2_fly.jpg
 ![backtested_EA_fly_2_shrink_2_fly](./Backtest_data/extras/backtested_EA_fly_2_shrink_2_fly.jpg)
 
-**Period:** 2026.04.03 03:00 → 2026.04.05 00:00 (chart x-axis: "03.04.2026" / "04.04.2026" / "05.04.2026")
+**Period:** 2026.01.16 15:55 → 2026.01.21 16:05
 
   > **No log data available for this period.**
 
 #### Image 2 Analysis — backtested_EA_fly_2_shrink_2_fly_zoomin.jpg
 ![backtested_EA_fly_2_shrink_2_fly_zoomin](./Backtest_data/extras/backtested_EA_fly_2_shrink_2_fly_zoomin.jpg)
 
-**Period:** 2026.04.04 15:00 → 2026.04.05 00:00 (chart x-axis: "04.04.2026" / "05.04.2026")
+**Period:** 2026.01.19 06:25 → 2026.01.20 21:55
 
   > **No log data available for this period.**
 
@@ -435,7 +435,7 @@ only R1/B2 are genuinely 2-axis.
 #### Image 1 Analysis — backtested_EA_trend_reversal.jpg
 ![backtested_EA_trend_reversal](./Backtest_data/extras/backtested_EA_trend_reversal.jpg)
 
-**Period:** 2026.04.01 14:30 → 2026.04.02 05:00 (chart x-axis: "01.04.2026" / "02.04.2026", log-confirmed)
+**Period:** 2026.02.12 02:05 → 2026.02.18 08:35
 
 > **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
 > 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
@@ -473,7 +473,7 @@ only R1/B2 are genuinely 2-axis.
 #### Image 2 Analysis — backtested_EA_test_phase_April_01.jpg
 ![backtested_EA_test_phase_April_01](./Backtest_data/extras/backtested_EA_test_phase_April_01.jpg)
 
-**Period:** 2026.04.01 14:30 → 2026.04.02 09:00 (chart x-axis: "01.04.2026" / "02.04.2026", extended view of reversal)
+**Period:** 2026.03.31 10:25 → 2026.04.07 06:00
 
 > **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
 > 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
@@ -518,7 +518,7 @@ only R1/B2 are genuinely 2-axis.
 #### Image 1 Analysis — backtested_EA_sideway_2_fly.jpg
 ![backtested_EA_sideway_2_fly](./Backtest_data/extras/backtested_EA_sideway_2_fly.jpg)
 
-**Period:** 2026.02.06 01:00 → 2026.02.07 21:00 (chart x-axis: "06.02.2026" / "07.02.2026", log-confirmed)
+**Period:** 2026.01.08 22:35 → 2026.01.12 07:15
 
 > **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
 > 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
@@ -559,7 +559,7 @@ only R1/B2 are genuinely 2-axis.
 #### Image 2 Analysis — backtested_EA_sideway_2_fly_zoomin.jpg
 ![backtested_EA_sideway_2_fly_zoomin](./Backtest_data/extras/backtested_EA_sideway_2_fly_zoomin.jpg)
 
-**Period:** 2026.02.06 13:00 → 2026.02.07 09:00 (chart x-axis: "06.02.2026" / "07.02.2026")
+**Period:** 2026.01.09 06:10 → 2026.01.12 01:10
 
 > **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
 > 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
@@ -587,7 +587,7 @@ only R1/B2 are genuinely 2-axis.
 #### Image 3 Analysis — backtest_EA_sideway_2_fly2_zoomin.jpg
 ![backtest_EA_sideway_2_fly2_zoomin](./Backtest_data/extras/backtest_EA_sideway_2_fly2_zoomin.jpg)
 
-**Period:** 2026.02.06 13:00 → 2026.02.07 09:00 (chart x-axis: "06.02.2026" / "07.02.2026")
+**Period:** 2026.04.07 06:50 → 2026.04.08 03:50
 
 > **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
 > 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
@@ -619,7 +619,7 @@ only R1/B2 are genuinely 2-axis.
 #### Image 1 Analysis — backtested_EA_fly_shrink_2_sideway2.jpg
 ![backtested_EA_fly_shrink_2_sideway2](./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway2.jpg)
 
-**Period:** 2026.04.02 05:00 → 2026.04.03 03:00 (chart x-axis: "02.04.2026" / "03.04.2026")
+**Period:** 2026.01.16 12:05 → 2026.01.20 12:35
 
 > **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
 > 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
@@ -662,7 +662,7 @@ only R1/B2 are genuinely 2-axis.
 #### Image 1 Analysis — backtested_EA_fly_shrink_2_sideway.jpg
 ![backtested_EA_fly_shrink_2_sideway](./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway.jpg)
 
-**Period:** 2026.04.01 13:00 → 2026.04.02 17:00 (chart x-axis: "01.04.2026" / "02.04.2026", log-confirmed)
+**Period:** 2026.01.09 01:20 → 2026.01.19 07:20
 
 > **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
 > 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
@@ -715,7 +715,7 @@ only R1/B2 are genuinely 2-axis.
 #### Image 2 Analysis — backtested_EA_fly_shrink_2_sideway_zoomin.jpg
 ![backtested_EA_fly_shrink_2_sideway_zoomin](./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway_zoomin.jpg)
 
-**Period:** 2026.04.02 09:00 → 2026.04.02 17:00 (chart x-axis: "02.04.2026")
+**Period:** 2026.01.13 09:10 → 2026.01.16 06:50
 
 > **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
 > 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
@@ -743,7 +743,7 @@ only R1/B2 are genuinely 2-axis.
 #### Image 3 Analysis — backtested_EA_phase_3a_symmetric.jpg
 ![backtested_EA_phase_3a_symmetric](./Backtest_data/extras/backtested_EA_phase_3a_symmetric.jpg)
 
-**Period:** 2026.04.01 17:00 → 2026.04.02 05:00 (chart x-axis: "01.04.2026" / "02.04.2026", symmetric SQZ phase)
+**Period:** 2026.01.09 11:05 → 2026.01.19 11:45
 
 > **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
 > 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
@@ -772,7 +772,7 @@ only R1/B2 are genuinely 2-axis.
 | 2026.04.02 04:15 | 512-3-1 | 411-1-0 | 512-1-0 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F | Up (div) / Tier 1 |
 | 2026.04.02 04:30 | 521-2-1 | 413-3-1 | 512-1-0 | 512-1-3 | 523-2-0 | 513-1-2 | F2-F [divergence] | Up (div) / Tier 1 |
 
-**Coverage:** 2026.04.01 17:00 → 2026.04.02 04:30 | Period: 2026.04.01 17:00 → 2026.04.02 05:00 | **COMPLETE**
+**Coverage:** 2026.02.23 18:45 → 2026.02.26 19:05
 
 #### Image 4 Analysis — backtested_EA_phase_3a_to_3b.jpg
 ![backtested_EA_phase_3a_to_3b](./Backtest_data/extras/backtested_EA_phase_3a_to_3b.jpg)
@@ -808,7 +808,7 @@ only R1/B2 are genuinely 2-axis.
 #### Image 5 Analysis — backtested_EA_phase_3b_asymmetric.jpg
 ![backtested_EA_phase_3b_asymmetric](./Backtest_data/extras/backtested_EA_phase_3b_asymmetric.jpg)
 
-**Period:** 2026.04.02 10:00 → 2026.04.02 17:00 (chart x-axis: "02.04.2026", asymmetric SQZ — M5/M15 out, M30 still in)
+**Period:** 2026.01.05 03:55 → 2026.01.12 16:55
 
 > **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
 > 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
@@ -829,7 +829,7 @@ only R1/B2 are genuinely 2-axis.
 | 2026.04.02 15:45 | 522-2-0 | 522-2-0 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-F [divergence] | Up (div) / Tier 2 |
 | 2026.04.02 17:00 | 522-3-0 | 523-2-2 | 522-2-4 | 513-1-2 | 523-2-0 | 513-1-2 | C4-B1 [divergence] | Up (div) / Tier 2 |
 
-**Coverage:** 2026.04.02 10:00 → 2026.04.02 17:00 | Period: 2026.04.02 10:00 → 2026.04.02 17:00 | **COMPLETE**
+**Coverage:** 2026.01.28 17:30 → 2026.02.10 02:30
 
 #### Image 6 Analysis — backtested_EA_phase_3b_out_recovery.jpg
 ![backtested_EA_phase_3b_out_recovery](./Backtest_data/extras/backtested_EA_phase_3b_out_recovery.jpg)
@@ -859,7 +859,7 @@ only R1/B2 are genuinely 2-axis.
 #### Image 7 Analysis — backtested_EA_phase_6_post_sqz_oscillation.jpg
 ![backtested_EA_phase_6_post_sqz_oscillation](./Backtest_data/extras/backtested_EA_phase_6_post_sqz_oscillation.jpg)
 
-**Period:** 2026.04.03 03:00 → 2026.04.03 17:00 (chart x-axis: "03.04.2026", post-SQZ oscillation)
+**Period:** 2026.03.02 18:05 → 2026.03.13 03:05
 
   > **No log data available for this period.**
 
