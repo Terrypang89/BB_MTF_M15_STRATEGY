@@ -12,40 +12,63 @@ from collections import defaultdict
 
 BASE = Path(__file__).resolve().parent.parent
 LOG_PATH = BASE / "references" / "Backtest_data" / "V31.04" / "20260620_clean.log"
+IMAGE_ANALYSIS_PATH = BASE / "references" / "IMAGE_ANALYSIS.md"
 
 TF_NAMES = ["M15", "M30", "H1", "H4", "D1", "W1"]
 
-# User-defined periods per image block (in order of appearance in IMAGE_ANALYSIS.md)
-PERIODS = [
-    # Scenario F
-    ("F_img1", "2026.01.02 01:00", "2026.01.03 04:00"),
-    ("F_img2", "2026.04.01 13:00", "2026.04.01 17:00"),
-    ("F_img3", "2026.01.02 01:00", "2026.01.03 04:00"),
-    # Scenario S
-    ("S_img1", "2026.03.30 13:00", "2026.04.01 13:00"),
-    ("S_img2", "2026.03.30 14:30", "2026.04.01 09:00"),
-    ("S_img3", "2026.03.30 13:00", "2026.04.01 17:00"),
-    # Scenario P
-    ("P_img1", "2026.04.03 03:00", "2026.04.05 00:00"),
-    ("P_img2", "2026.04.04 15:00", "2026.04.05 00:00"),
-    # Scenario R
-    ("R_img1", "2026.04.01 14:30", "2026.04.02 05:00"),
-    ("R_img2", "2026.04.01 14:30", "2026.04.02 09:00"),
-    # Scenario B
-    ("B_img1", "2026.02.06 01:00", "2026.02.07 21:00"),
-    ("B_img2", "2026.02.06 13:00", "2026.02.07 09:00"),
-    ("B_img3", "2026.02.06 13:00", "2026.02.07 09:00"),
-    # Scenario V
-    ("V_img1", "2026.04.02 05:00", "2026.04.03 03:00"),
-    # Scenario C
-    ("C_img1", "2026.04.01 13:00", "2026.04.02 17:00"),
-    ("C_img2", "2026.04.02 09:00", "2026.04.02 17:00"),
-    ("C_img3", "2026.04.01 17:00", "2026.04.02 05:00"),
-    ("C_img4", "2026.04.02 05:00", "2026.04.02 17:00"),
-    ("C_img5", "2026.04.02 10:00", "2026.04.02 17:00"),
-    ("C_img6", "2026.04.02 17:00", "2026.04.03 03:00"),
-    ("C_img7", "2026.04.03 03:00", "2026.04.03 17:00"),
-]
+# Mapping from script block names to (scenario_letter, image_number)
+# derived from the IMAGE_ANALYSIS.md structure.
+BLOCK_TO_SCENARIO = {
+    "F_img1": ("F", 1),
+    "S_img1": ("S", 1), "S_img2": ("S", 2), "S_img3": ("S", 3),
+    "P_img1": ("P", 1), "P_img2": ("P", 2),
+    "R_img1": ("R", 1), "R_img2": ("R", 2),
+    "B_img1": ("B", 1), "B_img2": ("B", 2), "B_img3": ("B", 3),
+    "V_img1": ("V", 1),
+    "C_img1": ("C", 1), "C_img2": ("C", 2), "C_img3": ("C", 3),
+    "C_img4": ("C", 4), "C_img5": ("C", 5), "C_img6": ("C", 6),
+    "C_img7": ("C", 7),
+}
+
+def parse_periods_from_file():
+    """Parse **Period:** lines from IMAGE_ANALYSIS.md.
+
+    Returns list of (block_name, start, end) tuples by matching
+    scenario headings (## Scenario X) + image analysis blocks
+    (#### Image N Analysis) + **Period:** lines.
+    This keeps periods in sync with the user's file automatically.
+    """
+    periods = []
+    current_scenario = None
+    scenario_img_count = 0
+
+    with open(IMAGE_ANALYSIS_PATH, 'r', encoding='utf-8') as f:
+        for line in f:
+            # Track current scenario heading
+            m_sc = re.match(r'^## Scenario ([A-Z])', line)
+            if m_sc:
+                current_scenario = m_sc.group(1)
+                scenario_img_count = 0
+                continue
+
+            # Track image analysis blocks within a scenario
+            m_img = re.match(r'^#### Image (\d+) Analysis', line)
+            if m_img and current_scenario:
+                scenario_img_count = int(m_img.group(1))
+                continue
+
+            # Parse Period line — extract "START → END"
+            m_per = re.search(r'\*\*Period:\*\*\s*(.+?)\s*→\s*(.+?)(?:\s*\(|\s*$)', line)
+            if m_per and current_scenario and scenario_img_count > 0:
+                block_name = f"{current_scenario}_img{scenario_img_count}"
+                start = m_per.group(1).strip()
+                end = m_per.group(2).strip()
+                periods.append((block_name, start, end))
+                continue
+
+    return periods
+
+PERIODS = parse_periods_from_file()
 
 def parse_log(log_path):
     """Parse log into dict: { tf: { datetime_str: {stage, diffMid, BBUpDn} } }"""
