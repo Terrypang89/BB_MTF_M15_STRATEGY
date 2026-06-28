@@ -192,7 +192,7 @@ M30->fly-down) at lower BBLoc.
 
 ---
 
-## Part 5 — Analysis Tables
+## Part 5 — Analysis Tables - 
 
 > **Cell = BBW-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
 > 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
@@ -204,7 +204,8 @@ M30->fly-down) at lower BBLoc.
 
 ---
 
-### Scenario F — Image 1
+### Image 1 Analysis — backtested_EA_fly_scenario.jpg
+![backtested_EA_fly_scenario](./Backtest_data/extras/backtested_EA_fly_scenario.jpg)
 
 **Period:** 2026.02.02 13:10 -> 2026.02.10 08:10
 
@@ -257,7 +258,8 @@ At 2026.02.02 13:15, MTF = S1C3
 
 ---
 
-### Scenario ? — Image 0
+### Image 2 Analysis — backtested_EA_predict_trend_1.jpg
+![backtested_EA_predict_trend_1](./Backtest_data/extras/backtested_EA_predict_trend_1.jpg)
 
 **Period:** 2026.01.07 19:15 -> 2026.01.09 19:15
 
@@ -309,7 +311,8 @@ At 2026.01.07 19:15, MTF = R3C3
 
 ---
 
-### Scenario ? — Image 0
+### Image 3 Analysis — LTH_drive_fly.jpg
+![LTH_drive_fly](./Backtest_data/extras/LTH_drive_fly.jpg)
 
 **Period:** 2026.01.28 11:25 -> 2026.01.29 04:20
 
@@ -350,7 +353,8 @@ At 2026.01.28 11:30, MTF = F3F3
 
 ---
 
-### Scenario S — Image 1
+### Image 4 Analysis — backtested_EA_fly_2_fly_shrink.jpg
+![backtested_EA_fly_2_fly_shrink](./Backtest_data/extras/backtested_EA_fly_2_fly_shrink.jpg)
 
 **Period:** 2026.01.09 22:25 -> 2026.01.13 07:05
 
@@ -417,7 +421,8 @@ At 2026.01.09 22:30, MTF = F3F3
 
 ---
 
-### Scenario S — Image 2
+### Image 5 Analysis — backtested_EA_fly_2_fly_shrink_zoomin.jpg
+![backtested_EA_fly_2_fly_shrink_zoomin](./Backtest_data/extras/backtested_EA_fly_2_fly_shrink_zoomin.jpg)
 
 **Period:** 2026.01.12 02:55 -> 2026.01.12 20:55
 
@@ -466,7 +471,8 @@ At 2026.01.12 03:00, MTF = F5F5
 
 ---
 
-### Scenario S — Image 3
+### Image 6 Analysis — backtested_EA_b_to_e_to_g_progression.jpg
+![backtested_EA_b_to_e_to_g_progression](./Backtest_data/extras/backtested_EA_b_to_e_to_g_progression.jpg)
 
 **Period:** 2026.02.26 10:45 -> 2026.03.11 11:45
 
@@ -517,7 +523,8 @@ At 2026.02.26 10:45, MTF = F3S1
 
 ---
 
-### Scenario P — Image 1
+### Image 7 Analysis — backtested_EA_fly_2_shrink_2_fly.jpg
+![backtested_EA_fly_2_shrink_2_fly](./Backtest_data/extras/backtested_EA_fly_2_shrink_2_fly.jpg)
 
 **Period:** 2026.01.16 15:55 -> 2026.01.21 16:05
 
@@ -574,7 +581,8 @@ At 2026.01.16 16:00, MTF = C2F3
 
 ---
 
-### Scenario P — Image 2
+### Image 8 Analysis — backtested_EA_fly_2_shrink_2_fly_zoomin.jpg
+![backtested_EA_fly_2_shrink_2_fly_zoomin](./Backtest_data/extras/backtested_EA_fly_2_shrink_2_fly_zoomin.jpg)
 
 **Period:** 2026.01.19 06:25 -> 2026.01.20 21:55
 
@@ -628,7 +636,8 @@ At 2026.01.19 06:30, MTF = F5F3
 
 ---
 
-### Scenario R — Image 1
+### Image 9 Analysis — backtested_EA_trend_reversal.jpg
+![backtested_EA_trend_reversal](./Backtest_data/extras/backtested_EA_trend_reversal.jpg)
 
 **Period:** 2026.02.12 02:05 -> 2026.02.18 08:35
 
@@ -680,7 +689,8 @@ At 2026.02.12 02:15, MTF = F3C2
 
 ---
 
-### Scenario R — Image 2
+### Image 10 Analysis — backtested_EA_test_phase_April_01.jpg
+![backtested_EA_test_phase_April_01](./Backtest_data/extras/backtested_EA_test_phase_April_01.jpg)
 
 **Period:** 2026.03.31 10:25 -> 2026.04.07 06:00
 
@@ -735,7 +745,8 @@ At 2026.03.31 10:30, MTF = F3S1
 
 ---
 
-### Scenario B — Image 1
+### Image 11 Analysis — backtested_EA_sideway_2_fly.jpg
+![backtested_EA_sideway_2_fly](./Backtest_data/extras/backtested_EA_sideway_2_fly.jpg)
 
 **Period:** 2026.01.08 22:35 -> 2026.01.12 07:15
 
@@ -800,7 +811,8 @@ At 2026.01.08 22:45, MTF = S1F3
 
 ---
 
-### Scenario B — Image 2
+### Image 12 Analysis — backtested_EA_sideway_2_fly_zoomin.jpg
+![backtested_EA_sideway_2_fly_zoomin](./Backtest_data/extras/backtested_EA_sideway_2_fly_zoomin.jpg)
 
 **Period:** 2026.01.09 06:10 -> 2026.01.12 01:10
 
@@ -854,7 +866,8 @@ At 2026.01.09 06:15, MTF = F3F3
 
 ---
 
-### Scenario B — Image 3
+### Image 13 Analysis — backtest_EA_sideway_2_fly2_zoomin.jpg
+![backtest_EA_sideway_2_fly2_zoomin](./Backtest_data/extras/backtest_EA_sideway_2_fly2_zoomin.jpg)
 
 **Period:** 2026.04.07 06:50 -> 2026.04.08 03:50
 
@@ -911,7 +924,8 @@ At 2026.04.07 07:00, MTF = F3R2
 
 ---
 
-### Scenario V — Image 1
+### Image 14 Analysis — backtested_EA_fly_shrink_2_sideway2.jpg
+![backtested_EA_fly_shrink_2_sideway2](./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway2.jpg)
 
 **Period:** 2026.01.16 12:05 -> 2026.01.20 12:35
 
@@ -971,7 +985,8 @@ At 2026.01.16 12:15, MTF = S1C1
 
 ---
 
-### Scenario C — Image 1
+### Image 15 Analysis — backtested_EA_fly_shrink_2_sideway.jpg
+![backtested_EA_fly_shrink_2_sideway](./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway.jpg)
 
 **Period:** 2026.01.09 01:20 -> 2026.01.19 07:20
 
@@ -1022,7 +1037,8 @@ At 2026.01.09 01:30, MTF = F5F3
 
 ---
 
-### Scenario C — Image 2
+### Image 16 Analysis — backtested_EA_fly_shrink_2_sideway_zoomin.jpg
+![backtested_EA_fly_shrink_2_sideway_zoomin](./Backtest_data/extras/backtested_EA_fly_shrink_2_sideway_zoomin.jpg)
 
 **Period:** 2026.01.13 09:10 -> 2026.01.16 06:50
 
@@ -1073,7 +1089,8 @@ At 2026.01.13 09:15, MTF = C5S3
 
 ---
 
-### Scenario C — Image 3
+### Image 17 Analysis — backtested_EA_phase_3a_symmetric.jpg
+![backtested_EA_phase_3a_symmetric](./Backtest_data/extras/backtested_EA_phase_3a_symmetric.jpg)
 
 **Period:** 2026.01.09 11:05 -> 2026.01.19 11:45
 
@@ -1123,9 +1140,10 @@ At 2026.01.09 11:15, MTF = F3C1
 
 ---
 
-### Scenario C — Image 4
+### Image 18 Analysis — backtested_EA_phase_3a_to_3b.jpg
+![backtested_EA_phase_3a_to_3b](./Backtest_data/extras/backtested_EA_phase_3a_to_3b.jpg)
 
-**Period:** 2026.04.02 05:00 -> 2026.04.02 17:00
+**Period:** 2026.02.23 10:45:00 → 2026.02.26 19:05
 
 | datetime | M15 | M30 | H1 | H4 | D1 | Scenario HTF (+BBLoc) | Scenario MTF (+BBLoc) | Trend/Tier |
 |----------|-----|-----|----|----|----|----------------------|----------------------|------------|
@@ -1157,7 +1175,8 @@ At 2026.04.02 05:00, MTF = F1C5
 
 ---
 
-### Scenario C — Image 5
+### Image 19 Analysis — backtested_EA_phase_3b_asymmetric.jpg
+![backtested_EA_phase_3b_asymmetric](./Backtest_data/extras/backtested_EA_phase_3b_asymmetric.jpg)
 
 **Period:** 2026.01.05 03:55 -> 2026.01.12 16:55
 
@@ -1207,7 +1226,8 @@ At 2026.01.05 04:00, MTF = F5F5
 
 ---
 
-### Scenario C — Image 6
+### Image 20 Analysis — backtested_EA_phase_3b_out_recovery.jpg
+![backtested_EA_phase_3b_out_recovery](./Backtest_data/extras/backtested_EA_phase_3b_out_recovery.jpg)
 
 **Period:** 2026.04.02 17:00 -> 2026.04.03 03:00
 
@@ -1235,7 +1255,8 @@ At 2026.04.02 17:00, MTF = R2S1
 
 ---
 
-### Scenario C — Image 7
+### Image 21 Analysis — backtested_EA_phase_6_post_sqz_oscillation.jpg
+![backtested_EA_phase_6_post_sqz_oscillation](./Backtest_data/extras/backtested_EA_phase_6_post_sqz_oscillation.jpg)
 
 **Period:** 2026.03.02 18:05 -> 2026.03.13 03:05
 

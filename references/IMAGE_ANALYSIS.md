@@ -1977,7 +1977,7 @@ only R1/B2 are genuinely 2-axis.
 #### Image 4 Analysis — backtested_EA_phase_3a_to_3b.jpg
 ![backtested_EA_phase_3a_to_3b](./Backtest_data/extras/backtested_EA_phase_3a_to_3b.jpg)
 
-**Period:** 2026.04.02 05:00 → 2026.04.02 17:00 (chart x-axis: "02.04.2026", transition from symmetric to asymmetric SQZ)
+**Period:** 2026.02.23 10:45:00 → 2026.02.26 19:05
 
 > **Cell = BBW_stage-diffMid-BBUpDn** (e.g. 511-1-1). BBW: 511/512=up-fly,
 > 521/522=down-fly, 513/523=shrink, 4xx=SQZ. diffMid: 1=up, 2=down,
