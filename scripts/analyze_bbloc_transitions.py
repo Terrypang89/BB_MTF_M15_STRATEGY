@@ -350,8 +350,8 @@ def step3_analyze(kept, transitions, persistence):
 
     print(f"\n  D. Honest Verdict:")
     if beats_majority and beats_random:
-        print(f"     BBLoc slope DOES beat baselines on transitions ({transition_accuracy:.1f}% vs {always_majority_accuracy:.1f}% majority, {random_accuracy:.1f}% random)")
-        verdict = "BEATS_BASELINE"
+        print(f"     BBLoc slope beats baselines on transitions ({transition_accuracy:.1f}% vs {always_majority_accuracy:.1f}% majority, {random_accuracy:.1f}% random) — modest margin")
+        verdict = "MODEST_SIGNAL"
     elif beats_random and not beats_majority:
         print(f"     BBLoc slope beats random ({transition_accuracy:.1f}% vs {random_accuracy:.1f}%) but NOT majority baseline ({always_majority_accuracy:.1f}%)")
         verdict = "MARGINAL"
@@ -464,14 +464,24 @@ def step4_write_report(total_rows, kept_rows, dropped_rows,
 
 ## 6. Honest Verdict
 
-**Verdict: {analysis['verdict']}**
-
 """
 
-    if analysis['verdict'] == "BEATS_BASELINE":
-        report += f"""The BBLoc slope predictor achieves **{analysis['transition_accuracy']:.1f}% accuracy on transitions** — meaningfully better than the majority baseline ({analysis['always_majority_accuracy']:.1f}%) and random ({analysis['random_accuracy']:.1f}%).
+    if analysis['verdict'] in ("BEATS_BASELINE", "MODEST_SIGNAL"):
+        margin = analysis['transition_accuracy'] - analysis['always_majority_accuracy']
+        extra_correct = int(round(margin / 100 * analysis['transitions']))
+        report += f"""**Verdict: MODEST SIGNAL — BEATS BASELINE BUT WEAKLY**
 
-This suggests BBLoc trajectory DOES carry predictive signal for MTF scenario transitions. Part 4 (prediction layer) could be designed around this signal, particularly for transition types with high % consistency.
+The BBLoc slope predictor achieves **{analysis['transition_accuracy']:.1f}% accuracy on transitions** — better than the majority baseline ({analysis['always_majority_accuracy']:.1f}%) and random ({analysis['random_accuracy']:.1f}%), but the margin is only **{margin:.1f} percentage points** over majority.
+
+Key context:
+- **{analysis['slope_dist']['flat']/analysis['total_pairs']*100:.1f}% of BBLoc slopes are flat** (within 0.3), meaning the predictor defaults to "neutral/persist" most of the time — which is wrong on transition rows by definition. This structural limitation caps accuracy.
+- The {margin:.1f}% margin ({extra_correct} more correct predictions out of {analysis['transitions']} transitions) is real but modest.
+- Some transition types show high consistency (e.g., CF->CR, FC->SC, SC->CC, RC->SC) but these are low-frequency types (n < 15).
+- The most common transitions (FF->FS, RR->RS, FS->FC) show low-to-moderate consistency, suggesting BBLoc slope is not predictive for the dominant transition patterns.
+
+**What this means**: BBLoc trajectory carries some signal for MTF transitions, but it's not strong enough to be a standalone predictor. It may be useful as one factor among many (e.g., combined with HTF context, BBUpDn state, or price location). Part 4 could use BBLoc slope as a directional bias, but should not rely on it as the sole predictor.
+
+**For high-consistency transition types**, BBLoc slope is a more reliable signal — these could be candidates for targeted prediction rules.
 """
     elif analysis['verdict'] == "MARGINAL":
         report += f"""The BBLoc slope predictor achieves **{analysis['transition_accuracy']:.1f}% accuracy on transitions** — better than random ({analysis['random_accuracy']:.1f}%) but not meaningfully better than always predicting the majority direction ({analysis['always_majority_accuracy']:.1f}%).

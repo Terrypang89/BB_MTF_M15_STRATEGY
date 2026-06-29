@@ -172,10 +172,10 @@ The BBLoc slope predictor achieves **40.9% accuracy on transitions** — better 
 
 Key context:
 - **68.9% of BBLoc slopes are flat** (within 0.3), meaning the predictor defaults to "neutral/persist" most of the time — which is wrong on transition rows by definition. This structural limitation caps accuracy.
-- The 5.5% margin (289 vs 250 correct out of 706 transitions = 39 more correct) is real but modest.
-- Some transition types show high consistency (CF->CR: 83.3%, SC->CC: 81.8%, FC->SC: 78.6%, RC->SC: 90.0%) but these are low-frequency types (n < 15).
-- The most common transitions (FF->FS: 58, RR->RS: 57, FS->FC: 39) show low-to-moderate consistency (5.1%-32.8%), suggesting BBLoc slope is not predictive for the dominant transition patterns.
+- The 5.5% margin (39 more correct predictions out of 706 transitions) is real but modest.
+- Some transition types show high consistency (e.g., CF->CR, FC->SC, SC->CC, RC->SC) but these are low-frequency types (n < 15).
+- The most common transitions (FF->FS, RR->RS, FS->FC) show low-to-moderate consistency, suggesting BBLoc slope is not predictive for the dominant transition patterns.
 
 **What this means**: BBLoc trajectory carries some signal for MTF transitions, but it's not strong enough to be a standalone predictor. It may be useful as one factor among many (e.g., combined with HTF context, BBUpDn state, or price location). Part 4 could use BBLoc slope as a directional bias, but should not rely on it as the sole predictor.
 
-**For high-consistency transition types** (CF->CR, FC->SC, SC->CC, RC->SC), BBLoc slope is a more reliable signal — these could be candidates for targeted prediction rules.
+**For high-consistency transition types**, BBLoc slope is a more reliable signal — these could be candidates for targeted prediction rules.
