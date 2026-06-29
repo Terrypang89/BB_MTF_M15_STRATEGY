@@ -1,0 +1,40 @@
+{
+    "run_id": "20260629_3",
+    "run_id_num": 0,
+    "run_mq5_version": "V31.04",
+    "timestamp": "2026-06-29T20:48:35.625365",
+    "parameters": {
+        "expert": "Tofu_EA_Simple_V6.ex5",
+        "symbol": "XAUUSD",
+        "period": "M5",
+        "optimization": "0",
+        "model": "0",
+        "fromdate": "2026.01.01",
+        "todate": "2026.04.30",
+        "forwardmode": "0",
+        "deposit": "10000",
+        "currency": "USD",
+        "profitinpips": "0",
+        "leverage": "1:100",
+        "executionmode": "263",
+        "optimizationcriterion": "0",
+        "visual": "0",
+        "shutdownterminal": "1",
+        "replacereport": "1",
+        "report": "Tester_report.html",
+        "ORDERS_COMMENT": "V31.04"
+    },
+    "artifacts": {
+        "archieve_folder": "logs\\20260629_3",
+        "report_variants": [
+            "report_tables_clean.json"
+        ],
+        "log_file": "20260629_clean.log"
+    },
+    "vector_db": {
+        "code_embedding_id": "code_20260629_3",
+        "header_embedding_id": "header_20260629_3",
+        "log_embedding_id": "log_20260629_3",
+        "report_embedding_id": "report_20260629_3"
+    }
+}
