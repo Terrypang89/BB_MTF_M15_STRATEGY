@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "36.02"
+#property version   "36.03"
 //+------------------------------------------------------------------+
 //| TofyTrade6 — DualTF Stack logic                                   |
 //| Part 3 (IDENTIFY) + REAL BBLoc + LOGGING.                         |
@@ -161,6 +161,10 @@ DualTFScenarioState IdentifyDualTF(BB_MTF_Data_struct &bb[], double &close_price
 
    //--- Real BBLoc — MTF (use H1 bands, snap to sparse scale)
    s.mtf_bbloc = ComputeMTFBBLoc(price, bb[3].BBLowLV[LA], bb[3].BBUppLV[LA]);
+
+   //--- No-data gate: BBLoc must agree with state — band-source TF is "X" → bbloc=-1
+   if(s.htf_d1_state == "X") s.htf_bbloc = -1;   // D1 bands drive htf_bbloc
+   if(s.mtf_h1_state == "X") s.mtf_bbloc = -1;   // H1 bands drive mtf_bbloc
 
    //--- Info string
    s.info = "HTF="+s.htf_scenario+"(D1="+s.htf_d1_state+",H4="+s.htf_h4_state+") " +
