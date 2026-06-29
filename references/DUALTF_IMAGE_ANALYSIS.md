@@ -1296,6 +1296,118 @@ This is a self-backtest. The improvement tells us duration is a strong
 signal in THIS data. Whether it generalizes to OOS data requires external
 validation.
 
+### Prediction Accuracy Breakdown (persistence vs transition)
+
+> **Methodology note:** The accuracy numbers below are computed by comparing
+> the predicted next MTF scenario code (from the "Predicted next MTF scenario"
+> column, or the current code when the duration rule applies) against the
+> actual next row's MTF scenario code. This is the correct metric for
+> next-scenario prediction — the model predicts what comes next, and we
+> measure whether it got it right. The Part 5.5 self-backtest used a
+> different comparison (predicted vs current row), which measures something
+> else entirely (did the model predict persistence?) and does not reflect
+> next-scenario accuracy.
+
+**Definitions:** For each verifiable row (has a prediction and a next row to
+compare against):
+
+- **Persistence row** = the actual next scenario equals the current scenario
+  (the state did not change).
+- **Transition row** = the actual next scenario differs from the current
+  scenario (the state changed — breakout, reversal, compression).
+- **Correct** = predicted scenario code equals the actual next scenario code.
+- **Direction-correct** = predicted scenario and actual next scenario share
+  the same first letter (right scenario family: F/S/C/R, even if BBLoc differs).
+
+**Data composition:**
+
+| Category | Count | Share |
+|----------|-------|-------|
+| Total verifiable rows | 640 | 100% |
+| Persistence rows | 220 | 34.4% |
+| Transition rows | 420 | 65.6% |
+
+The data is **transition-dominated** — 65.6% of rows involve a scenario
+change. This is because the MTF scenario code includes BBLoc digits
+(88 unique codes across the dataset), making exact persistence less common
+than transition.
+
+**Three accuracy numbers (with M15+Duration rule applied):**
+
+| Metric | Correct | Total | Rate |
+|--------|---------|-------|------|
+| **A. Overall accuracy** | 99 | 640 | **15.5%** |
+| **B. Persistence accuracy** | 94 | 220 | **42.7%** |
+| **C. Transition accuracy** | 5 | 420 | **1.2%** |
+| Transition direction-accuracy | 214 | 420 | **51.0%** |
+
+For reference, the baseline model (no duration rule) scores:
+6.6% overall, 16.4% persistence, 1.4% transition.
+
+**Always-persist baseline:**
+
+A trivial strategy that always predicts "next = current" (predict persist
+every time) would score:
+
+| Metric | Correct | Total | Rate |
+|--------|---------|-------|------|
+| Always-persist accuracy | 220 | 640 | **34.4%** |
+
+The model with the duration rule (15.5%) scores **18.9 percentage points
+below** the always-persist baseline (34.4%). The duration rule helps on
+persist rows with duration >= 3 (62 rows) but hurts on transition rows
+with duration >= 3 (46 rows) — it predicts persist when a transition
+occurs. Because transitions dominate the data (65.6%), the net effect is
+negative.
+
+**Baseline comparison (without vs with duration):**
+
+| Model | Overall | Persistence | Transition |
+|-------|---------|-------------|------------|
+| Baseline (no duration) | 6.6% | 16.4% | 1.4% |
+| With duration rule | 15.5% | 42.7% | 1.2% |
+| Always-persist | 34.4% | 100.0% | 0.0% |
+
+The duration rule improves overall accuracy by +8.9 pp (from 6.6% to
+15.5%) — but this improvement comes entirely from persistence rows
+(+26.3 pp). Transition accuracy actually worsens (1.4% to 1.2%).
+
+**Part 5.5 discrepancy:** The Part 5.5 self-backtest reports 67.9%
+accuracy with the duration rule (449/661). This figure cannot be
+reproduced from the data. Investigation reveals:
+
+1. The Log verification column's "Actual" value is the current row's
+   scenario code, not the next row's. The MATCH check compares predicted
+   vs current (did the model predict persistence?), not predicted vs next
+   (did the model predict the correct next scenario?). These are different
+   metrics.
+2. Part 5.5 claims 391 MISMATCH persist rows (next=current, baseline
+   wrong) — the actual count is 184. This error propagates through the
+   improvement calculation, inflating the reported accuracy.
+3. With correct counts, the duration rule improves baseline accuracy
+   by only +8.9 pp (57 rows), not +42.0 pp (278 rows) as Part 5.5
+   reports.
+
+**Honest conclusion:** The model predicts persistence moderately well
+(42.7%) but transitions essentially at random (1.2% exact, 51.0%
+direction). The 15.5% overall accuracy is dominated by the 65.6% of
+rows that are transitions — on which the model performs near-chance. The
+always-persist baseline (34.4%) beats the model, confirming that the
+duration rule's damage on transition rows outweighs its benefit on
+persist rows. The Part 5.5 figure of 67.9% is not reproducible and
+appears to stem from a data-counting error (391 vs 184 persist rows)
+and a metric that compares predicted vs current rather than predicted
+vs next.
+
+> **NOTE:** The EA design (DUALTF_ARCHITECTURE.md) must be benchmarked
+> on **transition accuracy (1.2%)**, NOT overall accuracy (15.5%),
+> since overall is dominated by trivial persistence and the model
+> performs worse than the always-persist baseline. The trading-relevant
+> skill — predicting transitions (breakouts/reversals) — is 1.2%
+> exact-match, 51.0% direction-correct. Until the EA can predict
+> transitions meaningfully better than chance, its design remains
+> unvalidated.
+
 ---
 
 ## Part 6 — Cross-Reference with IMAGE_ANALYSIS.md
