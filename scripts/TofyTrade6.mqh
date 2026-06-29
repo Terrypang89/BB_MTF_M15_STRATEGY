@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "36.01"
+#property version   "36.02"
 //+------------------------------------------------------------------+
 //| TofyTrade6 — DualTF Stack logic                                   |
 //| Part 3 (IDENTIFY) + REAL BBLoc + LOGGING.                         |
@@ -27,7 +27,7 @@ void SigEvt6(string evt, string kvs)
 //═══════════════════════════════════════════════════════════════════
 // ENUM — 4-state per TF
 //═══════════════════════════════════════════════════════════════════
-enum DUAL_STATE { DS_F=0, DS_S=1, DS_C=2, DS_R=3 };   // Fly-up, Shrink, Compress, Fly-down
+enum DUAL_STATE { DS_F=0, DS_S=1, DS_C=2, DS_R=3, DS_X=4 }; // Fly-up, Shrink, Compress, Fly-down, No-data
 
 string DualStateName(DUAL_STATE d) {
    switch(d){
@@ -35,6 +35,7 @@ string DualStateName(DUAL_STATE d) {
       case DS_S: return "S";
       case DS_C: return "C";
       case DS_R: return "R";
+      case DS_X: return "X";
       default:   return "?";
    }
 }
@@ -61,6 +62,7 @@ struct DualTFScenarioState {
 // 511/512 -> F, 521/522 -> R, 513/523 -> S, 400-499 -> C
 DUAL_STATE BBStageToDualState(int stage)
 {
+   if(stage==0)                return DS_X;   // no data — flag explicitly, don't fake
    if(stage==511 || stage==512) return DS_F;
    if(stage==521 || stage==522) return DS_R;
    if(stage==513 || stage==523) return DS_S;
@@ -80,7 +82,7 @@ DUAL_STATE BBStageToDualState(int stage)
 double ComputeBBLocRaw(double price, double bblow, double bbupp)
 {
    double width = bbupp - bblow;
-   if(width <= 0.0) return 5.0;   // degenerate: bands collapsed -> mid
+   if(width <= 0.0) return -1.0;  // degenerate/missing bands -> no-data sentinel
    double ratio = (price - bblow) / width;
    double raw   = ratio * 10.0;
    if(raw < 0.0)  raw = 0.0;      // below lower band -> 0
@@ -111,6 +113,7 @@ int SnapToMTFScale(double raw)
 int ComputeMTFBBLoc(double price, double bblow, double bbupp)
 {
    double raw = ComputeBBLocRaw(price, bblow, bbupp);
+   if(raw < 0.0) return -1;   // no-data sentinel — don't snap
    return SnapToMTFScale(raw);
 }
 
@@ -230,7 +233,7 @@ void DrawGateLabel(string tag, double price, BB_MTF_Data_struct &BB_datas[],
 }
 
 //═══════════════════════════════════════════════════════════════════
-// TRADE STRATEGY — V36.01: identify + BBLoc + log + draw only
+// TRADE STRATEGY — V36.02: identify + BBLoc + log + draw only
 // NO trades — prediction unvalidated (1.2%), Part 5 deferred.
 // Signature matches TofyTrade5 exactly so the EA call site works unchanged.
 //═══════════════════════════════════════════════════════════════════
@@ -263,15 +266,21 @@ void Trade_Strategy(
    //--- Log the per-bar DualTF data (produces the redesign dataset)
    LogDualTFBar(BB_datas, s);
 
-   //--- Draw chart label: scenario + BBLoc visible on backtest chart
-   string tag = "HTF:"+s.htf_scenario+"["+IntegerToString(s.htf_bbloc)+
-                "] MTF:"+s.mtf_scenario+"["+IntegerToString(s.mtf_bbloc)+"]";
-   DrawGateLabel(tag, close_prices[LA], BB_datas, clrWhite, 1);
+   //--- Draw chart label only on scenario CHANGE (readable chart)
+   static string s_prevScenario = "";
+   string curKey = s.htf_scenario + IntegerToString(s.htf_bbloc) +
+                  s.mtf_scenario + IntegerToString(s.mtf_bbloc);
+   if(curKey != s_prevScenario) {
+      s_prevScenario = curKey;
+      string tag = "HTF:"+s.htf_scenario+"["+IntegerToString(s.htf_bbloc)+
+                   "] MTF:"+s.mtf_scenario+"["+IntegerToString(s.mtf_bbloc)+"]";
+      DrawGateLabel(tag, close_prices[LA], BB_datas, clrWhite, 1);
+   }
 
    //--- Set Trade_info to the scenario summary
    Trade_info = s.info;
 
-   // V36.01: identify + BBLoc + log + draw only. NO trades — prediction
+   // V36.02: identify + BBLoc + log + draw only. NO trades — prediction
    // unvalidated (1.2%), Part 5 deferred.
 }
 
