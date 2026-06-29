@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "1.00"
+#property version   "36.01"
 //+------------------------------------------------------------------+
 //| TofyTrade6 — DualTF Stack logic                                   |
 //| Part 3 (IDENTIFY) + REAL BBLoc + LOGGING.                         |
@@ -217,6 +217,65 @@ void LogDualTFBar(BB_MTF_Data_struct &bb[], DualTFScenarioState &s)
 }
 
 //═══════════════════════════════════════════════════════════════════
+// DRAW LABEL — ported from TofyTrade5
+// DEPENDENCY: DRAW_LABEL macro provided by EA includes (TofyIncludeSimple.mqh)
+//═══════════════════════════════════════════════════════════════════
+void DrawGateLabel(string tag, double price, BB_MTF_Data_struct &BB_datas[],
+                   color labelColor, int tf_idx=1)
+{
+   datetime curtime = iTime(_Symbol, PERIOD_M5, 0);
+   DRAW_LABEL(tag, curtime, price, labelColor,
+              BB_datas[tf_idx].BBFontSize, BB_datas[tf_idx].BBArrowWidth,
+              90, ANCHOR_UPPER, BB_datas[tf_idx]);
+}
+
+//═══════════════════════════════════════════════════════════════════
+// TRADE STRATEGY — V36.01: identify + BBLoc + log + draw only
+// NO trades — prediction unvalidated (1.2%), Part 5 deferred.
+// Signature matches TofyTrade5 exactly so the EA call site works unchanged.
+//═══════════════════════════════════════════════════════════════════
+void Trade_Strategy(
+   BB_MTF_Data_struct      &BB_datas[],
+   ATRSLBUF_struct         &ATRSL1BUF,
+   BB_MTF_Impact_struct    &BBTFImpact,
+   ENUM_Trade_Act          &Trade_act,   // OUT: 0=hold 1=exit_sell+buy 2=exit_buy+sell 7=exit_all
+   string                  &Trade_info,
+   double                  &Trade_lots,
+   double                  &Trade_sl,
+   int                      BUYS,
+   int                      SELLS,
+   double                  &close_prices[],
+   double                   baseLot = 0.01
+)
+{
+   //--- Defaults: HOLD, no stop, base lot
+   Trade_act=0; Trade_info=""; Trade_lots=baseLot; Trade_sl=0.0;
+
+   //--- Once-per-bar guard
+   static datetime s_lastBar=0;
+   datetime cur = iTime(_Symbol, PERIOD_M5, 0);
+   if(cur==s_lastBar) { Trade_info=""; return; }
+   s_lastBar=cur;
+
+   //--- Layer 1: Identify DualTF scenario + compute real BBLoc
+   DualTFScenarioState s = IdentifyDualTF(BB_datas, close_prices);
+
+   //--- Log the per-bar DualTF data (produces the redesign dataset)
+   LogDualTFBar(BB_datas, s);
+
+   //--- Draw chart label: scenario + BBLoc visible on backtest chart
+   string tag = "HTF:"+s.htf_scenario+"["+IntegerToString(s.htf_bbloc)+
+                "] MTF:"+s.mtf_scenario+"["+IntegerToString(s.mtf_bbloc)+"]";
+   DrawGateLabel(tag, close_prices[LA], BB_datas, clrWhite, 1);
+
+   //--- Set Trade_info to the scenario summary
+   Trade_info = s.info;
+
+   // V36.01: identify + BBLoc + log + draw only. NO trades — prediction
+   // unvalidated (1.2%), Part 5 deferred.
+}
+
+//═══════════════════════════════════════════════════════════════════
 // PART 4 — MINIMAL EXPERIMENTAL STUB
 //
 // STUB — coarse-data prediction scored 1.2% transition accuracy.
@@ -296,10 +355,12 @@ MTFPrediction_EXPERIMENTAL PredictNextMTF_EXPERIMENTAL(DualTFScenarioState &s)
 // 1. This file is a repo logic file — sibling to TofyTrade5.mqh.
 //    User integrates into their EA locally; does not #include TofyTrade5.
 // 2. BB_datas[] index convention: 0=M5, 1=M15, 2=M30, 3=H1, 4=H4, 5=D1.
-// 3. Call IdentifyDualTF(bb, close_prices) per bar -> DualTFScenarioState.
-// 4. Call LogDualTFBar(bb, state) per bar -> produces the log dataset.
-// 5. PredictNextMTF_EXPERIMENTAL is a STUB — ignore its output for trades.
-// 6. Part 5 (trade action) is DEFERRED — no DecideDualTFAction yet.
-// 7. The real BBLoc (ComputeHTFBBLoc / ComputeMTFBBLoc) is the KEY
+// 3. Call Trade_Strategy() — same signature as TofyTrade5. It calls
+//    IdentifyDualTF + LogDualTFBar + DrawGateLabel internally.
+// 4. Trade_Strategy returns Trade_act=0 (HOLD) — no trades. This is a
+//    visualization/data pass. PredictNextMTF_EXPERIMENTAL is a STUB.
+// 5. Part 5 (trade action) is DEFERRED — no DecideDualTFAction yet.
+// 6. The real BBLoc (ComputeHTFBBLoc / ComputeMTFBBLoc) is the KEY
 //    feature — it produces data the analysis side cannot generate.
+// 7. DrawGateLabel depends on DRAW_LABEL macro from EA includes.
 //+------------------------------------------------------------------+
