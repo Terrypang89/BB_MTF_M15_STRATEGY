@@ -21,7 +21,7 @@ flowchart LR
 
 - **Layer 1 — Identify DualTF Scenario**: Given current BB state across all TFs, derive 4-state (F/S/C/R) per TF, then pair into HTF (D1×H4) and MTF (H1×M30) scenarios with BBLoc. Replaces the 7-scenario IdentifyScenario with the DualTF 4×4 derivation.
 - **Layer 2 — Predict Next MTF**: Given DualTF scenario + rolling MTF history, predict the next MTF scenario. Uses real-time rolling buffer (EA advantage over analysis-side snapshot).
-- **Layer 3 — Decide Trade Action**: Given DualTF scenario + predicted next MTF + M15/M5 timing, select entry/exit/size. DualTF scenario = structure/setup; M15/M5 = timing.
+- **Layer 3 — Decide Trade Action**: Given DualTF scenario + predicted next MTF + M15 timing, select entry/exit/size. DualTF scenario = structure/setup; M15 = timing (M5 optional refinement only, never standalone).
 
 > **Successor note:** This design replaces the 7-scenario system (F1/S1/C1/V1/R1 etc.) with the 4-state DualTF model. It is NOT the current built system — the current system uses the 7-scenario IdentifyScenario described in ARCHITECTURE.md.
 
@@ -38,9 +38,9 @@ These responsibilities are invariant across all three layers — they define wha
 | H1 | MTF axis (with M30) — the leg ridden, primary trend driver | L1 (MTF scenario), L2 (MTF prediction target), L3 (confinement) |
 | M30 | MTF axis (with H1) — MTF confinement check | L1 (MTF scenario), L2 (MTF prediction), L3 (confinement) |
 | M15 | Leading-edge — feeds Part 4 prediction AND Part 5 entry/exit timing | L2 (leading-edge signal), L3 (entry/exit trigger) |
-| M5 | Fine entry/exit timing — Part 5 only | L3 (fine-grained trigger) |
+| M5 | Optional within-M15-bar refinement — NOT a standalone trigger | L3 (tick refinement only, after M15 confirms) |
 
-**Key difference from 7-scenario system:** M15 is no longer just an entry trigger — it is a leading-edge signal in the prediction function (Part 4). M5 is relegated to fine timing (Part 5 only). The HTF axis (D1×H4) becomes a fork-decider: which way does compression break?
+**Key difference from 7-scenario system:** M15 is no longer just an entry trigger — it is a leading-edge signal in the prediction function (Part 4) and the PRIMARY entry/exit timing trigger. M5 is NOT a standalone trigger — optional within-M15-bar refinement only after M15 confirms. The HTF axis (D1×H4) becomes a fork-decider: which way does compression break?
 
 ---
 
@@ -195,12 +195,38 @@ Gaps at 2, 4, 6 reflect the same coarse-data limit as the analysis side — the 
 
 **Key advantage:** The EA's BBLoc is real (from price/band computation), not inferred from BBUpDn. This means levels 0, 2, 4, 6, 8 are reachable — the trajectory is continuous, not gapped. The MTF sparse scale is a design choice (matching the analysis side for consistency), not a data limitation.
 
+**Band-position ladder:**
+
+```
+HTF BBLoc (0-10) — price position in the Bollinger bands:
+
+   10  ── over BB Upper
+──────── 9   BB Upper band
+    8   ── between Upper and Upper-Mid
+──────── 7   BB Upper-Mid
+    6   ── between Upper-Mid and Mid
+──────── 5   BB Mid band
+    4   ── between Mid and Lower-Mid
+──────── 3   BB Lower-Mid
+    2   ── between Lower-Mid and Lower
+──────── 1   BB Lower band
+    0   ── below BB Lower
+
+MTF BBLoc (sparse 0,1,3,5,7,9,10) — same anchors, coarser:
+   1=Lower, 3=Lower-Mid, 5=Mid, 7=Upper-Mid, 9=Upper, 0=below, 10=above
+```
+
+**Computation flowchart:**
+
 ```mermaid
 flowchart TD
-    Price["Current price"] --> BandRange["band_range = band_up - band_low"]
-    BandRange --> Position["position = (price - band_low) / band_range"]
-    Position --> HTFScale["HTF: bbloc = position * 10 → 0-10"]
-    Position --> MTFScale["MTF: map to sparse {0,1,3,5,7,9,10}\nvia nearest anchor"]
+    A["Read price + band values<br/>BBUppLV BBLowLV BB_Mid"] --> B["Compute ratio<br/>r = (price - BBLowLV) / (BBUppLV - BBLowLV)"]
+    B --> C["Scale to 0-10<br/>bbloc_raw = r * 10"]
+    C --> D{"Which axis?"}
+    D -->|"HTF: D1 or H4"| E["Round to 0-10 full resolution"]
+    D -->|"MTF: H1 or M30"| F["Snap to nearest of 0,1,3,5,7,9,10"]
+    E --> G["htf_bbloc"]
+    F --> H["mtf_bbloc"]
 ```
 
 ### 3.5 Build Status
@@ -315,21 +341,53 @@ flowchart TD
 
 **Prediction rules (from DUALTF_IMAGE_ANALYSIS.md Part 4):**
 
-| Condition | Predicted Next MTF | Confidence | Key Input |
-|-----------|-------------------|------------|-----------|
-| Duration ≥ 3 | Same MTF (persist) | 7-10 | Rolling buffer |
-| MTF in C, BBLoc climbing, HTF up | FF at high BBLoc | 8-9 | HTF fork-decider + BBLoc trajectory |
-| MTF in C, BBLoc at upper, HTF down | RR at upper | 5-6 | HTF fork-decider |
-| MTF in C, BBLoc rolling over (5→3) | FR at lower BBLoc | 5 | BBLoc trajectory from buffer |
-| MTF in F, BBLoc falling | S at lower BBLoc | 5 | BBLoc trajectory |
-| MTF in S, HTF fly-up, BBLoc rising | F at higher BBLoc | 5-6 | HTF + BBLoc trajectory |
-| M15 in F + BBLoc rising | Continuation signal | +2 boost | M15 leading-edge |
+| Condition | Predicted Next MTF (+BBLoc) | Predicted Target | Confidence | Key Input |
+|-----------|---------------------------|-----------------|------------|-----------|
+| Duration ≥ 3 | Same MTF (persist) | Current HTF band level (no change) | 7-10 | Rolling buffer |
+| MTF in C, BBLoc climbing, HTF up | FF at high BBLoc | H4 BB Upper | 8-9 | HTF fork-decider + BBLoc trajectory |
+| MTF in C, BBLoc at upper, HTF down | RR at upper | D1 BB Lower-Mid | 5-6 | HTF fork-decider |
+| MTF in C, BBLoc rolling over (5→3) | FR at lower BBLoc | D1 BB Mid | 5 | BBLoc trajectory from buffer |
+| MTF in F, BBLoc falling | S at lower BBLoc | H1 BB Mid | 5 | BBLoc trajectory |
+| MTF in S, HTF fly-up, BBLoc rising | F at higher BBLoc | H4 BB Upper-Mid | 5-6 | HTF + BBLoc trajectory |
+| M15 in F + BBLoc rising | Continuation signal | +1 HTF band level | +2 boost | M15 leading-edge |
 
 > **HTF as fork-decider:** The HTF axis (D1×H4) determines which way compression breaks. D1 fly-up → compression breaks up (F); D1 fly-down → compression breaks down (R). This is the most critical HTF input — it resolves the C → {F or R} fork.
 
 > **M15 as leading-edge:** M15 state feeds the prediction function (Part 4) AND entry/exit timing (Part 5). M15 in fly-up with BBLoc rising = strong continuation signal; M15 in fly-down with BBLoc falling = early reversal signal.
 
-### 4.3 Sequence Diagram — Per-Bar Predict Flow
+### 4.2a Predicted Target Derivation
+
+The predicted target is derived from the predicted MTF direction and current HTF BBLoc. The target is always an HTF band level — price moves toward HTF structure, not MTF.
+
+```mermaid
+flowchart TD
+    A["Predicted next MTF + current HTF BBLoc + HTF scenario"] --> B{"Predicted MTF direction?"}
+    B -->|"FF continuation up"| C{"HTF BBLoc position?"}
+    B -->|"FR reversal down"| D{"HTF BBLoc position?"}
+    B -->|"persist or compress"| E["No directional target — ranging"]
+    C -->|"below upper"| F["Target = HTF upper band BBLoc 9"]
+    C -->|"at upper"| G["Target = HTF upper or break to 10"]
+    D -->|"above mid"| H["Target = HTF BBmid BBLoc 5"]
+    D -->|"at or below mid"| I["Target = HTF lower band BBLoc 1"]
+    F --> J["Predicted target to Part 5 take-profit"]
+    G --> J
+    H --> J
+    I --> J
+    E --> J
+```
+
+**Target logic in words:**
+- Predicted FF (continuation up) → target = next HTF band UP (toward HTF upper BBLoc 9); if already at upper → HTF upper band or break to 10.
+- Predicted FR (reversal down) → target = HTF BBmid (BBLoc 5) if above mid, else HTF lower band (BBLoc 1).
+- Predicted persist/compress → no directional target (ranging).
+
+**Open design questions this diagram surfaces:**
+
+- **OPEN: HTF/MTF divergence** — when HTF=F-up but predicted MTF=R-down, does the target follow the MTF prediction (HTF mid) or does strong HTF suppress the reversal target? TBD — user to verify.
+- **OPEN: at-band behavior** — predict-up while at upper band: target the band (resistance) or allow break above (BBLoc 10, trend riding band)? TBD.
+- **OPEN: target source** — confirmed HTF-band-driven, or does MTF band structure also factor? TBD.
+
+> **Purpose:** This diagram verifies the target design — unresolved paths = design gaps. The HTF involvement (target = HTF band level) is made explicit.
 
 ```mermaid
 sequenceDiagram
@@ -356,7 +414,7 @@ sequenceDiagram
     L2-->>Caller: "MTFPrediction p"
 
     Caller->>L3: "DualTFScenarioState s + MTFPrediction p + BB_datas[]"
-    L3->>L3: "Scenario + prediction → setup<br/>M15/M5 → timing → entry/exit/hold"
+    L3->>L3: "Scenario + prediction → setup<br/>M15 → timing → entry/exit/hold"
     L3-->>Caller: "TradeAction"
 ```
 
@@ -385,13 +443,23 @@ The 68% figure comes from the analysis-side self-backtest where the predicted ne
 
 > **UNBUILT, Phase after baseline.** Depends on the EA baseline (s_prevH1Sqz fix + scenario rename + V31.06 backtest promotion) and Layer 1 being built first.
 
+### Prediction Outputs → Trade Action
+
+| Prediction Output | Part 5 Decision It Drives |
+|-------------------|--------------------------|
+| next MTF scenario | DIRECTION — FF/continuation → hold/add; FR/reversal → exit/flip; persist → hold |
+| predicted BBLoc | STOP / URGENCY — near a band (BBLoc 9) → tighten stop, take partial; mid (5) → less urgency |
+| predicted target | TAKE-PROFIT — Part 5 sets the TP order at the predicted target |
+
+**Summary:** next-MTF → direction; BBLoc → stop/urgency; target → take-profit. Three prediction outputs map to three distinct Part 5 decisions.
+
 ---
 
 ## Part 5 — Layer 3: Decide Trade Action (UNBUILT)
 
 ### 5.1 Interface — Class Diagram
 
-The action decision: inputs (DualTF scenario, predicted next MTF, M15/M5 timing) → output (entry / exit / hold / size).
+The action decision: inputs (DualTF scenario, predicted next MTF, M15 timing) → output (entry / exit / hold / size). M5 is not a standalone trigger.
 
 ```mermaid
 classDiagram
@@ -413,7 +481,7 @@ classDiagram
     }
 
     class BB_MTF_Data_struct {
-        <<per-TF raw input — M15/M5 timing>>
+        <<per-TF raw input — M15 timing (M5 optional)>>
         int BBW_stage
         int BB_diffMid_Trend
         int BBUpDn_state
@@ -451,7 +519,7 @@ classDiagram
 
 ### 5.2 Control Flow — Activity Diagram
 
-DualTF scenario + prediction → setup; M15/M5 → timing trigger → entry/exit/hold.
+DualTF scenario + prediction → setup; M15 → timing trigger → entry/exit/hold. M5 is not a standalone trigger.
 
 ```mermaid
 flowchart TD
@@ -480,19 +548,16 @@ flowchart TD
     Ceil0 -->|yes| Wait1["act=0 WAIT — ceiling blocks"]
     Ceil0 -->|no| Timing
 
-    subgraph TIMING["ENTRY TIMING — M15/M5"]
-        Timing["M15/M5 timing trigger<br/>Scenario = WHAT to trade\nM15/M5 = WHEN to trade"]
+    subgraph TIMING["ENTRY TIMING — M15 (M5 optional refinement)"]
+        Timing["M15 timing trigger<br/>Scenario = WHAT to trade\nM15 = WHEN to trade\nM5 = optional tick refinement only"]
 
         M15Trigger{"M15 flip detected?"}
-        M15Trigger -->|yes| M5Confirm{"M5 confirms?"}
-        M5Confirm -->|yes| EntryFired["Entry triggered"]
-        M5Confirm -->|no| Wait2["act=0 WAIT — waiting M5"]
+        M15Trigger -->|yes| EntryFired["Entry triggered by M15"]
         M15Trigger -->|no| Wait3["act=0 WAIT — waiting M15"]
     end
 
     Timing --> M15Trigger
     EntryFired --> Size["SIZE: confidence → size_mult<br/>min(ceiling, confidence_size)"]
-    Wait2 --> Size
     Wait3 --> Size
 
     Size --> Stop["SET STOP: ATRSL"]
@@ -503,14 +568,16 @@ flowchart TD
 
 **Evaluation order:** INVARIANTS → EXIT CHECKS → SETUP → TIMING → SIZE → STOP. Exits before entries — a position that should close must close before a new one opens.
 
-### 5.3 M15/M5 as Entry/Exit Timing
+### 5.3 M15 as Entry/Exit Timing (M5 optional refinement only)
 
-> **The DualTF scenario (D1/H4/H1/M30) = the STRUCTURE/setup; M15/M5 = the TIMING of entry/exit within that setup.** The structure tells you WHAT, M15 tells you WHEN.
+> **The DualTF scenario (D1/H4/H1/M30) = the STRUCTURE/setup; M15 = the TIMING of entry/exit within that setup. M5 is NOT a standalone trigger.** The structure tells you WHAT, M15 tells you WHEN.
+
+> **RATIONALE: M5 carries high noise; standalone M5 triggers cause whipsaw. M15 is the timing trigger; M5 is at most an optional refinement after M15 confirms, never standalone.**
 
 This is the separation of concerns in the DualTF model:
 
 - **Structure (Parts 3-4):** DualTF scenario identifies the current regime (HTF direction, MTF state, BBLoc). Prediction forecasts the next MTF. Together they define the setup — is there a trade? what direction? what target?
-- **Timing (Part 5):** M15 is the leading-edge trigger — it fires the actual entry when the M15 flip aligns with the setup. M5 is the fine-grained confirm — it tightens the entry to reduce slippage.
+- **Timing (Part 5):** M15 is the PRIMARY leading-edge trigger — it fires the actual entry when the M15 flip aligns with the setup. M5 is at most an optional within-M15-bar tick refinement (reducing slippage), but M5 never decides whether to enter — only M15 does.
 
 **M15 timing in the DualTF model:**
 
@@ -521,14 +588,14 @@ This is the separation of concerns in the DualTF model:
 | S (shrink) | Wait — no trigger | Compression, no momentum |
 | C (compress) | Wait — no trigger | SQZ, coiled but no direction |
 
-**M5 fine timing:** M5 confirms M15 trigger — reduces false entries. M15 flip + M5 same direction = entry fires. M15 flip + M5 not confirmed = wait.
+**M5 optional refinement (NOT a decision):** After M15 triggers, M5 may optionally refine the entry tick — but M5 never independently decides to enter or exit. M15 flip = entry fires. M5 = optional slippage reduction only.
 
 ### 5.4 Build Status
 
 | Component | Status | Detail |
 |-----------|--------|--------|
 | DualTF ceiling matrix | **UNBUILT** | HTF×MTF → size ceiling |
-| M15/M5 timing trigger | **UNBUILT** | Flip detection + confirm |
+| M15 timing trigger | **UNBUILT** | Flip detection (M5 optional refinement) |
 | Confidence → size mapping | **UNBUILT** | MTFPrediction.confidence → size_mult |
 | Exit checks | **UNBUILT** | Target-based + transition-based |
 
@@ -573,7 +640,7 @@ sequenceDiagram
     Note over Tick,L3Out: "LAYER 3 — Decide Trade Action"
     Tick->>L3: "DualTFScenarioState s + MTFPrediction p + BB_datas[]"
     L3->>L3: "Invariants → Exits → Setup → Timing → Size → Stop"
-    L3->>L3: "Scenario = WHAT, M15/M5 = WHEN"
+    L3->>L3: "Scenario = WHAT, M15 = WHEN (M5 optional only)"
     L3-->>Tick: "TradeAction<br/>(act, size_mult, stop_price)"
     end
 ```
@@ -621,7 +688,7 @@ flowchart TD
     end
 
     subgraph LAYER3["LAYER 3 — DecideTradeAction"]
-        P5["Build DecideTradeAction\n(DualTF ceiling, M15/M5 timing, confidence→size)"]
+        P5["Build DecideTradeAction\n(DualTF ceiling, M15 timing, confidence→size)"]
     end
 
     B1 --> B2 --> B3 --> P3 --> P4 --> P5
@@ -649,6 +716,6 @@ flowchart TD
 | Confidence computation — how to scale from HTF/MTF alignment | TBD | Drives size in Part 5 |
 | How is transition accuracy measured live? | TBD | Must separate from overall accuracy (68% is inflated) |
 | How does DualTF coexist with or replace the 7-scenario system? | TBD | Migration strategy — parallel run? hard cutover? |
-| M15/M5 flip detection threshold | TBD | Entry timing sensitivity |
+| M15 flip detection threshold | TBD | Entry timing sensitivity |
 | DualTF ceiling matrix — HTF×MTF → size ceiling values | TBD | Risk management |
 | Duration threshold for persist (is 3 bars optimal?) | TBD | Prediction accuracy |
