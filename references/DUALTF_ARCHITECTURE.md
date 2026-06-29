@@ -65,25 +65,25 @@ classDiagram
 
     class BB_datas {
         <<array input>>
-        BB_TF_Data[0]   *M5*
-        BB_TF_Data[1]   *M15*
-        BB_TF_Data[2]   *M30*
-        BB_TF_Data[3]   *H1*
-        BB_TF_Data[4]   *H4*
-        BB_TF_Data[5]   *D1*
+        BB_TF_Data tf_m5
+        BB_TF_Data tf_m15
+        BB_TF_Data tf_m30
+        BB_TF_Data tf_h1
+        BB_TF_Data tf_h4
+        BB_TF_Data tf_d1
     }
 
     class DualTFScenarioState {
-        string htf_scenario    *HTF 2-char code (D1-state)(H4-state), e.g. "FS"*
-        string mtf_scenario    *MTF 2-char code (H1-state)(M30-state), e.g. "FC"*
-        int htf_bbloc          *HTF band location 0-10 (real-time)*
-        int mtf_bbloc          *MTF band location {0,1,3,5,7,9,10}*
-        string htf_d1_state    *D1 raw state: F/S/C/R*
-        string htf_h4_state    *H4 raw state: F/S/C/R*
-        string mtf_h1_state    *H1 raw state: F/S/C/R*
-        string mtf_m30_state   *M30 raw state: F/S/C/R*
-        string m15_state       *M15 leading-edge state: F/S/C/R*
-        string info            *logging*
+        string htf_scenario
+        string mtf_scenario
+        int htf_bbloc
+        int mtf_bbloc
+        string htf_d1_state
+        string htf_h4_state
+        string mtf_h1_state
+        string mtf_m30_state
+        string m15_state
+        string info
     }
 
     class IdentifyDualTF {
@@ -236,22 +236,22 @@ classDiagram
 
     class MTFHistoryBuffer {
         <<rolling buffer — the 15-array>>
-        string[] mtf_scenario_hist   *recent MTF scenarios*
-        int[] mtf_bbloc_hist         *MTF BBLoc trajectory*
-        int[] htf_bbloc_hist         *HTF BBLoc trajectory*
-        int duration_in_state        *current MTF state duration*
-        string[] m15_state_hist      *M15 leading-edge history*
+        string[] mtf_scenario_hist
+        int[] mtf_bbloc_hist
+        int[] htf_bbloc_hist
+        int duration_in_state
+        string[] m15_state_hist
         void Push(DualTFScenarioState s)
         int Length
     }
 
     class MTFPrediction {
         <<output contract for Part 5>>
-        string next_mtf_scenario    *predicted next MTF (2-char)*
-        int next_mtf_bbloc          *predicted MTF BBLoc*
-        int confidence              *0-100, transition-aware*
-        bool is_transition          *true if MTF scenario changes*
-        string reason               *which rule fired*
+        string next_mtf_scenario
+        int next_mtf_bbloc
+        int confidence
+        bool is_transition
+        string reason
     }
 
     class PredictNextMTF {
@@ -414,19 +414,19 @@ classDiagram
 
     class BB_MTF_Data_struct {
         <<per-TF raw input — M15/M5 timing>>
-        int BBW_stage[LA, LA_1]
-        int BB_diffMid_Trend[LA, LA_1]
-        int BBUpDn_state[LA]
-        double diffBBW[LA]
+        int BBW_stage
+        int BB_diffMid_Trend
+        int BBUpDn_state
+        double diffBBW
     }
 
     class TradeAction {
         <<final EA output — drives OrderSend/OrderClose>>
-        int act           *0=hold / 1=BUY / 2=SELL / 7=exit_all*
-        string condition_id  *DualTF rule ID / WAIT*
-        double size_mult    *0.0-1.0*
-        double stop_price   *ATRSL-based*
-        string info         *logging*
+        int act
+        string condition_id
+        double size_mult
+        double stop_price
+        string info
     }
 
     class DecideTradeAction {
