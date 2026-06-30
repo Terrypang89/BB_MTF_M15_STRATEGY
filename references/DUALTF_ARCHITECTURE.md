@@ -243,7 +243,9 @@ flowchart TD
 
 ---
 
-## Part 4 — Layer 2: Predict Next MTF Scenario (UNBUILT)
+## Part 4 — Layer 2: Predict Next MTF Scenario (NOT VIABLE)
+
+> **STATUS: NOT VIABLE (tested).** Out-of-sample transition accuracy = 43.9% (BBLoc-only, best predictor); multi-input (HTF + M15 + duration) performs WORSE and overfits. 90.4% persistence base rate; 68.9% of pre-transition BBLoc slopes flat (no signal). TESTED across coarse data (1.2%), fine BBLoc (43.9%), and multi-input (worse). CONCLUSION: prediction is not feasible on available data — the EA should trade on IDENTIFICATION (Part 3), not prediction. This section is retained as a documented dead-end, not a build target.
 
 ### 4.1 Interface — Class Diagram
 
@@ -355,6 +357,114 @@ flowchart TD
 
 > **M15 as leading-edge:** M15 state feeds the prediction function (Part 4) AND entry/exit timing (Part 5). M15 in fly-up with BBLoc rising = strong continuation signal; M15 in fly-down with BBLoc falling = early reversal signal.
 
+### 4.2b Per-Bar Prediction Signal Flow (Mechanics)
+
+This diagram traces how each bar's raw per-TF data flows through the (attempted) prediction pipeline. Each node corresponds to a real computation step — reviewable against any log row.
+
+```mermaid
+flowchart TD
+    A["Bar N arrives: per-TF raw data\nD1/H4/H1/M30/M15 each:\nBBW_stage + diffMid_Trend + BBUpDn\n+ htf_bbloc + mtf_bbloc"]
+
+    A --> B1["D1 + H4 states → HTF scenario\n2-char code e.g. SF/CR/RS"]
+    A --> B2["H1 + M30 states → MTF scenario\n2-char code e.g. FF/FC/RS"]
+    A --> B3["mtf_bbloc appended to\nrolling buffer (6 bars)"]
+    A --> B4["M15 state → leading-edge signal\nF/S/C/R"]
+    A --> B5["Duration: count prior bars\nin same MTF scenario"]
+
+    B1 --> C1["HTF direction from htf_scenario\nD1-up/H4-up → up\nD1-down/H4-down → down\nmixed → neutral"]
+
+    B3 --> C2["BBLoc slope from 6-bar buffer\nlinear regression over mtf_bbloc\nrising >0.3 / falling <-0.3 / flat"]
+
+    B4 --> C3["M15 direction from state\nF/C → up  R → down  S → neutral"]
+
+    B5 --> C4["Duration flag\n>10 bars → transition likely\n≤10 → insufficient signal"]
+
+    C1 --> D1["BBLoc slope predictor\nrising → up  falling → down\nflat → neutral/persist"]
+
+    C2 --> D1
+
+    D1 --> E1{"Slope non-flat?"}
+    E1 -->|yes| F1["BBLoc decides\n(up or down)"]
+    E1 -->|no flat| F2["Fallback: HTF direction\nor M15 direction\nor neutral"]
+
+    C3 --> F2
+    C4 --> F2
+
+    F1 --> G["Predicted next MTF direction\nup → continuation scenario\ndown → reversal scenario\nneutral → persist"]
+
+    F2 --> G
+
+    G --> H["MTFPrediction output\nnext_mtf_scenario + confidence\n+ is_transition flag"]
+
+    classDef input fill:#e8f4fd,stroke:#2196F3
+    classDef compute fill:#fff3e0,stroke:#FF9800
+    classDef branch fill:#fce4ec,stroke:#E91E63
+    classDef output fill:#e8f5e9,stroke:#4CAF50
+
+    class A input
+    class B1,B2,B3,B4,B5 compute
+    class C1,C2,C3,C4 compute
+    class D1 compute
+    class E1 branch
+    class F1,F2 compute
+    class G output
+    class H output
+```
+
+**Reviewable trace:** For any log row, you can follow the path — raw per-TF data → HTF/MTF pairing → BBLoc slope + HTF direction + M15 state → slope branch → predicted direction. The bottleneck is the slope branch: 68.9% of slopes are flat, so the predictor falls through to the fallback (HTF/M15/neutral) where those signals are noise.
+
+### 4.2c Failure Anatomy — Where the Signal is Lost
+
+This diagram shows where and why prediction breaks, with empirical numbers from the V36.03 analysis. The design (4.1–4.2) looks sound on paper — the failure is in the data.
+
+```mermaid
+flowchart TD
+    A["706 MTF transitions in V36.03\n90.4% persistence base rate\n35.3% majority baseline"]
+
+    A --> B["68.9% of pre-transition\nBBLoc slopes are FLAT\n(≤0.3 over 6 bars)"]
+    B --> B1["Predictor defaults to\n'persist/neutral'\n→ WRONG on transitions\nby definition"]
+
+    A --> C["BBLoc slope non-flat\n31.1% of cases"]
+    C --> C1["BBLoc-only predictor\n39.4% TRAIN / 43.9% TEST\nbeats 35.3% baseline\nbut far from viable"]
+
+    A --> D["Add HTF direction\n(fork-decider on paper)"]
+    D --> D1["TEST accuracy DROPS\n43.9% → 41.2%\nHTF is noise not signal"]
+
+    A --> E["Add M15 cascade\n(leading edge on paper)"]
+    E --> E1["TEST accuracy DROPS\n43.9% → 43.0%\nM15 alone: 35.7%\n(barely above baseline)"]
+
+    A --> F["Combine all inputs\nBBLoc + HTF + M15 + duration"]
+    F --> F1["OVERFIT: 40.8% TRAIN\n→ 35.3% TEST\n= majority baseline\nvoting amplifies noise"]
+
+    B1 --> G["Signal exists only in\nRARE transition types:\nCF→CR 83% consistent\nRC→SC 90% consistent\nbut n < 15 each\n(insufficient for trading)"]
+
+    C1 --> G
+
+    G --> H["VERDICT: 43.9% OOS TEST\nnot viable for Part 4\nidentification > prediction"]
+
+    classDef data fill:#e8f4fd,stroke:#2196F3
+    classDef failure fill:#ffebee,stroke:#f44336
+    classDef partial fill:#fff3e0,stroke:#FF9800
+    classDef verdict fill:#e8f5e9,stroke:#4CAF50
+
+    class A data
+    class B,B1 failure
+    class C partial
+    class C1 partial
+    class D,D1 failure
+    class E,E1 failure
+    class F,F1 failure
+    class G data
+    class H verdict
+```
+
+**Why it fails (in words):**
+
+1. **Structural:** 68.9% of pre-transition BBLoc slopes are flat — the primary predictor has no signal for most transitions. The fallback (HTF/M15) is noise, not independent information.
+2. **Adding inputs HURTS:** Every multi-input combination reduces TEST accuracy vs BBLoc-only (43.9%). HTF direction (-2.7pp), M15 (-0.9pp), all combined (-8.6pp). The signals are correlated with noise, not independent predictive factors.
+3. **Overfitting:** All-combined predictor collapses to the majority baseline on TEST (35.3%) — it learned TRAIN patterns that don't generalize.
+4. **Rare-predictable vs common-unpredictable:** High-consistency transition types (CF→CR 83%, RC→SC 90%) are rare (n < 15 each). Common transitions (FF→FS, RR→RS) are unpredictable. The signal exists only in the tail.
+
 ### 4.2a Predicted Target Derivation
 
 The predicted target is derived from the predicted MTF direction and current HTF BBLoc. The target is always an HTF band level — price moves toward HTF structure, not MTF.
@@ -435,13 +545,13 @@ The 68% figure comes from the analysis-side self-backtest where the predicted ne
 
 | Component | Status | Detail |
 |-----------|--------|--------|
-| MTFHistoryBuffer (rolling buffer) | **UNBUILT** | Buffer size TBD, push/pop semantics |
-| Duration computation | **UNBUILT** | Backward count of same MTF scenario |
-| HTF fork-decider logic | **UNBUILT** | D1 direction → C breakout direction |
-| M15 leading-edge input | **UNBUILT** | M15 state + BBLoc as prediction boost |
-| Transition accuracy measurement | **UNBUILT** | Separate from overall accuracy |
+| MTFHistoryBuffer (rolling buffer) | **NOT VIABLE** | Tested — multi-input prediction fails OOS |
+| Duration computation | **NOT VIABLE** | Adding duration → accuracy drops |
+| HTF fork-decider logic | **NOT VIABLE** | HTF input adds noise, not signal |
+| M15 leading-edge input | **NOT VIABLE** | M15 alone = 35.7% (below 43.9% BBLoc-only) |
+| Transition accuracy measurement | **TESTED** | 43.9% OOS (BBLoc-only best); multi-input worse |
 
-> **UNBUILT, Phase after baseline.** Depends on the EA baseline (s_prevH1Sqz fix + scenario rename + V31.06 backtest promotion) and Layer 1 being built first.
+> **NOT VIABLE, not a build target.** Tested on V36.03 data with 70/30 chronological train/test split: BBLoc-only 43.9% OOS test accuracy (best predictor); adding HTF/M15/duration → accuracy drops, all-combined overfits (40.8% train → 35.3% test). See MULTIINPUT_PREDICTION_ANALYSIS.md and BBLOC_TRANSITION_ANALYSIS.md for full results.
 
 ### Prediction Outputs → Trade Action
 
@@ -452,6 +562,10 @@ The 68% figure comes from the analysis-side self-backtest where the predicted ne
 | predicted target | TAKE-PROFIT — Part 5 sets the TP order at the predicted target |
 
 **Summary:** next-MTF → direction; BBLoc → stop/urgency; target → take-profit. Three prediction outputs map to three distinct Part 5 decisions.
+
+### 4.6 What To Use Instead
+
+Since prediction is not viable (43.9% OOS TEST accuracy — barely above the 35.3% majority baseline, and multi-input is worse), **Part 5 should be IDENTIFICATION-based, not prediction-based**: trade on the CURRENT DualTF scenario + real BBLoc for entry/exit timing, NOT on a predicted next scenario. The DualTF scenario tells you WHERE you are (structure/setup); M15 tells you WHEN to act (timing). No prediction layer needed. See Part 5.
 
 ---
 
