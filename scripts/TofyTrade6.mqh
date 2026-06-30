@@ -1,13 +1,12 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "36.03"
+#property version   "36.04"
 //+------------------------------------------------------------------+
 //| TofyTrade6 — DualTF Stack logic                                   |
-//| Part 3 (IDENTIFY) + REAL BBLoc + LOGGING.                         |
-//| Part 4 prediction is a minimal experimental stub                  |
-//| (coarse-data prediction scored 1.2% transition accuracy,          |
-//|  commit 0229a8b — Part 4/5 to be redesigned after viewing         |
-//|  real BBLoc data on charts).                                      |
+//| Part 3 (IDENTIFY) + REAL BBLoc + LOGGING + Part 4 PREDICTION.     |
+//| Part 4 = real ported logic from analyze_multiinput_prediction.py  |
+//| (BBLoc slope predictor — 43.9% OOS accuracy, NOT VIABLE).         |
+//| Prediction computed/logged/drawn for DIAGNOSIS only — NO trading. |
 //| Repo logic file, sibling to TofyTrade5.mqh —                      |
 //| user integrates/compiles/backtests locally.                       |
 //| Separate from the 7-scenario system.                              |
@@ -118,6 +117,62 @@ int ComputeMTFBBLoc(double price, double bblow, double bbupp)
 }
 
 //═══════════════════════════════════════════════════════════════════
+// ROLLING MTF_BBLOC BUFFER + SLOPE — for Part 4 prediction
+// Ported from analyze_multiinput_prediction.py — Predictor A
+// BBLoc slope only — 43.9% OOS accuracy, NOT VIABLE, diagnosis only
+//═══════════════════════════════════════════════════════════════════
+#define BBLoc_BUF_SIZE  6   // last 6 bars of mtf_bbloc
+
+//--- rolling buffer of recent mtf_bbloc values
+static int  s_bblocBuf[BBLoc_BUF_SIZE];   // circular buffer
+static int  s_bblocBufIdx = 0;            // next write position
+static bool s_bblocBufReady = false;      // true after BBLoc_BUF_SIZE fills
+
+void UpdateBBLocBuf(int bbloc)
+{
+   s_bblocBuf[s_bblocBufIdx] = bbloc;
+   s_bblocBufIdx = (s_bblocBufIdx + 1) % BBLoc_BUF_SIZE;
+   if(s_bblocBufIdx == 0)
+      s_bblocBufReady = true;   // buffer has been written at least once fully
+}
+
+//--- linear regression slope (same math as Python bbloc_slope)
+// Skips -1 (no-data) values — they don't corrupt the slope
+double ComputeBBLocSlope()
+{
+   // Collect valid (non -1) values into a temp array
+   double valid[];
+   int    validCount = 0;
+   for(int i = 0; i < BBLoc_BUF_SIZE; i++)
+   {
+      if(s_bblocBuf[i] >= 0)
+      {
+         validCount++;
+         ArrayResize(valid, validCount);
+         valid[validCount - 1] = (double)s_bblocBuf[i];
+      }
+   }
+   if(validCount < 2) return 0.0;   // not enough data
+
+   // Linear regression: slope = sum((x-xm)(y-ym)) / sum((x-xm)^2)
+   double xMean = (validCount - 1) / 2.0;
+   double yMean = 0.0;
+   for(int i = 0; i < validCount; i++)
+      yMean += valid[i];
+   yMean /= validCount;
+
+   double num = 0.0, den = 0.0;
+   for(int i = 0; i < validCount; i++)
+   {
+      double xDiff = (double)i - xMean;
+      num += xDiff * (valid[i] - yMean);
+      den += xDiff * xDiff;
+   }
+   if(den == 0.0) return 0.0;
+   return num / den;
+}
+
+//═══════════════════════════════════════════════════════════════════
 // IDENTIFY DUALTF — Part 3, Layer 1
 //═══════════════════════════════════════════════════════════════════
 // Reads BB_datas[] + price -> per-TF F/S/C/R -> HTF/MTF pairs ->
@@ -176,6 +231,17 @@ DualTFScenarioState IdentifyDualTF(BB_MTF_Data_struct &bb[], double &close_price
 }
 
 //═══════════════════════════════════════════════════════════════════
+// PART 4 — PREDICTION STRUCT (forward, detailed impl below)
+//═══════════════════════════════════════════════════════════════════
+struct MTFPrediction {
+   string pred_direction;       // "up" / "down" / "neutral"
+   string predicted_mtf;        // predicted next MTF scenario (2-char)
+   int    predicted_bbloc;      // predicted next MTF BBLoc
+   double bbloc_slope;          // slope of mtf_bbloc over last 6 bars
+   string hit_miss;             // "HIT" / "MISS" / "NA"
+};
+
+//═══════════════════════════════════════════════════════════════════
 // LOGGING — per-bar, parseable (the redesign dataset)
 //═══════════════════════════════════════════════════════════════════
 // Log format (colon-separated, no spaces in values):
@@ -187,8 +253,9 @@ DualTFScenarioState IdentifyDualTF(BB_MTF_Data_struct &bb[], double &close_price
 //   m15:stg:<...> mid:<...> ud:<...> state:<...>
 //   htf:<scenario> htfbbloc:<bbloc>
 //   mtf:<scenario> mtfbbloc:<bbloc>
+//   pred:<up/down/neutral> predmtf:<predicted_MTF> slope:<bbloc_slope> predhit:<HIT/MISS/NA>
 
-void LogDualTFBar(BB_MTF_Data_struct &bb[], DualTFScenarioState &s)
+void LogDualTFBar(BB_MTF_Data_struct &bb[], DualTFScenarioState &s, const MTFPrediction &pred)
 {
    datetime dt = iTime(_Symbol, PERIOD_M5, 0);
    string dtStr = TimeToString(dt, TIME_DATE|TIME_SECONDS);
@@ -218,7 +285,12 @@ void LogDualTFBar(BB_MTF_Data_struct &bb[], DualTFScenarioState &s)
       +KV6("htf", s.htf_scenario)
       +KVi6("htfbbloc", s.htf_bbloc)
       +KV6("mtf", s.mtf_scenario)
-      +KVi6("mtfbbloc", s.mtf_bbloc);
+      +KVi6("mtfbbloc", s.mtf_bbloc)
+      //--- Part 4 prediction fields (diagnosis only, 43.9%, not viable)
+      +KV6("pred", pred.pred_direction)
+      +KV6("predmtf", pred.predicted_mtf)
+      +KV6("slope", DoubleToString(pred.bbloc_slope, 2))
+      +KV6("predhit", pred.hit_miss);
 
    SigEvt6("BAR", kvs);
 }
@@ -237,8 +309,132 @@ void DrawGateLabel(string tag, double price, BB_MTF_Data_struct &BB_datas[],
 }
 
 //═══════════════════════════════════════════════════════════════════
-// TRADE STRATEGY — V36.02: identify + BBLoc + log + draw only
-// NO trades — prediction unvalidated (1.2%), Part 5 deferred.
+// PART 4 — REAL PREDICTION (ported from analyze_multiinput_prediction.py)
+//
+// Predictor A: BBLoc slope only — 43.9% OOS accuracy, NOT VIABLE.
+// Ported for DIAGNOSIS only — NO trading on this prediction.
+//
+// Logic (from predict_bbloc_only in analyze_multiinput_prediction.py):
+//   bbloc_slope over last 6 bars (linear regression, same as Python).
+//   slope >  0.3 → predict "up"     (up-continuation transition)
+//   slope < -0.3 → predict "down"   (down-reversal transition)
+//   |slope| <= 0.3 → predict "neutral" (persist — no transition)
+//
+// Direction comparison (from classify_transition_direction):
+//   Order: R(0) < S(1) < F(2) < C(3) — second letter of MTF scenario.
+//   If TO second-letter value > FROM → "up"; < → "down"; == → "neutral".
+//═══════════════════════════════════════════════════════════════════
+//--- Map predicted direction to a concrete MTF scenario
+// "up" → second letter advances toward C (R→S, S→F, F→C)
+// "down" → second letter recedes toward R (C→F, F→S, S→R)
+// "neutral" → same scenario (persist)
+static string DirectionLetterMap[4] = {"R","S","F","C"}; // index 0=R,1=S,2=F,3=C
+
+//--- Static to store previous bar's predicted direction (for hit/miss)
+static string s_predDirection = "";   // last bar's predicted direction
+static string s_prevMtfScenario = ""; // last bar's MTF scenario
+
+string AdvanceSecondLetter(string curLetter, string direction)
+{
+   int curIdx = -1;
+   for(int i = 0; i < 4; i++)
+   {
+      if(DirectionLetterMap[i] == curLetter) { curIdx = i; break; }
+   }
+   if(curIdx < 0) return curLetter; // unknown, keep
+   if(direction == "up" && curIdx < 3)
+      return DirectionLetterMap[curIdx + 1];
+   if(direction == "down" && curIdx > 0)
+      return DirectionLetterMap[curIdx - 1];
+   return curLetter; // neutral or at boundary
+}
+
+//--- Classify the actual transition direction (same as Python)
+string ClassifyActualDirection(string fromMtf, string toMtf)
+{
+   if(fromMtf == toMtf) return "neutral";
+   if(StringLen(fromMtf) < 2 || StringLen(toMtf) < 2) return "neutral";
+   string fromCh = StringSubstr(fromMtf, 1, 1);
+   string toCh   = StringSubstr(toMtf, 1, 1);
+   int fromVal = -1, toVal = -1;
+   for(int i = 0; i < 4; i++)
+   {
+      if(DirectionLetterMap[i] == fromCh) fromVal = i;
+      if(DirectionLetterMap[i] == toCh)   toVal   = i;
+   }
+   if(fromVal < 0 || toVal < 0) return "neutral";
+   if(toVal > fromVal)  return "up";
+   if(toVal < fromVal)  return "down";
+   return "neutral";
+}
+
+//--- Main prediction function — ported from analyze_multiinput_prediction.py
+// Also performs one-bar-delayed hit/miss check against actual transition
+MTFPrediction PredictNextMTF(DualTFScenarioState &s, string prevMtfScenario)
+{
+   MTFPrediction p;
+   p.bbloc_slope    = 0.0;
+   p.pred_direction = "neutral";
+   p.predicted_mtf  = s.mtf_scenario;
+   p.predicted_bbloc = s.mtf_bbloc;
+   p.hit_miss       = "NA";
+
+   //--- No-data guard
+   if(s.mtf_bbloc < 0)
+   {
+      p.pred_direction = "neutral";
+      p.hit_miss       = "NA";
+      return p;
+   }
+
+   //--- Compute slope from rolling buffer (same as Python bbloc_slope)
+   p.bbloc_slope = ComputeBBLocSlope();
+
+   //--- Prediction rule (same thresholds as Python: predict_bbloc_only)
+   if(p.bbloc_slope > 0.3)
+      p.pred_direction = "up";
+   else if(p.bbloc_slope < -0.3)
+      p.pred_direction = "down";
+   else
+      p.pred_direction = "neutral";
+
+   //--- Map direction to predicted MTF scenario
+   if(p.pred_direction == "neutral")
+   {
+      p.predicted_mtf = s.mtf_scenario; // persist
+   }
+   else
+   {
+      string firstCh = StringSubstr(s.mtf_scenario, 0, 1);
+      string secondCh = StringSubstr(s.mtf_scenario, 1, 1);
+      string nextSecond = AdvanceSecondLetter(secondCh, p.pred_direction);
+      p.predicted_mtf = firstCh + nextSecond;
+   }
+   p.predicted_bbloc = s.mtf_bbloc; // BBLoc carry-forward (not predicted separately)
+
+   //--- One-bar-delayed hit/miss: compare previous bar's prediction to actual
+   // prevMtfScenario = MTF scenario on the previous bar
+   // s.mtf_scenario   = MTF scenario on the current bar (the "actual")
+   if(prevMtfScenario != "" && prevMtfScenario != "XX" && s.mtf_scenario != "XX")
+   {
+      string actualDir = ClassifyActualDirection(prevMtfScenario, s.mtf_scenario);
+      // We need the direction that was predicted on the previous bar.
+      // This is tracked in s_predDirection (static, set after prediction each bar).
+      if(s_predDirection != "")
+      {
+         if(s_predDirection == actualDir)
+            p.hit_miss = "HIT";
+         else
+            p.hit_miss = "MISS";
+      }
+   }
+
+   return p;
+}
+
+//═══════════════════════════════════════════════════════════════════
+// TRADE STRATEGY — V36.04: identify + BBLoc + log + draw + predict
+// Prediction for DIAGNOSIS only (43.9%, not viable) — Trade_act = 0
 // Signature matches TofyTrade5 exactly so the EA call site works unchanged.
 //═══════════════════════════════════════════════════════════════════
 void Trade_Strategy(
@@ -267,8 +463,18 @@ void Trade_Strategy(
    //--- Layer 1: Identify DualTF scenario + compute real BBLoc
    DualTFScenarioState s = IdentifyDualTF(BB_datas, close_prices);
 
+   //--- Update rolling BBLoc buffer (for slope computation)
+   UpdateBBLocBuf(s.mtf_bbloc);
+
+   //--- Part 4: Predict next MTF + one-bar-delayed hit/miss
+   MTFPrediction pred = PredictNextMTF(s, s_prevMtfScenario);
+
+   //--- Store this bar's prediction for next bar's hit/miss check
+   s_predDirection   = pred.pred_direction;
+   s_prevMtfScenario = s.mtf_scenario;
+
    //--- Log the per-bar DualTF data (produces the redesign dataset)
-   LogDualTFBar(BB_datas, s);
+   LogDualTFBar(BB_datas, s, pred);
 
    //--- Draw chart label only on scenario CHANGE (readable chart)
    static string s_prevScenario = "";
@@ -277,89 +483,34 @@ void Trade_Strategy(
    if(curKey != s_prevScenario) {
       s_prevScenario = curKey;
       string tag = "HTF:"+s.htf_scenario+"["+IntegerToString(s.htf_bbloc)+
-                   "] MTF:"+s.mtf_scenario+"["+IntegerToString(s.mtf_bbloc)+"]";
-      DrawGateLabel(tag, close_prices[LA], BB_datas, clrWhite, 1);
+                   "] MTF:"+s.mtf_scenario+"["+IntegerToString(s.mtf_bbloc)+
+                   "] pred:"+pred.pred_direction;
+      // Append hit/miss if available
+      if(pred.hit_miss != "NA")
+         tag += " hit:"+pred.hit_miss;
+      // Color-code: red on MISS, green on HIT, white on NA/transition
+      color drawClr = clrWhite;
+      if(pred.hit_miss == "MISS")
+         drawClr = clrRed;
+      else if(pred.hit_miss == "HIT")
+         drawClr = clrLime;
+      DrawGateLabel(tag, close_prices[LA], BB_datas, drawClr, 1);
    }
 
    //--- Set Trade_info to the scenario summary
-   Trade_info = s.info;
+   Trade_info = s.info + " | PRED:" + pred.pred_direction +
+                " slope:" + DoubleToString(pred.bbloc_slope, 2) +
+                " hit:" + pred.hit_miss;
 
-   // V36.02: identify + BBLoc + log + draw only. NO trades — prediction
-   // unvalidated (1.2%), Part 5 deferred.
-}
-
-//═══════════════════════════════════════════════════════════════════
-// PART 4 — MINIMAL EXPERIMENTAL STUB
-//
-// STUB — coarse-data prediction scored 1.2% transition accuracy.
-// Part 4 to be redesigned after viewing real BBLoc data.
-// NOT for trade decisions.
-//═══════════════════════════════════════════════════════════════════
-struct MTFPrediction_EXPERIMENTAL {
-   string next_mtf_scenario;   // predicted next MTF (2-char)
-   int    next_mtf_bbloc;      // predicted MTF BBLoc
-   int    confidence;          // 0-100
-   bool   is_transition;       // MTF scenario changes
-   string reason;
-};
-
-//--- State machine helper: char 'F'/'S'/'C'/'R' -> DUAL_STATE
-DUAL_STATE CharToDualState(string ch)
-{
-   if(ch=="F") return DS_F;
-   if(ch=="S") return DS_S;
-   if(ch=="C") return DS_C;
-   if(ch=="R") return DS_R;
-   return DS_S;
-}
-
-//--- Valid next states per the state machine (design doc §4):
-// F -> {S, persist}, S -> {F, C, persist}, C -> {F, R, persist}, R -> {S, persist}
-void ValidNextStates(DUAL_STATE cur, string &next1, string &next2, string &next3)
-{
-   next3 = "persist";  // always valid
-   switch(cur) {
-      case DS_F: next1="S"; next2=""; break;
-      case DS_S: next1="F"; next2="C"; break;
-      case DS_C: next1="F"; next2="R"; break;
-      case DS_R: next1="S"; next2=""; break;
-      default:   next1="S"; next2=""; break;
-   }
-}
-
-MTFPrediction_EXPERIMENTAL PredictNextMTF_EXPERIMENTAL(DualTFScenarioState &s)
-{
-   MTFPrediction_EXPERIMENTAL p;
-   p.next_mtf_scenario = s.mtf_scenario;   // persist (safe default)
-   p.next_mtf_bbloc    = s.mtf_bbloc;
-   p.confidence        = 0;                 // zero — not for decisions
-   p.is_transition     = false;
-   p.reason = "STUB — persist default. Coarse-data prediction scored 1.2% transition accuracy. " +
-              "Part 4 to be redesigned after viewing real BBLoc data. NOT for trade decisions.";
-
-   //--- Minimal: return valid-next-states per the state machine
-   // (no full prediction rules — they'll be redesigned on real data)
-   DUAL_STATE h1Cur  = CharToDualState(StringSubstr(s.mtf_scenario,0,1));
-   DUAL_STATE m30Cur = CharToDualState(StringSubstr(s.mtf_scenario,1,1));
-   string h1n1,h1n2,h1n3, m30n1,m30n2,m30n3;
-   ValidNextStates(h1Cur, h1n1, h1n2, h1n3);
-   ValidNextStates(m30Cur, m30n1, m30n2, m30n3);
-
-   p.reason += " H1-valid-next:" + h1n1;
-   if(h1n2 != "") p.reason += "," + h1n2;
-   p.reason += " M30-valid-next:" + m30n1;
-   if(m30n2 != "") p.reason += "," + m30n2;
-
-   return p;
+   // V36.04: identify + BBLoc + log + draw + predict. NO trades —
+   // prediction shown for DIAGNOSIS only (43.9%, not viable).
 }
 
 //═══════════════════════════════════════════════════════════════════
 // PART 5 — DEFERRED
 //
-// Trade action deferred until Part 4 redesigned on real data.
-// No implementation — the prediction engine (Part 4) scored 1.2%
-// on coarse data and must be redesigned using real BBLoc data
-// generated by this file's logging before trade logic is written.
+// Trade action deferred. Part 4 prediction scored 43.9% OOS (not viable).
+// No trade logic will be built on this prediction.
 //═══════════════════════════════════════════════════════════════════
 // TradeAction struct and DecideDualTFAction function — DEFERRED.
 // See header comment: "Part 5 deferred stub."
@@ -369,11 +520,16 @@ MTFPrediction_EXPERIMENTAL PredictNextMTF_EXPERIMENTAL(DualTFScenarioState &s)
 //    User integrates into their EA locally; does not #include TofyTrade5.
 // 2. BB_datas[] index convention: 0=M5, 1=M15, 2=M30, 3=H1, 4=H4, 5=D1.
 // 3. Call Trade_Strategy() — same signature as TofyTrade5. It calls
-//    IdentifyDualTF + LogDualTFBar + DrawGateLabel internally.
-// 4. Trade_Strategy returns Trade_act=0 (HOLD) — no trades. This is a
-//    visualization/data pass. PredictNextMTF_EXPERIMENTAL is a STUB.
+//    IdentifyDualTF + PredictNextMTF + LogDualTFBar + DrawGateLabel.
+// 4. Trade_Strategy returns Trade_act=0 (HOLD) — no trades. Prediction
+//    shown for DIAGNOSIS only (43.9%, not viable).
 // 5. Part 5 (trade action) is DEFERRED — no DecideDualTFAction yet.
 // 6. The real BBLoc (ComputeHTFBBLoc / ComputeMTFBBLoc) is the KEY
 //    feature — it produces data the analysis side cannot generate.
 // 7. DrawGateLabel depends on DRAW_LABEL macro from EA includes.
+// 8. Part 4 prediction ported from analyze_multiinput_prediction.py
+//    (Predictor A: BBLoc slope only). Rolling 6-bar buffer + linear
+//    regression slope. Thresholds: >0.3=up, <-0.3=down, else neutral.
+//    One-bar-delayed hit/miss tracking — bar N predicts N+1, checked
+//    at N+1. Log fields: pred, predmtf, slope, predhit.
 //+------------------------------------------------------------------+
