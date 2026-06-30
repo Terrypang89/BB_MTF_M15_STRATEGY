@@ -1,12 +1,13 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "36.04"
+#property version   "36.05"
 //+------------------------------------------------------------------+
 //| TofyTrade6 — DualTF Stack logic                                   |
-//| Part 3 (IDENTIFY) + REAL BBLoc + LOGGING + Part 4 PREDICTION.     |
+//| Part 3 (IDENTIFY) + per-TF BBLoc + LOGGING + Part 4 PREDICTION.  |
 //| Part 4 = real ported logic from analyze_multiinput_prediction.py  |
 //| (BBLoc slope predictor — 43.9% OOS accuracy, NOT VIABLE).         |
 //| Prediction computed/logged/drawn for DIAGNOSIS only — NO trading. |
+//| Per-TF BBLoc format: HTF=F3F5 MTF=F3F5 LTF=F3                     |
 //| Repo logic file, sibling to TofyTrade5.mqh —                      |
 //| user integrates/compiles/backtests locally.                       |
 //| Separate from the 7-scenario system.                              |
@@ -45,8 +46,21 @@ string DualStateName(DUAL_STATE d) {
 struct DualTFScenarioState {
    string htf_scenario;       // 2-char: (D1-state)(H4-state), e.g. "FS"
    string mtf_scenario;       // 2-char: (H1-state)(M30-state), e.g. "FC"
-   int    htf_bbloc;          // 0-10, real price-vs-D1/H4-band
-   int    mtf_bbloc;          // {0,1,3,5,7,9,10}, real price-vs-H1/M30-band
+   int    htf_bbloc;          // 0-10, real price-vs-D1-band (legacy, kept for compat)
+   int    mtf_bbloc;          // sparse, real price-vs-H1-band (legacy, kept for compat)
+   //--- Per-TF BBLoc (V36.05): each TF from its own bands
+   // SCALE: HTF pair (D1,H4) = full 0-10; MTF+LTF (H1,M30,M15) = sparse {0,1,3,5,7,9,10}
+   // Anchors align (1=lower,5=mid,9=upper) so "3" means low-mid on all.
+   // OPTION: if user prefers ALL 0-10, swap ComputeMTFBBLoc → ComputeHTFBBLoc per-TF below.
+   int    d1_bbloc;           // 0-10, from D1 bands
+   int    h4_bbloc;           // 0-10, from H4 bands
+   int    h1_bbloc;           // sparse, from H1 bands
+   int    m30_bbloc;          // sparse, from M30 bands
+   int    m15_bbloc;          // sparse, from M15 bands
+   //--- Paired combo strings (V36.05): HTF=F3F5, MTF=F3F5, LTF=F3
+   string htf_combo;          // e.g. "F3F5" (D1-fly@3, H4-fly@5)
+   string mtf_combo;          // e.g. "F3F5" (H1-fly@3, M30-fly@5)
+   string ltf_combo;          // e.g. "F3"   (M15-fly@3)
    string htf_d1_state;       // "F"/"S"/"C"/"R"
    string htf_h4_state;       // "F"/"S"/"C"/"R"
    string mtf_h1_state;       // "F"/"S"/"C"/"R"
@@ -114,6 +128,14 @@ int ComputeMTFBBLoc(double price, double bblow, double bbupp)
    double raw = ComputeBBLocRaw(price, bblow, bbupp);
    if(raw < 0.0) return -1;   // no-data sentinel — don't snap
    return SnapToMTFScale(raw);
+}
+
+//--- Helper: format a single {state}{bbloc} segment for combo strings
+// No-data (bbloc == -1) → "X-" so the absence is obvious, e.g. "F3X-F5"
+string ComboSegment(string state, int bbloc)
+{
+   if(bbloc < 0) return "X-";
+   return state + IntegerToString(bbloc);
 }
 
 //═══════════════════════════════════════════════════════════════════
@@ -184,6 +206,8 @@ DualTFScenarioState IdentifyDualTF(BB_MTF_Data_struct &bb[], double &close_price
    DualTFScenarioState s;
    s.htf_scenario=""; s.mtf_scenario="";
    s.htf_bbloc=5; s.mtf_bbloc=5;
+   s.d1_bbloc=5; s.h4_bbloc=5; s.h1_bbloc=5; s.m30_bbloc=5; s.m15_bbloc=5;
+   s.htf_combo=""; s.mtf_combo=""; s.ltf_combo="";
    s.htf_d1_state="S"; s.htf_h4_state="S";
    s.mtf_h1_state="S"; s.mtf_m30_state="S";
    s.m15_state="S";
@@ -211,21 +235,36 @@ DualTFScenarioState IdentifyDualTF(BB_MTF_Data_struct &bb[], double &close_price
    //--- MTF scenario pair: (H1-state)(M30-state)
    s.mtf_scenario = s.mtf_h1_state + s.mtf_m30_state;
 
-   //--- Real BBLoc — HTF (use D1 bands for full resolution)
-   s.htf_bbloc = ComputeHTFBBLoc(price, bb[5].BBLowLV[LA], bb[5].BBUppLV[LA]);
+   //--- Per-TF BBLoc — each TF from its own bands (V36.05)
+   // HTF axis (D1, H4): full 0-10 resolution
+   s.d1_bbloc = ComputeHTFBBLoc(price, bb[5].BBLowLV[LA], bb[5].BBUppLV[LA]);
+   s.h4_bbloc = ComputeHTFBBLoc(price, bb[4].BBLowLV[LA], bb[4].BBUppLV[LA]);
+   // MTF+LTF axis (H1, M30, M15): sparse {0,1,3,5,7,9,10}
+   s.h1_bbloc  = ComputeMTFBBLoc(price, bb[3].BBLowLV[LA], bb[3].BBUppLV[LA]);
+   s.m30_bbloc = ComputeMTFBBLoc(price, bb[2].BBLowLV[LA], bb[2].BBUppLV[LA]);
+   s.m15_bbloc = ComputeMTFBBLoc(price, bb[1].BBLowLV[LA], bb[1].BBUppLV[LA]);
 
-   //--- Real BBLoc — MTF (use H1 bands, snap to sparse scale)
-   s.mtf_bbloc = ComputeMTFBBLoc(price, bb[3].BBLowLV[LA], bb[3].BBUppLV[LA]);
+   //--- Legacy aliases (kept for backward compat)
+   s.htf_bbloc = s.d1_bbloc;
+   s.mtf_bbloc = s.h1_bbloc;
 
-   //--- No-data gate: BBLoc must agree with state — band-source TF is "X" → bbloc=-1
-   if(s.htf_d1_state == "X") s.htf_bbloc = -1;   // D1 bands drive htf_bbloc
-   if(s.mtf_h1_state == "X") s.mtf_bbloc = -1;   // H1 bands drive mtf_bbloc
+   //--- No-data gate: TF state == "X" → that TF's bbloc = -1
+   if(s.htf_d1_state == "X") s.d1_bbloc = -1;
+   if(s.htf_h4_state == "X") s.h4_bbloc = -1;
+   if(s.mtf_h1_state == "X") s.h1_bbloc = -1;
+   if(s.mtf_m30_state == "X") s.m30_bbloc = -1;
+   if(s.m15_state == "X") s.m15_bbloc = -1;
 
-   //--- Info string
-   s.info = "HTF="+s.htf_scenario+"(D1="+s.htf_d1_state+",H4="+s.htf_h4_state+") " +
-            "MTF="+s.mtf_scenario+"(H1="+s.mtf_h1_state+",M30="+s.mtf_m30_state+") " +
-            "M15="+s.m15_state+" HTF-BBLoc="+IntegerToString(s.htf_bbloc) +
-            " MTF-BBLoc="+IntegerToString(s.mtf_bbloc);
+   //--- Build paired combo strings (V36.05): HTF=D1+H4, MTF=H1+M30, LTF=M15
+   // No-data shown as "X-", e.g. "F3X-F5" if D1 bbloc is -1
+   s.htf_combo = ComboSegment(s.htf_d1_state, s.d1_bbloc) +
+                 ComboSegment(s.htf_h4_state, s.h4_bbloc);
+   s.mtf_combo = ComboSegment(s.mtf_h1_state, s.h1_bbloc) +
+                 ComboSegment(s.mtf_m30_state, s.m30_bbloc);
+   s.ltf_combo = ComboSegment(s.m15_state, s.m15_bbloc);
+
+   //--- Info string (updated to show per-TF combos)
+   s.info = "HTF="+s.htf_combo+" MTF="+s.mtf_combo+" LTF="+s.ltf_combo;
 
    return s;
 }
@@ -246,13 +285,13 @@ struct MTFPrediction {
 //═══════════════════════════════════════════════════════════════════
 // Log format (colon-separated, no spaces in values):
 // [DUALTF] SIG:DUALTF evt:BAR dt:<datetime>
-//   d1:stg:<BBW_stage> mid:<diffMid> ud:<BBUpDn> state:<F/S/C/R>
-//   h4:stg:<...> mid:<...> ud:<...> state:<...>
-//   h1:stg:<...> mid:<...> ud:<...> state:<...>
-//   m30:stg:<...> mid:<...> ud:<...> state:<...>
-//   m15:stg:<...> mid:<...> ud:<...> state:<...>
-//   htf:<scenario> htfbbloc:<bbloc>
-//   mtf:<scenario> mtfbbloc:<bbloc>
+//   d1:stg:<BBW_stage> mid:<diffMid> ud:<BBUpDn> state:<F/S/C/R> bbloc:<N>
+//   h4:stg:<...> mid:<...> ud:<...> state:<...> bbloc:<N>
+//   h1:stg:<...> mid:<...> ud:<...> state:<...> bbloc:<N>
+//   m30:stg:<...> mid:<...> ud:<...> state:<...> bbloc:<N>
+//   m15:stg:<...> mid:<...> ud:<...> state:<...> bbloc:<N>
+//   htf:<scenario> mtf:<scenario>
+//   htfcombo:<F3F5> mtfcombo:<F3F5> ltfcombo:<F3>
 //   pred:<up/down/neutral> predmtf:<predicted_MTF> slope:<bbloc_slope> predhit:<HIT/MISS/NA>
 
 void LogDualTFBar(BB_MTF_Data_struct &bb[], DualTFScenarioState &s, const MTFPrediction &pred)
@@ -266,26 +305,33 @@ void LogDualTFBar(BB_MTF_Data_struct &bb[], DualTFScenarioState &s, const MTFPre
       +KV6("d1:mid", IntegerToString(bb[5].BB_diffMid_Trend[LA]))
       +KV6("d1:ud",  IntegerToString(bb[5].BBUpDn_state[LA]))
       +KV6("d1:state", s.htf_d1_state)
+      +KVi6("d1bbloc", s.d1_bbloc)
       +KV6("h4:stg", IntegerToString((int)bb[4].BBW_stage[LA]))
       +KV6("h4:mid", IntegerToString(bb[4].BB_diffMid_Trend[LA]))
       +KV6("h4:ud",  IntegerToString(bb[4].BBUpDn_state[LA]))
       +KV6("h4:state", s.htf_h4_state)
+      +KVi6("h4bbloc", s.h4_bbloc)
       +KV6("h1:stg", IntegerToString((int)bb[3].BBW_stage[LA]))
       +KV6("h1:mid", IntegerToString(bb[3].BB_diffMid_Trend[LA]))
       +KV6("h1:ud",  IntegerToString(bb[3].BBUpDn_state[LA]))
       +KV6("h1:state", s.mtf_h1_state)
+      +KVi6("h1bbloc", s.h1_bbloc)
       +KV6("m30:stg", IntegerToString((int)bb[2].BBW_stage[LA]))
       +KV6("m30:mid", IntegerToString(bb[2].BB_diffMid_Trend[LA]))
       +KV6("m30:ud",  IntegerToString(bb[2].BBUpDn_state[LA]))
       +KV6("m30:state", s.mtf_m30_state)
+      +KVi6("m30bbloc", s.m30_bbloc)
       +KV6("m15:stg", IntegerToString((int)bb[1].BBW_stage[LA]))
       +KV6("m15:mid", IntegerToString(bb[1].BB_diffMid_Trend[LA]))
       +KV6("m15:ud",  IntegerToString(bb[1].BBUpDn_state[LA]))
       +KV6("m15:state", s.m15_state)
+      +KVi6("m15bbloc", s.m15_bbloc)
       +KV6("htf", s.htf_scenario)
-      +KVi6("htfbbloc", s.htf_bbloc)
       +KV6("mtf", s.mtf_scenario)
-      +KVi6("mtfbbloc", s.mtf_bbloc)
+      //--- Per-TF combo strings (V36.05)
+      +KV6("htfcombo", s.htf_combo)
+      +KV6("mtfcombo", s.mtf_combo)
+      +KV6("ltfcombo", s.ltf_combo)
       //--- Part 4 prediction fields (diagnosis only, 43.9%, not viable)
       +KV6("pred", pred.pred_direction)
       +KV6("predmtf", pred.predicted_mtf)
@@ -433,7 +479,7 @@ MTFPrediction PredictNextMTF(DualTFScenarioState &s, string prevMtfScenario)
 }
 
 //═══════════════════════════════════════════════════════════════════
-// TRADE STRATEGY — V36.04: identify + BBLoc + log + draw + predict
+// TRADE STRATEGY — V36.05: identify + per-TF BBLoc + log + draw + predict
 // Prediction for DIAGNOSIS only (43.9%, not viable) — Trade_act = 0
 // Signature matches TofyTrade5 exactly so the EA call site works unchanged.
 //═══════════════════════════════════════════════════════════════════
@@ -477,24 +523,24 @@ void Trade_Strategy(
    LogDualTFBar(BB_datas, s, pred);
 
    //--- Draw chart label only on scenario CHANGE (readable chart)
+   // Change key = the combo strings (HTF+MTF+LTF combos)
    static string s_prevScenario = "";
-   string curKey = s.htf_scenario + IntegerToString(s.htf_bbloc) +
-                  s.mtf_scenario + IntegerToString(s.mtf_bbloc);
+   string curKey = s.htf_combo + s.mtf_combo + s.ltf_combo;
    if(curKey != s_prevScenario) {
       s_prevScenario = curKey;
-      string tag = "HTF:"+s.htf_scenario+"["+IntegerToString(s.htf_bbloc)+
-                   "] MTF:"+s.mtf_scenario+"["+IntegerToString(s.mtf_bbloc)+
-                   "] pred:"+pred.pred_direction;
+      string tag = "HTF:"+s.htf_combo+" MTF:"+s.mtf_combo+" LTF:"+s.ltf_combo+
+                   " PRED:"+pred.predicted_mtf;
       // Append hit/miss if available
       if(pred.hit_miss != "NA")
-         tag += " hit:"+pred.hit_miss;
+         tag += " "+pred.hit_miss;
       // Color-code: red on MISS, green on HIT, white on NA/transition
       color drawClr = clrWhite;
       if(pred.hit_miss == "MISS")
          drawClr = clrRed;
       else if(pred.hit_miss == "HIT")
          drawClr = clrLime;
-      DrawGateLabel(tag, close_prices[LA], BB_datas, drawClr, 1);
+      // M30 font size (bb[2] = M30 index). DRAW_LABEL from EA includes.
+      DrawGateLabel(tag, close_prices[LA], BB_datas, drawClr, 2);
    }
 
    //--- Set Trade_info to the scenario summary
@@ -502,7 +548,7 @@ void Trade_Strategy(
                 " slope:" + DoubleToString(pred.bbloc_slope, 2) +
                 " hit:" + pred.hit_miss;
 
-   // V36.04: identify + BBLoc + log + draw + predict. NO trades —
+   // V36.05: identify + per-TF BBLoc + log + draw + predict. NO trades —
    // prediction shown for DIAGNOSIS only (43.9%, not viable).
 }
 
@@ -524,12 +570,18 @@ void Trade_Strategy(
 // 4. Trade_Strategy returns Trade_act=0 (HOLD) — no trades. Prediction
 //    shown for DIAGNOSIS only (43.9%, not viable).
 // 5. Part 5 (trade action) is DEFERRED — no DecideDualTFAction yet.
-// 6. The real BBLoc (ComputeHTFBBLoc / ComputeMTFBBLoc) is the KEY
-//    feature — it produces data the analysis side cannot generate.
-// 7. DrawGateLabel depends on DRAW_LABEL macro from EA includes.
-// 8. Part 4 prediction ported from analyze_multiinput_prediction.py
+// 6. V36.05: per-TF BBLoc — each TF from its own bands. HTF pair (D1,H4)
+//    = full 0-10; MTF+LTF (H1,M30,M15) = sparse {0,1,3,5,7,9,10}.
+//    OPTION: to use ALL 0-10, swap ComputeMTFBBLoc → ComputeHTFBBLoc
+//    for H1/M30/M15 in IdentifyDualTF (3 lines).
+// 7. Combo format: HTF={D1state}{D1bbloc}{H4state}{H4bbloc} e.g. "F3F5"
+//    MTF={H1state}{H1bbloc}{M30state}{M30bbloc}, LTF={M15state}{M15bbloc}.
+//    No-data shown as "X-", e.g. "F3X-F5" if D1 bbloc is -1.
+// 8. DrawGateLabel uses M30 font size (bb[2]) for the chart label.
+//    Depends on DRAW_LABEL macro from EA includes (TofyIncludeSimple.mqh).
+// 9. Part 4 prediction ported from analyze_multiinput_prediction.py
 //    (Predictor A: BBLoc slope only). Rolling 6-bar buffer + linear
 //    regression slope. Thresholds: >0.3=up, <-0.3=down, else neutral.
 //    One-bar-delayed hit/miss tracking — bar N predicts N+1, checked
-//    at N+1. Log fields: pred, predmtf, slope, predhit.
+//    at N+1. Log fields: pred, predmtf, slope, predhit, htfcombo, mtfcombo, ltfcombo.
 //+------------------------------------------------------------------+
