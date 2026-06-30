@@ -229,6 +229,71 @@ flowchart TD
     F --> H["mtf_bbloc"]
 ```
 
+### 3.4a Per-Bar Runtime Sequence — TofyTrade6.mqh (V36.03)
+
+This sequenceDiagram traces the actual function call flow in TofyTrade6.mqh per bar.
+Each participant is a real function; each message is a real call.
+
+```mermaid
+sequenceDiagram
+    participant EA as "EA OnTick"
+    participant TS as "Trade_Strategy()"
+    participant ID as "IdentifyDualTF()"
+    participant B2D as "BBStageToDualState()"
+    participant HBF as "ComputeHTFBBLoc()"
+    participant MBF as "ComputeMTFBBLoc()"
+    participant L as "LogDualTFBar()"
+    participant DL as "DrawGateLabel()"
+
+    Note over EA,TS: "Part 3 is the WORKING, validated layer — V36.03 runtime"
+
+    EA->>TS: "BB_datas[] ATRSL1BUF BBTFImpact Trade_act close_prices[]"
+    TS->>TS: "Once-per-bar guard (iTime M5)"
+    TS-->>TS: "return if same bar (Trade_act=0)"
+
+    TS->>ID: "BB_datas[] close_prices[]"
+    Note over ID,B2D: "Per-TF state derivation (5 TFs)"
+    ID->>B2D: "bb[5].BBW_stage → D1 state"
+    B2D-->>ID: "DUAL_STATE (F/S/C/R/X)"
+    ID->>B2D: "bb[4].BBW_stage → H4 state"
+    B2D-->>ID: "DUAL_STATE"
+    ID->>B2D: "bb[3].BBW_stage → H1 state"
+    B2D-->>ID: "DUAL_STATE"
+    ID->>B2D: "bb[2].BBW_stage → M30 state"
+    B2D-->>ID: "DUAL_STATE"
+    ID->>B2D: "bb[1].BBW_stage → M15 state"
+    B2D-->>ID: "DUAL_STATE"
+
+    ID->>ID: "Pair: HTF=D1+H4 MTF=H1+M30"
+
+    ID->>HBF: "price bb[5].BBLowLV bb[5].BBUppLV"
+    HBF-->>ID: "htf_bbloc (0-10 rounded)"
+
+    ID->>MBF: "price bb[3].BBLowLV bb[3].BBUppLV"
+    MBF-->>ID: "mtf_bbloc (0,1,3,5,7,9,10 snapped)"
+
+    Note over ID: "No-data gate: state X → bbloc=-1"
+
+    ID->>ID: "Build info string"
+    ID-->>TS: "DualTFScenarioState s"
+
+    TS->>L: "BB_datas[] s"
+    L-->>TS: "DUALTF log line written"
+
+    TS->>TS: "Scenario change? (curKey vs prev)"
+    alt scenario changed
+        TS->>DL: "tag price BB_datas clrWhite 1"
+        DL-->>TS: "Chart label drawn"
+    else no change
+        TS->>TS: "skip DrawGateLabel"
+    end
+
+    TS->>TS: "Trade_info = s.info"
+    TS-->>EA: "Trade_act=0 (HOLD — no trades)"
+```
+
+**What this shows:** Per tick, the EA calls `Trade_Strategy()` which gates on once-per-bar. Inside: `IdentifyDualTF()` derives per-TF states via `BBStageToDualState()` (5 calls: D1/H4/H1/M30/M15), pairs HTF/MTF scenarios, computes real BBLoc via `ComputeHTFBBLoc()`/`ComputeMTFBBLoc()`, applies the no-data gate (state X → bbloc=-1), and returns `DualTFScenarioState`. The caller logs via `LogDualTFBar()`, draws a chart label only on scenario change via `DrawGateLabel()`, then returns `Trade_act=0` — no trades. This is the live V36.03 flow.
+
 ### 3.5 Build Status
 
 | Component | Status | Detail |
@@ -464,6 +529,54 @@ flowchart TD
 2. **Adding inputs HURTS:** Every multi-input combination reduces TEST accuracy vs BBLoc-only (43.9%). HTF direction (-2.7pp), M15 (-0.9pp), all combined (-8.6pp). The signals are correlated with noise, not independent predictive factors.
 3. **Overfitting:** All-combined predictor collapses to the majority baseline on TEST (35.3%) — it learned TRAIN patterns that don't generalize.
 4. **Rare-predictable vs common-unpredictable:** High-consistency transition types (CF→CR 83%, RC→SC 90%) are rare (n < 15 each). Common transitions (FF→FS, RR→RS) are unpredictable. The signal exists only in the tail.
+
+### 4.2d Prediction Flow as Tested — NOT VIABLE
+
+This sequenceDiagram shows the prediction flow AS TESTED against V36.03 data — framed
+honestly as a tested dead-end. The `PredictNextMTF_EXPERIMENTAL` stub in TofyTrade6.mqh
+returns persist with confidence=0 and is NOT wired to trades.
+
+```mermaid
+sequenceDiagram
+    participant Caller as "Caller<br/>(Trade_Strategy)"
+    participant PE as "PredictEngine<br/>(PredictNextMTF_EXPERIMENTAL)"
+    participant BS as "BBLocSlope<br/>(6-bar regression)"
+    participant HC as "HTFContext<br/>(fork-decider)"
+    participant MC as "M15Cascade<br/>(leading edge)"
+    participant DR as "Duration<br/>(in-state counter)"
+    participant PR as "Predictor<br/>(combine inputs)"
+
+    Note over Caller,PR: "PART 4 — TESTED NOT VIABLE<br/>43.9% OOS transition accuracy<br/>NOT a live trade path"
+
+    Caller->>PE: "DualTFScenarioState s<br/>MTFHistoryBuffer buf"
+
+    PE->>BS: "mtf_bbloc_hist (last 6 bars)"
+    BS-->>PE: "slope value (rising/falling/flat)"
+    Note over BS: "68.9% of the time slope is FLAT<br/>no signal for most transitions"
+
+    PE->>HC: "htf_scenario (D1+H4 states)"
+    HC-->>PE: "up / down / mixed"
+    Note over HC: "Adding HTF REDUCES test accuracy<br/>43.9% → 41.2% (noise not info)"
+
+    PE->>MC: "m15_state (F/S/C/R)"
+    MC-->>PE: "F/C=up R=down S=neutral"
+    Note over MC: "M15 alone = 35.7% (below baseline)<br/>Adding M15 → 43.0% (worse)"
+
+    PE->>DR: "duration_in_state"
+    DR-->>PE: ">10 or <=10 bars"
+    Note over DR: "Duration adds no independent signal"
+
+    PE->>PR: "slope + htf_dir + m15_dir + duration"
+    PR-->>PE: "predicted direction (up/down/neutral)"
+    Note over PR: "All-combined OVERFITS:<br/>40.8% train → 35.3% test<br/>(= majority baseline)"
+
+    PE->>PE: "Map direction to MTF scenario"
+    PE-->>Caller: "MTFPrediction<br/>(persist default confidence=0)"
+
+    Note over Caller,PR: "RESULT: 43.9% OOS test accuracy<br/>NOT VIABLE for Part 5<br/>Identification > prediction<br/>See Part 5 for the viable path"
+```
+
+**What this shows:** The prediction engine gathers four inputs — BBLoc slope (68.9% flat, no signal), HTF context (adding it reduces accuracy), M15 cascade (alone = 35.7%, below baseline), and duration (no independent signal). Combining all four overfits (40.8% train → 35.3% test = majority baseline). The stub returns persist with confidence=0 — NOT wired to trades. This flow is a documented dead-end.
 
 ### 4.2a Predicted Target Derivation
 
