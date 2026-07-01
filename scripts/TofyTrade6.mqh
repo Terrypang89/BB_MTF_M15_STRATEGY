@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "36.06"
+#property version   "36.07"
 //+------------------------------------------------------------------+
 //| TofyTrade6 — DualTF Stack logic                                   |
 //| Part 3 (IDENTIFY) + per-TF BBLoc + LOGGING + Part 4 PREDICTION.  |
@@ -345,21 +345,25 @@ void LogDualTFBar(BB_MTF_Data_struct &bb[], DualTFScenarioState &s, const MTFPre
 }
 
 //═══════════════════════════════════════════════════════════════════
-// DRAW LABEL — ported from TofyTrade5, V36.06: unique object names
+// DRAW LABEL — ported from TofyTrade5, V36.07: clean valid object names
 // DEPENDENCY: DRAW_LABEL macro provided by EA includes (TofyIncludeSimple.mqh)
 //═══════════════════════════════════════════════════════════════════
-// V36.06 FIX: labels were disappearing because DRAW_LABEL names the object
-// from the tag string. Repeated tags overwrote the same object → only the
-// first label persisted. Now each label gets a unique name (tag + datetime).
+// V36.07 FIX: objName must be a VALID MT5 name (no spaces/colons/slashes).
+// The readable tag is set as display TEXT via OBJPROP_TEXT after creation.
+// If DRAW_LABEL overwrites OBJPROP_TEXT internally, check locally — the
+// macro's signature/behavior is in TofyIncludeSimple.mqh (user-side).
 void DrawGateLabel(string tag, double price, BB_MTF_Data_struct &BB_datas[],
                    color labelColor, int tf_idx=1)
 {
    datetime curtime = iTime(_Symbol, PERIOD_M5, 0);
-   // Unique object name: tag + timestamp. Guarantees no overwrites.
-   string objName = tag + "_" + TimeToString(curtime, TIME_DATE|TIME_SECONDS);
+   // Clean, valid, unique object name: prefix + unix-seconds as digits only
+   string objName = "DualTF_" + IntegerToString((int)curtime);
    DRAW_LABEL(objName, curtime, price, labelColor,
               BB_datas[tf_idx].BBFontSize, BB_datas[tf_idx].BBArrowWidth,
               90, ANCHOR_UPPER, BB_datas[tf_idx]);
+   // Set the display text explicitly — the readable tag regardless of
+   // how DRAW_LABEL handles text internally.
+   ObjectSetString(0, objName, OBJPROP_TEXT, tag);
 }
 
 //═══════════════════════════════════════════════════════════════════
@@ -572,10 +576,12 @@ void Trade_Strategy(
 
    //--- Set Trade_info to the scenario summary
    Trade_info = s.info + " | PRED:" + pred.pred_direction +
+                "/" + pred.predicted_mtf +
+                "[" + IntegerToString(pred.predicted_bbloc) + "]" +
                 " slope:" + DoubleToString(pred.bbloc_slope, 2) +
                 " hit:" + pred.hit_miss;
 
-   // V36.06: identify + per-TF BBLoc + log + draw + predict. NO trades —
+   // V36.07: identify + per-TF BBLoc + log + draw + predict. NO trades —
    // prediction shown for DIAGNOSIS only. 43.9% stale, must re-measure.
 }
 
@@ -605,9 +611,11 @@ void Trade_Strategy(
 //    MTF={H1state}{H1bbloc}{M30state}{M30bbloc}, LTF={M15state}{M15bbloc}.
 //    No-data shown as "X-", e.g. "F3X-F5" if D1 bbloc is -1.
 // 8. DrawGateLabel uses M30 font size (bb[2]) for the chart label.
-//    V36.06: object names are unique (tag + datetime) to prevent
-//    overwrites. Depends on DRAW_LABEL macro from EA includes.
-// 9. V36.06: prediction + verification both target M30 (consistent).
+//    V36.07: object names are clean + valid (DualTF_<unix_seconds>) —
+//    no spaces/colons/slashes. Display text set via OBJPROP_TEXT.
+//    Depends on DRAW_LABEL macro from EA includes. If DRAW_LABEL
+//    overwrites OBJPROP_TEXT, check TofyIncludeSimple.mqh locally.
+// 9. V36.07: prediction + verification both target M30 (consistent).
 //    Rolling 6-bar M30 bbloc buffer + linear regression slope.
 //    Thresholds: >0.3=up, <-0.3=down, else neutral.
 //    predicted_mtf = H1-char + M30-char-shifted-by-direction (approximate).
