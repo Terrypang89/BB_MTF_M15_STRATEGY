@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "36.08"
+#property version   "36.09"
 //+------------------------------------------------------------------+
 //| TofyTrade6 — DualTF Stack logic                                   |
 //| Part 3 (IDENTIFY) + per-TF BBLoc + LOGGING + Part 4 PREDICTION.  |
@@ -345,20 +345,30 @@ void LogDualTFBar(BB_MTF_Data_struct &bb[], DualTFScenarioState &s, const MTFPre
 }
 
 //═══════════════════════════════════════════════════════════════════
-// DRAW LABEL — ported from TofyTrade5, V36.08: pass sanitized tag directly
-// DEPENDENCY: DRAW_LABEL macro provided by EA includes (TofyIncludeSimple.mqh)
+// DRAW LABEL — V36.09: DIAGNOSTIC — direct ObjectCreate, bypasses DRAW_LABEL
 //═══════════════════════════════════════════════════════════════════
-// V36.08: DRAW_LABEL uses its first param as BOTH the object name base AND
-// the display text — and it builds a unique name internally (appends curtime).
-// The tag must be a valid MT5 object name (no spaces/colons/slashes).
-// We pass the sanitized tag directly — DRAW_LABEL handles name + text.
+// Diagnostic build: bypasses DRAW_LABEL (EA include, unreadable) and creates
+// the label object directly. Hardcoded fontsize 10 + white. Logs [LABELDBG] with
+// creation result, error code, price, time, M30 font size, and tag.
+// One backtest + reading the [LABELDBG] lines reveals why labels don't appear.
 void DrawGateLabel(string tag, double price, BB_MTF_Data_struct &BB_datas[],
                    color labelColor, int tf_idx=1)
 {
    datetime curtime = iTime(_Symbol, PERIOD_M5, 0);
-   DRAW_LABEL(tag, curtime, price, labelColor,
-              BB_datas[tf_idx].BBFontSize, BB_datas[tf_idx].BBArrowWidth,
-              90, ANCHOR_UPPER, BB_datas[tf_idx]);
+   string nm = "DTF_" + IntegerToString((int)curtime);
+   ResetLastError();
+   bool created = ObjectCreate(0, nm, OBJ_TEXT, 0, curtime, price);
+   int errAfterCreate = GetLastError();
+   ObjectSetString(0, nm, OBJPROP_TEXT, tag);
+   ObjectSetInteger(0, nm, OBJPROP_FONTSIZE, 10);     // hardcoded visible size
+   ObjectSetInteger(0, nm, OBJPROP_COLOR, clrWhite);
+   ObjectSetInteger(0, nm, OBJPROP_ANCHOR, ANCHOR_LEFT);
+   ObjectSetInteger(0, nm, OBJPROP_SELECTABLE, false);
+   Print("[LABELDBG] created=", created, " name=", nm,
+         " err=", errAfterCreate, " price=", DoubleToString(price,2),
+         " curtime=", TimeToString(curtime, TIME_DATE|TIME_MINUTES),
+         " fontsrc_bb2=", BB_datas[tf_idx].BBFontSize,
+         " tag=", tag);
 }
 
 //═══════════════════════════════════════════════════════════════════
