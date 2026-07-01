@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "36.09"
+#property version   "36.10"
 //+------------------------------------------------------------------+
 //| TofyTrade6 — DualTF Stack logic                                   |
 //| Part 3 (IDENTIFY) + per-TF BBLoc + LOGGING + Part 4 PREDICTION.  |
@@ -363,6 +363,7 @@ void DrawGateLabel(string tag, double price, BB_MTF_Data_struct &BB_datas[],
    ObjectSetInteger(0, nm, OBJPROP_FONTSIZE, 10);     // hardcoded visible size
    ObjectSetInteger(0, nm, OBJPROP_COLOR, clrWhite);
    ObjectSetInteger(0, nm, OBJPROP_ANCHOR, ANCHOR_LEFT);
+   ObjectSetInteger(0, nm, OBJPROP_ANGLE, 90);   // vertical, bottom-to-top
    ObjectSetInteger(0, nm, OBJPROP_SELECTABLE, false);
    Print("[LABELDBG] created=", created, " name=", nm,
          " err=", errAfterCreate, " price=", DoubleToString(price,2),
