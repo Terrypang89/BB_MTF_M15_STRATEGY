@@ -1,13 +1,14 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "36.05"
+#property version   "36.06"
 //+------------------------------------------------------------------+
 //| TofyTrade6 — DualTF Stack logic                                   |
 //| Part 3 (IDENTIFY) + per-TF BBLoc + LOGGING + Part 4 PREDICTION.  |
-//| Part 4 = real ported logic from analyze_multiinput_prediction.py  |
-//| (BBLoc slope predictor — 43.9% OOS accuracy, NOT VIABLE).         |
+//| Part 4 = ported from analyze_multiinput_prediction.py (Predictor A) |
 //| Prediction computed/logged/drawn for DIAGNOSIS only — NO trading. |
 //| Per-TF BBLoc format: HTF=F3F5 MTF=F3F5 LTF=F3                     |
+//| NOTE: 43.9% accuracy measured on OLD H1-predict/M30-verify logic. |
+//|  After M30-consistency fix, accuracy must be RE-MEASURED.          |
 //| Repo logic file, sibling to TofyTrade5.mqh —                      |
 //| user integrates/compiles/backtests locally.                       |
 //| Separate from the 7-scenario system.                              |
@@ -139,9 +140,10 @@ string ComboSegment(string state, int bbloc)
 }
 
 //═══════════════════════════════════════════════════════════════════
-// ROLLING MTF_BBLOC BUFFER + SLOPE — for Part 4 prediction
+// ROLLING M30_BBLOC BUFFER + SLOPE — for Part 4 prediction
+// V36.06: uses M30 bbloc (m30_bbloc) — prediction + verification both M30
 // Ported from analyze_multiinput_prediction.py — Predictor A
-// BBLoc slope only — 43.9% OOS accuracy, NOT VIABLE, diagnosis only
+// 43.9% stale (measured on H1-predict/M30-verify mismatch) — must re-measure
 //═══════════════════════════════════════════════════════════════════
 #define BBLoc_BUF_SIZE  6   // last 6 bars of mtf_bbloc
 
@@ -292,7 +294,7 @@ struct MTFPrediction {
 //   m15:stg:<...> mid:<...> ud:<...> state:<...> bbloc:<N>
 //   htf:<scenario> mtf:<scenario>
 //   htfcombo:<F3F5> mtfcombo:<F3F5> ltfcombo:<F3>
-//   pred:<up/down/neutral> predmtf:<predicted_MTF> slope:<bbloc_slope> predhit:<HIT/MISS/NA>
+//   pred:<up/down/neutral> predmtf:<predicted_MTF> predbbloc:<N> slope:<bbloc_slope> predhit:<HIT/MISS/NA>
 
 void LogDualTFBar(BB_MTF_Data_struct &bb[], DualTFScenarioState &s, const MTFPrediction &pred)
 {
@@ -332,9 +334,10 @@ void LogDualTFBar(BB_MTF_Data_struct &bb[], DualTFScenarioState &s, const MTFPre
       +KV6("htfcombo", s.htf_combo)
       +KV6("mtfcombo", s.mtf_combo)
       +KV6("ltfcombo", s.ltf_combo)
-      //--- Part 4 prediction fields (diagnosis only, 43.9%, not viable)
+      //--- Part 4 prediction fields (diagnosis only, 43.9% stale — see V36.06 note)
       +KV6("pred", pred.pred_direction)
       +KV6("predmtf", pred.predicted_mtf)
+      +KVi6("predbbloc", pred.predicted_bbloc)
       +KV6("slope", DoubleToString(pred.bbloc_slope, 2))
       +KV6("predhit", pred.hit_miss);
 
@@ -342,14 +345,19 @@ void LogDualTFBar(BB_MTF_Data_struct &bb[], DualTFScenarioState &s, const MTFPre
 }
 
 //═══════════════════════════════════════════════════════════════════
-// DRAW LABEL — ported from TofyTrade5
+// DRAW LABEL — ported from TofyTrade5, V36.06: unique object names
 // DEPENDENCY: DRAW_LABEL macro provided by EA includes (TofyIncludeSimple.mqh)
 //═══════════════════════════════════════════════════════════════════
+// V36.06 FIX: labels were disappearing because DRAW_LABEL names the object
+// from the tag string. Repeated tags overwrote the same object → only the
+// first label persisted. Now each label gets a unique name (tag + datetime).
 void DrawGateLabel(string tag, double price, BB_MTF_Data_struct &BB_datas[],
                    color labelColor, int tf_idx=1)
 {
    datetime curtime = iTime(_Symbol, PERIOD_M5, 0);
-   DRAW_LABEL(tag, curtime, price, labelColor,
+   // Unique object name: tag + timestamp. Guarantees no overwrites.
+   string objName = tag + "_" + TimeToString(curtime, TIME_DATE|TIME_SECONDS);
+   DRAW_LABEL(objName, curtime, price, labelColor,
               BB_datas[tf_idx].BBFontSize, BB_datas[tf_idx].BBArrowWidth,
               90, ANCHOR_UPPER, BB_datas[tf_idx]);
 }
@@ -357,11 +365,14 @@ void DrawGateLabel(string tag, double price, BB_MTF_Data_struct &BB_datas[],
 //═══════════════════════════════════════════════════════════════════
 // PART 4 — REAL PREDICTION (ported from analyze_multiinput_prediction.py)
 //
-// Predictor A: BBLoc slope only — 43.9% OOS accuracy, NOT VIABLE.
-// Ported for DIAGNOSIS only — NO trading on this prediction.
+// Predictor A: BBLoc slope only — DIAGNOSIS only, NOT VIABLE.
+// V36.06: prediction + verification both target M30 (2nd char of MTF)
+//   — consistent. The old H1-predicts/M30-verifies mismatch is fixed.
+//   The 43.9% accuracy was measured on the OLD inconsistent version and
+//   no longer applies until the analysis script is re-run on this logic.
 //
 // Logic (from predict_bbloc_only in analyze_multiinput_prediction.py):
-//   bbloc_slope over last 6 bars (linear regression, same as Python).
+//   bbloc_slope over last 6 bars of M30 bbloc (linear regression, same as Python).
 //   slope >  0.3 → predict "up"     (up-continuation transition)
 //   slope < -0.3 → predict "down"   (down-reversal transition)
 //   |slope| <= 0.3 → predict "neutral" (persist — no transition)
@@ -422,11 +433,11 @@ MTFPrediction PredictNextMTF(DualTFScenarioState &s, string prevMtfScenario)
    p.bbloc_slope    = 0.0;
    p.pred_direction = "neutral";
    p.predicted_mtf  = s.mtf_scenario;
-   p.predicted_bbloc = s.mtf_bbloc;
+   p.predicted_bbloc = s.m30_bbloc;
    p.hit_miss       = "NA";
 
-   //--- No-data guard
-   if(s.mtf_bbloc < 0)
+   //--- No-data guard (M30 — consistent with prediction target)
+   if(s.m30_bbloc < 0)
    {
       p.pred_direction = "neutral";
       p.hit_miss       = "NA";
@@ -445,18 +456,29 @@ MTFPrediction PredictNextMTF(DualTFScenarioState &s, string prevMtfScenario)
       p.pred_direction = "neutral";
 
    //--- Map direction to predicted MTF scenario
+   // APPROXIMATE — derived by shifting the M30 char (2nd letter) by the
+   // predicted direction. Not a validated scenario predictor.
    if(p.pred_direction == "neutral")
    {
       p.predicted_mtf = s.mtf_scenario; // persist
    }
    else
    {
-      string firstCh = StringSubstr(s.mtf_scenario, 0, 1);
-      string secondCh = StringSubstr(s.mtf_scenario, 1, 1);
+      string firstCh = StringSubstr(s.mtf_scenario, 0, 1); // H1 stays
+      string secondCh = StringSubstr(s.mtf_scenario, 1, 1); // M30 shifts
       string nextSecond = AdvanceSecondLetter(secondCh, p.pred_direction);
       p.predicted_mtf = firstCh + nextSecond;
    }
-   p.predicted_bbloc = s.mtf_bbloc; // BBLoc carry-forward (not predicted separately)
+
+   //--- Project predicted_bbloc from M30 bbloc + slope direction
+   // APPROXIMATE — step the current m30_bbloc in the slope direction,
+   // clamped to {0,1,3,5,7,9,10} sparse scale. Not a validated predictor.
+   if(p.pred_direction == "up" && s.m30_bbloc < 10)
+      p.predicted_bbloc = MathMin(s.m30_bbloc + 2, 10);
+   else if(p.pred_direction == "down" && s.m30_bbloc > 0)
+      p.predicted_bbloc = MathMax(s.m30_bbloc - 2, 0);
+   else
+      p.predicted_bbloc = s.m30_bbloc;
 
    //--- One-bar-delayed hit/miss: compare previous bar's prediction to actual
    // prevMtfScenario = MTF scenario on the previous bar
@@ -479,8 +501,8 @@ MTFPrediction PredictNextMTF(DualTFScenarioState &s, string prevMtfScenario)
 }
 
 //═══════════════════════════════════════════════════════════════════
-// TRADE STRATEGY — V36.05: identify + per-TF BBLoc + log + draw + predict
-// Prediction for DIAGNOSIS only (43.9%, not viable) — Trade_act = 0
+// TRADE STRATEGY — V36.06: identify + per-TF BBLoc + log + draw + predict
+// Prediction + verification both M30 (consistent). DIAGNOSIS only — Trade_act = 0
 // Signature matches TofyTrade5 exactly so the EA call site works unchanged.
 //═══════════════════════════════════════════════════════════════════
 void Trade_Strategy(
@@ -510,7 +532,10 @@ void Trade_Strategy(
    DualTFScenarioState s = IdentifyDualTF(BB_datas, close_prices);
 
    //--- Update rolling BBLoc buffer (for slope computation)
-   UpdateBBLocBuf(s.mtf_bbloc);
+   // V36.06 FIX: use M30 bbloc — prediction + verification both target M30
+   // (2nd char of MTF scenario). Old version used H1 bbloc (mtf_bbloc) which
+   // created an H1-predicts/M30-verifies mismatch.
+   UpdateBBLocBuf(s.m30_bbloc);
 
    //--- Part 4: Predict next MTF + one-bar-delayed hit/miss
    MTFPrediction pred = PredictNextMTF(s, s_prevMtfScenario);
@@ -529,7 +554,9 @@ void Trade_Strategy(
    if(curKey != s_prevScenario) {
       s_prevScenario = curKey;
       string tag = "HTF:"+s.htf_combo+" MTF:"+s.mtf_combo+" LTF:"+s.ltf_combo+
-                   " PRED:"+pred.predicted_mtf;
+                   " PRED:"+pred.pred_direction+"/"+pred.predicted_mtf+
+                   "["+IntegerToString(pred.predicted_bbloc)+"]"+
+                   " slope:"+DoubleToString(pred.bbloc_slope,2);
       // Append hit/miss if available
       if(pred.hit_miss != "NA")
          tag += " "+pred.hit_miss;
@@ -548,8 +575,8 @@ void Trade_Strategy(
                 " slope:" + DoubleToString(pred.bbloc_slope, 2) +
                 " hit:" + pred.hit_miss;
 
-   // V36.05: identify + per-TF BBLoc + log + draw + predict. NO trades —
-   // prediction shown for DIAGNOSIS only (43.9%, not viable).
+   // V36.06: identify + per-TF BBLoc + log + draw + predict. NO trades —
+   // prediction shown for DIAGNOSIS only. 43.9% stale, must re-measure.
 }
 
 //═══════════════════════════════════════════════════════════════════
@@ -568,7 +595,7 @@ void Trade_Strategy(
 // 3. Call Trade_Strategy() — same signature as TofyTrade5. It calls
 //    IdentifyDualTF + PredictNextMTF + LogDualTFBar + DrawGateLabel.
 // 4. Trade_Strategy returns Trade_act=0 (HOLD) — no trades. Prediction
-//    shown for DIAGNOSIS only (43.9%, not viable).
+//    shown for DIAGNOSIS only. 43.9% stale (V36.06 consistency fix).
 // 5. Part 5 (trade action) is DEFERRED — no DecideDualTFAction yet.
 // 6. V36.05: per-TF BBLoc — each TF from its own bands. HTF pair (D1,H4)
 //    = full 0-10; MTF+LTF (H1,M30,M15) = sparse {0,1,3,5,7,9,10}.
@@ -578,10 +605,14 @@ void Trade_Strategy(
 //    MTF={H1state}{H1bbloc}{M30state}{M30bbloc}, LTF={M15state}{M15bbloc}.
 //    No-data shown as "X-", e.g. "F3X-F5" if D1 bbloc is -1.
 // 8. DrawGateLabel uses M30 font size (bb[2]) for the chart label.
-//    Depends on DRAW_LABEL macro from EA includes (TofyIncludeSimple.mqh).
-// 9. Part 4 prediction ported from analyze_multiinput_prediction.py
-//    (Predictor A: BBLoc slope only). Rolling 6-bar buffer + linear
-//    regression slope. Thresholds: >0.3=up, <-0.3=down, else neutral.
+//    V36.06: object names are unique (tag + datetime) to prevent
+//    overwrites. Depends on DRAW_LABEL macro from EA includes.
+// 9. V36.06: prediction + verification both target M30 (consistent).
+//    Rolling 6-bar M30 bbloc buffer + linear regression slope.
+//    Thresholds: >0.3=up, <-0.3=down, else neutral.
+//    predicted_mtf = H1-char + M30-char-shifted-by-direction (approximate).
+//    predicted_bbloc = m30_bbloc stepped by slope direction (approximate).
 //    One-bar-delayed hit/miss tracking — bar N predicts N+1, checked
-//    at N+1. Log fields: pred, predmtf, slope, predhit, htfcombo, mtfcombo, ltfcombo.
+//    at N+1. Log fields: pred, predmtf, predbbloc, slope, predhit.
+//    All 5 fields shown in chart label.
 //+------------------------------------------------------------------+
