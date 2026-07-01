@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "36.07"
+#property version   "36.08"
 //+------------------------------------------------------------------+
 //| TofyTrade6 — DualTF Stack logic                                   |
 //| Part 3 (IDENTIFY) + per-TF BBLoc + LOGGING + Part 4 PREDICTION.  |
@@ -345,25 +345,20 @@ void LogDualTFBar(BB_MTF_Data_struct &bb[], DualTFScenarioState &s, const MTFPre
 }
 
 //═══════════════════════════════════════════════════════════════════
-// DRAW LABEL — ported from TofyTrade5, V36.07: clean valid object names
+// DRAW LABEL — ported from TofyTrade5, V36.08: pass sanitized tag directly
 // DEPENDENCY: DRAW_LABEL macro provided by EA includes (TofyIncludeSimple.mqh)
 //═══════════════════════════════════════════════════════════════════
-// V36.07 FIX: objName must be a VALID MT5 name (no spaces/colons/slashes).
-// The readable tag is set as display TEXT via OBJPROP_TEXT after creation.
-// If DRAW_LABEL overwrites OBJPROP_TEXT internally, check locally — the
-// macro's signature/behavior is in TofyIncludeSimple.mqh (user-side).
+// V36.08: DRAW_LABEL uses its first param as BOTH the object name base AND
+// the display text — and it builds a unique name internally (appends curtime).
+// The tag must be a valid MT5 object name (no spaces/colons/slashes).
+// We pass the sanitized tag directly — DRAW_LABEL handles name + text.
 void DrawGateLabel(string tag, double price, BB_MTF_Data_struct &BB_datas[],
                    color labelColor, int tf_idx=1)
 {
    datetime curtime = iTime(_Symbol, PERIOD_M5, 0);
-   // Clean, valid, unique object name: prefix + unix-seconds as digits only
-   string objName = "DualTF_" + IntegerToString((int)curtime);
-   DRAW_LABEL(objName, curtime, price, labelColor,
+   DRAW_LABEL(tag, curtime, price, labelColor,
               BB_datas[tf_idx].BBFontSize, BB_datas[tf_idx].BBArrowWidth,
               90, ANCHOR_UPPER, BB_datas[tf_idx]);
-   // Set the display text explicitly — the readable tag regardless of
-   // how DRAW_LABEL handles text internally.
-   ObjectSetString(0, objName, OBJPROP_TEXT, tag);
 }
 
 //═══════════════════════════════════════════════════════════════════
@@ -557,21 +552,16 @@ void Trade_Strategy(
    string curKey = s.htf_combo + s.mtf_combo + s.ltf_combo;
    if(curKey != s_prevScenario) {
       s_prevScenario = curKey;
-      string tag = "HTF:"+s.htf_combo+" MTF:"+s.mtf_combo+" LTF:"+s.ltf_combo+
-                   " PRED:"+pred.pred_direction+"/"+pred.predicted_mtf+
-                   "["+IntegerToString(pred.predicted_bbloc)+"]"+
-                   " slope:"+DoubleToString(pred.bbloc_slope,2);
-      // Append hit/miss if available
+      // Build sanitized tag — valid MT5 object name chars only:
+      // HTF-F3F5_MTF-F3F5_LTF-F3_PRED-down-FS3-MISS
+      // ":"→"-", space→"_", "/"→"-", "[]"removed, slope dropped from chart
+      string tag = "HTF-"+s.htf_combo+"_MTF-"+s.mtf_combo+"_LTF-"+s.ltf_combo+
+                   "_PRED-"+pred.pred_direction+"-"+pred.predicted_mtf+
+                   IntegerToString(pred.predicted_bbloc);
       if(pred.hit_miss != "NA")
-         tag += " "+pred.hit_miss;
-      // Color-code: red on MISS, green on HIT, white on NA/transition
-      color drawClr = clrWhite;
-      if(pred.hit_miss == "MISS")
-         drawClr = clrRed;
-      else if(pred.hit_miss == "HIT")
-         drawClr = clrLime;
-      // M30 font size (bb[2] = M30 index). DRAW_LABEL from EA includes.
-      DrawGateLabel(tag, close_prices[LA], BB_datas, drawClr, 2);
+         tag += "-"+pred.hit_miss;
+      // M30 font size (bb[2] = M30 index). White only. DRAW_LABEL from EA includes.
+      DrawGateLabel(tag, close_prices[LA], BB_datas, clrWhite, 2);
    }
 
    //--- Set Trade_info to the scenario summary
@@ -581,7 +571,7 @@ void Trade_Strategy(
                 " slope:" + DoubleToString(pred.bbloc_slope, 2) +
                 " hit:" + pred.hit_miss;
 
-   // V36.07: identify + per-TF BBLoc + log + draw + predict. NO trades —
+   // V36.08: identify + per-TF BBLoc + log + draw + predict. NO trades —
    // prediction shown for DIAGNOSIS only. 43.9% stale, must re-measure.
 }
 
@@ -611,11 +601,10 @@ void Trade_Strategy(
 //    MTF={H1state}{H1bbloc}{M30state}{M30bbloc}, LTF={M15state}{M15bbloc}.
 //    No-data shown as "X-", e.g. "F3X-F5" if D1 bbloc is -1.
 // 8. DrawGateLabel uses M30 font size (bb[2]) for the chart label.
-//    V36.07: object names are clean + valid (DualTF_<unix_seconds>) —
-//    no spaces/colons/slashes. Display text set via OBJPROP_TEXT.
-//    Depends on DRAW_LABEL macro from EA includes. If DRAW_LABEL
-//    overwrites OBJPROP_TEXT, check TofyIncludeSimple.mqh locally.
-// 9. V36.07: prediction + verification both target M30 (consistent).
+//    V36.08: sanitized tag passed directly to DRAW_LABEL (which handles
+//    name + text internally). Tag format: HTF-F3F5_MTF-F3F5_LTF-F3_PRED-down-FS3-MISS.
+//    Color always white. Depends on DRAW_LABEL macro from EA includes.
+// 9. V36.08: prediction + verification both target M30 (consistent).
 //    Rolling 6-bar M30 bbloc buffer + linear regression slope.
 //    Thresholds: >0.3=up, <-0.3=down, else neutral.
 //    predicted_mtf = H1-char + M30-char-shifted-by-direction (approximate).
