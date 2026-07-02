@@ -355,7 +355,7 @@ void DrawGateLabel(string tag, double price, BB_MTF_Data_struct &BB_datas[],
                    color labelColor, int tf_idx=1)
 {
    datetime curtime = iTime(_Symbol, PERIOD_M5, 0);
-   string nm = "DTF_" + IntegerToString((int)curtime);
+   string nm = "DTF_" + tag + "_" + IntegerToString((int)curtime);
    ResetLastError();
    bool created = ObjectCreate(0, nm, OBJ_TEXT, 0, curtime, price);
    int errAfterCreate = GetLastError();
@@ -363,7 +363,7 @@ void DrawGateLabel(string tag, double price, BB_MTF_Data_struct &BB_datas[],
    ObjectSetInteger(0, nm, OBJPROP_FONTSIZE, 10);     // hardcoded visible size
    ObjectSetInteger(0, nm, OBJPROP_COLOR, clrWhite);
    ObjectSetInteger(0, nm, OBJPROP_ANCHOR, ANCHOR_LEFT);
-   ObjectSetInteger(0, nm, OBJPROP_ANGLE, 90);   // vertical, bottom-to-top
+   ObjectSetDouble(0, nm, OBJPROP_ANGLE, 90);   // vertical, bottom-to-top
    ObjectSetInteger(0, nm, OBJPROP_SELECTABLE, false);
    Print("[LABELDBG] created=", created, " name=", nm,
          " err=", errAfterCreate, " price=", DoubleToString(price,2),
