@@ -1,17 +1,38 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "36.10"
+#property version   "36.11"
 //+------------------------------------------------------------------+
 //| TofyTrade6 — DualTF Stack logic                                   |
-//| Part 3 (IDENTIFY) + per-TF BBLoc + LOGGING + Part 4 PREDICTION.  |
-//| Part 4 = ported from analyze_multiinput_prediction.py (Predictor A) |
-//| Prediction computed/logged/drawn for DIAGNOSIS only — NO trading. |
-//| Per-TF BBLoc format: HTF=F3F5 MTF=F3F5 LTF=F3                     |
-//| NOTE: 43.9% accuracy measured on OLD H1-predict/M30-verify logic. |
-//|  After M30-consistency fix, accuracy must be RE-MEASURED.          |
-//| Repo logic file, sibling to TofyTrade5.mqh —                      |
-//| user integrates/compiles/backtests locally.                       |
-//| Separate from the 7-scenario system.                              |
+//| V36.11 — FIRST TRADING VERSION:                                    |
+//|   TransitionDetector + v1 ruleset per DUALTF_ARCHITECTURE.md.      |
+//|   Expectancy unmeasured — this version EXISTS to measure it.       |
+//|                                                                    |
+//| PART 4 — TransitionDetector (M15 F/R flip detection)               |
+//| PART 5 — v1 Trade Ruleset (gate, entry, TP, SL, invalidation)      |
+//| Prediction fields (pred/predmtf/slope/predhit) = DIAGNOSTIC ONLY   |
+//|   — NOT trade inputs.                                              |
+//| Repo logic file, sibling to TofyTrade5.mqh —                       |
+//| user integrates/compiles/backtests locally.                        |
+//| Separate from the 7-scenario system.                               |
+//+------------------------------------------------------------------+
+//═══════════════════════════════════════════════════════════════════
+// STEP 0 — ENUM_Trade_Act interface findings (from TofyTrade5.mqh):
+//   0 = hold (no action)
+//   1 = exit_sell+buy  (open BUY / switch to BUY)
+//   2 = exit_buy+sell  (open SELL / switch to SELL)
+//   7 = exit_all       (close all positions)
+// Trade_sl = PRICE convention (confirmed: GetATRSLStop returns a price).
+// BUYS/SELLS = open position counts; BUYS+SELLS==0 means flat.
+// No TP parameter exists — TP managed in logic (monitor each bar).
+//
+// FLAG — SL handling: Trade_sl is set at entry. The EA/broker may
+// execute the SL independently. SL_HIT detection is best-effort:
+// if close_price <= SL (BUY) or >= SL (SELL) on an exit bar, we
+// log SL_HIT. However, the EA may close the position before we
+// see the bar (tick-level SL), so SL_HIT may be underreported.
+// Verify at compile: does the EA apply Trade_sl via OrderSend
+// or OrderModify? If so, SL is broker-managed and SL_HIT is
+// broker-executed — we may never see the bar.
 //+------------------------------------------------------------------+
 #include <TofyIncludeSimple.mqh>
 
@@ -68,6 +89,43 @@ struct DualTFScenarioState {
    string mtf_m30_state;      // "F"/"S"/"C"/"R"
    string m15_state;          // "F"/"S"/"C"/"R" — leading edge
    string info;               // human-readable reason string
+};
+
+//═══════════════════════════════════════════════════════════════════
+// PART 4 — PREDICTION STRUCT (diagnostic only — NOT trade input)
+//═══════════════════════════════════════════════════════════════════
+struct MTFPrediction {
+   string pred_direction;       // "up" / "down" / "neutral"
+   string predicted_mtf;        // predicted next MTF scenario (2-char)
+   int    predicted_bbloc;      // predicted next MTF BBLoc
+   double bbloc_slope;          // slope of mtf_bbloc over last 6 bars
+   string hit_miss;             // "HIT" / "MISS" / "NA"
+};
+
+//═══════════════════════════════════════════════════════════════════
+// PART 4 — TransitionDetector trigger struct
+//═══════════════════════════════════════════════════════════════════
+struct TransitionTrigger {
+   bool     active;              // true if a trigger fired
+   int      direction;           // 1=UP, 2=DOWN
+   datetime fire_time;           // M5 bar time when trigger fired
+   int      fire_bar;            // M5 bar index when trigger fired (for validity)
+};
+
+//═══════════════════════════════════════════════════════════════════
+// PART 5 — Position state tracking
+//═══════════════════════════════════════════════════════════════════
+struct PositionState {
+   bool     open;                // is there an open position?
+   int      direction;           // 1=BUY, 2=SELL
+   double   entry_price;         // price at entry
+   datetime entry_time;          // M5 bar time at entry
+   double   tp_price;            // take-profit price (M30 band)
+   double   sl_price;            // stop-loss price (opposite M15 band)
+   bool     m30_followed;        // has M30 reached trigger target state?
+   int      bars_since_entry;    // M5 bars elapsed since entry
+   string   trigger_state;       // M15 state at trigger ("F" for UP, "R" for DOWN)
+   int      trigger_dir;         // trigger direction (1=UP, 2=DOWN)
 };
 
 //═══════════════════════════════════════════════════════════════════
@@ -141,9 +199,7 @@ string ComboSegment(string state, int bbloc)
 
 //═══════════════════════════════════════════════════════════════════
 // ROLLING M30_BBLOC BUFFER + SLOPE — for Part 4 prediction
-// V36.06: uses M30 bbloc (m30_bbloc) — prediction + verification both M30
-// Ported from analyze_multiinput_prediction.py — Predictor A
-// 43.9% stale (measured on H1-predict/M30-verify mismatch) — must re-measure
+// DIAGNOSTIC ONLY — does not affect trade decisions
 //═══════════════════════════════════════════════════════════════════
 #define BBLoc_BUF_SIZE  6   // last 6 bars of mtf_bbloc
 
@@ -164,7 +220,6 @@ void UpdateBBLocBuf(int bbloc)
 // Skips -1 (no-data) values — they don't corrupt the slope
 double ComputeBBLocSlope()
 {
-   // Collect valid (non -1) values into a temp array
    double valid[];
    int    validCount = 0;
    for(int i = 0; i < BBLoc_BUF_SIZE; i++)
@@ -178,7 +233,6 @@ double ComputeBBLocSlope()
    }
    if(validCount < 2) return 0.0;   // not enough data
 
-   // Linear regression: slope = sum((x-xm)(y-ym)) / sum((x-xm)^2)
    double xMean = (validCount - 1) / 2.0;
    double yMean = 0.0;
    for(int i = 0; i < validCount; i++)
@@ -199,10 +253,6 @@ double ComputeBBLocSlope()
 //═══════════════════════════════════════════════════════════════════
 // IDENTIFY DUALTF — Part 3, Layer 1
 //═══════════════════════════════════════════════════════════════════
-// Reads BB_datas[] + price -> per-TF F/S/C/R -> HTF/MTF pairs ->
-// real BBLoc -> fills and returns DualTFScenarioState.
-// TF index convention (same as TofyTrade5):
-//   0=M5, 1=M15, 2=M30, 3=H1, 4=H4, 5=D1
 DualTFScenarioState IdentifyDualTF(BB_MTF_Data_struct &bb[], double &close_prices[])
 {
    DualTFScenarioState s;
@@ -238,10 +288,8 @@ DualTFScenarioState IdentifyDualTF(BB_MTF_Data_struct &bb[], double &close_price
    s.mtf_scenario = s.mtf_h1_state + s.mtf_m30_state;
 
    //--- Per-TF BBLoc — each TF from its own bands (V36.05)
-   // HTF axis (D1, H4): full 0-10 resolution
    s.d1_bbloc = ComputeHTFBBLoc(price, bb[5].BBLowLV[LA], bb[5].BBUppLV[LA]);
    s.h4_bbloc = ComputeHTFBBLoc(price, bb[4].BBLowLV[LA], bb[4].BBUppLV[LA]);
-   // MTF+LTF axis (H1, M30, M15): sparse {0,1,3,5,7,9,10}
    s.h1_bbloc  = ComputeMTFBBLoc(price, bb[3].BBLowLV[LA], bb[3].BBUppLV[LA]);
    s.m30_bbloc = ComputeMTFBBLoc(price, bb[2].BBLowLV[LA], bb[2].BBUppLV[LA]);
    s.m15_bbloc = ComputeMTFBBLoc(price, bb[1].BBLowLV[LA], bb[1].BBUppLV[LA]);
@@ -257,45 +305,126 @@ DualTFScenarioState IdentifyDualTF(BB_MTF_Data_struct &bb[], double &close_price
    if(s.mtf_m30_state == "X") s.m30_bbloc = -1;
    if(s.m15_state == "X") s.m15_bbloc = -1;
 
-   //--- Build paired combo strings (V36.05): HTF=D1+H4, MTF=H1+M30, LTF=M15
-   // No-data shown as "X-", e.g. "F3X-F5" if D1 bbloc is -1
+   //--- Build paired combo strings (V36.05)
    s.htf_combo = ComboSegment(s.htf_d1_state, s.d1_bbloc) +
                  ComboSegment(s.htf_h4_state, s.h4_bbloc);
    s.mtf_combo = ComboSegment(s.mtf_h1_state, s.h1_bbloc) +
                  ComboSegment(s.mtf_m30_state, s.m30_bbloc);
    s.ltf_combo = ComboSegment(s.m15_state, s.m15_bbloc);
 
-   //--- Info string (updated to show per-TF combos)
+   //--- Info string
    s.info = "HTF="+s.htf_combo+" MTF="+s.mtf_combo+" LTF="+s.ltf_combo;
 
    return s;
 }
 
 //═══════════════════════════════════════════════════════════════════
-// PART 4 — PREDICTION STRUCT (forward, detailed impl below)
+// PART 4 — PREDICTION (DIAGNOSTIC ONLY — NOT trade input)
 //═══════════════════════════════════════════════════════════════════
-struct MTFPrediction {
-   string pred_direction;       // "up" / "down" / "neutral"
-   string predicted_mtf;        // predicted next MTF scenario (2-char)
-   int    predicted_bbloc;      // predicted next MTF BBLoc
-   double bbloc_slope;          // slope of mtf_bbloc over last 6 bars
-   string hit_miss;             // "HIT" / "MISS" / "NA"
-};
+// The following prediction code is retained for logging/diagnostics.
+// It MUST NOT influence any trade decision. (grep-check: no pred_
+// fields appear in gate/entry/exit logic below.)
+
+static string DirectionLetterMap[4] = {"R","S","F","C"};
+
+static string s_predDirection = "";
+static string s_prevMtfScenario = "";
+
+string AdvanceSecondLetter(string curLetter, string direction)
+{
+   int curIdx = -1;
+   for(int i = 0; i < 4; i++)
+   {
+      if(DirectionLetterMap[i] == curLetter) { curIdx = i; break; }
+   }
+   if(curIdx < 0) return curLetter;
+   if(direction == "up" && curIdx < 3)
+      return DirectionLetterMap[curIdx + 1];
+   if(direction == "down" && curIdx > 0)
+      return DirectionLetterMap[curIdx - 1];
+   return curLetter;
+}
+
+string ClassifyActualDirection(string fromMtf, string toMtf)
+{
+   if(fromMtf == toMtf) return "neutral";
+   if(StringLen(fromMtf) < 2 || StringLen(toMtf) < 2) return "neutral";
+   string fromCh = StringSubstr(fromMtf, 1, 1);
+   string toCh   = StringSubstr(toMtf, 1, 1);
+   int fromVal = -1, toVal = -1;
+   for(int i = 0; i < 4; i++)
+   {
+      if(DirectionLetterMap[i] == fromCh) fromVal = i;
+      if(DirectionLetterMap[i] == toCh)   toVal   = i;
+   }
+   if(fromVal < 0 || toVal < 0) return "neutral";
+   if(toVal > fromVal)  return "up";
+   if(toVal < fromVal)  return "down";
+   return "neutral";
+}
+
+MTFPrediction PredictNextMTF(DualTFScenarioState &s, string prevMtfScenario)
+{
+   MTFPrediction p;
+   p.bbloc_slope    = 0.0;
+   p.pred_direction = "neutral";
+   p.predicted_mtf  = s.mtf_scenario;
+   p.predicted_bbloc = s.m30_bbloc;
+   p.hit_miss       = "NA";
+
+   if(s.m30_bbloc < 0)
+   {
+      p.pred_direction = "neutral";
+      p.hit_miss       = "NA";
+      return p;
+   }
+
+   p.bbloc_slope = ComputeBBLocSlope();
+
+   if(p.bbloc_slope > 0.3)
+      p.pred_direction = "up";
+   else if(p.bbloc_slope < -0.3)
+      p.pred_direction = "down";
+   else
+      p.pred_direction = "neutral";
+
+   if(p.pred_direction == "neutral")
+   {
+      p.predicted_mtf = s.mtf_scenario;
+   }
+   else
+   {
+      string firstCh = StringSubstr(s.mtf_scenario, 0, 1);
+      string secondCh = StringSubstr(s.mtf_scenario, 1, 1);
+      string nextSecond = AdvanceSecondLetter(secondCh, p.pred_direction);
+      p.predicted_mtf = firstCh + nextSecond;
+   }
+
+   if(p.pred_direction == "up" && s.m30_bbloc < 10)
+      p.predicted_bbloc = MathMin(s.m30_bbloc + 2, 10);
+   else if(p.pred_direction == "down" && s.m30_bbloc > 0)
+      p.predicted_bbloc = MathMax(s.m30_bbloc - 2, 0);
+   else
+      p.predicted_bbloc = s.m30_bbloc;
+
+   if(prevMtfScenario != "" && prevMtfScenario != "XX" && s.mtf_scenario != "XX")
+   {
+      string actualDir = ClassifyActualDirection(prevMtfScenario, s.mtf_scenario);
+      if(s_predDirection != "")
+      {
+         if(s_predDirection == actualDir)
+            p.hit_miss = "HIT";
+         else
+            p.hit_miss = "MISS";
+      }
+   }
+
+   return p;
+}
 
 //═══════════════════════════════════════════════════════════════════
-// LOGGING — per-bar, parseable (the redesign dataset)
+// LOGGING — per-bar, parseable
 //═══════════════════════════════════════════════════════════════════
-// Log format (colon-separated, no spaces in values):
-// [DUALTF] SIG:DUALTF evt:BAR dt:<datetime>
-//   d1:stg:<BBW_stage> mid:<diffMid> ud:<BBUpDn> state:<F/S/C/R> bbloc:<N>
-//   h4:stg:<...> mid:<...> ud:<...> state:<...> bbloc:<N>
-//   h1:stg:<...> mid:<...> ud:<...> state:<...> bbloc:<N>
-//   m30:stg:<...> mid:<...> ud:<...> state:<...> bbloc:<N>
-//   m15:stg:<...> mid:<...> ud:<...> state:<...> bbloc:<N>
-//   htf:<scenario> mtf:<scenario>
-//   htfcombo:<F3F5> mtfcombo:<F3F5> ltfcombo:<F3>
-//   pred:<up/down/neutral> predmtf:<predicted_MTF> predbbloc:<N> slope:<bbloc_slope> predhit:<HIT/MISS/NA>
-
 void LogDualTFBar(BB_MTF_Data_struct &bb[], DualTFScenarioState &s, const MTFPrediction &pred)
 {
    datetime dt = iTime(_Symbol, PERIOD_M5, 0);
@@ -330,11 +459,10 @@ void LogDualTFBar(BB_MTF_Data_struct &bb[], DualTFScenarioState &s, const MTFPre
       +KVi6("m15bbloc", s.m15_bbloc)
       +KV6("htf", s.htf_scenario)
       +KV6("mtf", s.mtf_scenario)
-      //--- Per-TF combo strings (V36.05)
       +KV6("htfcombo", s.htf_combo)
       +KV6("mtfcombo", s.mtf_combo)
       +KV6("ltfcombo", s.ltf_combo)
-      //--- Part 4 prediction fields (diagnosis only, 43.9% stale — see V36.06 note)
+      //--- Part 4 prediction fields (DIAGNOSTIC ONLY — not trade inputs)
       +KV6("pred", pred.pred_direction)
       +KV6("predmtf", pred.predicted_mtf)
       +KVi6("predbbloc", pred.predicted_bbloc)
@@ -345,174 +473,168 @@ void LogDualTFBar(BB_MTF_Data_struct &bb[], DualTFScenarioState &s, const MTFPre
 }
 
 //═══════════════════════════════════════════════════════════════════
-// DRAW LABEL — V36.09: DIAGNOSTIC — direct ObjectCreate, bypasses DRAW_LABEL
+// DRAW LABEL — trade events only (V36.11)
+// Removed [LABELDBG] Print. Scenario-change labels disabled.
 //═══════════════════════════════════════════════════════════════════
-// Diagnostic build: bypasses DRAW_LABEL (EA include, unreadable) and creates
-// the label object directly. Hardcoded fontsize 10 + white. Logs [LABELDBG] with
-// creation result, error code, price, time, M30 font size, and tag.
-// One backtest + reading the [LABELDBG] lines reveals why labels don't appear.
-void DrawGateLabel(string tag, double price, BB_MTF_Data_struct &BB_datas[],
-                   color labelColor, int tf_idx=1)
+void DrawTradeLabel(string tag, double price, BB_MTF_Data_struct &BB_datas[],
+                    color labelColor, int tf_idx=1)
 {
    datetime curtime = iTime(_Symbol, PERIOD_M5, 0);
    string nm = "DTF_" + tag + "_" + IntegerToString((int)curtime);
-   ResetLastError();
-   bool created = ObjectCreate(0, nm, OBJ_TEXT, 0, curtime, price);
-   int errAfterCreate = GetLastError();
+   ObjectCreate(0, nm, OBJ_TEXT, 0, curtime, price);
    ObjectSetString(0, nm, OBJPROP_TEXT, tag);
-   ObjectSetInteger(0, nm, OBJPROP_FONTSIZE, 10);     // hardcoded visible size
+   ObjectSetInteger(0, nm, OBJPROP_FONTSIZE, 10);
    ObjectSetInteger(0, nm, OBJPROP_COLOR, clrWhite);
    ObjectSetInteger(0, nm, OBJPROP_ANCHOR, ANCHOR_LEFT);
-   ObjectSetDouble(0, nm, OBJPROP_ANGLE, 90);   // vertical, bottom-to-top
+   ObjectSetDouble(0, nm, OBJPROP_ANGLE, 90);
    ObjectSetInteger(0, nm, OBJPROP_SELECTABLE, false);
-   Print("[LABELDBG] created=", created, " name=", nm,
-         " err=", errAfterCreate, " price=", DoubleToString(price,2),
-         " curtime=", TimeToString(curtime, TIME_DATE|TIME_MINUTES),
-         " fontsrc_bb2=", BB_datas[tf_idx].BBFontSize,
-         " tag=", tag);
 }
 
 //═══════════════════════════════════════════════════════════════════
-// PART 4 — REAL PREDICTION (ported from analyze_multiinput_prediction.py)
-//
-// Predictor A: BBLoc slope only — DIAGNOSIS only, NOT VIABLE.
-// V36.06: prediction + verification both target M30 (2nd char of MTF)
-//   — consistent. The old H1-predicts/M30-verifies mismatch is fixed.
-//   The 43.9% accuracy was measured on the OLD inconsistent version and
-//   no longer applies until the analysis script is re-run on this logic.
-//
-// Logic (from predict_bbloc_only in analyze_multiinput_prediction.py):
-//   bbloc_slope over last 6 bars of M30 bbloc (linear regression, same as Python).
-//   slope >  0.3 → predict "up"     (up-continuation transition)
-//   slope < -0.3 → predict "down"   (down-reversal transition)
-//   |slope| <= 0.3 → predict "neutral" (persist — no transition)
-//
-// Direction comparison (from classify_transition_direction):
-//   Order: R(0) < S(1) < F(2) < C(3) — second letter of MTF scenario.
-//   If TO second-letter value > FROM → "up"; < → "down"; == → "neutral".
+// PART 4 — TransitionDetector
+// FIRES on M15 state flip to F (UP) or R (DOWN) only.
+// S/C flips excluded. No HTF filter.
+// Validity = 12 M5 bars from fire.
 //═══════════════════════════════════════════════════════════════════
-//--- Map predicted direction to a concrete MTF scenario
-// "up" → second letter advances toward C (R→S, S→F, F→C)
-// "down" → second letter recedes toward R (C→F, F→S, S→R)
-// "neutral" → same scenario (persist)
-static string DirectionLetterMap[4] = {"R","S","F","C"}; // index 0=R,1=S,2=F,3=C
+// Static: previous M15 state (for flip detection)
+static string s_prevM15State = "";
 
-//--- Static to store previous bar's predicted direction (for hit/miss)
-static string s_predDirection = "";   // last bar's predicted direction
-static string s_prevMtfScenario = ""; // last bar's MTF scenario
-
-string AdvanceSecondLetter(string curLetter, string direction)
+TransitionTrigger DetectTransition(DualTFScenarioState &s, datetime curTime)
 {
-   int curIdx = -1;
-   for(int i = 0; i < 4; i++)
-   {
-      if(DirectionLetterMap[i] == curLetter) { curIdx = i; break; }
-   }
-   if(curIdx < 0) return curLetter; // unknown, keep
-   if(direction == "up" && curIdx < 3)
-      return DirectionLetterMap[curIdx + 1];
-   if(direction == "down" && curIdx > 0)
-      return DirectionLetterMap[curIdx - 1];
-   return curLetter; // neutral or at boundary
-}
+   TransitionTrigger trig;
+   trig.active = false;
+   trig.direction = 0;
+   trig.fire_time = 0;
+   trig.fire_bar = 0;
 
-//--- Classify the actual transition direction (same as Python)
-string ClassifyActualDirection(string fromMtf, string toMtf)
-{
-   if(fromMtf == toMtf) return "neutral";
-   if(StringLen(fromMtf) < 2 || StringLen(toMtf) < 2) return "neutral";
-   string fromCh = StringSubstr(fromMtf, 1, 1);
-   string toCh   = StringSubstr(toMtf, 1, 1);
-   int fromVal = -1, toVal = -1;
-   for(int i = 0; i < 4; i++)
+   // No flip on first call (no previous state)
+   if(s_prevM15State == "")
    {
-      if(DirectionLetterMap[i] == fromCh) fromVal = i;
-      if(DirectionLetterMap[i] == toCh)   toVal   = i;
-   }
-   if(fromVal < 0 || toVal < 0) return "neutral";
-   if(toVal > fromVal)  return "up";
-   if(toVal < fromVal)  return "down";
-   return "neutral";
-}
-
-//--- Main prediction function — ported from analyze_multiinput_prediction.py
-// Also performs one-bar-delayed hit/miss check against actual transition
-MTFPrediction PredictNextMTF(DualTFScenarioState &s, string prevMtfScenario)
-{
-   MTFPrediction p;
-   p.bbloc_slope    = 0.0;
-   p.pred_direction = "neutral";
-   p.predicted_mtf  = s.mtf_scenario;
-   p.predicted_bbloc = s.m30_bbloc;
-   p.hit_miss       = "NA";
-
-   //--- No-data guard (M30 — consistent with prediction target)
-   if(s.m30_bbloc < 0)
-   {
-      p.pred_direction = "neutral";
-      p.hit_miss       = "NA";
-      return p;
+      s_prevM15State = s.m15_state;
+      return trig;
    }
 
-   //--- Compute slope from rolling buffer (same as Python bbloc_slope)
-   p.bbloc_slope = ComputeBBLocSlope();
-
-   //--- Prediction rule (same thresholds as Python: predict_bbloc_only)
-   if(p.bbloc_slope > 0.3)
-      p.pred_direction = "up";
-   else if(p.bbloc_slope < -0.3)
-      p.pred_direction = "down";
-   else
-      p.pred_direction = "neutral";
-
-   //--- Map direction to predicted MTF scenario
-   // APPROXIMATE — derived by shifting the M30 char (2nd letter) by the
-   // predicted direction. Not a validated scenario predictor.
-   if(p.pred_direction == "neutral")
+   // Both current and previous must be non-X (valid data)
+   if(s.m15_state == "X" || s_prevM15State == "X")
    {
-      p.predicted_mtf = s.mtf_scenario; // persist
-   }
-   else
-   {
-      string firstCh = StringSubstr(s.mtf_scenario, 0, 1); // H1 stays
-      string secondCh = StringSubstr(s.mtf_scenario, 1, 1); // M30 shifts
-      string nextSecond = AdvanceSecondLetter(secondCh, p.pred_direction);
-      p.predicted_mtf = firstCh + nextSecond;
+      s_prevM15State = s.m15_state;
+      return trig;
    }
 
-   //--- Project predicted_bbloc from M30 bbloc + slope direction
-   // APPROXIMATE — step the current m30_bbloc in the slope direction,
-   // clamped to {0,1,3,5,7,9,10} sparse scale. Not a validated predictor.
-   if(p.pred_direction == "up" && s.m30_bbloc < 10)
-      p.predicted_bbloc = MathMin(s.m30_bbloc + 2, 10);
-   else if(p.pred_direction == "down" && s.m30_bbloc > 0)
-      p.predicted_bbloc = MathMax(s.m30_bbloc - 2, 0);
-   else
-      p.predicted_bbloc = s.m30_bbloc;
-
-   //--- One-bar-delayed hit/miss: compare previous bar's prediction to actual
-   // prevMtfScenario = MTF scenario on the previous bar
-   // s.mtf_scenario   = MTF scenario on the current bar (the "actual")
-   if(prevMtfScenario != "" && prevMtfScenario != "XX" && s.mtf_scenario != "XX")
+   // State must have changed
+   if(s.m15_state == s_prevM15State)
    {
-      string actualDir = ClassifyActualDirection(prevMtfScenario, s.mtf_scenario);
-      // We need the direction that was predicted on the previous bar.
-      // This is tracked in s_predDirection (static, set after prediction each bar).
-      if(s_predDirection != "")
-      {
-         if(s_predDirection == actualDir)
-            p.hit_miss = "HIT";
-         else
-            p.hit_miss = "MISS";
-      }
+      return trig;
    }
 
-   return p;
+   // Flip to F = UP trigger
+   if(s.m15_state == "F" && s_prevM15State != "F")
+   {
+      trig.active = true;
+      trig.direction = 1;  // UP
+      trig.fire_time = curTime;
+      trig.fire_bar = 0;   // bar 0 = fire bar
+   }
+   // Flip to R = DOWN trigger
+   else if(s.m15_state == "R" && s_prevM15State != "R")
+   {
+      trig.active = true;
+      trig.direction = 2;  // DOWN
+      trig.fire_time = curTime;
+      trig.fire_bar = 0;
+   }
+   // S/C flips → no trigger (excluded by lift measurement)
+
+   // Update previous state for next call
+   s_prevM15State = s.m15_state;
+   return trig;
 }
 
 //═══════════════════════════════════════════════════════════════════
-// TRADE STRATEGY — V36.06: identify + per-TF BBLoc + log + draw + predict
-// Prediction + verification both M30 (consistent). DIAGNOSIS only — Trade_act = 0
+// PART 5 — Tradeability Gate
+// Evaluates at trigger bar. Returns gate result string.
+//═══════════════════════════════════════════════════════════════════
+string EvaluateGate(int triggerDir, int m30bbloc, bool positionOpen)
+{
+   // One-position-at-a-time
+   if(positionOpen)
+      return "SKIP_CONCURRENT";
+
+   // No-data guard
+   if(m30bbloc == -1)
+      return "GATE_SKIP_NODATA";
+
+   if(triggerDir == 1)  // UP trigger
+   {
+      if(m30bbloc == 5 || m30bbloc == 7)
+         return "PASS";
+      if(m30bbloc == 9 || m30bbloc == 10)
+         return "GATE_SKIP_ATBAND";
+      // {0,1,3} = FAR
+      return "GATE_SKIP_FAR";
+   }
+   else  // DOWN trigger (dir==2)
+   {
+      if(m30bbloc == 3 || m30bbloc == 5)
+         return "PASS";
+      if(m30bbloc == 0 || m30bbloc == 1)
+         return "GATE_SKIP_ATBAND";
+      // {7,9,10} = FAR
+      return "GATE_SKIP_FAR";
+   }
+}
+
+//═══════════════════════════════════════════════════════════════════
+// TRADE LOGGING — [TRADE] prefix, parseable
+//═══════════════════════════════════════════════════════════════════
+void LogTradeEntry(string dir, string gateResult, double entryPrice, double slPrice,
+                   double tpPrice, int m30bbloc, string m15State, string m30State,
+                   int h1bbloc, int h4bbloc, datetime dt)
+{
+   double slDist  = MathAbs(entryPrice - slPrice);
+   double tpDist  = MathAbs(tpPrice - entryPrice);
+   double rr      = (slDist > 0) ? (tpDist / slDist) : 0.0;
+   string dtStr   = TimeToString(dt, TIME_DATE|TIME_SECONDS);
+
+   Print("[TRADE] evt:ENTRY dir:", dir,
+         " dt:", dtStr,
+         " entry:", DoubleToString(entryPrice, _Digits),
+         " sl:", DoubleToString(slPrice, _Digits),
+         " sldist:", DoubleToString(slDist, _Digits),
+         " tp:", DoubleToString(tpPrice, _Digits),
+         " tpdist:", DoubleToString(tpDist, _Digits),
+         " rr:", DoubleToString(rr, 2),
+         " m30bbloc:", IntegerToString(m30bbloc),
+         " m15:", m15State,
+         " m30:", m30State,
+         " h1bbloc:", IntegerToString(h1bbloc),
+         " h4bbloc:", IntegerToString(h4bbloc));
+}
+
+void LogTradeExit(string reason, double exitPrice, int barsHeld, bool m30Followed,
+                  datetime dt)
+{
+   string dtStr   = TimeToString(dt, TIME_DATE|TIME_SECONDS);
+
+   Print("[TRADE] evt:EXIT reason:", reason,
+         " dt:", dtStr,
+         " exit:", DoubleToString(exitPrice, _Digits),
+         " bars_held:", IntegerToString(barsHeld),
+         " m30_followed:", m30Followed ? "Y" : "N");
+}
+
+void LogTradeSkip(string reason, string dir, int m30bbloc, datetime dt)
+{
+   string dtStr   = TimeToString(dt, TIME_DATE|TIME_SECONDS);
+
+   Print("[TRADE] evt:SKIP reason:", reason,
+         " dir:", dir,
+         " dt:", dtStr,
+         " m30bbloc:", IntegerToString(m30bbloc));
+}
+
+//═══════════════════════════════════════════════════════════════════
+// TRADE STRATEGY — V36.11: identify + TransitionDetector + v1 ruleset
 // Signature matches TofyTrade5 exactly so the EA call site works unchanged.
 //═══════════════════════════════════════════════════════════════════
 void Trade_Strategy(
@@ -541,86 +663,215 @@ void Trade_Strategy(
    //--- Layer 1: Identify DualTF scenario + compute real BBLoc
    DualTFScenarioState s = IdentifyDualTF(BB_datas, close_prices);
 
-   //--- Update rolling BBLoc buffer (for slope computation)
-   // V36.06 FIX: use M30 bbloc — prediction + verification both target M30
-   // (2nd char of MTF scenario). Old version used H1 bbloc (mtf_bbloc) which
-   // created an H1-predicts/M30-verifies mismatch.
+   //--- Update rolling BBLoc buffer (for slope computation — diagnostic)
    UpdateBBLocBuf(s.m30_bbloc);
 
-   //--- Part 4: Predict next MTF + one-bar-delayed hit/miss
+   //--- Part 4 prediction (DIAGNOSTIC ONLY — not used in trade path)
    MTFPrediction pred = PredictNextMTF(s, s_prevMtfScenario);
-
-   //--- Store this bar's prediction for next bar's hit/miss check
    s_predDirection   = pred.pred_direction;
    s_prevMtfScenario = s.mtf_scenario;
 
-   //--- Log the per-bar DualTF data (produces the redesign dataset)
+   //--- Log the per-bar DualTF data
    LogDualTFBar(BB_datas, s, pred);
 
-   //--- Draw chart label only on scenario CHANGE (readable chart)
-   // Change key = the combo strings (HTF+MTF+LTF combos)
-   static string s_prevScenario = "";
-   string curKey = s.htf_combo + s.mtf_combo + s.ltf_combo;
-   if(curKey != s_prevScenario) {
-      s_prevScenario = curKey;
-      // Build sanitized tag — valid MT5 object name chars only:
-      // HTF-F3F5_MTF-F3F5_LTF-F3_PRED-down-FS3-MISS
-      // ":"→"-", space→"_", "/"→"-", "[]"removed, slope dropped from chart
-      string tag = "HTF-"+s.htf_combo+"_MTF-"+s.mtf_combo+"_LTF-"+s.ltf_combo+
-                   "_PRED-"+pred.pred_direction+"-"+pred.predicted_mtf+
-                   IntegerToString(pred.predicted_bbloc);
-      if(pred.hit_miss != "NA")
-         tag += "-"+pred.hit_miss;
-      // M30 font size (bb[2] = M30 index). White only. DRAW_LABEL from EA includes.
-      DrawGateLabel(tag, close_prices[LA], BB_datas, clrWhite, 2);
+   //--- Position state (static — persists across calls)
+   static PositionState pos;
+   if(!pos.open)
+   {
+      pos.direction=0; pos.entry_price=0; pos.entry_time=0;
+      pos.tp_price=0; pos.sl_price=0; pos.m30_followed=false;
+      pos.bars_since_entry=0; pos.trigger_state=""; pos.trigger_dir=0;
    }
 
-   //--- Set Trade_info to the scenario summary
-   Trade_info = s.info + " | PRED:" + pred.pred_direction +
-                "/" + pred.predicted_mtf +
-                "[" + IntegerToString(pred.predicted_bbloc) + "]" +
-                " slope:" + DoubleToString(pred.bbloc_slope, 2) +
-                " hit:" + pred.hit_miss;
+   bool positionOpen = (BUYS + SELLS > 0);
 
-   // V36.08: identify + per-TF BBLoc + log + draw + predict. NO trades —
-   // prediction shown for DIAGNOSIS only. 43.9% stale, must re-measure.
+   //==================================================================================
+   // PART 5 — EXIT LOGIC (position open)
+   //==================================================================================
+   // Sync: if our state says open but EA sees no position, it was closed externally
+   // (broker SL, manual close). Reset without logging — EA owns that exit.
+   if(pos.open && !positionOpen)
+   {
+      pos.open = false;
+   }
+
+   if(positionOpen && pos.open)
+   {
+      pos.bars_since_entry++;
+      double px = close_prices[LA];
+
+      //--- Check m30 follow: has M30 reached the trigger target state?
+      // UP trigger (dir=1): target = F; DOWN trigger (dir=2): target = R
+      if(!pos.m30_followed)
+      {
+         if(pos.trigger_dir == 1 && s.mtf_m30_state == "F")
+            pos.m30_followed = true;
+         if(pos.trigger_dir == 2 && s.mtf_m30_state == "R")
+            pos.m30_followed = true;
+      }
+
+      //--- Priority order for exits:
+
+      // 1. TP_HIT: price reached TP
+      // UP: close >= TP; DOWN: close <= TP
+      if((pos.trigger_dir == 1 && px >= pos.tp_price) ||
+         (pos.trigger_dir == 2 && px <= pos.tp_price))
+      {
+         Trade_act = 7;  // exit_all
+         LogTradeExit("TP_HIT", px, pos.bars_since_entry, pos.m30_followed, cur);
+         DrawTradeLabel("EXIT-TPHIT", px, BB_datas, clrWhite, 2);
+         Trade_info = "SIG:SIG evt:EXIT reason:TP_HIT";
+         pos.open = false;
+         return;
+      }
+
+      // 2. M15_REVERT: m15 state != trigger target state
+      if(s.m15_state != pos.trigger_state)
+      {
+         Trade_act = 7;  // exit_all
+         LogTradeExit("M15_REVERT", px, pos.bars_since_entry, pos.m30_followed, cur);
+         DrawTradeLabel("EXIT-REVERT", px, BB_datas, clrWhite, 2);
+         Trade_info = "SIG:SIG evt:EXIT reason:M15_REVERT";
+         pos.open = false;
+         return;
+      }
+
+      // 3. TIMEOUT: 12 M5 bars elapsed AND m30 has not followed
+      // Once m30 HAS followed, timeout no longer applies
+      if(!pos.m30_followed && pos.bars_since_entry >= 12)
+      {
+         Trade_act = 7;  // exit_all
+         LogTradeExit("TIMEOUT", px, pos.bars_since_entry, pos.m30_followed, cur);
+         DrawTradeLabel("EXIT-TIMEOUT", px, BB_datas, clrWhite, 2);
+         Trade_info = "SIG:SIG evt:EXIT reason:TIMEOUT";
+         pos.open = false;
+         return;
+      }
+
+      // 4. SL_HIT detection (best-effort — broker may execute before we see the bar)
+      // UP: close <= SL; DOWN: close >= SL
+      if((pos.trigger_dir == 1 && px <= pos.sl_price) ||
+         (pos.trigger_dir == 2 && px >= pos.sl_price))
+      {
+         Trade_act = 7;  // exit_all
+         LogTradeExit("SL_HIT", px, pos.bars_since_entry, pos.m30_followed, cur);
+         DrawTradeLabel("EXIT-SLHIT", px, BB_datas, clrWhite, 2);
+         Trade_info = "SIG:SIG evt:EXIT reason:SL_HIT";
+         pos.open = false;
+         return;
+      }
+
+      //--- No exit — hold. Set Trade_sl for EA trailing (tighten-only by caller)
+      Trade_sl = pos.sl_price;
+      Trade_info = "SIG:SIG evt:HOLD pos:" + (pos.trigger_dir==1?"BUY":"SELL") +
+                   " bars:" + IntegerToString(pos.bars_since_entry) +
+                   " m30follow:" + (pos.m30_followed?"Y":"N");
+      return;
+   }
+
+   //==================================================================================
+   // PART 4 + PART 5 — TRIGGER + GATE + ENTRY (no position open)
+   //==================================================================================
+
+   //--- Detect M15 transition
+   TransitionTrigger trig = DetectTransition(s, cur);
+
+   if(trig.active)
+   {
+      string trigDir = (trig.direction == 1) ? "UP" : "DOWN";
+
+      //--- Evaluate tradeability gate
+      string gateResult = EvaluateGate(trig.direction, s.m30_bbloc, positionOpen);
+
+      if(gateResult == "PASS")
+      {
+         //--- ENTRY
+         double entryPx = close_prices[LA];
+
+         // SL = opposite-side M15 band at entry
+         double slPx;
+         if(trig.direction == 1)  // UP: SL = M15 lower band
+            slPx = BB_datas[1].BBLowLV[LA];
+         else                     // DOWN: SL = M15 upper band
+            slPx = BB_datas[1].BBUppLV[LA];
+
+         // TP = M30 band at entry
+         double tpPx;
+         if(trig.direction == 1)  // UP: TP = M30 upper band
+            tpPx = BB_datas[2].BBUppLV[LA];
+         else                     // DOWN: TP = M30 lower band
+            tpPx = BB_datas[2].BBLowLV[LA];
+
+         // Set position state
+         pos.open = true;
+         pos.direction = trig.direction;
+         pos.entry_price = entryPx;
+         pos.entry_time = cur;
+         pos.tp_price = tpPx;
+         pos.sl_price = slPx;
+         pos.m30_followed = false;
+         pos.bars_since_entry = 0;
+         pos.trigger_state = (trig.direction == 1) ? "F" : "R";
+         pos.trigger_dir = trig.direction;
+
+         // Set trade outputs
+         Trade_act = (ENUM_Trade_Act)trig.direction;  // 1=BUY, 2=SELL
+         Trade_lots = baseLot;
+         Trade_sl = slPx;  // PRICE convention
+
+         // Log entry
+         LogTradeEntry(trigDir, gateResult, entryPx, slPx, tpPx,
+                       s.m30_bbloc, s.m15_state, s.mtf_m30_state,
+                       s.h1_bbloc, s.h4_bbloc, cur);
+
+         // Draw label
+         double slDist = MathAbs(entryPx - slPx);
+         double tpDist = MathAbs(tpPx - entryPx);
+         double rr = (slDist > 0) ? (tpDist / slDist) : 0.0;
+         string labelTag = "ENTRY-" + trigDir + "-rr" + DoubleToString(rr, 1);
+         DrawTradeLabel(labelTag, entryPx, BB_datas, clrWhite, 2);
+
+         Trade_info = "SIG:SIG evt:ENTRY dir:" + trigDir +
+                      " entry:" + DoubleToString(entryPx, _Digits) +
+                      " sl:" + DoubleToString(slPx, _Digits) +
+                      " tp:" + DoubleToString(tpPx, _Digits) +
+                      " rr:" + DoubleToString(rr, 2);
+         return;
+      }
+      else
+      {
+         //--- Skipped trigger
+         LogTradeSkip(gateResult, trigDir, s.m30_bbloc, cur);
+
+         // Draw skip label
+         string labelTag = "TRIG-" + trigDir + "-SKIP";
+         DrawTradeLabel(labelTag, close_prices[LA], BB_datas, clrWhite, 2);
+
+         Trade_info = "SIG:SIG evt:SKIP dir:" + trigDir +
+                      " reason:" + gateResult +
+                      " m30bbloc:" + IntegerToString(s.m30_bbloc);
+         return;
+      }
+   }
+
+   //--- No trigger, no position — HOLD
+   Trade_info = "SIG:SIG evt:HOLD";
 }
 
-//═══════════════════════════════════════════════════════════════════
-// PART 5 — DEFERRED
-//
-// Trade action deferred. Part 4 prediction scored 43.9% OOS (not viable).
-// No trade logic will be built on this prediction.
-//═══════════════════════════════════════════════════════════════════
-// TradeAction struct and DecideDualTFAction function — DEFERRED.
-// See header comment: "Part 5 deferred stub."
 //+------------------------------------------------------------------+
 // INTEGRATION NOTES:
 // 1. This file is a repo logic file — sibling to TofyTrade5.mqh.
 //    User integrates into their EA locally; does not #include TofyTrade5.
 // 2. BB_datas[] index convention: 0=M5, 1=M15, 2=M30, 3=H1, 4=H4, 5=D1.
-// 3. Call Trade_Strategy() — same signature as TofyTrade5. It calls
-//    IdentifyDualTF + PredictNextMTF + LogDualTFBar + DrawGateLabel.
-// 4. Trade_Strategy returns Trade_act=0 (HOLD) — no trades. Prediction
-//    shown for DIAGNOSIS only. 43.9% stale (V36.06 consistency fix).
-// 5. Part 5 (trade action) is DEFERRED — no DecideDualTFAction yet.
-// 6. V36.05: per-TF BBLoc — each TF from its own bands. HTF pair (D1,H4)
-//    = full 0-10; MTF+LTF (H1,M30,M15) = sparse {0,1,3,5,7,9,10}.
-//    OPTION: to use ALL 0-10, swap ComputeMTFBBLoc → ComputeHTFBBLoc
-//    for H1/M30/M15 in IdentifyDualTF (3 lines).
-// 7. Combo format: HTF={D1state}{D1bbloc}{H4state}{H4bbloc} e.g. "F3F5"
-//    MTF={H1state}{H1bbloc}{M30state}{M30bbloc}, LTF={M15state}{M15bbloc}.
-//    No-data shown as "X-", e.g. "F3X-F5" if D1 bbloc is -1.
-// 8. DrawGateLabel uses M30 font size (bb[2]) for the chart label.
-//    V36.08: sanitized tag passed directly to DRAW_LABEL (which handles
-//    name + text internally). Tag format: HTF-F3F5_MTF-F3F5_LTF-F3_PRED-down-FS3-MISS.
-//    Color always white. Depends on DRAW_LABEL macro from EA includes.
-// 9. V36.08: prediction + verification both target M30 (consistent).
-//    Rolling 6-bar M30 bbloc buffer + linear regression slope.
-//    Thresholds: >0.3=up, <-0.3=down, else neutral.
-//    predicted_mtf = H1-char + M30-char-shifted-by-direction (approximate).
-//    predicted_bbloc = m30_bbloc stepped by slope direction (approximate).
-//    One-bar-delayed hit/miss tracking — bar N predicts N+1, checked
-//    at N+1. Log fields: pred, predmtf, predbbloc, slope, predhit.
-//    All 5 fields shown in chart label.
+// 3. Call Trade_Strategy() — same signature as TofyTrade5.
+// 4. V36.11: TransitionDetector (Part 4) + v1 trade ruleset (Part 5).
+//    First trading version — Trade_act nonzero, fixed 0.01 lots.
+// 5. Prediction fields (pred/predmtf/slope/predhit) = DIAGNOSTIC ONLY.
+//    They do NOT appear in gate/entry/exit logic (grep-checkable).
+// 6. Trade_sl = PRICE convention (matches TofyTrade5).
+// 7. TP managed in logic — no TP parameter in ENUM_Trade_Act.
+// 8. Exit priority: TP_HIT > M15_REVERT > TIMEOUT > SL_HIT.
+// 9. Timeout (12 M5 bars) disabled once m30_followed = true.
+// 10. [LABELDBG] Print removed. Trade-event labels only.
+// 11. Scenario-change labels disabled.
 //+------------------------------------------------------------------+
