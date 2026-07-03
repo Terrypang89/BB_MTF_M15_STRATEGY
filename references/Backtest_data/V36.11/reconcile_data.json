@@ -1,0 +1,237 @@
+{
+  "step1": {
+    "real_entries": 17,
+    "phantoms": 0,
+    "unmatched_in_deals": 0,
+    "real_exits": 16,
+    "unmatched_exit_lines": 1,
+    "unmatched_out_deals": 1,
+    "in_deal_count": 17,
+    "out_deal_count": 17
+  },
+  "step2": {
+    "mechanism": "DOUBLE_LOGGING",
+    "failed_exit": true,
+    "unmatched_exit_details": [
+      {
+        "dt": "2026.01.14 01:00:00",
+        "reason": "M15_REVERT",
+        "exit_price": 4588.92,
+        "bars_held": 6
+      }
+    ]
+  },
+  "step2b": {
+    "flip_windows": 422,
+    "multi_event_windows": 73,
+    "single_event_windows": 349
+  },
+  "step3": {
+    "n": 16,
+    "win_rate": 0.3125,
+    "mean_profit": -2.720625,
+    "median_profit": -3.1,
+    "total_net": -43.53,
+    "pf": 0.5645693708112434,
+    "mean_r": -0.11387100936634355,
+    "median_r": -0.09112286890064668,
+    "ex_max_net": -66.92,
+    "revert_net": -57.05,
+    "rr_low_net": -48.78,
+    "rr_high_net": 5.250000000000001,
+    "trades": [
+      {
+        "in_deal_id": 2,
+        "out_deal_id": 3,
+        "direction": "UP",
+        "profit": -0.37,
+        "swap": 0.0,
+        "reason": "M15_REVERT",
+        "bars_held": 24,
+        "sldist": 23.46,
+        "rr": 1.18,
+        "r_multiple": -0.01577152600170503
+      },
+      {
+        "in_deal_id": 4,
+        "out_deal_id": 5,
+        "direction": "DOWN",
+        "profit": -4.12,
+        "swap": 0.0,
+        "reason": "M15_REVERT",
+        "bars_held": 8,
+        "sldist": 25.5,
+        "rr": 0.65,
+        "r_multiple": -0.16156862745098038
+      },
+      {
+        "in_deal_id": 6,
+        "out_deal_id": 7,
+        "direction": "UP",
+        "profit": -11.04,
+        "swap": 0.0,
+        "reason": "M15_REVERT",
+        "bars_held": 4,
+        "sldist": 13.69,
+        "rr": 0.88,
+        "r_multiple": -0.8064280496712929
+      },
+      {
+        "in_deal_id": 8,
+        "out_deal_id": 9,
+        "direction": "DOWN",
+        "profit": -18.11,
+        "swap": 0.0,
+        "reason": "SL_HIT",
+        "bars_held": 7,
+        "sldist": 10.82,
+        "rr": 0.98,
+        "r_multiple": -1.6737523105360443
+      },
+      {
+        "in_deal_id": 10,
+        "out_deal_id": 11,
+        "direction": "DOWN",
+        "profit": -5.35,
+        "swap": 0.0,
+        "reason": "M15_REVERT",
+        "bars_held": 11,
+        "sldist": 14.14,
+        "rr": 1.6,
+        "r_multiple": -0.3783592644978783
+      },
+      {
+        "in_deal_id": 12,
+        "out_deal_id": 13,
+        "direction": "UP",
+        "profit": -15.33,
+        "swap": 0.0,
+        "reason": "M15_REVERT",
+        "bars_held": 5,
+        "sldist": 33.29,
+        "rr": 0.3,
+        "r_multiple": -0.4604986482427155
+      },
+      {
+        "in_deal_id": 14,
+        "out_deal_id": 15,
+        "direction": "UP",
+        "profit": 1.68,
+        "swap": 0.0,
+        "reason": "M15_REVERT",
+        "bars_held": 6,
+        "sldist": 21.5,
+        "rr": 0.64,
+        "r_multiple": 0.07813953488372093
+      },
+      {
+        "in_deal_id": 16,
+        "out_deal_id": 17,
+        "direction": "DOWN",
+        "profit": -0.56,
+        "swap": 0.0,
+        "reason": "M15_REVERT",
+        "bars_held": 5,
+        "sldist": 15.02,
+        "rr": 0.82,
+        "r_multiple": -0.037283621837549935
+      },
+      {
+        "in_deal_id": 18,
+        "out_deal_id": 19,
+        "direction": "UP",
+        "profit": -5.17,
+        "swap": 0.0,
+        "reason": "M15_REVERT",
+        "bars_held": 10,
+        "sldist": 13.97,
+        "rr": 0.46,
+        "r_multiple": -0.37007874015748027
+      },
+      {
+        "in_deal_id": 20,
+        "out_deal_id": 21,
+        "direction": "DOWN",
+        "profit": -20.87,
+        "swap": 0.0,
+        "reason": "SL_HIT",
+        "bars_held": 4,
+        "sldist": 10.74,
+        "rr": 0.38,
+        "r_multiple": -1.9432029795158288
+      },
+      {
+        "in_deal_id": 22,
+        "out_deal_id": 23,
+        "direction": "UP",
+        "profit": 20.4,
+        "swap": -0.55,
+        "reason": "TP_HIT",
+        "bars_held": 3,
+        "sldist": 20.17,
+        "rr": 0.64,
+        "r_multiple": 1.0114030738720872
+      },
+      {
+        "in_deal_id": 24,
+        "out_deal_id": 25,
+        "direction": "UP",
+        "profit": 8.71,
+        "swap": 0.0,
+        "reason": "TIMEOUT",
+        "bars_held": 12,
+        "sldist": 18.24,
+        "rr": 1.54,
+        "r_multiple": 0.4775219298245615
+      },
+      {
+        "in_deal_id": 26,
+        "out_deal_id": 27,
+        "direction": "DOWN",
+        "profit": -15.95,
+        "swap": 0.0,
+        "reason": "M15_REVERT",
+        "bars_held": 2,
+        "sldist": 24.61,
+        "rr": 0.73,
+        "r_multiple": -0.6481105241771637
+      },
+      {
+        "in_deal_id": 28,
+        "out_deal_id": 29,
+        "direction": "DOWN",
+        "profit": 23.39,
+        "swap": 0.38,
+        "reason": "TP_HIT",
+        "bars_held": 7,
+        "sldist": 23.32,
+        "rr": 0.87,
+        "r_multiple": 1.0030017152658661
+      },
+      {
+        "in_deal_id": 30,
+        "out_deal_id": 31,
+        "direction": "DOWN",
+        "profit": 2.26,
+        "swap": 0.0,
+        "reason": "M15_REVERT",
+        "bars_held": 1,
+        "sldist": 1.03,
+        "rr": 20.62,
+        "r_multiple": 2.1941747572815533
+      },
+      {
+        "in_deal_id": 32,
+        "out_deal_id": 33,
+        "direction": "DOWN",
+        "profit": -3.1,
+        "swap": 0.0,
+        "reason": "M15_REVERT",
+        "bars_held": 7,
+        "sldist": 34.02,
+        "rr": 0.6,
+        "r_multiple": -0.09112286890064668
+      }
+    ]
+  }
+}
