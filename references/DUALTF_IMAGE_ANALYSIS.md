@@ -1,4 +1,9 @@
-# DualTF Stack Chart Analysis — DESIGN (UNBUILT, UNVALIDATED, Phase-3)
+# DualTF Stack Chart Analysis — SUPERSEDED AS EVIDENCE
+
+> **SUPERSEDED AS EVIDENCE** — built on coarse {1,2,3,5} BBLoc and the killed
+> prediction design; retained as historical record. Current evidence:
+> per-TF-BBLoc logs (V36.03+) and the four measured analyses (see
+> DUALTF_ARCHITECTURE.md Evidence Index).
 
 > **A 4-state x 2-axis scenario model with band-location tracking. NOT implemented
 > in code, NOT validated. Depends on the EA baseline (V31.06) blocker.**

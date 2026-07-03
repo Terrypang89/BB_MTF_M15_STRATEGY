@@ -1,10 +1,11 @@
-# DualTF Architecture — EA Implementation Design (UNBUILT SPEC)
+# DualTF Architecture — EA Implementation Design (MEASURED SPEC)
 
 > **A three-layer EA design implementing the DualTF Stack model**
-> (DUALTF_IMAGE_ANALYSIS.md): Identify → Predict → Act. **DESIGN SPEC — not code, not validated.**
-> This is an **ALTERNATIVE/successor** to the 7-scenario system in ARCHITECTURE.md.
-> All three layers are **UNBUILT** and depend on the EA baseline
-> (s_prevH1Sqz fix + scenario rename A→F... + V31.06 backtest promotion) first.
+> (DUALTF_IMAGE_ANALYSIS.md): Identify → Detect → Act.
+> Part 3 **BUILT & BACKTESTED** (TofyTrade6.mqh V36.10, backtests V36.01–V36.10,
+> 7,608-row verified logs); Part 4 **redesigned as TransitionDetector**
+> (measured-viable, not yet implemented as detector); Part 5 **DESIGN**
+> (measured rules, unimplemented).
 
 ---
 
@@ -12,18 +13,16 @@
 
 ```mermaid
 flowchart LR
-    L1["**Layer 1**\nIdentify DualTF Scenario\nWHERE am I?\n(F/S/C/R per axis)"] --> L2["**Layer 2**\nPredict Next MTF\nWHAT's next?\n(rolling buffer)"]
-    L2 --> L3["**Layer 3**\nDecide Trade Action\nWHAT to do?\n(entry/exit/size)"]
+    L1["**Layer 1**\nIdentify DualTF Scenario\nWHERE am I?\n(F/S/C/R per axis)"] --> L2["**Layer 2**\nTransitionDetector\nM15 flip F/R?\n(detection)"]
+    L2 --> L3["**Layer 3**\nTrade Ruleset\nWHAT to do?\n(entry/exit/gate)"]
 
     L1 -.->|DualTF Scenario + BBLoc| L2
-    L2 -.->|Next MTF Prediction| L3
+    L2 -.->|Trigger{direction, validity}| L3
 ```
 
-- **Layer 1 — Identify DualTF Scenario**: Given current BB state across all TFs, derive 4-state (F/S/C/R) per TF, then pair into HTF (D1×H4) and MTF (H1×M30) scenarios with BBLoc. Replaces the 7-scenario IdentifyScenario with the DualTF 4×4 derivation.
-- **Layer 2 — Predict Next MTF**: Given DualTF scenario + rolling MTF history, predict the next MTF scenario. Uses real-time rolling buffer (EA advantage over analysis-side snapshot).
-- **Layer 3 — Decide Trade Action**: Given DualTF scenario + predicted next MTF + M15 timing, select entry/exit/size. DualTF scenario = structure/setup; M15 = timing (M5 optional refinement only, never standalone).
-
-> **Successor note:** This design replaces the 7-scenario system (F1/S1/C1/V1/R1 etc.) with the 4-state DualTF model. It is NOT the current built system — the current system uses the 7-scenario IdentifyScenario described in ARCHITECTURE.md.
+- **Layer 1 — Identify DualTF Scenario**: Given current BB state across all TFs, derive 4-state (F/S/C/R) per TF, then pair into HTF (D1×H4) and MTF (H1×M30) scenarios with per-TF BBLoc. Replaces the 7-scenario IdentifyScenario with the DualTF 4×4 derivation.
+- **Layer 2 — TransitionDetector**: Detects M15 state flips to F (up) or R (down). No prediction — detection of real events. Fires trigger with 12-row validity window.
+- **Layer 3 — Trade Ruleset**: Given trigger + m30bbloc zone, applies gate (NEAR/MID only) → entry → M30-band TP → stop → invalidation.
 
 ---
 
@@ -33,18 +32,18 @@ These responsibilities are invariant across all three layers — they define wha
 
 | TF | Role | Layers that consume |
 |----|------|---------------------|
-| D1 | HTF axis (with H4) — sets macro direction, fork-decider for compression breakout | L1 (HTF scenario), L2 (HTF constraint on prediction), L3 (directional a priori) |
-| H4 | HTF axis (with D1) — primary HTF classifier, phase context | L1 (HTF scenario), L2 (HTF constraint), L3 (confinement check) |
-| H1 | MTF axis (with M30) — the leg ridden, primary trend driver | L1 (MTF scenario), L2 (MTF prediction target), L3 (confinement) |
-| M30 | MTF axis (with H1) — MTF confinement check | L1 (MTF scenario), L2 (MTF prediction), L3 (confinement) |
-| M15 | Leading-edge — feeds Part 4 prediction AND Part 5 entry/exit timing | L2 (leading-edge signal), L3 (entry/exit trigger) |
+| D1 | HTF axis (with H4) — sets macro direction, fork-decider for compression breakout | L1 (HTF scenario), L3 (directional a priori) |
+| H4 | HTF axis (with D1) — primary HTF classifier, phase context | L1 (HTF scenario), L3 (confinement check) |
+| H1 | MTF axis (with M30) — the leg ridden, primary trend driver | L1 (MTF scenario), L3 (confinement) |
+| M30 | MTF axis (with H1) — MTF confinement check | L1 (MTF scenario), L3 (confinement) |
+| M15 | Leading-edge — feeds Part 4 TransitionDetector AND Part 5 entry/exit timing | L2 (leading-edge signal), L3 (entry/exit trigger) |
 | M5 | Optional within-M15-bar refinement — NOT a standalone trigger | L3 (tick refinement only, after M15 confirms) |
 
-**Key difference from 7-scenario system:** M15 is no longer just an entry trigger — it is a leading-edge signal in the prediction function (Part 4) and the PRIMARY entry/exit timing trigger. M5 is NOT a standalone trigger — optional within-M15-bar refinement only after M15 confirms. The HTF axis (D1×H4) becomes a fork-decider: which way does compression break?
+**Key difference from 7-scenario system:** M15 is no longer just an entry trigger — it is the PRIMARY detection signal (Part 4) and the PRIMARY entry/exit timing trigger. M5 is NOT a standalone trigger — optional within-M15-bar refinement only after M15 confirms. The HTF axis (D1×H4) provides context but has no filter role (HTF filter killed by measurement).
 
 ---
 
-## Part 3 — Layer 1: Identify DualTF Scenario (UNBUILT)
+## Part 3 — Layer 1: Identify DualTF Scenario (BUILT & BACKTESTED)
 
 ### 3.1 Interface — Class/Struct Diagram
 
@@ -78,6 +77,14 @@ classDiagram
         string mtf_scenario
         int htf_bbloc
         int mtf_bbloc
+        int d1_bbloc
+        int h4_bbloc
+        int h1_bbloc
+        int m30_bbloc
+        int m15_bbloc
+        string htf_combo
+        string mtf_combo
+        string ltf_combo
         string htf_d1_state
         string htf_h4_state
         string mtf_h1_state
@@ -100,8 +107,16 @@ classDiagram
 |-------|------|---------|-------------|
 | `htf_scenario` | string | HTF 2-char code (D1-state)(H4-state), e.g. "FS" = D1 fly-up, H4 shrinking | L2, L3 |
 | `mtf_scenario` | string | MTF 2-char code (H1-state)(M30-state), e.g. "FC" = H1 fly-up, M30 compress | L2, L3 |
-| `htf_bbloc` | int | HTF band location 0-10 (real-time from price/band computation) | L2 (prediction constraint), L3 |
-| `mtf_bbloc` | int | MTF band location {0,1,3,5,7,9,10} (sparse scale) | L2 (rolling trajectory), L3 |
+| `htf_bbloc` | int | HTF band location 0-10 (legacy, kept for compat) | L3 |
+| `mtf_bbloc` | int | MTF band location {0,1,3,5,7,9,10} (legacy, kept for compat) | L3 |
+| `d1_bbloc` | int | D1 per-TF band location 0-10 (V36.05+) | L2, L3 |
+| `h4_bbloc` | int | H4 per-TF band location 0-10 (V36.05+) | L2, L3 |
+| `h1_bbloc` | int | H1 per-TF band location sparse (V36.05+) | L2, L3 |
+| `m30_bbloc` | int | M30 per-TF band location sparse (V36.05+) | L2, L3 |
+| `m15_bbloc` | int | M15 per-TF band location sparse (V36.05+) | L2, L3 |
+| `htf_combo` | string | HTF paired combo string, e.g. "F3F5" (V36.05+) | L2, L3 |
+| `mtf_combo` | string | MTF paired combo string, e.g. "F3F5" (V36.05+) | L2, L3 |
+| `ltf_combo` | string | LTF combo string, e.g. "F3" (V36.05+) | L2, L3 |
 | `htf_d1_state` | string | D1 raw 4-state: F/S/C/R | L2 (HTF fork-decider) |
 | `htf_h4_state` | string | H4 raw 4-state: F/S/C/R | L2 (HTF fork-decider) |
 | `mtf_h1_state` | string | H1 raw 4-state: F/S/C/R | L2, L3 |
@@ -229,7 +244,7 @@ flowchart TD
     F --> H["mtf_bbloc"]
 ```
 
-### 3.4a Per-Bar Runtime Sequence — TofyTrade6.mqh (V36.03)
+### 3.4a Per-Bar Runtime Sequence — TofyTrade6.mqh (V36.10)
 
 This sequenceDiagram traces the actual function call flow in TofyTrade6.mqh per bar.
 Each participant is a real function; each message is a real call.
@@ -245,7 +260,7 @@ sequenceDiagram
     participant L as "LogDualTFBar()"
     participant DL as "DrawGateLabel()"
 
-    Note over EA,TS: "Part 3 is the WORKING, validated layer — V36.03 runtime"
+    Note over EA,TS: "Part 3 is the WORKING, validated layer — V36.10 runtime"
 
     EA->>TS: "BB_datas[] ATRSL1BUF BBTFImpact Trade_act close_prices[]"
     TS->>TS: "Once-per-bar guard (iTime M5)"
@@ -292,557 +307,193 @@ sequenceDiagram
     TS-->>EA: "Trade_act=0 (HOLD — no trades)"
 ```
 
-**What this shows:** Per tick, the EA calls `Trade_Strategy()` which gates on once-per-bar. Inside: `IdentifyDualTF()` derives per-TF states via `BBStageToDualState()` (5 calls: D1/H4/H1/M30/M15), pairs HTF/MTF scenarios, computes real BBLoc via `ComputeHTFBBLoc()`/`ComputeMTFBBLoc()`, applies the no-data gate (state X → bbloc=-1), and returns `DualTFScenarioState`. The caller logs via `LogDualTFBar()`, draws a chart label only on scenario change via `DrawGateLabel()`, then returns `Trade_act=0` — no trades. This is the live V36.03 flow.
+**What this shows:** Per tick, the EA calls `Trade_Strategy()` which gates on once-per-bar. Inside: `IdentifyDualTF()` derives per-TF states via `BBStageToDualState()` (5 calls: D1/H4/H1/M30/M15), pairs HTF/MTF scenarios, computes real BBLoc via `ComputeHTFBBLoc()`/`ComputeMTFBBLoc()`, applies the no-data gate (state X → bbloc=-1), and returns `DualTFScenarioState`. The caller logs via `LogDualTFBar()`, draws a chart label only on scenario change via `DrawGateLabel()`, then returns `Trade_act=0` — no trades. This is the live V36.10 flow.
 
 ### 3.5 Build Status
 
 | Component | Status | Detail |
 |-----------|--------|--------|
-| 4-state derivation (BBW_stage → F/S/C/R) | **UNBUILT** | Straightforward mapping, no logic |
-| HTF pairing (D1×H4) | **UNBUILT** | String concatenation of two states |
-| MTF pairing (H1×M30) | **UNBUILT** | String concatenation of two states |
-| BBLoc computation | **UNBUILT** | Real price-vs-band formula — EA advantage |
-| M15 leading-edge state | **UNBUILT** | Same derivation as other TFs |
+| 4-state derivation (BBW_stage → F/S/C/R) | **BUILT** | BBStageToDualState(), V36.10 |
+| HTF pairing (D1×H4) | **BUILT** | htf_combo (e.g. "F3F5"), V36.10 |
+| MTF pairing (H1×M30) | **BUILT** | mtf_combo, V36.10 |
+| BBLoc computation | **BUILT** | ComputeHTFBBLoc/ComputeMTFBBLoc, per-TF (d1_bbloc/h4_bbloc/h1_bbloc/m30_bbloc/m15_bbloc), V36.10 |
+| M15 leading-edge state | **BUILT** | Same derivation as other TFs, V36.10 |
 
-> **UNBUILT.** Replaces the 7-scenario IdentifyScenario. Needs the EA baseline (s_prevH1Sqz fix + scenario rename + V31.06 backtest promotion) before this layer can be built.
+> **BUILT & BACKTESTED.** TofyTrade6.mqh V36.10, backtests V36.01–V36.10, 7,608 DUALTF log rows verified.
 
 ---
 
-## Part 4 — Layer 2: Predict Next MTF Scenario (NOT VIABLE)
+## Part 4 — Layer 2: TransitionDetector (MEASURED-VIABLE)
 
-> **STATUS: NOT VIABLE (tested).** Out-of-sample transition accuracy = 43.9% (BBLoc-only, best predictor); multi-input (HTF + M15 + duration) performs WORSE and overfits. 90.4% persistence base rate; 68.9% of pre-transition BBLoc slopes flat (no signal). TESTED across coarse data (1.2%), fine BBLoc (43.9%), and multi-input (worse). CONCLUSION: prediction is not feasible on available data — the EA should trade on IDENTIFICATION (Part 3), not prediction. This section is retained as a documented dead-end, not a build target.
+> **STATUS: MEASURED-VIABLE (tested).** Detection-based approach grounded in data.
+> TransitionDetector fires on actual M15 state flips to F (up) or R (down) —
+> not a forecast, a detection. Grounding citation: CASCADE_LEAD_ANALYSIS.md.
 
-### 4.1 Interface — Class Diagram
+### SUPERSEDED — Prediction (retained as evidence trail)
 
-The rolling-history buffer ("15-array") stores recent MTF scenarios, BBLoc trajectory, duration-in-state, and M15 leading-edge. This is the EA's real-time equivalent of the analysis-side log — but with prior-state tracking the snapshot lacked.
+> **PREDICTION IS DEAD.** Coarse data: 1.2% transition accuracy. Fine BBLoc:
+> 43.9% OOS (BBLoc-only, best predictor — and that number was later invalidated:
+> it was measured on H1-predicts/M30-verifies inconsistent logic, fixed in V36.06,
+> consistent version never re-measured). Multi-input WORSE + overfit (40.8%→35.3%).
+> See MULTIINPUT_PREDICTION_ANALYSIS.md for the full failure anatomy.
+> The design below (4.1–4.2a, 4.2c–4.2d) is retained as historical record.
 
-```mermaid
-classDiagram
-    class DualTFScenarioState {
-        <<from Part 3>>
-        string htf_scenario
-        string mtf_scenario
-        int htf_bbloc
-        int mtf_bbloc
-        string m15_state
-    }
+### 4.1 TransitionDetector — Definition
 
-    class MTFHistoryBuffer {
-        <<rolling buffer — the 15-array>>
-        string[] mtf_scenario_hist
-        int[] mtf_bbloc_hist
-        int[] htf_bbloc_hist
-        int duration_in_state
-        string[] m15_state_hist
-        void Push(DualTFScenarioState s)
-        int Length
-    }
+**Detection, not prediction.** The TransitionDetector fires on actual M15 state
+flips — real events, not forecasts.
 
-    class MTFPrediction {
-        <<output contract for Part 5>>
-        string next_mtf_scenario
-        int next_mtf_bbloc
-        int confidence
-        bool is_transition
-        string reason
-    }
+- **FIRES** on M15 state flip to F (up trigger) or R (down trigger) ONLY.
+  S/C flips excluded — lift 1.26x/1.07x, no edge.
+- **NO HTF filter** — killed by measurement (agreeing 33.0% vs disagreeing 35.9%).
+- **Measured stats** (K=12, CASCADE_LEAD_ANALYSIS.md):
+  - Recall: 57.2% (294/514 M30 transitions preceded by same-target M15 flip)
+  - Precision: F 38.0% (93/245), R 32.9% (83/252)
+  - Lift: F 2.03x, R 2.01x (over unconditional base rate)
+  - Median lead: 5 rows (25 minutes)
+  - Validity window: 12 rows (60 minutes)
+- **Output:** trigger {direction, fire-time, 12-row validity window} → Part 5.
+- **Existing prediction fields** (pred_direction, predmtf, slope, predhit)
+  remain **LOG-DIAGNOSTIC ONLY** — never trade inputs.
 
-    class PredictNextMTF {
-        +MTFPrediction PredictNextMTF(DualTFScenarioState &s, MTFHistoryBuffer &buf)
-    }
-
-    DualTFScenarioState --> PredictNextMTF : feeds
-    MTFHistoryBuffer --> PredictNextMTF : history
-    PredictNextMTF --> MTFPrediction : returns
-```
-
-**MTFPrediction field meanings:**
-
-| Field | Type | Meaning | Consumed by Part 5 |
-|-------|------|---------|-------------------|
-| `next_mtf_scenario` | string | Predicted next MTF scenario (e.g. "FF") | Setup: what regime to expect |
-| `next_mtf_bbloc` | int | Predicted MTF BBLoc at next transition | Target: where price is heading |
-| `confidence` | int | 0-100, scaled by transition accuracy (not inflated by persistence) | Size multiplier |
-| `is_transition` | bool | True if MTF scenario changes (breakout/reversal) | Re-evaluate trigger |
-| `reason` | string | Which prediction rule fired | Logging, benchmark verification |
-
-> **Key difference from 7-scenario PredictNext:** The 7-scenario system scored direction per-TF (DirectionScore) then assembled. The DualTF system uses a rolling MTF history buffer — the EA can track prior MTF scenarios in real time, which the analysis-side snapshot could not. This enables prior-state detection (R2/R3, P, V3/V4, B3) that the analysis side missed.
-
-### 4.2 Prediction Function
-
-**Prediction = f(HTF + BBLoc, current MTF + BBLoc, prior MTF + BBLoc, M15 state, duration) → next MTF scenario + BBLoc**
-
-The prediction function reads the rolling MTF history buffer (EA advantage) and applies rules:
+### 4.2 TransitionDetector Flowchart
 
 ```mermaid
 flowchart TD
-    Start["Start: DualTFScenarioState + MTFHistoryBuffer"] --> ReadHTF["Read HTF scenario + BBLoc\nFork-decider: D1 direction"]
+    A["M15 state flip detected"]
+    A --> B{"Flip to F or R?"}
+    B -->|F| C["UP TRIGGER\n{direction: UP, fire-time: now,\nvalidity: 12 rows}"]
+    B -->|R| D["DOWN TRIGGER\n{direction: DOWN, fire-time: now,\nvalidity: 12 rows}"]
+    B -->|S or C| E["NO TRIGGER\nS/C excluded (no lift)"]
 
-    ReadHTF --> ReadCurrentMTF["Read current MTF scenario + BBLoc"]
-    ReadCurrentMTF --> ReadPriorMTF["Read prior MTF scenario + BBLoc\nFrom rolling buffer"]
+    C --> F["Part 5: Tradeability Gate\n+ Target Rule"]
+    D --> F
 
-    ReadPriorMTF --> DurationCheck{"Duration ≥ 3?"}
+    classDef trigger fill:#e8f5e9,stroke:#4CAF50
+    classDef skip fill:#ffebee,stroke:#f44336
+    classDef pass fill:#e8f4fd,stroke:#2196F3
 
-    DurationCheck -->|yes| Persist["Predict PERSIST\nNext MTF = current MTF\nConfidence = 7-10"]
-    Persist --> Return([return MTFPrediction])
-
-    DurationCheck -->|no| HTFFork{"HTF fork-decider?\nD1 direction?"}
-
-    HTFFork -->|D1 up| UpBias["HTF bias UP\nCompression breaks → F"]
-    HTFFork -->|D1 down| DownBias["HTF bias DOWN\nCompression breaks → R"]
-
-    UpBias --> M15Check{"M15 leading-edge?\nM15 in F + BBLoc rising?"}
-    DownBias --> M15CheckDn{"M15 leading-edge?\nM15 in R + BBLoc falling?"}
-
-    M15Check -->|yes| StrongUp["Strong UP prediction\nFF at high BBLoc\nConfidence = 8-9"]
-    M15Check -->|no| WeakUp["Moderate UP prediction\nFS at mid BBLoc\nConfidence = 4-5"]
-
-    M15CheckDn -->|yes| StrongDn["Strong DOWN prediction\nRR at low BBLoc\nConfidence = 8-9"]
-    M15CheckDn -->|no| WeakDn["Moderate DOWN prediction\nRS at mid BBLoc\nConfidence = 4-5"]
-
-    StrongUp --> Return
-    WeakUp --> Return
-    StrongDn --> Return
-    WeakDn --> Return
+    class C,D trigger
+    class E skip
+    class F pass
 ```
 
-**Prediction rules (from DUALTF_IMAGE_ANALYSIS.md Part 4):**
-
-| Condition | Predicted Next MTF (+BBLoc) | Predicted Target | Confidence | Key Input |
-|-----------|---------------------------|-----------------|------------|-----------|
-| Duration ≥ 3 | Same MTF (persist) | Current HTF band level (no change) | 7-10 | Rolling buffer |
-| MTF in C, BBLoc climbing, HTF up | FF at high BBLoc | H4 BB Upper | 8-9 | HTF fork-decider + BBLoc trajectory |
-| MTF in C, BBLoc at upper, HTF down | RR at upper | D1 BB Lower-Mid | 5-6 | HTF fork-decider |
-| MTF in C, BBLoc rolling over (5→3) | FR at lower BBLoc | D1 BB Mid | 5 | BBLoc trajectory from buffer |
-| MTF in F, BBLoc falling | S at lower BBLoc | H1 BB Mid | 5 | BBLoc trajectory |
-| MTF in S, HTF fly-up, BBLoc rising | F at higher BBLoc | H4 BB Upper-Mid | 5-6 | HTF + BBLoc trajectory |
-| M15 in F + BBLoc rising | Continuation signal | +1 HTF band level | +2 boost | M15 leading-edge |
-
-> **HTF as fork-decider:** The HTF axis (D1×H4) determines which way compression breaks. D1 fly-up → compression breaks up (F); D1 fly-down → compression breaks down (R). This is the most critical HTF input — it resolves the C → {F or R} fork.
-
-> **M15 as leading-edge:** M15 state feeds the prediction function (Part 4) AND entry/exit timing (Part 5). M15 in fly-up with BBLoc rising = strong continuation signal; M15 in fly-down with BBLoc falling = early reversal signal.
-
-### 4.2b Per-Bar Prediction Signal Flow (Mechanics)
-
-This diagram traces how each bar's raw per-TF data flows through the (attempted) prediction pipeline. Each node corresponds to a real computation step — reviewable against any log row.
-
-```mermaid
-flowchart TD
-    A["Bar N arrives: per-TF raw data\nD1/H4/H1/M30/M15 each:\nBBW_stage + diffMid_Trend + BBUpDn\n+ htf_bbloc + mtf_bbloc"]
-
-    A --> B1["D1 + H4 states → HTF scenario\n2-char code e.g. SF/CR/RS"]
-    A --> B2["H1 + M30 states → MTF scenario\n2-char code e.g. FF/FC/RS"]
-    A --> B3["mtf_bbloc appended to\nrolling buffer (6 bars)"]
-    A --> B4["M15 state → leading-edge signal\nF/S/C/R"]
-    A --> B5["Duration: count prior bars\nin same MTF scenario"]
-
-    B1 --> C1["HTF direction from htf_scenario\nD1-up/H4-up → up\nD1-down/H4-down → down\nmixed → neutral"]
-
-    B3 --> C2["BBLoc slope from 6-bar buffer\nlinear regression over mtf_bbloc\nrising >0.3 / falling <-0.3 / flat"]
-
-    B4 --> C3["M15 direction from state\nF/C → up  R → down  S → neutral"]
-
-    B5 --> C4["Duration flag\n>10 bars → transition likely\n≤10 → insufficient signal"]
-
-    C1 --> D1["BBLoc slope predictor\nrising → up  falling → down\nflat → neutral/persist"]
-
-    C2 --> D1
-
-    D1 --> E1{"Slope non-flat?"}
-    E1 -->|yes| F1["BBLoc decides\n(up or down)"]
-    E1 -->|no flat| F2["Fallback: HTF direction\nor M15 direction\nor neutral"]
-
-    C3 --> F2
-    C4 --> F2
-
-    F1 --> G["Predicted next MTF direction\nup → continuation scenario\ndown → reversal scenario\nneutral → persist"]
-
-    F2 --> G
-
-    G --> H["MTFPrediction output\nnext_mtf_scenario + confidence\n+ is_transition flag"]
-
-    classDef input fill:#e8f4fd,stroke:#2196F3
-    classDef compute fill:#fff3e0,stroke:#FF9800
-    classDef branch fill:#fce4ec,stroke:#E91E63
-    classDef output fill:#e8f5e9,stroke:#4CAF50
-
-    class A input
-    class B1,B2,B3,B4,B5 compute
-    class C1,C2,C3,C4 compute
-    class D1 compute
-    class E1 branch
-    class F1,F2 compute
-    class G output
-    class H output
-```
-
-**Reviewable trace:** For any log row, you can follow the path — raw per-TF data → HTF/MTF pairing → BBLoc slope + HTF direction + M15 state → slope branch → predicted direction. The bottleneck is the slope branch: 68.9% of slopes are flat, so the predictor falls through to the fallback (HTF/M15/neutral) where those signals are noise.
-
-### 4.2c Failure Anatomy — Where the Signal is Lost
-
-This diagram shows where and why prediction breaks, with empirical numbers from the V36.03 analysis. The design (4.1–4.2) looks sound on paper — the failure is in the data.
-
-```mermaid
-flowchart TD
-    A["706 MTF transitions in V36.03\n90.4% persistence base rate\n35.3% majority baseline"]
-
-    A --> B["68.9% of pre-transition\nBBLoc slopes are FLAT\n(≤0.3 over 6 bars)"]
-    B --> B1["Predictor defaults to\n'persist/neutral'\n→ WRONG on transitions\nby definition"]
-
-    A --> C["BBLoc slope non-flat\n31.1% of cases"]
-    C --> C1["BBLoc-only predictor\n39.4% TRAIN / 43.9% TEST\nbeats 35.3% baseline\nbut far from viable"]
-
-    A --> D["Add HTF direction\n(fork-decider on paper)"]
-    D --> D1["TEST accuracy DROPS\n43.9% → 41.2%\nHTF is noise not signal"]
-
-    A --> E["Add M15 cascade\n(leading edge on paper)"]
-    E --> E1["TEST accuracy DROPS\n43.9% → 43.0%\nM15 alone: 35.7%\n(barely above baseline)"]
-
-    A --> F["Combine all inputs\nBBLoc + HTF + M15 + duration"]
-    F --> F1["OVERFIT: 40.8% TRAIN\n→ 35.3% TEST\n= majority baseline\nvoting amplifies noise"]
-
-    B1 --> G["Signal exists only in\nRARE transition types:\nCF→CR 83% consistent\nRC→SC 90% consistent\nbut n < 15 each\n(insufficient for trading)"]
-
-    C1 --> G
-
-    G --> H["VERDICT: 43.9% OOS TEST\nnot viable for Part 4\nidentification > prediction"]
-
-    classDef data fill:#e8f4fd,stroke:#2196F3
-    classDef failure fill:#ffebee,stroke:#f44336
-    classDef partial fill:#fff3e0,stroke:#FF9800
-    classDef verdict fill:#e8f5e9,stroke:#4CAF50
-
-    class A data
-    class B,B1 failure
-    class C partial
-    class C1 partial
-    class D,D1 failure
-    class E,E1 failure
-    class F,F1 failure
-    class G data
-    class H verdict
-```
-
-**Why it fails (in words):**
-
-1. **Structural:** 68.9% of pre-transition BBLoc slopes are flat — the primary predictor has no signal for most transitions. The fallback (HTF/M15) is noise, not independent information.
-2. **Adding inputs HURTS:** Every multi-input combination reduces TEST accuracy vs BBLoc-only (43.9%). HTF direction (-2.7pp), M15 (-0.9pp), all combined (-8.6pp). The signals are correlated with noise, not independent predictive factors.
-3. **Overfitting:** All-combined predictor collapses to the majority baseline on TEST (35.3%) — it learned TRAIN patterns that don't generalize.
-4. **Rare-predictable vs common-unpredictable:** High-consistency transition types (CF→CR 83%, RC→SC 90%) are rare (n < 15 each). Common transitions (FF→FS, RR→RS) are unpredictable. The signal exists only in the tail.
-
-### 4.2d Prediction Flow as Tested — NOT VIABLE
-
-This sequenceDiagram shows the prediction flow AS TESTED against V36.03 data — framed
-honestly as a tested dead-end. The `PredictNextMTF_EXPERIMENTAL` stub in TofyTrade6.mqh
-returns persist with confidence=0 and is NOT wired to trades.
-
-```mermaid
-sequenceDiagram
-    participant Caller as "Caller<br/>(Trade_Strategy)"
-    participant PE as "PredictEngine<br/>(PredictNextMTF_EXPERIMENTAL)"
-    participant BS as "BBLocSlope<br/>(6-bar regression)"
-    participant HC as "HTFContext<br/>(fork-decider)"
-    participant MC as "M15Cascade<br/>(leading edge)"
-    participant DR as "Duration<br/>(in-state counter)"
-    participant PR as "Predictor<br/>(combine inputs)"
-
-    Note over Caller,PR: "PART 4 — TESTED NOT VIABLE<br/>43.9% OOS transition accuracy<br/>NOT a live trade path"
-
-    Caller->>PE: "DualTFScenarioState s<br/>MTFHistoryBuffer buf"
-
-    PE->>BS: "mtf_bbloc_hist (last 6 bars)"
-    BS-->>PE: "slope value (rising/falling/flat)"
-    Note over BS: "68.9% of the time slope is FLAT<br/>no signal for most transitions"
-
-    PE->>HC: "htf_scenario (D1+H4 states)"
-    HC-->>PE: "up / down / mixed"
-    Note over HC: "Adding HTF REDUCES test accuracy<br/>43.9% → 41.2% (noise not info)"
-
-    PE->>MC: "m15_state (F/S/C/R)"
-    MC-->>PE: "F/C=up R=down S=neutral"
-    Note over MC: "M15 alone = 35.7% (below baseline)<br/>Adding M15 → 43.0% (worse)"
-
-    PE->>DR: "duration_in_state"
-    DR-->>PE: ">10 or <=10 bars"
-    Note over DR: "Duration adds no independent signal"
-
-    PE->>PR: "slope + htf_dir + m15_dir + duration"
-    PR-->>PE: "predicted direction (up/down/neutral)"
-    Note over PR: "All-combined OVERFITS:<br/>40.8% train → 35.3% test<br/>(= majority baseline)"
-
-    PE->>PE: "Map direction to MTF scenario"
-    PE-->>Caller: "MTFPrediction<br/>(persist default confidence=0)"
-
-    Note over Caller,PR: "RESULT: 43.9% OOS test accuracy<br/>NOT VIABLE for Part 5<br/>Identification > prediction<br/>See Part 5 for the viable path"
-```
-
-**What this shows:** The prediction engine gathers four inputs — BBLoc slope (68.9% flat, no signal), HTF context (adding it reduces accuracy), M15 cascade (alone = 35.7%, below baseline), and duration (no independent signal). Combining all four overfits (40.8% train → 35.3% test = majority baseline). The stub returns persist with confidence=0 — NOT wired to trades. This flow is a documented dead-end.
-
-### 4.2a Predicted Target Derivation
-
-The predicted target is derived from the predicted MTF direction and current HTF BBLoc. The target is always an HTF band level — price moves toward HTF structure, not MTF.
-
-```mermaid
-flowchart TD
-    A["Predicted next MTF + current HTF BBLoc + HTF scenario"] --> B{"Predicted MTF direction?"}
-    B -->|"FF continuation up"| C{"HTF BBLoc position?"}
-    B -->|"FR reversal down"| D{"HTF BBLoc position?"}
-    B -->|"persist or compress"| E["No directional target — ranging"]
-    C -->|"below upper"| F["Target = HTF upper band BBLoc 9"]
-    C -->|"at upper"| G["Target = HTF upper or break to 10"]
-    D -->|"above mid"| H["Target = HTF BBmid BBLoc 5"]
-    D -->|"at or below mid"| I["Target = HTF lower band BBLoc 1"]
-    F --> J["Predicted target to Part 5 take-profit"]
-    G --> J
-    H --> J
-    I --> J
-    E --> J
-```
-
-**Target logic in words:**
-- Predicted FF (continuation up) → target = next HTF band UP (toward HTF upper BBLoc 9); if already at upper → HTF upper band or break to 10.
-- Predicted FR (reversal down) → target = HTF BBmid (BBLoc 5) if above mid, else HTF lower band (BBLoc 1).
-- Predicted persist/compress → no directional target (ranging).
-
-**Open design questions this diagram surfaces:**
-
-- **OPEN: HTF/MTF divergence** — when HTF=F-up but predicted MTF=R-down, does the target follow the MTF prediction (HTF mid) or does strong HTF suppress the reversal target? TBD — user to verify.
-- **OPEN: at-band behavior** — predict-up while at upper band: target the band (resistance) or allow break above (BBLoc 10, trend riding band)? TBD.
-- **OPEN: target source** — confirmed HTF-band-driven, or does MTF band structure also factor? TBD.
-
-> **Purpose:** This diagram verifies the target design — unresolved paths = design gaps. The HTF involvement (target = HTF band level) is made explicit.
-
-```mermaid
-sequenceDiagram
-    participant Caller as "Caller<br/>(OnBar)"
-    participant L1 as "IdentifyDualTF<br/>(Part 3)"
-    participant SS as "DualTFScenarioState s"
-    participant Buf as "MTFHistoryBuffer<br/>(rolling)"
-    participant L2 as "PredictNextMTF<br/>(Part 4)"
-    participant L3 as "DecideTradeAction<br/>(Part 5)"
-
-    Caller->>L1: "BB_datas[] + close_prices + band_data"
-    L1->>L1: "Per-TF: BBW_stage → F/S/C/R"
-    L1->>L1: "Pair: D1×H4 → HTF, H1×M30 → MTF"
-    L1->>L1: "BBLoc: real price-vs-band"
-    L1-->>Caller: "DualTFScenarioState s"
-
-    Caller->>Buf: "Buf.Push(s)"
-    Buf->>Buf: "Update MTF scenario + BBLoc history<br/>Compute duration_in_state"
-
-    Caller->>L2: "DualTFScenarioState s + MTFHistoryBuffer buf"
-    L2->>L2: "Read HTF + BBLoc (fork-decider)"
-    L2->>L2: "Read current + prior MTF + BBLoc"
-    L2->>L2: "Duration ≥ 3 → persist<br/>Else → HTF fork-decider + M15"
-    L2-->>Caller: "MTFPrediction p"
-
-    Caller->>L3: "DualTFScenarioState s + MTFPrediction p + BB_datas[]"
-    L3->>L3: "Scenario + prediction → setup<br/>M15 → timing → entry/exit/hold"
-    L3-->>Caller: "TradeAction"
-```
-
-**Critical details visible in this diagram:**
-- **HANDOFF POINT:** DualTFScenarioState flows L1 → L2 → L3, same as the 7-scenario system.
-- **ROLLING BUFFER:** Between L1 and L2, the MTFHistoryBuffer is updated with the new scenario. This is the EA's real-time advantage — prior MTF states are tracked, not just the current state.
-- **PREDICTION CONSUMED:** MTFPrediction flows into DecideTradeAction — it is NOT decorative (the 7-scenario TofyTrade4 problem where PredictNextTrend was drawn-and-discarded).
-
-### 4.4 Benchmark — Validation Target
-
-> **⚠ The analysis self-backtest ~68% OVERALL is INFLATED by persistence** — most rows don't change state, so predicting "persist" on every row yields high accuracy. The EA's real success metric is **TRANSITION accuracy** (predicting actual scenario CHANGES — breakouts and reversals), NOT yet measured, expected lower. **Benchmark on TRANSITION accuracy, not 68%.**
-
-The 68% figure comes from the analysis-side self-backtest where the predicted next-MTF-scenario is compared to the actual next row. However, because most rows are in a persistent state (fly states last 5-15+ bars), predicting "same as current" on every row achieves high accuracy without skill. The transition accuracy — how well the model predicts when and where state changes occur — is the real measure of predictive skill.
-
-**Verification target:** When built, measure transition accuracy separately from overall accuracy. A model that predicts 68% overall but 40% on transitions is a persistence model, not a prediction model.
-
-### 4.5 Build Status
+**What this shows:** The TransitionDetector detects real M15 flips — no forecast, no
+rolling buffer, no prediction. It fires on F/R flips only (S/C excluded by lift
+measurement). The trigger carries direction, fire-time, and a 12-row validity window.
+Existing prediction fields (slope, pred_direction, predhit) are log-diagnostics only.
+
+### 4.3 Build Status
 
 | Component | Status | Detail |
 |-----------|--------|--------|
-| MTFHistoryBuffer (rolling buffer) | **NOT VIABLE** | Tested — multi-input prediction fails OOS |
-| Duration computation | **NOT VIABLE** | Adding duration → accuracy drops |
-| HTF fork-decider logic | **NOT VIABLE** | HTF input adds noise, not signal |
-| M15 leading-edge input | **NOT VIABLE** | M15 alone = 35.7% (below 43.9% BBLoc-only) |
-| Transition accuracy measurement | **TESTED** | 43.9% OOS (BBLoc-only best); multi-input worse |
+| TransitionDetector (M15 F/R flip detection) | **MEASURED-VIABLE** | 57.2% recall, 2.03x/2.01x lift, CASCADE_LEAD_ANALYSIS.md |
+| HTF filter | **KILLED** | Agreeing 33.0% vs disagreeing 35.9% — no effect |
+| S/C flip detection | **KILLED** | Lift 1.26x/1.07x — no edge |
+| Prediction fields (slope, pred_direction, predhit) | **LOG-DIAGNOSTIC** | Never trade inputs |
 
-> **NOT VIABLE, not a build target.** Tested on V36.03 data with 70/30 chronological train/test split: BBLoc-only 43.9% OOS test accuracy (best predictor); adding HTF/M15/duration → accuracy drops, all-combined overfits (40.8% train → 35.3% test). See MULTIINPUT_PREDICTION_ANALYSIS.md and BBLOC_TRANSITION_ANALYSIS.md for full results.
-
-### Prediction Outputs → Trade Action
-
-| Prediction Output | Part 5 Decision It Drives |
-|-------------------|--------------------------|
-| next MTF scenario | DIRECTION — FF/continuation → hold/add; FR/reversal → exit/flip; persist → hold |
-| predicted BBLoc | STOP / URGENCY — near a band (BBLoc 9) → tighten stop, take partial; mid (5) → less urgency |
-| predicted target | TAKE-PROFIT — Part 5 sets the TP order at the predicted target |
-
-**Summary:** next-MTF → direction; BBLoc → stop/urgency; target → take-profit. Three prediction outputs map to three distinct Part 5 decisions.
-
-### 4.6 What To Use Instead
-
-Since prediction is not viable (43.9% OOS TEST accuracy — barely above the 35.3% majority baseline, and multi-input is worse), **Part 5 should be IDENTIFICATION-based, not prediction-based**: trade on the CURRENT DualTF scenario + real BBLoc for entry/exit timing, NOT on a predicted next scenario. The DualTF scenario tells you WHERE you are (structure/setup); M15 tells you WHEN to act (timing). No prediction layer needed. See Part 5.
+> **Measured-viable, not yet implemented as detector.** The cascade lead measurement
+> grounds the TransitionDetector design (CASCADE_LEAD_ANALYSIS.md, commit 623f38d).
+> Existing prediction stubs in TofyTrade6.mqh return persist with confidence=0.
 
 ---
 
-## Part 5 — Layer 3: Decide Trade Action (UNBUILT)
+## Part 5 — Layer 3: Measured v1 Trade Ruleset (DESIGN)
 
-### 5.1 Interface — Class Diagram
+### 5.1 Trade Rules — Measured
 
-The action decision: inputs (DualTF scenario, predicted next MTF, M15 timing) → output (entry / exit / hold / size). M5 is not a standalone trigger.
+**ENTRY:** On TransitionDetector trigger, enter in the flip direction (UP = BUY, DOWN = SELL).
 
-```mermaid
-classDiagram
-    class DualTFScenarioState {
-        <<from Part 3>>
-        string htf_scenario
-        string mtf_scenario
-        int htf_bbloc
-        int mtf_bbloc
-        string m15_state
-    }
+**TRADEABILITY GATE:** m30bbloc at trigger row must be NEAR or MID —
+UP: {5, 7}; DOWN: {3, 5} on the sparse scale.
+**SKIP** AT/BEYOND (M30-band TP incoherent there; tier-2 H1 cascade DEAD — lift 0.99x;
+TIER2_REACH_ANALYSIS.md) and **SKIP** FAR (6/45 = 13% follow).
 
-    class MTFPrediction {
-        <<from Part 4>>
-        string next_mtf_scenario
-        int next_mtf_bbloc
-        int confidence
-        bool is_transition
-    }
+**TAKE-PROFIT:** M30 band — 98.1% reach from NEAR+MID on the FOLLOWED subset,
+61–72% reach on ALL triggers at N=12 (TARGET_REACH_ANALYSIS.md).
+H4 target DEAD: C1 FAIL 24.4% reach from MID+FAR.
 
-    class BB_MTF_Data_struct {
-        <<per-TF raw input — M15 timing (M5 optional)>>
-        int BBW_stage
-        int BB_diffMid_Trend
-        int BBUpDn_state
-        double diffBBW
-    }
+**STOP (v1 DEFAULT — LEAST-GROUNDED parameter, unmeasured):**
+Opposite-side M15 band at entry.
+Alternatives: opposite M30 band, fixed price offset.
+**REQUIREMENT:** V36.11 must log per-trade stop and TP distances in PRICE
+so the Tester adjudicates.
 
-    class TradeAction {
-        <<final EA output — drives OrderSend/OrderClose>>
-        int act
-        string condition_id
-        double size_mult
-        double stop_price
-        string info
-    }
+**INVALIDATION/EXIT:** M15 state reverts to non-trigger state,
+OR 12 rows elapse without M30 reaching the trigger state → close.
 
-    class DecideTradeAction {
-        +TradeAction DecideTradeAction(DualTFScenarioState &s, MTFPrediction &p, BB_MTF_Data_struct &bb[])
-    }
+**SIZING:** Fixed 0.01 lots (v1).
 
-    DualTFScenarioState --> DecideTradeAction : setup
-    MTFPrediction --> DecideTradeAction : directs
-    BB_MTF_Data_struct --> DecideTradeAction : timing
-    DecideTradeAction --> TradeAction : outputs
-```
+**FREQUENCY:** ~230 qualifying triggers / 4 months ≈ 2.7 per trading day.
 
-**TradeAction field meanings:**
-
-| Field | Type | Meaning | Consumed by |
-|-------|------|---------|-------------|
-| `act` | int | 0=hold, 1=BUY, 2=SELL, 7=exit_all | OrderSend / OrderClose |
-| `condition_id` | string | DualTF rule identifier (e.g. "HTF-F-up/MTF-C-break") | Logging, benchmark verification |
-| `size_mult` | double | 0.0–1.0, from prediction confidence | Lot size |
-| `stop_price` | double | ATRSL stop at entry | OrderSend SL |
-| `info` | string | Debug string | Logging |
+**EXPECTANCY WARNING:** Follow-rate is not win-rate. The kept NEAR/MID population
+follows at only 23% (54/230) vs 52% for the skipped at-band majority.
+Reach is not profit — no stops or path analysis in any reach analysis.
+Profitability is decided ONLY by the V36.11 Tester report.
+RR must clear ~2:1 for the geometry to work.
 
 ### 5.2 Control Flow — Activity Diagram
 
-DualTF scenario + prediction → setup; M15 → timing trigger → entry/exit/hold. M5 is not a standalone trigger.
-
 ```mermaid
 flowchart TD
-    Start["Start: DualTFScenarioState + MTFPrediction + BB_datas[]"] --> Setup["SETUP: Read scenario + prediction<br/>HTF scenario + BBLoc = macro context<br/>MTF scenario + BBLoc = current regime<br/>Next MTF prediction = expected regime"]
+    A["TransitionDetector trigger\nUP or DOWN"]
+    A --> B{"TRADEABILITY GATE\nm30bbloc zone?"}
 
-    Setup --> InvCheck{"INVARIANTS?<br/>Emergency / VETO-AT-TARGET"}
-    InvCheck -->|yes| Emerg["act=7 EMERGENCY exit"]
-    InvCheck -->|no| ExitCheck
+    B -->|"NEAR or MID"| C["ENTER\nBUY if UP, SELL if DOWN\nSize: 0.01 lots"]
+    B -->|"AT/BEYOND"| D["SKIP\nM30 TP incoherent;\ntier-2 cascade dead"]
+    B -->|"FAR"| E["SKIP\nOnly 13% follow"]
 
-    subgraph EXITS["EXIT CHECKS — before any entry"]
-        ExitCheck{"Price at target_tf band?"}
-        ExitCheck -->|yes| Exit1["act=7 X1 target exit"]
-        ExitCheck -->|no| TransitionCheck{"Prediction is_transition=True?"}
-        TransitionCheck -->|yes| RevCheck{"Next MTF = reversal (R)?"}
-        RevCheck -->|yes| Exit2["act=7 reversal exit"]
-        RevCheck -->|no| Hold1["Hold — transition but not reversal"]
-        TransitionCheck -->|no| Hold1
-    end
+    C --> F["TAKE-PROFIT\nM30 band"]
+    F --> G["STOP\nOpposite M15 band\n(least-grounded param)"]
 
-    Hold1 --> SizeSetup
-    Exit2 --> SizeSetup
+    G --> H{"INVALIDATION?"}
+    H -->|"M15 reverts"| I["CLOSE"]
+    H -->|"12 rows elapse"| J["CLOSE\nM30 did not reach trigger state"]
+    H -->|"NEITHER"| K["HOLD"]
 
-    SizeSetup["MATRIX CEILING<br/>ceiling = DualTFCeiling(htf_scenario, mtf_scenario)"]
+    classDef enter fill:#e8f5e9,stroke:#4CAF50
+    classDef skip fill:#ffebee,stroke:#f44336
+    classDef close fill:#fff3e0,stroke:#FF9800
+    classDef hold fill:#e8f4fd,stroke:#2196F3
 
-    SizeSetup --> Ceil0{"ceiling <= 0?"}
-    Ceil0 -->|yes| Wait1["act=0 WAIT — ceiling blocks"]
-    Ceil0 -->|no| Timing
-
-    subgraph TIMING["ENTRY TIMING — M15 (M5 optional refinement)"]
-        Timing["M15 timing trigger<br/>Scenario = WHAT to trade\nM15 = WHEN to trade\nM5 = optional tick refinement only"]
-
-        M15Trigger{"M15 flip detected?"}
-        M15Trigger -->|yes| EntryFired["Entry triggered by M15"]
-        M15Trigger -->|no| Wait3["act=0 WAIT — waiting M15"]
-    end
-
-    Timing --> M15Trigger
-    EntryFired --> Size["SIZE: confidence → size_mult<br/>min(ceiling, confidence_size)"]
-    Wait3 --> Size
-
-    Size --> Stop["SET STOP: ATRSL"]
-    Stop --> Return([return TradeAction])
-    Emerg --> Return
-    Wait1 --> Return
+    class C enter
+    class D,E skip
+    class I,J close
+    class K hold
 ```
 
-**Evaluation order:** INVARIANTS → EXIT CHECKS → SETUP → TIMING → SIZE → STOP. Exits before entries — a position that should close must close before a new one opens.
+**What this shows:** Trigger → gate (zone check) → entry + TP + stop → invalidation paths.
+Two skip paths (AT/BEYOND and FAR) handle the majority of triggers.
+The gate keeps only the NEAR/MID minority where the M30-band TP is coherent.
 
-### 5.3 M15 as Entry/Exit Timing (M5 optional refinement only)
-
-> **The DualTF scenario (D1/H4/H1/M30) = the STRUCTURE/setup; M15 = the TIMING of entry/exit within that setup. M5 is NOT a standalone trigger.** The structure tells you WHAT, M15 tells you WHEN.
-
-> **RATIONALE: M5 carries high noise; standalone M5 triggers cause whipsaw. M15 is the timing trigger; M5 is at most an optional refinement after M15 confirms, never standalone.**
-
-This is the separation of concerns in the DualTF model:
-
-- **Structure (Parts 3-4):** DualTF scenario identifies the current regime (HTF direction, MTF state, BBLoc). Prediction forecasts the next MTF. Together they define the setup — is there a trade? what direction? what target?
-- **Timing (Part 5):** M15 is the PRIMARY leading-edge trigger — it fires the actual entry when the M15 flip aligns with the setup. M5 is at most an optional within-M15-bar tick refinement (reducing slippage), but M5 never decides whether to enter — only M15 does.
-
-**M15 timing in the DualTF model:**
-
-| M15 State | Timing Signal | Context |
-|-----------|--------------|---------|
-| F (fly-up) + BBLoc rising | Entry timing for long setups | M15 confirms HTF up direction |
-| R (fly-down) + BBLoc falling | Entry timing for short setups | M15 confirms HTF down direction |
-| S (shrink) | Wait — no trigger | Compression, no momentum |
-| C (compress) | Wait — no trigger | SQZ, coiled but no direction |
-
-**M5 optional refinement (NOT a decision):** After M15 triggers, M5 may optionally refine the entry tick — but M5 never independently decides to enter or exit. M15 flip = entry fires. M5 = optional slippage reduction only.
-
-### 5.4 Build Status
+### 5.3 Build Status
 
 | Component | Status | Detail |
 |-----------|--------|--------|
-| DualTF ceiling matrix | **UNBUILT** | HTF×MTF → size ceiling |
-| M15 timing trigger | **UNBUILT** | Flip detection (M5 optional refinement) |
-| Confidence → size mapping | **UNBUILT** | MTFPrediction.confidence → size_mult |
-| Exit checks | **UNBUILT** | Target-based + transition-based |
+| Tradeability gate (NEAR/MID only) | **DESIGN** | Measured: 230 qualifying triggers / 4 months |
+| Take-profit (M30 band) | **DESIGN** | 98.1% reach NEAR+MID FOLLOWED; 61-72% ALL at N=12 |
+| Stop (opposite M15 band) | **DESIGN** | Least-grounded parameter — unmeasured |
+| Invalidation (M15 revert or 12 rows) | **DESIGN** | From cascade validity window |
+| Sizing (0.01 lots) | **DESIGN** | Fixed v1 |
 
-> **UNBUILT, Phase after Part 4.** Depends on Part 3 (IdentifyDualTF) and Part 4 (PredictNextMTF) being built and validated first.
+> **DESIGN — measured rules, unimplemented.** The rules are grounded in four
+> committed analyses (CASCADE_LEAD, TARGET_REACH, TIER2_REACH, MULTIINPUT_PREDICTION).
+> The stop parameter is the least-grounded — V36.11 price logs decide.
 
 ---
 
 ## Cross-Layer Data Flow — Sequence Diagram
 
-Per-bar L1→L2→L3: Identify → Predict → Act, showing what each layer passes to the next.
+Per-bar L1→L2→L3: Identify → Detect → Act, showing what each layer passes to the next.
 
 ```mermaid
 sequenceDiagram
     participant Tick as "Tick<br/>(per M15 bar)"
     participant L1 as "Layer 1<br/>IdentifyDualTF"
     participant L1Out as "DualTFScenarioState<br/>s"
-    participant Buf as "MTFHistoryBuffer<br/>buf"
-    participant L2 as "Layer 2<br/>PredictNextMTF"
-    participant L2Out as "MTFPrediction<br/>p"
-    participant L3 as "Layer 3<br/>DecideTradeAction"
+    participant L2 as "Layer 2<br/>TransitionDetector"
+    participant L2Out as "Trigger<br/>(direction, validity)"
+    participant L3 as "Layer 3<br/>Trade Ruleset"
     participant L3Out as "TradeAction"
 
     rect rgb(240, 248, 255)
@@ -851,31 +502,29 @@ sequenceDiagram
     L1->>L1: "BBW_stage → F/S/C/R per TF"
     L1->>L1: "D1×H4 → HTF pair, H1×M30 → MTF pair"
     L1->>L1: "BBLoc: real price-vs-band"
-    L1-->>Tick: "DualTFScenarioState s<br/>(htf_scenario, mtf_scenario,<br/>htf_bbloc, mtf_bbloc, m15_state)"
+    L1-->>Tick: "DualTFScenarioState s<br/>(per-TF states, per-TF bbloc,<br/>combo strings, m15_state)"
     end
 
     rect rgb(255, 248, 240)
-    Note over Tick,L2Out: "LAYER 2 — Predict Next MTF"
-    Tick->>Buf: "buf.Push(s)"
-    Buf->>Buf: "Update MTF scenario + BBLoc trajectory<br/>Compute duration_in_state"
-    Tick->>L2: "DualTFScenarioState s + MTFHistoryBuffer buf"
-    L2->>L2: "HTF fork-decider + current/prior MTF<br/>Duration check + M15 leading-edge"
-    L2-->>Tick: "MTFPrediction p<br/>(next_mtf_scenario, confidence,<br/>is_transition)"
+    Note over Tick,L2Out: "LAYER 2 — TransitionDetector"
+    Tick->>L2: "DualTFScenarioState s"
+    L2->>L2: "M15 flip to F or R?"
+    L2-->>Tick: "Trigger{direction, fire-time,<br/>12-row validity}"
     end
 
     rect rgb(250, 250, 250)
-    Note over Tick,L3Out: "LAYER 3 — Decide Trade Action"
-    Tick->>L3: "DualTFScenarioState s + MTFPrediction p + BB_datas[]"
-    L3->>L3: "Invariants → Exits → Setup → Timing → Size → Stop"
-    L3->>L3: "Scenario = WHAT, M15 = WHEN (M5 optional only)"
-    L3-->>Tick: "TradeAction<br/>(act, size_mult, stop_price)"
+    Note over Tick,L3Out: "LAYER 3 — Trade Ruleset"
+    Tick->>L3: "Trigger + DualTFScenarioState s"
+    L3->>L3: "Gate (zone check) → Entry → TP → Stop"
+    L3->>L3: "Invalidation: M15 revert or 12 rows"
+    L3-->>Tick: "TradeAction<br/>(act, stop_price, info)"
     end
 ```
 
 **Data flow summary:**
-- **L1 → L2:** DualTFScenarioState (htf_scenario, mtf_scenario, htf_bbloc, mtf_bbloc, m15_state) + MTFHistoryBuffer (rolling trajectory)
-- **L2 → L3:** MTFPrediction (next_mtf_scenario, confidence, is_transition)
-- **L3 output:** TradeAction (act, size_mult, stop_price) — drives OrderSend/OrderClose
+- **L1 → L2:** DualTFScenarioState (per-TF states, per-TF bbloc, combo strings, m15_state)
+- **L2 → L3:** Trigger (direction, fire-time, 12-row validity window)
+- **L3 output:** TradeAction (act, stop_price, info) — drives OrderSend/OrderClose
 
 ---
 
@@ -884,65 +533,102 @@ sequenceDiagram
 | Capability | Analysis side | EA side |
 |------------|--------------|---------|
 | BBLoc | Coarse {1,2,3,5} from BBUpDn mapping | Real 0-10 from price/band computation |
-| Prior-state scenarios (R2/R3, P, V3/V4, B3) | Undetectable (single snapshot, no history) | Detectable (rolling MTFHistoryBuffer tracks full trajectory) |
-| Prediction inputs | Post-hoc from log (static snapshot) | Real-time rolling buffer (live trajectory) |
-| Validation | Self-backtest (~68% overall — inflated by persistence) | Live forward-test on transitions (real skill measure) |
-| Duration tracking | Backward count from log rows | Real-time counter in buffer |
+| Prior-state scenarios (R2/R3, P, V3/V4, B3) | Undetectable (single snapshot, no history) | Detectable (rolling buffer tracks full trajectory) |
+| Detector trigger | M15 flip from log (post-hoc) | Real-time M15 flip detection |
+| Validation | CASCADE_LEAD_ANALYSIS (7,608 rows) | Live forward-test on transitions |
+| Per-TF BBLoc | Not available (V36.02 and earlier) | Per-TF bbloc (V36.05+) — d1_bbloc, h4_bbloc, h1_bbloc, m30_bbloc, m15_bbloc |
 | M15 leading-edge | Coarse BBUpDn mapping only | Real BBLoc + state from price/band |
 
-> **The EA is the REAL test of the DualTF prediction.** The analysis side operates on coarse, static data (BBUpDn mapping, single snapshot). The EA has real-time, continuous data (price-vs-band, rolling buffer). The 68% self-backtest figure is inflated by persistence — the EA's transition accuracy on live data is the true measure.
+> **The EA is the REAL test of the DualTF detector.** The analysis side operates on coarse, static data (BBUpDn mapping, single snapshot). The EA has real-time, continuous data (price-vs-band, per-TF bbloc). The CASCADE_LEAD_ANALYSIS (7,608 rows) grounds the TransitionDetector — the EA's forward-test on live data is the true measure.
 
 ---
 
 ## Blocker Integration & Build Phases
 
-All three layers are **UNBUILT**. The existing EA must be stabilized before the DualTF system can be built. The blocker chain:
+The s_prevH1Sqz timing bug fix + scenario rename + V31.06 backtest promotion baseline
+was claimed as a blocker for DualTF — **FALSIFIED**. DualTF was built and backtested
+independently (V36.01–V36.10) without that baseline. That baseline gates promotion of
+the OLD 7-scenario system only; DualTF is independent.
 
 ```mermaid
 flowchart TD
-    subgraph BLOCKERS["BLOCKERS — must resolve first"]
+    subgraph BLOCKERS["BLOCKERS — old 7-scenario system only"]
         B1["s_prevH1Sqz timing bug fix\n(V31.06: capture-prior-then-update)"]
         B2["Scenario rename A→F...\n(align with 4-state nomenclature)"]
         B3["V31.06 backtest promotion\n(baseline validation)"]
     end
 
     subgraph LAYER1["LAYER 1 — IdentifyDualTF"]
-        P3["Build IdentifyDualTF\n(BBW_stage → F/S/C/R, HTF/MTF pairing, BBLoc)"]
+        P3["IdentifyDualTF\n(BUILT & BACKTESTED V36.10)"]
     end
 
-    subgraph LAYER2["LAYER 2 — PredictNextMTF"]
-        P4["Build MTFHistoryBuffer + PredictNextMTF\n(Rolling buffer, HTF fork-decider, M15 leading-edge)"]
+    subgraph LAYER2["LAYER 2 — TransitionDetector"]
+        P4["TransitionDetector\n(MEASURED-VIABLE, not yet implemented)"]
     end
 
     subgraph LAYER3["LAYER 3 — DecideTradeAction"]
-        P5["Build DecideTradeAction\n(DualTF ceiling, M15 timing, confidence→size)"]
+        P5["Measured v1 Trade Ruleset\n(DESIGN — measured rules, unimplemented)"]
     end
 
-    B1 --> B2 --> B3 --> P3 --> P4 --> P5
+    B1 --> B2 --> B3
+    P3 --> P4 --> P5
 ```
 
 **Phase list:**
 
 | Phase | Task | Status |
 |-------|------|--------|
-| 0 | s_prevH1Sqz fix (V31.06) + scenario rename + backtest promotion | **BLOCKER** |
-| 1 | Build IdentifyDualTF (per-TF derivation, HTF/MTF pairing, BBLoc) | UNBUILT |
-| 2 | Build MTFHistoryBuffer + PredictNextMTF (rolling buffer, fork-decider, M15) | UNBUILT |
-| 3 | Build DecideTradeAction (ceiling, timing, size, exits) | UNBUILT |
-| 4 | GATE 3 — transition accuracy benchmark (NOT 68% overall) | UNBUILT |
-| 5 | GATE 4 — live forward-test | UNBUILT |
+| 0 | s_prevH1Sqz fix (V31.06) + scenario rename + backtest promotion | **OLD SYSTEM ONLY** — DualTF independent |
+| 1 | Build IdentifyDualTF (per-TF derivation, HTF/MTF pairing, BBLoc) | **BUILT** — V36.10 |
+| 2 | Build TransitionDetector (M15 flip detection, F/R only) | MEASURED-VIABLE |
+| 3 | Build DecideTradeAction (measured rules: gate, TP, stop, invalidation) | DESIGN |
 
 ---
 
-## Open Questions / TODO
+## Open Questions / v2 Hypotheses
 
-| Question | Status | Impact |
-|----------|--------|--------|
-| Exact BBLoc formula thresholds per TF | TBD | Affects BBLoc precision, prediction accuracy |
-| MTFHistoryBuffer size (how many bars?) | TBD | Too small = no trajectory; too large = stale data |
-| Confidence computation — how to scale from HTF/MTF alignment | TBD | Drives size in Part 5 |
-| How is transition accuracy measured live? | TBD | Must separate from overall accuracy (68% is inflated) |
-| How does DualTF coexist with or replace the 7-scenario system? | TBD | Migration strategy — parallel run? hard cutover? |
-| M15 flip detection threshold | TBD | Entry timing sensitivity |
-| DualTF ceiling matrix — HTF×MTF → size ceiling values | TBD | Risk management |
-| Duration threshold for persist (is 3 bars optimal?) | TBD | Prediction accuracy |
+These are explicitly unmeasured — they follow from the analysis but need their own
+measurement before design work.
+
+### AT-Band Trend-Ride (v2 candidate — highest priority)
+
+The skip rule discards the HIGHEST-following triggers: the at-band majority follows
+at 52% (116/222) vs 23% (54/230) for the kept NEAR/MID minority. A different trade
+type may exist here — momentum entry, exhaustion exit. The H4-at-band hold rate is
+65% (TARGET_REACH_ANALYSIS.md), and tier-3 H4 reach from the at-band population is
+63–68% (TIER2_REACH_ANALYSIS.md). v2 needs its own target/exit measurement first.
+
+### Stop-Source Comparison
+
+Opposite M15 band vs opposite M30 band vs fixed price offset. Unmeasured — the
+stop parameter is the LEAST-GROUNDED in the v1 ruleset. V36.11 price logs decide.
+
+### M30→H1 Cascade for Trade Management
+
+The tier-2 cascade died as a TP rule (lift 0.99x, T2-2 FAIL). But H1 reach as a
+hold/scale signal — "ride through the M30 band toward H1" — is unmeasured.
+
+### D1 as Persistence/Exhaustion Context
+
+D1 as a macro context for trade duration (e.g., D1 fly-up = longer hold window)
+is unmeasured. D1 is never a target — its role is confinement/exhaustion context.
+
+### Sparse-BBLoc Quantization
+
+The sparse bbloc scale (0,1,3,5,7,9,10) may overstate the 68.9%-flat-slope finding
+from the prediction analysis. Noted, NOT a license to reopen prediction.
+
+---
+
+## Evidence Index
+
+| Hypothesis / Finding | Analysis File | Commit | Verdict |
+|---------------------|---------------|--------|---------|
+| Cascade lead (M15 flip → M30 transition) | CASCADE_LEAD_ANALYSIS.md | 623f38d | **VIABLE** — 57.2% recall, 2.03x/2.01x lift, median 5 rows |
+| M30-band TP (NEAR+MID) | TARGET_REACH_ANALYSIS.md | 3a0ea21 | **VIABLE** — 98.1% reach NEAR+MID FOLLOWED |
+| H4-band TP (MID+FAR) | TARGET_REACH_ANALYSIS.md | 3a0ea21 | **DEAD** — C1 FAIL 24.4% |
+| Tier-2 H1 cascade | TIER2_REACH_ANALYSIS.md | 53cb2eb | **DEAD** — T2-2 FAIL 0.99x lift |
+| HTF filter (agreeing vs disagreeing) | CASCADE_LEAD_ANALYSIS.md | 623f38d | **DEAD** — 33.0% vs 35.9%, no effect |
+| Multi-input prediction | MULTIINPUT_PREDICTION_ANALYSIS.md | 623f38d | **DEAD** — 43.9% OOS, overfit 40.8%→35.3% |
+| Zone gate (FAR skip) | TARGET_REACH_ANALYSIS.md | 3a0ea21 | **VIABLE** — FAR follow 13% (6/45) |
+| AT-band hold rate (H4) | TARGET_REACH_ANALYSIS.md | 3a0ea21 | **VIABLE** — 65% ride rate |
