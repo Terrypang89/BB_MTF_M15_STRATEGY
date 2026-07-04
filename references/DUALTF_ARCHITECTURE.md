@@ -9,15 +9,102 @@
 
 ---
 
+## Architecture overview — four-layer model
+
+> **STATUS NOTE (2026-07-04):** Layer 3 exit lifecycle reflects V36.13 (exit-retry fix) which is **IN-FLIGHT** — backtest not yet verified. Re-verify this section and all IN-FLIGHT-tagged diagrams after the V36.13 backtest.
+
+### Layer ↔ Part Mapping
+
+| Layer | Part | Description | Status |
+|-------|------|-------------|--------|
+| Layer 1 | Part 3 | Identification — per-TF states + BBLoc | **BUILT V36.10** |
+| Layer 2 | Part 4 | TransitionDetector — M15 flip detection | **BUILT V36.11** |
+| Layer 3 | Part 5 | Trade ruleset — gate, entry, TP, SL, exit | **BUILT V36.11 + V36.13 IN-FLIGHT** |
+| Layer 4 | Open Questions + Evidence Index | Measurement gate — nothing enters Layers 2-3 without committed analysis passing pre-fixed criteria | **ONGOING** |
+
+### Four-Layer Overview Diagram
+
+```mermaid
+flowchart TD
+    classDef built fill:#E1F5EE,stroke:#0F6E56
+    classDef inflight fill:#FAEEDA,stroke:#854F0B
+    classDef gated fill:#F1EFE8,stroke:#5F5E5A
+
+    subgraph L1sub ["Layer 1 — Identification"]
+        L1id["per-TF states + BBLoc<br/>V36.10"]
+    end
+
+    subgraph L2sub ["Layer 2 — TransitionDetector"]
+        L2det["fires on M15 flip to F or R"]
+    end
+
+    subgraph L3sub ["Layer 3 — Trade Ruleset"]
+        L3gate["m30bbloc NEAR or MID"]
+        L3entry["0.01 lots<br/>SL M15 band, TP M30 band"]
+        L3mgmt["manage exit"]
+        L3act["act 1 / 2 / 7"]
+        L3skip["at-band, FAR, concurrent"]
+        L3retry["V36.13: retry close<br/>until confirmed flat"]
+    end
+
+    subgraph L4sub ["Layer 4 — Measurement Gate"]
+        L4knobs["staged knobs<br/>min-rr gate V36.14, revert loosen V36.15"]
+        L4queue["measurement queue<br/>H4 volatility lead, revert vs HTF trend,<br/>at-band trend-ride, M30/H1 trend at trigger"]
+    end
+
+    M15["M15"] --> L1id
+    M30["M30"] --> L1id
+    H1n["H1"] --> L1id
+    H4n["H4"] --> L1id
+    D1n["D1"] --> L1id
+
+    L1id --> L2det
+    L2det --> L3gate
+    L3gate -->|"pass"| L3entry
+    L3gate -->|"skip"| L3skip
+    L3entry --> L3mgmt
+    L3mgmt --> L3act
+    L3mgmt --> L3retry
+    L4queue -.->|"criteria PASS promotes"| L3sub
+    L4knobs -.->|"criteria PASS promotes"| L3sub
+
+    class L1id,L2det,L3gate,L3entry,L3mgmt,L3act,L3skip built
+    class L3retry inflight
+    class L4knobs,L4queue gated
+```
+
+*Legend: teal = built, amber = in-flight, gray = gated (measurement required before promotion).*
+
+### TF Roles (measured inventory)
+
+| TF | Role | Notes |
+|----|------|-------|
+| M15 | Trigger + SL price + revert exit | Leading-edge signal for detection and timing |
+| M30 | Gate location + TP price + timeout disarm | Never used for trend — gate and target only |
+| H1 | Layer 1 logging only | Zero decision role |
+| H4 | Layer 1 logging only | Zero decision role |
+| D1 | Layer 1 logging only | Zero decision role |
+
+**Dead roles (killed by measurement):**
+
+| Dead Role | Kill Numbers | Source |
+|-----------|-------------|--------|
+| HTF entry filter (agreeing vs disagreeing) | 33.0% vs 35.9% — no effect | CASCADE_LEAD_ANALYSIS.md |
+| H4-band TP target | 24.4% reach from MID+FAR | TARGET_REACH_ANALYSIS.md |
+| Tier-2 H1 cascade TP | 0.99x lift — below 1.0 | TIER2_REACH_ANALYSIS.md |
+| MTF prediction | 1.2% coarse, 43.9% fine (invalidated), multi-input worse | MULTIINPUT_PREDICTION_ANALYSIS.md |
+
+---
+
 ## Three-Layer Overview
 
 ```mermaid
 flowchart LR
-    L1["**Layer 1**\nIdentify DualTF Scenario\nWHERE am I?\n(F/S/C/R per axis)"] --> L2["**Layer 2**\nTransitionDetector\nM15 flip F/R?\n(detection)"]
-    L2 --> L3["**Layer 3**\nTrade Ruleset\nWHAT to do?\n(entry/exit/gate)"]
+    L1["**Layer 1**<br/>Identify DualTF Scenario<br/>WHERE am I?<br/>(F/S/C/R per axis)"] --> L2["**Layer 2**<br/>TransitionDetector<br/>M15 flip F/R?<br/>(detection)"]
+    L2 --> L3["**Layer 3**<br/>Trade Ruleset<br/>WHAT to do?<br/>(entry/exit/gate)"]
 
-    L1 -.->|DualTF Scenario + BBLoc| L2
-    L2 -.->|Trigger{direction, validity}| L3
+    L1 -.->|"DualTF Scenario + BBLoc"| L2
+    L2 -.->|"trigger: direction, validity"| L3
 ```
 
 - **Layer 1 — Identify DualTF Scenario**: Given current BB state across all TFs, derive 4-state (F/S/C/R) per TF, then pair into HTF (D1×H4) and MTF (H1×M30) scenarios with per-TF BBLoc. Replaces the 7-scenario IdentifyScenario with the DualTF 4×4 derivation.
@@ -101,6 +188,24 @@ classDiagram
     IdentifyDualTF --> DualTFScenarioState : returns
 ```
 
+```mermaid
+classDiagram
+    class PositionState {
+        bool open
+        int direction
+        double entry_price
+        datetime entry_time
+        double tp_price
+        double sl_price
+        bool m30_followed
+        int bars_since_entry
+        string trigger_state
+        int trigger_dir
+    }
+```
+
+> **Note:** PositionState fields match TofyTrade6.mqh V36.12 struct. An `exit_pending` field (bool) is part of V36.13 IN-FLIGHT — not yet present in the committed struct.
+
 **Field meanings (DualTFScenarioState):**
 
 | Field | Type | Meaning | Consumed by |
@@ -140,11 +245,11 @@ flowchart TD
     H1State --> M30State["M30: BBW_stage → F/S/C/R"]
     M30State --> M15State["M15: BBW_stage → F/S/C/R"]
 
-    M15State --> HTFPair["HTF scenario = (D1-state)(H4-state)\nPair into 2-char code, e.g. 'FS'"]
-    HTFPair --> MTFPair["MTF scenario = (H1-state)(M30-state)\nPair into 2-char code, e.g. 'FC'"]
+    M15State --> HTFPair["HTF scenario = (D1-state)(H4-state)<br/>Pair into 2-char code, e.g. 'FS'"]
+    HTFPair --> MTFPair["MTF scenario = (H1-state)(M30-state)<br/>Pair into 2-char code, e.g. 'FC'"]
 
-    MTFPair --> HTFBBLoc["Compute HTF BBLoc (0-10)\nFrom real price vs D1/H4 bands"]
-    HTFBBLoc --> MTFBBLoc["Compute MTF BBLoc ({0,1,3,5,7,9,10})\nFrom real price vs H1/M30 bands"]
+    MTFPair --> HTFBBLoc["Compute HTF BBLoc (0-10)<br/>From real price vs D1/H4 bands"]
+    HTFBBLoc --> MTFBBLoc["Compute MTF BBLoc (0,1,3,5,7,9,10)<br/>From real price vs H1/M30 bands"]
 
     MTFBBLoc --> Info["Set info string"]
     Info --> Return([return DualTFScenarioState])
@@ -362,11 +467,11 @@ flips — real events, not forecasts.
 flowchart TD
     A["M15 state flip detected"]
     A --> B{"Flip to F or R?"}
-    B -->|F| C["UP TRIGGER\n{direction: UP, fire-time: now,\nvalidity: 12 rows}"]
-    B -->|R| D["DOWN TRIGGER\n{direction: DOWN, fire-time: now,\nvalidity: 12 rows}"]
-    B -->|S or C| E["NO TRIGGER\nS/C excluded (no lift)"]
+    B -->|F| C["UP TRIGGER<br/>direction: UP, fire-time: now,<br/>validity: 12 rows"]
+    B -->|R| D["DOWN TRIGGER<br/>direction: DOWN, fire-time: now,<br/>validity: 12 rows"]
+    B -->|S or C| E["NO TRIGGER<br/>S/C excluded (no lift)"]
 
-    C --> F["Part 5: Tradeability Gate\n+ Target Rule"]
+    C --> F["Part 5: Tradeability Gate<br/>+ Target Rule"]
     D --> F
 
     classDef trigger fill:#e8f5e9,stroke:#4CAF50
@@ -436,35 +541,87 @@ RR must clear ~2:1 for the geometry to work.
 
 ```mermaid
 flowchart TD
-    A["TransitionDetector trigger\nUP or DOWN"]
-    A --> B{"TRADEABILITY GATE\nm30bbloc zone?"}
+    A["TransitionDetector trigger<br/>UP or DOWN"]
+    A --> B{"TRADEABILITY GATE<br/>m30bbloc zone?"}
 
-    B -->|"NEAR or MID"| C["ENTER\nBUY if UP, SELL if DOWN\nSize: 0.01 lots"]
-    B -->|"AT/BEYOND"| D["SKIP\nM30 TP incoherent;\ntier-2 cascade dead"]
-    B -->|"FAR"| E["SKIP\nOnly 13% follow"]
+    B -->|"NEAR or MID"| C["ENTER<br/>BUY if UP, SELL if DOWN<br/>Size: 0.01 lots"]
+    B -->|"AT/BEYOND"| D["SKIP<br/>M30 TP incoherent;<br/>tier-2 cascade dead"]
+    B -->|"FAR"| E["SKIP<br/>Only 13% follow"]
 
-    C --> F["TAKE-PROFIT\nM30 band"]
-    F --> G["STOP\nOpposite M15 band\n(least-grounded param)"]
+    C --> F["TAKE-PROFIT<br/>M30 band"]
+    F --> G["STOP<br/>Opposite M15 band<br/>(least-grounded param)"]
 
-    G --> H{"INVALIDATION?"}
-    H -->|"M15 reverts"| I["CLOSE"]
-    H -->|"12 rows elapse"| J["CLOSE\nM30 did not reach trigger state"]
-    H -->|"NEITHER"| K["HOLD"]
+    G --> H{"EXIT PRIORITY 1:<br/>TP hit?"}
+    H -->|"yes"| I["CLOSE"]
+    H -->|"no"| M{"EXIT PRIORITY 2:<br/>M15 reverts?"}
+    M -->|"yes"| I
+    M -->|"no"| T{"EXIT PRIORITY 3:<br/>timeout?"}
+    T -->|"m30_followed = false<br/>and 12 bars elapsed"| I
+    T -->|"m30_followed = true<br/>timeout disarmed"| SL{"EXIT PRIORITY 4:<br/>SL hit?"}
+    T -->|"neither"| K["HOLD"]
+    SL -->|"yes"| I
+    SL -->|"no"| K
+
+    K --> RETRY{"close confirmed flat?<br/>(V36.13 IN-FLIGHT)"}
+    RETRY -->|"no"| K
+    RETRY -->|"yes"| FLAT["FLAT"]
 
     classDef enter fill:#e8f5e9,stroke:#4CAF50
     classDef skip fill:#ffebee,stroke:#f44336
     classDef close fill:#fff3e0,stroke:#FF9800
     classDef hold fill:#e8f4fd,stroke:#2196F3
+    classDef retry fill:#FAEEDA,stroke:#854F0B
 
     class C enter
     class D,E skip
-    class I,J close
+    class I close
     class K hold
+    class RETRY retry
 ```
 
 **What this shows:** Trigger → gate (zone check) → entry + TP + stop → invalidation paths.
 Two skip paths (AT/BEYOND and FAR) handle the majority of triggers.
 The gate keeps only the NEAR/MID minority where the M30-band TP is coherent.
+
+### 5.2a Position Lifecycle — State Diagram (V36.13 IN-FLIGHT)
+
+```mermaid
+stateDiagram-v2
+    [*] --> FLAT
+    FLAT --> TRIGGERED : "M15 flips to F or R"
+    TRIGGERED --> FLAT : "gate skip - atband, FAR, concurrent, nodata"
+    TRIGGERED --> OPEN : "gate pass - act 1 or 2, SL and TP set"
+    OPEN --> EXIT_PENDING : "TP hit, M15 revert, or timeout - act 7 issued"
+    EXIT_PENDING --> EXIT_PENDING : "close rejected - re-issue act 7 next bar"
+    EXIT_PENDING --> FLAT : "live counts confirm flat"
+    OPEN --> FLAT : "broker SL filled - counts reach zero, sync"
+```
+
+> **Note:** EXIT_PENDING retry loop is V36.13 IN-FLIGHT. Entries are blocked while OPEN or EXIT_PENDING (one position at a time). Pre-V36.13 the EXIT_PENDING state did not exist — a rejected close orphaned the position (the 2026.01.14 ERROR 4756 case).
+
+### 5.2b Per-Bar End-to-End Flow — Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant EA as Tofu_EA_Simple_V6
+    participant TS as Trade_Strategy_TofyTrade6
+    participant Broker as tester_broker
+
+    EA->>TS: OnTick - bb data, live BUYS SELLS
+    TS->>TS: identify states and BBLoc
+    TS->>TS: detect M15 flip
+    TS->>TS: gate m30bbloc zone
+    TS->>TS: manage position - TP, revert, timeout, retry
+    TS-->>EA: Trade_act, Trade_sl, Trade_info
+    EA->>Broker: ORDER_SEND or ORDERS_CLOSE per act
+    alt close rejected - e.g. market closed, error 4756
+        Broker-->>EA: fail retcode
+        Note over TS: exit_pending stays true - act 7 re-issued next bar (V36.13 IN-FLIGHT)
+    else close filled
+        Broker-->>EA: out deal
+        Note over TS: next bar counts show flat - state resets
+    end
+```
 
 ### 5.3 Build Status
 
@@ -509,7 +666,7 @@ sequenceDiagram
     Note over Tick,L2Out: "LAYER 2 — TransitionDetector"
     Tick->>L2: "DualTFScenarioState s"
     L2->>L2: "M15 flip to F or R?"
-    L2-->>Tick: "Trigger{direction, fire-time,<br/>12-row validity}"
+    L2-->>Tick: "Trigger: direction, fire-time,<br/>12-row validity"
     end
 
     rect rgb(250, 250, 250)
@@ -553,21 +710,21 @@ the OLD 7-scenario system only; DualTF is independent.
 ```mermaid
 flowchart TD
     subgraph BLOCKERS["BLOCKERS — old 7-scenario system only"]
-        B1["s_prevH1Sqz timing bug fix\n(V31.06: capture-prior-then-update)"]
-        B2["Scenario rename A→F...\n(align with 4-state nomenclature)"]
-        B3["V31.06 backtest promotion\n(baseline validation)"]
+        B1["s_prevH1Sqz timing bug fix<br/>(V31.06: capture-prior-then-update)"]
+        B2["Scenario rename A→F...<br/>(align with 4-state nomenclature)"]
+        B3["V31.06 backtest promotion<br/>(baseline validation)"]
     end
 
     subgraph LAYER1["LAYER 1 — IdentifyDualTF"]
-        P3["IdentifyDualTF\n(BUILT & BACKTESTED V36.10)"]
+        P3["IdentifyDualTF<br/>(BUILT & BACKTESTED V36.10)"]
     end
 
     subgraph LAYER2["LAYER 2 — TransitionDetector"]
-        P4["TransitionDetector\n(MEASURED-VIABLE, not yet implemented)"]
+        P4["TransitionDetector<br/>(MEASURED-VIABLE, not yet implemented)"]
     end
 
     subgraph LAYER3["LAYER 3 — DecideTradeAction"]
-        P5["Measured v1 Trade Ruleset\n(DESIGN — measured rules, unimplemented)"]
+        P5["Measured v1 Trade Ruleset<br/>(DESIGN — measured rules, unimplemented)"]
     end
 
     B1 --> B2 --> B3
