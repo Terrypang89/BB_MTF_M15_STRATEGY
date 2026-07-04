@@ -1,11 +1,11 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "36.11"
+#property version   "36.12"
 //+------------------------------------------------------------------+
 //| TofyTrade6 — DualTF Stack logic                                   |
-//| V36.11 — FIRST TRADING VERSION:                                    |
-//|   TransitionDetector + v1 ruleset per DUALTF_ARCHITECTURE.md.      |
-//|   Expectancy unmeasured — this version EXISTS to measure it.       |
+//| V36.12 — DIAGNOSTIC: [EXITDBG] logging to locate the V36.11        |
+//|   failed-exit mechanism. No behavior change. Remove after diag.    |
+//|   V36.11: FIRST TRADING VERSION — TransitionDetector + v1 ruleset. |
 //|                                                                    |
 //| PART 4 — TransitionDetector (M15 F/R flip detection)               |
 //| PART 5 — v1 Trade Ruleset (gate, entry, TP, SL, invalidation)      |
@@ -685,6 +685,10 @@ void Trade_Strategy(
 
    bool positionOpen = (BUYS + SELLS > 0);
 
+   //--- V36.12 diagnostic: track whether an exit was decided this bar
+   static bool s_exitDecided = false;
+   s_exitDecided = false;
+
    //==================================================================================
    // PART 5 — EXIT LOGIC (position open)
    //==================================================================================
@@ -692,6 +696,12 @@ void Trade_Strategy(
    // (broker SL, manual close). Reset without logging — EA owns that exit.
    if(pos.open && !positionOpen)
    {
+      // V36.12: [EXITDBG] SYNC_RESET — catches M-C (silent desync eating the exit)
+      Print("[EXITDBG] evt:SYNC_RESET pos_dir:", pos.trigger_dir==1?"BUY":pos.trigger_dir==2?"SELL":"?",
+            " BUYS:", IntegerToString(BUYS),
+            " SELLS:", IntegerToString(SELLS),
+            " last_exit_logged:", "none",
+            " dt:", TimeToString(cur, TIME_DATE|TIME_SECONDS));
       pos.open = false;
    }
 
@@ -712,27 +722,56 @@ void Trade_Strategy(
 
       //--- Priority order for exits:
 
-      // 1. TP_HIT: price reached TP
+  // 1. TP_HIT: price reached TP
       // UP: close >= TP; DOWN: close <= TP
       if((pos.trigger_dir == 1 && px >= pos.tp_price) ||
          (pos.trigger_dir == 2 && px <= pos.tp_price))
       {
+         // V36.12: [EXITDBG] DECIDE — before Trade_act is set
+         s_exitDecided = true;
+         Print("[EXITDBG] evt:DECIDE reason:TP_HIT dt:", TimeToString(cur, TIME_DATE|TIME_SECONDS),
+               " pos_open:", pos.open?"Y":"N",
+               " pos_dir:", pos.trigger_dir==1?"BUY":"SELL",
+               " BUYS:", IntegerToString(BUYS),
+               " SELLS:", IntegerToString(SELLS),
+               " Trade_act_before:", IntegerToString(Trade_act),
+               " bars_since_entry:", IntegerToString(pos.bars_since_entry));
          Trade_act = 7;  // exit_all
          LogTradeExit("TP_HIT", px, pos.bars_since_entry, pos.m30_followed, cur);
          DrawTradeLabel("EXIT-TPHIT", px, BB_datas, clrWhite, 2);
          Trade_info = "SIG:SIG evt:EXIT reason:TP_HIT";
          pos.open = false;
+         Print("[EXITDBG] evt:RETURN Trade_act_final:", IntegerToString(Trade_act),
+               " pos_open:", pos.open?"Y":"N",
+               " BUYS:", IntegerToString(BUYS),
+               " SELLS:", IntegerToString(SELLS),
+               " Trade_sl:", DoubleToString(Trade_sl, _Digits),
+               " dt:", TimeToString(cur, TIME_DATE|TIME_SECONDS));
          return;
       }
 
       // 2. M15_REVERT: m15 state != trigger target state
       if(s.m15_state != pos.trigger_state)
       {
+         s_exitDecided = true;
+         Print("[EXITDBG] evt:DECIDE reason:M15_REVERT dt:", TimeToString(cur, TIME_DATE|TIME_SECONDS),
+               " pos_open:", pos.open?"Y":"N",
+               " pos_dir:", pos.trigger_dir==1?"BUY":"SELL",
+               " BUYS:", IntegerToString(BUYS),
+               " SELLS:", IntegerToString(SELLS),
+               " Trade_act_before:", IntegerToString(Trade_act),
+               " bars_since_entry:", IntegerToString(pos.bars_since_entry));
          Trade_act = 7;  // exit_all
          LogTradeExit("M15_REVERT", px, pos.bars_since_entry, pos.m30_followed, cur);
          DrawTradeLabel("EXIT-REVERT", px, BB_datas, clrWhite, 2);
          Trade_info = "SIG:SIG evt:EXIT reason:M15_REVERT";
          pos.open = false;
+         Print("[EXITDBG] evt:RETURN Trade_act_final:", IntegerToString(Trade_act),
+               " pos_open:", pos.open?"Y":"N",
+               " BUYS:", IntegerToString(BUYS),
+               " SELLS:", IntegerToString(SELLS),
+               " Trade_sl:", DoubleToString(Trade_sl, _Digits),
+               " dt:", TimeToString(cur, TIME_DATE|TIME_SECONDS));
          return;
       }
 
@@ -740,11 +779,25 @@ void Trade_Strategy(
       // Once m30 HAS followed, timeout no longer applies
       if(!pos.m30_followed && pos.bars_since_entry >= 12)
       {
+         s_exitDecided = true;
+         Print("[EXITDBG] evt:DECIDE reason:TIMEOUT dt:", TimeToString(cur, TIME_DATE|TIME_SECONDS),
+               " pos_open:", pos.open?"Y":"N",
+               " pos_dir:", pos.trigger_dir==1?"BUY":"SELL",
+               " BUYS:", IntegerToString(BUYS),
+               " SELLS:", IntegerToString(SELLS),
+               " Trade_act_before:", IntegerToString(Trade_act),
+               " bars_since_entry:", IntegerToString(pos.bars_since_entry));
          Trade_act = 7;  // exit_all
          LogTradeExit("TIMEOUT", px, pos.bars_since_entry, pos.m30_followed, cur);
          DrawTradeLabel("EXIT-TIMEOUT", px, BB_datas, clrWhite, 2);
          Trade_info = "SIG:SIG evt:EXIT reason:TIMEOUT";
          pos.open = false;
+         Print("[EXITDBG] evt:RETURN Trade_act_final:", IntegerToString(Trade_act),
+               " pos_open:", pos.open?"Y":"N",
+               " BUYS:", IntegerToString(BUYS),
+               " SELLS:", IntegerToString(SELLS),
+               " Trade_sl:", DoubleToString(Trade_sl, _Digits),
+               " dt:", TimeToString(cur, TIME_DATE|TIME_SECONDS));
          return;
       }
 
@@ -753,11 +806,25 @@ void Trade_Strategy(
       if((pos.trigger_dir == 1 && px <= pos.sl_price) ||
          (pos.trigger_dir == 2 && px >= pos.sl_price))
       {
+         s_exitDecided = true;
+         Print("[EXITDBG] evt:DECIDE reason:SL_HIT dt:", TimeToString(cur, TIME_DATE|TIME_SECONDS),
+               " pos_open:", pos.open?"Y":"N",
+               " pos_dir:", pos.trigger_dir==1?"BUY":"SELL",
+               " BUYS:", IntegerToString(BUYS),
+               " SELLS:", IntegerToString(SELLS),
+               " Trade_act_before:", IntegerToString(Trade_act),
+               " bars_since_entry:", IntegerToString(pos.bars_since_entry));
          Trade_act = 7;  // exit_all
          LogTradeExit("SL_HIT", px, pos.bars_since_entry, pos.m30_followed, cur);
          DrawTradeLabel("EXIT-SLHIT", px, BB_datas, clrWhite, 2);
          Trade_info = "SIG:SIG evt:EXIT reason:SL_HIT";
          pos.open = false;
+         Print("[EXITDBG] evt:RETURN Trade_act_final:", IntegerToString(Trade_act),
+               " pos_open:", pos.open?"Y":"N",
+               " BUYS:", IntegerToString(BUYS),
+               " SELLS:", IntegerToString(SELLS),
+               " Trade_sl:", DoubleToString(Trade_sl, _Digits),
+               " dt:", TimeToString(cur, TIME_DATE|TIME_SECONDS));
          return;
       }
 
@@ -766,6 +833,12 @@ void Trade_Strategy(
       Trade_info = "SIG:SIG evt:HOLD pos:" + (pos.trigger_dir==1?"BUY":"SELL") +
                    " bars:" + IntegerToString(pos.bars_since_entry) +
                    " m30follow:" + (pos.m30_followed?"Y":"N");
+      Print("[EXITDBG] evt:RETURN Trade_act_final:", IntegerToString(Trade_act),
+            " pos_open:", pos.open?"Y":"N",
+            " BUYS:", IntegerToString(BUYS),
+            " SELLS:", IntegerToString(SELLS),
+            " Trade_sl:", DoubleToString(Trade_sl, _Digits),
+            " dt:", TimeToString(cur, TIME_DATE|TIME_SECONDS));
       return;
    }
 
