@@ -1,11 +1,13 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "36.12"
+#property version   "36.13"
 //+------------------------------------------------------------------+
 //| TofyTrade6 — DualTF Stack logic                                   |
-//| V36.12 — DIAGNOSTIC: [EXITDBG] logging to locate the V36.11        |
-//|   failed-exit mechanism. No behavior change. Remove after diag.    |
-//|   V36.11: FIRST TRADING VERSION — TransitionDetector + v1 ruleset. |
+//| V36.13 — EXIT-RETRY FIX: pos.open cleared only on confirmed-flat.  |
+//|   exit_pending retry loop re-issues act=7 until broker closes.    |
+//|   Fixes orphan bug (ERROR 4756, 2026.01.14).                      |
+//|   V36.12: DIAGNOSTIC [EXITDBG] — removed (diagnostic complete).   |
+//|   V36.11: FIRST TRADING VERSION — TransitionDetector + v1 ruleset.|
 //|                                                                    |
 //| PART 4 — TransitionDetector (M15 F/R flip detection)               |
 //| PART 5 — v1 Trade Ruleset (gate, entry, TP, SL, invalidation)      |
@@ -126,6 +128,9 @@ struct PositionState {
    int      bars_since_entry;    // M5 bars elapsed since entry
    string   trigger_state;       // M15 state at trigger ("F" for UP, "R" for DOWN)
    int      trigger_dir;         // trigger direction (1=UP, 2=DOWN)
+   bool     exit_pending;        // V36.13: exit issued but not confirmed flat
+   string   exit_reason;         // V36.13: original exit reason (preserved across retries)
+   int      exit_pending_bar;    // V36.13: bars_since_entry when exit first issued
 };
 
 //═══════════════════════════════════════════════════════════════════
@@ -681,31 +686,52 @@ void Trade_Strategy(
       pos.direction=0; pos.entry_price=0; pos.entry_time=0;
       pos.tp_price=0; pos.sl_price=0; pos.m30_followed=false;
       pos.bars_since_entry=0; pos.trigger_state=""; pos.trigger_dir=0;
+      pos.exit_pending=false; pos.exit_reason=""; pos.exit_pending_bar=0;
    }
 
    bool positionOpen = (BUYS + SELLS > 0);
 
-   //--- V36.12 diagnostic: track whether an exit was decided this bar
-   static bool s_exitDecided = false;
-   s_exitDecided = false;
+   //--- V36.13: exit-retry — pos.open cleared only on confirmed flat
 
    //==================================================================================
    // PART 5 — EXIT LOGIC (position open)
    //==================================================================================
-   // Sync: if our state says open but EA sees no position, it was closed externally
-   // (broker SL, manual close). Reset without logging — EA owns that exit.
-   if(pos.open && !positionOpen)
+
+   //--- V36.13: Confirmed-flat reconciliation
+   // pos.open is cleared ONLY when the broker confirms flat (BUYS==0 && SELLS==0).
+   // This covers: (a) exit-retry after rejected close, (b) external close (broker SL,
+   // manual close), (c) normal exit on the bar the broker fills it.
+   if(pos.open && BUYS == 0 && SELLS == 0)
    {
-      // V36.12: [EXITDBG] SYNC_RESET — catches M-C (silent desync eating the exit)
-      Print("[EXITDBG] evt:SYNC_RESET pos_dir:", pos.trigger_dir==1?"BUY":pos.trigger_dir==2?"SELL":"?",
-            " BUYS:", IntegerToString(BUYS),
-            " SELLS:", IntegerToString(SELLS),
-            " last_exit_logged:", "none",
-            " dt:", TimeToString(cur, TIME_DATE|TIME_SECONDS));
+      //--- If we had an exit pending, log the final EXIT with the original reason
+      if(pos.exit_pending)
+      {
+         double px = close_prices[LA];
+         LogTradeExit(pos.exit_reason, px, pos.bars_since_entry, pos.m30_followed, cur);
+         DrawTradeLabel("EXIT-" + pos.exit_reason, px, BB_datas, clrWhite, 2);
+         Trade_info = "SIG:SIG evt:EXIT reason:" + pos.exit_reason;
+      }
       pos.open = false;
+      pos.exit_pending = false;
+      pos.exit_reason = "";
+      return;
    }
 
-   if(positionOpen && pos.open)
+   //--- V36.13: Exit-retry — re-issue act=7 while pending and position still live
+   if(pos.exit_pending && positionOpen)
+   {
+      int barsPending = pos.bars_since_entry - pos.exit_pending_bar;
+      Print("[TRADE] evt:EXIT_RETRY reason:", pos.exit_reason,
+            " dt:", TimeToString(cur, TIME_DATE|TIME_SECONDS),
+            " bars_pending:", IntegerToString(barsPending),
+            " BUYS:", IntegerToString(BUYS),
+            " SELLS:", IntegerToString(SELLS));
+      Trade_act = 7;
+      Trade_info = "SIG:SIG evt:EXIT_RETRY reason:" + pos.exit_reason;
+      return;
+   }
+
+   if(positionOpen && pos.open && !pos.exit_pending)
    {
       pos.bars_since_entry++;
       double px = close_prices[LA];
@@ -721,57 +747,29 @@ void Trade_Strategy(
       }
 
       //--- Priority order for exits:
+      // 1. TP_HIT, 2. M15_REVERT, 3. TIMEOUT, 4. SL_HIT
 
-  // 1. TP_HIT: price reached TP
+      // 1. TP_HIT: price reached TP
       // UP: close >= TP; DOWN: close <= TP
       if((pos.trigger_dir == 1 && px >= pos.tp_price) ||
          (pos.trigger_dir == 2 && px <= pos.tp_price))
       {
-         // V36.12: [EXITDBG] DECIDE — before Trade_act is set
-         s_exitDecided = true;
-         Print("[EXITDBG] evt:DECIDE reason:TP_HIT dt:", TimeToString(cur, TIME_DATE|TIME_SECONDS),
-               " pos_open:", pos.open?"Y":"N",
-               " pos_dir:", pos.trigger_dir==1?"BUY":"SELL",
-               " BUYS:", IntegerToString(BUYS),
-               " SELLS:", IntegerToString(SELLS),
-               " Trade_act_before:", IntegerToString(Trade_act),
-               " bars_since_entry:", IntegerToString(pos.bars_since_entry));
-         Trade_act = 7;  // exit_all
-         LogTradeExit("TP_HIT", px, pos.bars_since_entry, pos.m30_followed, cur);
-         DrawTradeLabel("EXIT-TPHIT", px, BB_datas, clrWhite, 2);
+         pos.exit_pending = true;
+         pos.exit_reason = "TP_HIT";
+         pos.exit_pending_bar = pos.bars_since_entry;
+         Trade_act = 7;
          Trade_info = "SIG:SIG evt:EXIT reason:TP_HIT";
-         pos.open = false;
-         Print("[EXITDBG] evt:RETURN Trade_act_final:", IntegerToString(Trade_act),
-               " pos_open:", pos.open?"Y":"N",
-               " BUYS:", IntegerToString(BUYS),
-               " SELLS:", IntegerToString(SELLS),
-               " Trade_sl:", DoubleToString(Trade_sl, _Digits),
-               " dt:", TimeToString(cur, TIME_DATE|TIME_SECONDS));
          return;
       }
 
       // 2. M15_REVERT: m15 state != trigger target state
       if(s.m15_state != pos.trigger_state)
       {
-         s_exitDecided = true;
-         Print("[EXITDBG] evt:DECIDE reason:M15_REVERT dt:", TimeToString(cur, TIME_DATE|TIME_SECONDS),
-               " pos_open:", pos.open?"Y":"N",
-               " pos_dir:", pos.trigger_dir==1?"BUY":"SELL",
-               " BUYS:", IntegerToString(BUYS),
-               " SELLS:", IntegerToString(SELLS),
-               " Trade_act_before:", IntegerToString(Trade_act),
-               " bars_since_entry:", IntegerToString(pos.bars_since_entry));
-         Trade_act = 7;  // exit_all
-         LogTradeExit("M15_REVERT", px, pos.bars_since_entry, pos.m30_followed, cur);
-         DrawTradeLabel("EXIT-REVERT", px, BB_datas, clrWhite, 2);
+         pos.exit_pending = true;
+         pos.exit_reason = "M15_REVERT";
+         pos.exit_pending_bar = pos.bars_since_entry;
+         Trade_act = 7;
          Trade_info = "SIG:SIG evt:EXIT reason:M15_REVERT";
-         pos.open = false;
-         Print("[EXITDBG] evt:RETURN Trade_act_final:", IntegerToString(Trade_act),
-               " pos_open:", pos.open?"Y":"N",
-               " BUYS:", IntegerToString(BUYS),
-               " SELLS:", IntegerToString(SELLS),
-               " Trade_sl:", DoubleToString(Trade_sl, _Digits),
-               " dt:", TimeToString(cur, TIME_DATE|TIME_SECONDS));
          return;
       }
 
@@ -779,25 +777,11 @@ void Trade_Strategy(
       // Once m30 HAS followed, timeout no longer applies
       if(!pos.m30_followed && pos.bars_since_entry >= 12)
       {
-         s_exitDecided = true;
-         Print("[EXITDBG] evt:DECIDE reason:TIMEOUT dt:", TimeToString(cur, TIME_DATE|TIME_SECONDS),
-               " pos_open:", pos.open?"Y":"N",
-               " pos_dir:", pos.trigger_dir==1?"BUY":"SELL",
-               " BUYS:", IntegerToString(BUYS),
-               " SELLS:", IntegerToString(SELLS),
-               " Trade_act_before:", IntegerToString(Trade_act),
-               " bars_since_entry:", IntegerToString(pos.bars_since_entry));
-         Trade_act = 7;  // exit_all
-         LogTradeExit("TIMEOUT", px, pos.bars_since_entry, pos.m30_followed, cur);
-         DrawTradeLabel("EXIT-TIMEOUT", px, BB_datas, clrWhite, 2);
+         pos.exit_pending = true;
+         pos.exit_reason = "TIMEOUT";
+         pos.exit_pending_bar = pos.bars_since_entry;
+         Trade_act = 7;
          Trade_info = "SIG:SIG evt:EXIT reason:TIMEOUT";
-         pos.open = false;
-         Print("[EXITDBG] evt:RETURN Trade_act_final:", IntegerToString(Trade_act),
-               " pos_open:", pos.open?"Y":"N",
-               " BUYS:", IntegerToString(BUYS),
-               " SELLS:", IntegerToString(SELLS),
-               " Trade_sl:", DoubleToString(Trade_sl, _Digits),
-               " dt:", TimeToString(cur, TIME_DATE|TIME_SECONDS));
          return;
       }
 
@@ -806,25 +790,11 @@ void Trade_Strategy(
       if((pos.trigger_dir == 1 && px <= pos.sl_price) ||
          (pos.trigger_dir == 2 && px >= pos.sl_price))
       {
-         s_exitDecided = true;
-         Print("[EXITDBG] evt:DECIDE reason:SL_HIT dt:", TimeToString(cur, TIME_DATE|TIME_SECONDS),
-               " pos_open:", pos.open?"Y":"N",
-               " pos_dir:", pos.trigger_dir==1?"BUY":"SELL",
-               " BUYS:", IntegerToString(BUYS),
-               " SELLS:", IntegerToString(SELLS),
-               " Trade_act_before:", IntegerToString(Trade_act),
-               " bars_since_entry:", IntegerToString(pos.bars_since_entry));
-         Trade_act = 7;  // exit_all
-         LogTradeExit("SL_HIT", px, pos.bars_since_entry, pos.m30_followed, cur);
-         DrawTradeLabel("EXIT-SLHIT", px, BB_datas, clrWhite, 2);
+         pos.exit_pending = true;
+         pos.exit_reason = "SL_HIT";
+         pos.exit_pending_bar = pos.bars_since_entry;
+         Trade_act = 7;
          Trade_info = "SIG:SIG evt:EXIT reason:SL_HIT";
-         pos.open = false;
-         Print("[EXITDBG] evt:RETURN Trade_act_final:", IntegerToString(Trade_act),
-               " pos_open:", pos.open?"Y":"N",
-               " BUYS:", IntegerToString(BUYS),
-               " SELLS:", IntegerToString(SELLS),
-               " Trade_sl:", DoubleToString(Trade_sl, _Digits),
-               " dt:", TimeToString(cur, TIME_DATE|TIME_SECONDS));
          return;
       }
 
@@ -833,18 +803,21 @@ void Trade_Strategy(
       Trade_info = "SIG:SIG evt:HOLD pos:" + (pos.trigger_dir==1?"BUY":"SELL") +
                    " bars:" + IntegerToString(pos.bars_since_entry) +
                    " m30follow:" + (pos.m30_followed?"Y":"N");
-      Print("[EXITDBG] evt:RETURN Trade_act_final:", IntegerToString(Trade_act),
-            " pos_open:", pos.open?"Y":"N",
-            " BUYS:", IntegerToString(BUYS),
-            " SELLS:", IntegerToString(SELLS),
-            " Trade_sl:", DoubleToString(Trade_sl, _Digits),
-            " dt:", TimeToString(cur, TIME_DATE|TIME_SECONDS));
       return;
    }
 
    //==================================================================================
    // PART 4 + PART 5 — TRIGGER + GATE + ENTRY (no position open)
    //==================================================================================
+
+   //--- V36.13: Block entry while pos.open or exit_pending (one-position-at-a-time).
+   // Even if broker-state positionOpen is stale, we never open a second position.
+   if(pos.open || pos.exit_pending)
+   {
+      Trade_info = "SIG:SIG evt:BLOCK pos_open:" + (pos.open?"Y":"N") +
+                   " exit_pending:" + (pos.exit_pending?"Y":"N");
+      return;
+   }
 
    //--- Detect M15 transition
    TransitionTrigger trig = DetectTransition(s, cur);
@@ -947,4 +920,8 @@ void Trade_Strategy(
 // 9. Timeout (12 M5 bars) disabled once m30_followed = true.
 // 10. [LABELDBG] Print removed. Trade-event labels only.
 // 11. Scenario-change labels disabled.
+// 12. V36.13: Exit-retry fix. pos.open cleared only on confirmed flat
+//    (BUYS==0 && SELLS==0). exit_pending retry loop re-issues act=7
+//    until broker closes. Fixes orphan bug (ERROR 4756).
+// 13. V36.13: Entry blocked while pos.open or pos.exit_pending.
 //+------------------------------------------------------------------+
