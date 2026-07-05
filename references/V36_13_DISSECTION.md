@@ -242,3 +242,79 @@ flowchart TD
 
 These scripts measure REALIZED outcomes on historical trades. They classify what happened; they do not predict what will happen. A separable subset found here is in-sample and needs a forward test on fresh data before trusting.
 
+
+## Scenario-cell dissection (H4 x H1 at entry)
+
+The 214 reconciled trades split into joint scenario cells by H4 state x H1 state at the entry bar. Pre-registered bar: PF >= 1.2 at n >= 20.
+
+### Sanity Reconciliation
+
+- Sum of cell n: **214** (expected 214) — PASS
+- Sum of cell $: **-896.62** (per-trade profit sum: -896.62, delta: +0.00) — PASS
+
+### n-Distribution Across Cells
+
+- n >= 20: **3** cells
+- n 10-19: **8** cells
+- n < 10: **5** cells
+- empty: **9** cells
+
+### Cell Grid (H4 x H1)
+
+| Cell | n | Total $ | Mean $ | Win-Rate | PF |
+|------|---|---------|--------|----------|-----|
+| F-F | 35 | -118.84 | -3.40 | 20.0% | 0.56 |
+| F-S | 13 | -137.17 | -10.55 | 38.5% | 0.44 |
+| F-C | 11 | -128.95 | -11.72 | 18.2% | 0.20 |
+| F-R | 11 | -155.28 | -14.12 | 27.3% | 0.15 |
+| S-F | 26 | +92.48 | +3.56 | 57.7% | 1.55 |
+| S-S | 14 | +98.28 | +7.02 | 50.0% | 1.97 |
+| S-C | 10 | -36.50 | -3.65 | 50.0% | 0.56 |
+| S-R | 13 | -76.69 | -5.90 | 30.8% | 0.40 |
+| C-F | 5 | -41.59 | -8.32 | 20.0% | 0.23 |
+| C-S | 7 | -56.34 | -8.05 | 28.6% | 0.30 |
+| C-C | 5 | -5.59 | -1.12 | 60.0% | 0.77 |
+| C-R | 6 | -130.30 | -21.72 | 0.0% | 0.00 |
+| R-F | 8 | +62.18 | +7.77 | 50.0% | 3.41 |
+| R-S | 19 | -217.07 | -11.42 | 42.1% | 0.37 |
+| R-C | 10 | -46.83 | -4.68 | 40.0% | 0.69 |
+| R-R | 21 | +1.59 | +0.08 | 33.3% | 1.01 |
+
+### Marginals
+
+| H4 State | n | Total $ | Mean $ | Win-Rate | PF |
+|----------|---|---------|--------|----------|-----|
+| F | 70 | -540.24 | -7.72 | 24.3% | 0.37 |
+| S | 63 | +77.57 | +1.23 | 49.2% | 1.16 |
+| C | 23 | -233.82 | -10.17 | 26.1% | 0.19 |
+| R | 58 | -200.13 | -3.45 | 39.7% | 0.70 |
+
+| H1 State | n | Total $ | Mean $ | Win-Rate | PF |
+|----------|---|---------|--------|----------|-----|
+| F | 74 | -5.77 | -0.08 | 36.5% | 0.99 |
+| S | 53 | -312.30 | -5.89 | 41.5% | 0.59 |
+| C | 36 | -217.87 | -6.05 | 38.9% | 0.48 |
+| R | 51 | -360.68 | -7.07 | 27.5% | 0.39 |
+
+### Verdict
+
+**SURVIVOR**
+
+Cell S-F: n=26, PF=1.55, total=+92.48, WR=57.7%
+in-sample, post-hoc, one of 16+ comparisons — a HYPOTHESIS requiring a forward test on a fresh data window before any rule is built on it.
+
+### Below-Threshold (PF >= 1.2 but n < 20 — not promoted)
+
+- Cell S-S: n=14, PF=1.97, total=+98.28 — too small to trade
+- Cell R-F: n=8, PF=3.41, total=+62.18 — too small to trade
+
+### Multiple-Comparisons Note
+
+With 16+ cells and a 21% base win-rate, 1-2 cells are EXPECTED to look profitable by chance alone. Only the pre-registered bar (PF >= 1.2 at n >= 20) counts, and even a survivor is a hypothesis, not a validated edge.
+
+### Limitations
+
+- **In-sample, post-hoc:** The cell with the best PF was selected from the same data it was evaluated on. Overfitting is possible. A forward test on a fresh data window is required before building any rule on a survivor cell.
+- **X-cell handling:** X states (no real TF data at entry) form their own row/column in the grid. They are reported, not silently dropped, but carry no signal — they are no-data rows.
+- **No new design recommendations:** The fixed verdict categories (SURVIVOR / NO-SURVIVOR) are the only conclusions drawn. No scenario-specific entry filter is proposed without a forward test.
+
