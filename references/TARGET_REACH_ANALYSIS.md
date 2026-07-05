@@ -242,6 +242,29 @@ For triggers firing in AT/BEYOND zone: does bbloc hold at the band for 12 rows (
 | H1 | 182 | 56 | 45 | 31% |
 | H4 | 112 | 73 | 8 | 65% |
 
+## Calculation method (plain explanation)
+
+**(a) COUNT** — Scan every DUALTF row. When the M15 state flips to F (UP trigger) or R (DOWN trigger), mark the bar. Total: 245 UP triggers and 252 DOWN triggers (497 total). For each trigger, record the M30 BBLoc zone (FAR, MID, NEAR, AT/BEYOND).
+
+**(b) RATE** — For each trigger, look forward N rows (12/24/48/96). If price reaches the target band (M30, H1, or H4) within N rows, count it as "reached." Reach rate = reached / total triggers in that zone. At N=48, M30 band reach from NEAR+MID = 98.1% (FOLLOWED subset). H4 reach from MID+FAR = 24.4%.
+
+**(c) LIFT** — The base rate is how often the band gets reached from the same zone even without a trigger (unconditional reach). Lift = trigger-conditioned reach / base-rate reach. For M30 NEAR UP: 91% / 80% = 1.14x. Lift near 1.0 means the trigger adds nothing over random; lift >= 1.5 means the trigger meaningfully improves reach.
+
+This analysis measures whether a signal EXISTS in the identification log — NOT whether trading it is profitable. A signal with high lift can still lose money in live trading (see V36.13 backtest: -$899). Signal existence and trade profitability are different questions.
+
+```mermaid
+flowchart TD
+    A["7608 DUALTF log rows"] --> B["Mark trigger events: M15 flip to F or R"]
+    B --> C["Record zone: FAR, MID, NEAR, AT/BEYOND"]
+    C --> D["Count reach: did price hit target band within N rows"]
+    D --> E["Reach rate = reached / total per zone"]
+    E --> F["Base rate: reach without any trigger signal"]
+    F --> G["Lift = trigger reach / base rate"]
+    G --> H{"M30 NEAR+MID >= 60% and H4 MID+FAR >= 40%?"}
+    H -->|Yes| I["Verdict: viable TP target"]
+    H -->|No| J["Verdict: M30 TP, H4 dead"]
+```
+
 ## VERDICT
 
 **Criteria applied mechanically at N=48 on M30-FOLLOWED subset — no post-hoc adjustment.**

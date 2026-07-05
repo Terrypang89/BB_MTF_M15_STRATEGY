@@ -92,6 +92,29 @@ Window K=12 rows (60 minutes)
 | 6 | 36.2% | 20.7% | 2.88x | 2.44x | 3.0 | FAIL | PASS | PASS |
 | 24 | 85.8% | 56.6% | 1.67x | 1.61x | 8.0 | PASS | PASS | PASS |
 
+## Calculation method (plain explanation)
+
+**(a) COUNT** — Scan every DUALTF row in the log. Whenever the M15 state flips on a bar (different from the previous bar), mark that bar as an M15-flip event. Total: 1094 flips (245 toward F, 252 toward R, 367 toward S, 230 toward C).
+
+**(b) RATE** — Two directions: *recall* looks backward (for each M30 transition, was there a same-target M15 flip in the 12-row window before?); *precision* looks forward (for each M15 flip, does M30 reach the same target state within 12 rows?). Recall = 57.2% (294 LED out of 514 M30 transitions). Precision toward F = 38.0% (93/245), toward R = 32.9% (83/252).
+
+**(c) LIFT** — Divide precision by the base rate (how often M30 moves to that target without any M15-flip signal). For F: 38.0% / 18.7% = 2.03x. For R: 32.9% / 16.4% = 2.01x. Lift near 1.0 means the signal adds nothing; lift >= 1.5 means the signal beats chance and carries real information.
+
+This analysis measures whether a signal EXISTS in the identification log — NOT whether trading it is profitable. A signal with high lift can still lose money in live trading (see V36.13 backtest: -$899). Signal existence and trade profitability are different questions.
+
+```mermaid
+flowchart TD
+    A["7608 DUALTF log rows"] --> B["Mark M15-flip events: 1094 flips"]
+    B --> C["Count M30 transitions in window: 514"]
+    C --> D["Recall: 57.2% (294 of 514 M30 had prior M15 flip)"]
+    B --> E["Precision per target: F=38.0%, R=32.9%"]
+    E --> F["Base rate per target: F=18.7%, R=16.4%"]
+    F --> G["Lift = precision / base: F=2.03x, R=2.01x"]
+    G --> H{"Lift >= 1.5x and recall >= 40%?"}
+    H -->|Yes| I["Verdict: VIABLE"]
+    H -->|No| J["Verdict: FAIL"]
+```
+
 ## VERDICT
 
 **Criteria applied mechanically at K=12 — no post-hoc adjustment.**

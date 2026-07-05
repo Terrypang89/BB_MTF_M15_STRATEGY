@@ -65,6 +65,28 @@ Instead of predicting every transition, predict only when inputs agree:
 | D — All combined | 40.8% | 35.3% | +5.5pp | OVERFIT |
 | E — M15 alone | 39.4% | 35.7% | +3.6pp | OK |
 
+## Calculation method (plain explanation)
+
+**(a) COUNT** — From the 7333 real-data DUALTF rows, identify transition events (M30 state changes). Split: 485 transitions in TRAIN (first 70%), 221 in TEST (last 30%). Each transition is the ground-truth label.
+
+**(b) RATE** — For each predictor, measure accuracy = correct predictions / total predictions on the TEST set. Predictor A (BBLoc slope only): 43.9% accuracy on 221 TEST transitions. Majority baseline (always predict "down"): 35.3%.
+
+**(c) LIFT** — The baseline is the accuracy without any model (always predict majority class). Predictor A: 43.9% vs 35.3% baseline = +8.6pp improvement. However, adding more inputs (HTF, M15, duration) *reduces* accuracy — predictor D (all combined) drops to 35.3%, equal to baseline. Lift here is expressed as accuracy-over-baseline rather than a ratio, because the question is whether the model adds information over dumb guessing. The answer: no, multi-input adds nothing and overfits.
+
+This analysis measures whether a signal EXISTS in the identification log — NOT whether trading it is profitable. A signal with high lift can still lose money in live trading (see V36.13 backtest: -$899). Signal existence and trade profitability are different questions.
+
+```mermaid
+flowchart TD
+    A["7333 real-data DUALTF rows"] --> B["Mark transition events: 485 TRAIN, 221 TEST"]
+    B --> C["Fit predictors on TRAIN, evaluate on TEST"]
+    C --> D["Accuracy: correct / total TEST predictions"]
+    D --> E["Baseline: always predict majority = 35.3%"]
+    E --> F["Predictor A: 43.9%, D: 35.3% (overfit)"]
+    F --> G{"Any predictor meaningfully beats baseline?"}
+    G -->|Yes| H["Verdict: prediction VIABLE"]
+    G -->|No| I["Verdict: prediction DEAD"]
+```
+
 ## 6. Honest Verdict
 
 **Multi-input does NOT meaningfully beat BBLoc-only on TEST.**

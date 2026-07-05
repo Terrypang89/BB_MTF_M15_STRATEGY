@@ -122,6 +122,28 @@ At-band triggers where H1 is ALSO at/beyond. H4-band reach at N=48.
 
 > Tier-3 sample adequate (n=68). H4 reach from tier-3: 63%.
 
+## Calculation method (plain explanation)
+
+**(a) COUNT** — From the 497 total triggers, filter to "at-band triggers" where M30 is already at/beyond its band (222 triggers: 111 UP, 111 DOWN). For each at-band trigger, record the H1 BBLoc zone.
+
+**(b) RATE** — For each at-band trigger in NEAR+MID zones, look forward N=48 rows. If price reaches the H1 band, count it as "reached." H1 reach = 79.5% (n=44 NEAR+MID triggers).
+
+**(c) LIFT** — The base rate is the unconditional H1 reach from the same zone without any trigger. Lift = trigger-conditioned reach / base rate. For NEAR+MID pooled: 74.7% / 75.3% = 0.99x. Lift near 1.0 means the trigger adds no information over random; lift >= 1.5 means the trigger meaningfully improves reach. At 0.99x, the at-band trigger signal is worthless — H1 reaches the same rate regardless.
+
+This analysis measures whether a signal EXISTS in the identification log — NOT whether trading it is profitable. A signal with high lift can still lose money in live trading (see V36.13 backtest: -$899). Signal existence and trade profitability are different questions.
+
+```mermaid
+flowchart TD
+    A["7608 DUALTF log rows"] --> B["Mark at-band triggers: M30 at/beyond band, 222"]
+    B --> C["Record H1 zone: FAR, MID, NEAR, AT/BEYOND"]
+    C --> D["Count H1 reach within N=48 rows: 79.5% NEAR+MID"]
+    D --> E["Base rate: H1 reach without trigger: 75.3%"]
+    E --> F["Lift = trigger reach / base rate: 0.99x"]
+    F --> G{"Lift >= 1.3x?"}
+    G -->|Yes| H["Verdict: tier-2 cascade VIABLE"]
+    G -->|No| I["Verdict: tier-2 cascade DEAD"]
+```
+
 ## VERDICT
 
 **Criteria applied mechanically at N=48, FOLLOWED subset, NEAR+MID pooled, both directions — no post-hoc adjustment.**
