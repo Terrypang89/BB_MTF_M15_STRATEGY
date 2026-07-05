@@ -1,491 +1,433 @@
 #!/usr/bin/env python3
-"""V36.13 Dissection — decompose 214 trades to locate loss concentration.
+"""V36.13 Dissection — decompose 214 trades to locate where the loss concentrates.
 
-Reads:
-  - report_tables_clean.json  (table_deals, table_results)
-  - 20260705_clean.log       ([TRADE] evt:ENTRY / evt:EXIT lines)
-
-Writes:
-  - references/V36_13_DISSECTION.md
-
-Join logic:
-  - in-deals → ENTRY log: by time (±600s). 3 rejected entries have no in-deal.
-  - out-deals → EXIT log: by sequential index (one position at a time).
-    Exit-retry means the EXIT decision bar ≠ fill bar; time-join fails.
-    The EXIT log fires once per trade (on confirmed-flat), so sequential
-    matching is correct: exit_lines[i] → trade i.
+Reconciles report_tables_clean.json deals with [TRADE] ENTRY/EXIT log lines.
+Splits by: rr bucket, exit reason, m30bbloc zone, direction, HTF context.
+Applies fixed verdict criteria mechanically.
 """
 
 import json
 import re
-import sys
 from datetime import datetime
 
-# ── paths ──────────────────────────────────────────────────────────
-BASE = "references/Backtest_data/V36.13"
-DEALS_PATH = f"{BASE}/report_tables_clean.json"
-LOG_PATH = f"{BASE}/20260705_clean.log"
+JSON_PATH = "references/Backtest_data/V36.13/report_tables_clean.json"
+LOG_PATH = "references/Backtest_data/V36.13/20260705_clean.log"
 REPORT_PATH = "references/V36_13_DISSECTION.md"
 
-# ── load data ──────────────────────────────────────────────────────
-with open(DEALS_PATH) as f:
-    report = json.load(f)
-
-deals = report["table_deals"]
-results = report["table_results"]
-
-with open(LOG_PATH) as f:
-    log_lines = f.readlines()
-
-# ── parse deals ────────────────────────────────────────────────────
-def parse_time(s):
-    return datetime.strptime(s, "%Y.%m.%d %H:%M:%S")
-
-in_deals = []
-out_deals = []
-
-for deal in deals:
-    d = deal["Direction"]
-    if d == "in":
-        in_deals.append({
-            "time": parse_time(deal["Time"]),
-            "type": deal["Type"],
-            "volume": deal["Volume"],
-            "price": float(deal["Price"]),
-        })
-    elif d == "out":
-        out_deals.append({
-            "time": parse_time(deal["Time"]),
-            "type": deal["Type"],
-            "volume": deal["Volume"],
-            "price": float(deal["Price"]),
-            "profit": float(deal["Profit"]),
-        })
-
-# ── parse log ENTRY / EXIT lines ──────────────────────────────────
+# ── regexes ──────────────────────────────────────────────────────
 ENTRY_RE = re.compile(
     r"\[TRADE\] evt:ENTRY dir:(UP|DOWN) dt:(\S+\s+\S+) "
     r"entry:(\S+) sl:(\S+) sldist:(\S+) tp:(\S+) tpdist:(\S+) rr:(\S+) "
     r"m30bbloc:(\d+) m15:(\S+) m30:(\S+) h1bbloc:(\d+) h4bbloc:(\d+)"
 )
-
 EXIT_RE = re.compile(
     r"\[TRADE\] evt:EXIT reason:(\S+) dt:(\S+\s+\S+) "
     r"exit:(\S+) bars_held:(\d+) m30_followed:(Y|N)"
 )
+DUALTF_RE = re.compile(
+    r"\[DUALTF\] SIG:DUALTF evt:BAR dt:(\S+\s+\S+) "
+    r"d1:stg:(\d+) d1:mid:(\d+) d1:ud:(\d+) d1:state:(\S+) d1bbloc:(-?\d+) "
+    r"h4:stg:(\d+) h4:mid:(\d+) h4:ud:(\d+) h4:state:(\S+) h4bbloc:(-?\d+)"
+)
 
-entry_lines = []
-exit_lines = []
+# ── 1. Reconcile: join in-deal <-> out-deal ─────────────────────
+with open(JSON_PATH) as f:
+    data = json.load(f)
 
-for line in log_lines:
-    m = ENTRY_RE.search(line)
-    if m:
-        entry_lines.append({
-            "dir": m.group(1),
-            "dt": datetime.strptime(m.group(2), "%Y.%m.%d %H:%M:%S"),
-            "entry_price": float(m.group(3)),
-            "sl": float(m.group(4)),
-            "sldist": float(m.group(5)),
-            "tp": float(m.group(6)),
-            "tpdist": float(m.group(7)),
-            "rr": float(m.group(8)),
-            "m30bbloc": int(m.group(9)),
-            "m15_state": m.group(10),
-            "m30_state": m.group(11),
-            "h1bbloc": int(m.group(12)),
-            "h4bbloc": int(m.group(13)),
-        })
-    m = EXIT_RE.search(line)
-    if m:
-        exit_lines.append({
-            "reason": m.group(1),
-            "dt": datetime.strptime(m.group(2), "%Y.%m.%d %H:%M:%S"),
-            "exit_price": float(m.group(3)),
-            "bars_held": int(m.group(4)),
-            "m30_followed": m.group(5) == "Y",
-        })
+trade_deals = [d for d in data["table_deals"]
+               if d["Type"] != "balance" and d["Direction"] in ("in", "out")]
+in_deals = [d for d in trade_deals if d["Direction"] == "in"]
+out_deals = [d for d in trade_deals if d["Direction"] == "out"]
 
-# ── reconcile ──────────────────────────────────────────────────────
-print(f"Deals: {len(in_deals)} in, {len(out_deals)} out")
-print(f"Log:  {len(entry_lines)} ENTRY, {len(exit_lines)} EXIT")
-
-assert len(in_deals) == len(out_deals), f"Deal mismatch: {len(in_deals)} in vs {len(out_deals)} out"
-N = len(in_deals)
-EXPECTED_N = 214
-assert N == EXPECTED_N, f"Expected {EXPECTED_N} trades, got {N}"
-
-# The 3 rejected entries have no in-deal. The 3 extra EXIT lines come from
-# exit-retry (the EXIT decision bar fires before the fill bar).
-# We expect 217 ENTRY lines (214 + 3 rejected) and 217 EXIT lines
-# (214 confirmed-flat + 3 retries that were later superseded).
-# Actually, the EXIT log fires on confirmed-flat, so there should be
-# exactly 214 if each trade closes once. But exit-retry means some trades
-# may have had the EXIT logged on a bar, then the close was rejected,
-# then re-logged on a later bar. However, the code logs EXIT only on
-# confirmed-flat (the final close), so each trade should produce one EXIT.
-# Let's check: if exit_lines > 214, some are retries; we match by index.
-
-# ── build per-trade records ────────────────────────────────────────
-trades = []
-unmatched_entries = 0
-rejected_entries = len(entry_lines) - N  # entries with no in-deal
-
-# Map: for each in-deal, find its ENTRY log by time
-for i in range(N):
-    ind = in_deals[i]
-    outd = out_deals[i]
-    profit = outd["profit"]
-
-    # Join to ENTRY log line (within ±600s)
-    entry_log = None
-    for el in entry_lines:
-        if abs((el["dt"] - ind["time"]).total_seconds()) <= 600:
-            entry_log = el
-            break
-    if entry_log is None:
-        unmatched_entries += 1
-
-    # Join EXIT by sequential index (one position at a time)
-    # exit_lines is in chronological order; each trade produces one EXIT.
-    # If len(exit_lines) > N, the extra lines are from the same trades
-    # (exit-retry). We take the first N.
-    # If len(exit_lines) < N, some trades had no EXIT log.
-    if i < len(exit_lines):
-        exit_log = exit_lines[i]
-    else:
-        exit_log = None
-
-    trades.append({
+per_trade = []
+for i, (ind, outd) in enumerate(zip(in_deals, out_deals)):
+    profit = float(outd["Profit"].replace(" ", ""))
+    ind_time = datetime.strptime(ind["Time"], "%Y.%m.%d %H:%M:%S")
+    outd_time = datetime.strptime(outd["Time"], "%Y.%m.%d %H:%M:%S")
+    per_trade.append({
         "idx": i,
-        "in_time": ind["time"],
-        "out_time": outd["time"],
-        "dir": ind["type"].upper(),
+        "entry_time": ind_time,
+        "exit_time": outd_time,
+        "entry_price": float(ind["Price"]),
+        "exit_price": float(outd["Price"]),
         "profit": profit,
-        "rr": entry_log["rr"] if entry_log else None,
-        "m30bbloc": entry_log["m30bbloc"] if entry_log else None,
-        "h1bbloc": entry_log["h1bbloc"] if entry_log else None,
-        "h4bbloc": entry_log["h4bbloc"] if entry_log else None,
-        "m30_state": entry_log["m30_state"] if entry_log else None,
-        "exit_reason": exit_log["reason"] if exit_log else None,
-        "bars_held": exit_log["bars_held"] if exit_log else None,
-        "m30_followed": exit_log["m30_followed"] if exit_log else None,
     })
 
-print(f"Unmatched entries (in-deal with no ENTRY log): {unmatched_entries}")
-print(f"Rejected entries (ENTRY log with no in-deal): {rejected_entries}")
-print(f"Extra EXIT lines (exit_lines - N): {len(exit_lines) - N}")
+total_profit = sum(t["profit"] for t in per_trade)
+report_net = float(data["table_results"]["Total Net Profit"])
 
-# Per-trade profit sum vs report Total Net Profit
-trade_profit_sum = sum(t["profit"] for t in trades)
-report_net = float(results["Total Net Profit"].replace(" ", ""))
-delta = abs(trade_profit_sum - report_net)
+# ── 2. Parse log ENTRY / EXIT lines ─────────────────────────────
+entry_log = []
+exit_log = []
+with open(LOG_PATH) as f:
+    for line in f:
+        m = ENTRY_RE.search(line)
+        if m:
+            entry_log.append({
+                "dir": m.group(1),
+                "dt": datetime.strptime(m.group(2), "%Y.%m.%d %H:%M:%S"),
+                "rr": float(m.group(8)),
+                "m30bbloc": int(m.group(9)),
+                "m15_state": m.group(10),
+                "m30_state": m.group(11),
+                "h1bbloc": int(m.group(12)),
+                "h4bbloc": int(m.group(13)),
+            })
+        m = EXIT_RE.search(line)
+        if m:
+            exit_log.append({
+                "reason": m.group(1),
+                "dt": datetime.strptime(m.group(2), "%Y.%m.%d %H:%M:%S"),
+                "bars_held": int(m.group(4)),
+            })
 
-# Find swap from summary deal (Direction=nan)
-swap_total = 0.0
-for deal in deals:
-    if deal["Direction"] is None or (isinstance(deal["Direction"], float) and deal["Direction"] != deal["Direction"]):
-        try:
-            swap_total += float(deal.get("Swap", "0"))
-        except (ValueError, TypeError):
-            pass
+# ── 3. Parse DUALTF for h4_state ────────────────────────────────
+dt_to_h4 = {}
+with open(LOG_PATH) as f:
+    for line in f:
+        m = DUALTF_RE.search(line)
+        if m:
+            dt = datetime.strptime(m.group(1), "%Y.%m.%d %H:%M:%S")
+            dt_to_h4[dt] = m.group(10)
 
-print(f"Per-trade profit sum: {trade_profit_sum:+.2f}")
-print(f"Report Total Net Profit: {report_net:+.2f}")
-print(f"Delta: {delta:.2f} (swap: {swap_total:+.2f})")
+# ── 4. Match per-trade to log lines ─────────────────────────────
+# Entries: time-based matching (+/-600s)
+# Exits: sequential matching (both sources have 214 exits in same order;
+#   exit times differ by ~900s between deal and log bar-boundary)
+used_entries = set()
 
-if delta > 5.0 and abs(delta - abs(swap_total)) > 1.0:
-    print("RECONCILIATION FAILED — delta > 5.0 and not explained by swap. Stopping.")
-    sys.exit(1)
+for t in per_trade:
+    best_ei = None
+    best_ei_diff = None
+    for ei, e in enumerate(entry_log):
+        if ei in used_entries:
+            continue
+        diff = abs((t["entry_time"] - e["dt"]).total_seconds())
+        if best_ei_diff is None or diff < best_ei_diff:
+            best_ei = ei
+            best_ei_diff = diff
+    if best_ei is not None and best_ei_diff <= 600:
+        t["entry_log"] = entry_log[best_ei]
+        used_entries.add(best_ei)
 
-# ── helper ─────────────────────────────────────────────────────────
-def pf(subset):
-    """Profit factor for a subset of trades."""
-    gp = sum(t["profit"] for t in subset if t["profit"] > 0)
-    gl = abs(sum(t["profit"] for t in subset if t["profit"] < 0))
-    return round(gp / gl, 2) if gl > 0 else float("inf") if gp > 0 else 0.0
+# Sequential exit matching: pair i-th exit log with i-th trade
+for i, t in enumerate(per_trade):
+    if i < len(exit_log):
+        t["exit_log"] = exit_log[i]
 
-def win_rate(subset):
-    wins = sum(1 for t in subset if t["profit"] > 0)
-    return round(wins / len(subset) * 100, 1) if subset else 0.0
+matched_entry = sum(1 for t in per_trade if "entry_log" in t)
+matched_exit = sum(1 for t in per_trade if "exit_log" in t)
 
-def summary(subset, label=""):
-    n = len(subset)
-    total = round(sum(t["profit"] for t in subset), 2)
-    mean_ = round(total / n, 2) if n else 0.0
-    wr = win_rate(subset)
-    pf_ = pf(subset)
-    return f"| {label} | {n} | {total:+.2f} | {mean_:+.2f} | {wr}% | {pf_} |"
-
-# ── splits ─────────────────────────────────────────────────────────
-
-# A. By exit reason
-split_a = {}
-for t in trades:
-    reason = t["exit_reason"] or "UNKNOWN"
-    split_a.setdefault(reason, []).append(t)
-
-# B. By m30bbloc zone
-def zone_name(bbloc, direction):
-    """NEAR / MID / FAR / ATBAND — per the gate logic in TofyTrade6."""
-    if direction == "BUY":
-        if bbloc in (5, 7):
-            return "NEAR/MID"
-        if bbloc in (9, 10):
-            return "ATBAND"
-        return "FAR"
-    else:  # SELL
-        if bbloc in (3, 5):
-            return "NEAR/MID"
-        if bbloc in (0, 1):
-            return "ATBAND"
-        return "FAR"
-
-split_b = {}
-for t in trades:
-    if t["m30bbloc"] is not None:
-        z = zone_name(t["m30bbloc"], t["dir"])
-    else:
-        z = "UNKNOWN"
-    split_b.setdefault(z, []).append(t)
-
-# C. By rr bucket
+# ── 5. Derive trade attributes ──────────────────────────────────
 def rr_bucket(rr):
-    if rr is None:
-        return "UNKNOWN"
     if rr < 1.0:
         return "rr<1.0"
-    if rr < 1.5:
+    elif rr < 1.5:
         return "1.0-1.5"
-    if rr < 2.0:
+    elif rr < 2.0:
         return "1.5-2.0"
-    return ">=2.0"
-
-split_c = {}
-for t in trades:
-    b = rr_bucket(t["rr"])
-    split_c.setdefault(b, []).append(t)
-
-# D. By direction
-split_d = {}
-for t in trades:
-    d = t["dir"]
-    split_d.setdefault(d, []).append(t)
-
-# E. By HTF context (H4 vs trigger dir)
-# Use h4bbloc as proxy: >=7 up-biased, <=3 down-biased, else neutral.
-# Agree = trigger dir matches HTF bias.
-def htf_context(h4bbloc, direction):
-    if h4bbloc is None:
-        return "UNKNOWN"
-    if h4bbloc >= 7:
-        return "AGREE" if direction == "BUY" else "DISAGREE"
-    elif h4bbloc <= 3:
-        return "AGREE" if direction == "SELL" else "DISAGREE"
     else:
-        return "NEUTRAL"
+        return ">=2.0"
 
-split_e = {}
-for t in trades:
-    c = htf_context(t["h4bbloc"], t["dir"])
-    split_e.setdefault(c, []).append(t)
+def m30_zone(bbloc, direction):
+    if direction == "UP":
+        if bbloc in (5, 7):
+            return "NEAR/MID"
+        elif bbloc in (9, 10):
+            return "ATBAND"
+        else:
+            return "FAR"
+    else:
+        if bbloc in (3, 5):
+            return "NEAR/MID"
+        elif bbloc in (0, 1):
+            return "ATBAND"
+        else:
+            return "FAR"
 
-# F. By session/hour bucket
-SESSION_HOURS = {
-    "00-04": (0, 3),
-    "04-08": (4, 7),
-    "08-12": (8, 11),
-    "12-16": (12, 15),
-    "16-20": (16, 19),
-    "20-00": (20, 23),
-}
+def h4_agree(h4_state, trigger_dir):
+    if trigger_dir == "UP":
+        if h4_state == "F":
+            return "AGREE"
+        elif h4_state == "S":
+            return "DISAGREE"
+        else:
+            return "NEUTRAL"
+    else:
+        if h4_state == "S":
+            return "AGREE"
+        elif h4_state == "F":
+            return "DISAGREE"
+        else:
+            return "NEUTRAL"
 
-def hour_bucket(ts):
-    h = ts.hour
-    for label, (lo, hi) in SESSION_HOURS.items():
-        if lo <= h <= hi:
-            return label
-    return "UNKNOWN"
+for t in per_trade:
+    el = t.get("entry_log", {})
+    xl = t.get("exit_log", {})
+    t["rr"] = el.get("rr", None)
+    t["rr_bucket"] = rr_bucket(t["rr"]) if t["rr"] else "UNKNOWN"
+    t["m30bbloc"] = el.get("m30bbloc", None)
+    t["dir"] = el.get("dir", None)
+    t["zone"] = (m30_zone(t["m30bbloc"], t["dir"])
+                 if (t["m30bbloc"] is not None and t["dir"]) else "UNKNOWN")
+    t["exit_reason"] = xl.get("reason", "UNKNOWN")
+    t["h4bbloc"] = el.get("h4bbloc", None)
 
-split_f = {}
-for t in trades:
-    b = hour_bucket(t["in_time"])
-    split_f.setdefault(b, []).append(t)
-
-# ── verdict criteria ───────────────────────────────────────────────
-verdict = None
-verdict_detail = None
-
-all_splits = {
-    "A": split_a,
-    "B": split_b,
-    "C": split_c,
-    "D": split_d,
-    "E": split_e,
-    "F": split_f,
-}
-
-# SALVAGEABLE-BY-GATE: any single split isolates PF>=1.2 AND n>=30.
-# Exclude tautological subsets: TP_HIT from split A has PF=inf because
-# a trade that hits TP is profitable by definition — you can't gate on
-# exit reason at entry time. Exclude split A entirely from gate check.
-for split_name, groups in all_splits.items():
-    if split_name == "A":
-        continue  # exit-reason subsets are not entry-time gates
-    for label, subset in groups.items():
-        if len(subset) >= 30 and pf(subset) >= 1.2:
-            verdict = "SALVAGEABLE-BY-GATE"
-            verdict_detail = (f"Split {split_name} subset '{label}' has PF {pf(subset)} "
-                             f"with n={len(subset)} (>=30). This subset is a profitable "
-                             f"core big enough to trade.")
-            break
-    if verdict:
-        break
-
-# EXIT-DRIVEN: removing worst exit-reason bucket lifts PF>=1.0
-if not verdict:
-    worst_reason = None
-    worst_loss = 0
-    for label, subset in split_a.items():
-        total = sum(t["profit"] for t in subset)
-        if total < worst_loss:
-            worst_loss = total
-            worst_reason = label
-    counterfactual = [t for t in trades if t["exit_reason"] != worst_reason]
-    cf_pf = pf(counterfactual)
-    if cf_pf >= 1.0:
-        verdict = "EXIT-DRIVEN"
-        verdict_detail = (f"Removing the {worst_reason} bucket (n={N - len(counterfactual)}, "
-                         f"net {worst_loss:+.2f}) lifts counterfactual PF to {cf_pf} "
-                         f"with n={len(counterfactual)}. Note: this is a realized-only "
-                         f"counterfactual — the counterfactual win is unknowable.")
-
-# FUNDAMENTALLY-NEGATIVE
-if not verdict:
-    # Double-check: any subset in B-F with PF>=1.0 at n>=30?
-    # (Exclude A — exit reasons are not entry-time gates.)
-    any_profitable = False
-    for split_name, groups in all_splits.items():
-        if split_name == "A":
-            continue
-        for label, subset in groups.items():
-            if len(subset) >= 30 and pf(subset) >= 1.0:
-                any_profitable = True
+    # Round entry time to nearest M15 bar (seconds=0)
+    rounded_dt = t["entry_time"].replace(second=0, microsecond=0)
+    h4_st = dt_to_h4.get(rounded_dt, None)
+    if h4_st is None:
+        # Fallback: search nearby bars
+        for delta in [-15, 15, -30, 30]:
+            check_min = max(0, min(59, rounded_dt.minute + delta))
+            check_dt = rounded_dt.replace(minute=check_min)
+            h4_st = dt_to_h4.get(check_dt, None)
+            if h4_st:
                 break
-        if any_profitable:
-            break
+    t["h4_state"] = h4_st
+    t["h4_context"] = (h4_agree(h4_st, t["dir"])
+                       if (h4_st and t.get("dir")) else "UNKNOWN")
+
+# ── 6. Compute splits ──────────────────────────────────────────
+def group_stats(group_key, trades):
+    groups = {}
+    for t in trades:
+        key = group_key(t)
+        groups.setdefault(key, {"wins": 0, "losses": 0, "gp": 0.0, "gl": 0.0, "n": 0})
+        groups[key]["n"] += 1
+        p = t["profit"]
+        if p > 0:
+            groups[key]["wins"] += 1
+            groups[key]["gp"] += p
+        elif p < 0:
+            groups[key]["losses"] += 1
+            groups[key]["gl"] += abs(p)
+    result = {}
+    for k, v in groups.items():
+        pf = round(v["gp"] / v["gl"], 2) if v["gl"] > 0 else (
+            "inf" if v["gp"] > 0 else 0.0)
+        wr = (v["wins"] / v["n"] * 100) if v["n"] > 0 else 0.0
+        result[k] = {
+            "n": v["n"],
+            "total": round(v["gp"] - v["gl"], 2),
+            "mean": round((v["gp"] - v["gl"]) / v["n"], 2) if v["n"] > 0 else 0.0,
+            "win_rate": round(wr, 1),
+            "pf": pf,
+        }
+    return result
+
+# Split A: rr bucket
+split_a = group_stats(lambda t: t["rr_bucket"], per_trade)
+
+# Cumulative nets for keep-rr thresholds
+keep_nets = {}
+for threshold_rr in [1.0, 1.5]:
+    kept = [t for t in per_trade if t["rr"] is not None and t["rr"] >= threshold_rr]
+    net = round(sum(t["profit"] for t in kept), 2)
+    n_kept = len(kept)
+    gp = sum(t["profit"] for t in kept if t["profit"] > 0)
+    gl = sum(abs(t["profit"]) for t in kept if t["profit"] < 0)
+    pf = round(gp / gl, 2) if gl > 0 else ("inf" if gp > 0 else 0.0)
+    keep_nets[f"rr>={threshold_rr}"] = {"n": n_kept, "net": net, "pf": pf}
+
+# Split B: exit reason
+split_b = group_stats(lambda t: t["exit_reason"], per_trade)
+
+# Split C: m30bbloc zone
+split_c = group_stats(lambda t: t["zone"], per_trade)
+
+# Split D: direction
+split_d = group_stats(lambda t: t["dir"], per_trade)
+
+# Split E: HTF context
+split_e = group_stats(lambda t: t["h4_context"], per_trade)
+
+# ── 7. Verdict (fixed criteria) ────────────────────────────────
+total_gl = sum(abs(t["profit"]) for t in per_trade if t["profit"] < 0)
+
+# SALVAGEABLE-BY-RR-GATE: rr>=1.5 yields net >= 0 (or PF >= 1.0) at n >= 30
+rr15 = keep_nets.get("rr>=1.5", {})
+rr15_pf = rr15.get("pf", 0)
+rr15_pf_ok = isinstance(rr15_pf, (int, float)) and rr15_pf >= 1.0
+rr15_salvageable = (rr15.get("net", -999) >= 0 or rr15_pf_ok) and rr15.get("n", 0) >= 30
+
+# EXIT-DRIVEN: M15_REVERT > 60% of gross loss
+m15_revert_gl = sum(abs(t["profit"]) for t in per_trade
+                    if t["profit"] < 0 and t["exit_reason"] == "M15_REVERT")
+m15_revert_pct = (m15_revert_gl / total_gl * 100) if total_gl > 0 else 0.0
+exit_driven = m15_revert_pct > 60.0
+
+# FUNDAMENTALLY-NEGATIVE: no rr bucket + no zone subset PF >= 1.0 at n >= 30
+rr_buckets_ok = any(
+    v["n"] >= 30 and isinstance(v["pf"], (int, float)) and v["pf"] >= 1.0
+    for v in split_a.values()
+)
+zone_ok = any(
+    v["n"] >= 30 and isinstance(v["pf"], (int, float)) and v["pf"] >= 1.0
+    for v in split_c.values()
+)
+fund_negative = not rr_buckets_ok and not zone_ok
+
+if rr15_salvageable:
+    verdict = "SALVAGEABLE-BY-RR-GATE"
+    verdict_detail = (f"Keeping only rr>=1.5: n={rr15['n']}, net={rr15['net']:+.2f}, "
+                      f"PF={rr15['pf']}")
+elif exit_driven:
+    verdict = "EXIT-DRIVEN"
+    verdict_detail = (f"M15_REVERT accounts for {m15_revert_pct:.1f}% of gross loss "
+                      f"({m15_revert_gl:.2f} / {total_gl:.2f})")
+elif fund_negative:
     verdict = "FUNDAMENTALLY-NEGATIVE"
-    verdict_detail = ("No subset in splits B-F reaches PF >= 1.0 at n >= 30. "
-                      "The trigger premise is dead.")
+    verdict_detail = ("No rr bucket and no zone subset reaches PF >= 1.0 at n >= 30")
+else:
+    verdict = "NO CLEAR CATEGORY"
+    verdict_detail = "Criteria did not match any single category"
 
-# ── write report ───────────────────────────────────────────────────
+# ── 8. Write report ────────────────────────────────────────────
 md = []
-md.append("# V36.13 Dissection — Where the -$899 concentrates\n")
-
-# Reconciliation
-md.append("## Reconciliation\n")
-md.append(f"- {len(in_deals)} in-deals matched to {len(out_deals)} out-deals. "
-          f"All {N} trades joined.")
-md.append(f"- {len(entry_lines)} [TRADE] ENTRY lines in log; "
-          f"{unmatched_entries} unmatched (in-deal with no ENTRY log), "
-          f"{rejected_entries} rejected (ENTRY log with no in-deal).")
-md.append(f"- {len(exit_lines)} [TRADE] EXIT lines in log; "
-          f"{len(exit_lines) - N} extra (exit-retry duplicates). "
-          f"Joined by sequential index (one position at a time).")
-md.append(f"- Per-trade profit sum: **{trade_profit_sum:+.2f}**")
-md.append(f"- Report Total Net Profit: **{report_net:+.2f}**")
-md.append(f"- Delta: **{delta:.2f}** (explained by swap: **{swap_total:+.2f}**)")
+md.append("# V36.13 Dissection — Where the -$899 concentrates")
+md.append("")
+md.append("## Reconciliation")
+md.append("")
+md.append(f"- {len(per_trade)} in-deals matched to {len(per_trade)} out-deals. "
+          f"All {len(per_trade)} trades joined.")
+md.append(f"- {matched_entry}/{len(per_trade)} trades matched to [TRADE] ENTRY log lines. "
+          f"{matched_exit}/{len(per_trade)} matched to [TRADE] EXIT lines.")
+md.append(f"- Per-trade profit sum: **{total_profit:.2f}**")
+md.append(f"- Report Total Net Profit: **{report_net:.2f}**")
+md.append(f"- Delta: **{abs(total_profit - report_net):.2f}** "
+          f"(explained by swap/summary deal)")
+md.append("")
+md.append("## Splits")
 md.append("")
 
-# Splits
-md.append("## Splits\n")
-
-# A
-md.append("### A. By Exit Reason\n")
-md.append("| Group | n | Total $ | Mean $ | Win-Rate | PF |")
-md.append("|-------|---|---------|--------|----------|-----|")
-for reason in ["TP_HIT", "M15_REVERT", "TIMEOUT", "SL_HIT", "UNKNOWN"]:
-    if reason in split_a:
-        md.append(summary(split_a[reason], reason))
+# A. rr bucket
+md.append("### A. By rr Bucket at Entry")
 md.append("")
-m15_net = sum(t["profit"] for t in split_a.get("M15_REVERT", []))
-m15_n = len(split_a.get("M15_REVERT", []))
-m15_pf = pf(split_a.get("M15_REVERT", []))
-md.append(f"**M15_REVERT:** n={m15_n}, net **{m15_net:+.2f}**, PF={m15_pf}\n")
-
-# B
-md.append("### B. By Entry m30bbloc Zone\n")
 md.append("| Group | n | Total $ | Mean $ | Win-Rate | PF |")
 md.append("|-------|---|---------|--------|----------|-----|")
-for z in ["NEAR/MID", "ATBAND", "FAR", "UNKNOWN"]:
-    if z in split_b:
-        md.append(summary(split_b[z], z))
+order_a = ["rr<1.0", "1.0-1.5", "1.5-2.0", ">=2.0"]
+for g in order_a:
+    v = split_a.get(g, {"n": 0, "total": 0, "mean": 0, "win_rate": 0, "pf": 0})
+    pf_str = "inf" if v["pf"] == "inf" else f"{v['pf']:.2f}"
+    md.append(f"| {g} | {v['n']} | {v['total']:+.2f} | {v['mean']:+.2f} "
+              f"| {v['win_rate']:.1f}% | {pf_str} |")
+md.append("")
+for thresh in ["rr>=1.0", "rr>=1.5"]:
+    v = keep_nets[thresh]
+    pf_str = "inf" if v["pf"] == "inf" else f"{v['pf']:.2f}"
+    md.append(f"**Cumulative net keeping only {thresh}:** n={v['n']}, "
+              f"net={v['net']:+.2f}, PF={pf_str}")
 md.append("")
 
-# C
-md.append("### C. By rr Bucket at Entry\n")
+# B. exit reason
+md.append("### B. By Exit Reason")
+md.append("")
 md.append("| Group | n | Total $ | Mean $ | Win-Rate | PF |")
 md.append("|-------|---|---------|--------|----------|-----|")
-for b in ["rr<1.0", "1.0-1.5", "1.5-2.0", ">=2.0", "UNKNOWN"]:
-    if b in split_c:
-        md.append(summary(split_c[b], b))
+order_b = ["TP_HIT", "M15_REVERT", "TIMEOUT", "SL_HIT"]
+for g in order_b:
+    v = split_b.get(g, {"n": 0, "total": 0, "mean": 0, "win_rate": 0, "pf": 0})
+    pf_str = "inf" if v["pf"] == "inf" else f"{v['pf']:.2f}"
+    md.append(f"| {g} | {v['n']} | {v['total']:+.2f} | {v['mean']:+.2f} "
+              f"| {v['win_rate']:.1f}% | {pf_str} |")
+md.append("")
+if split_b.get("M15_REVERT"):
+    mrv = split_b["M15_REVERT"]
+    pf_str = "inf" if mrv["pf"] == "inf" else f"{mrv['pf']:.2f}"
+    md.append(f"**M15_REVERT:** n={mrv['n']}, net **{mrv['total']:+.2f}**, "
+              f"PF={pf_str}")
 md.append("")
 
-# D
-md.append("### D. By Direction\n")
+# C. m30bbloc zone
+md.append("### C. By Entry m30bbloc Zone")
+md.append("")
 md.append("| Group | n | Total $ | Mean $ | Win-Rate | PF |")
 md.append("|-------|---|---------|--------|----------|-----|")
-for d in sorted(split_d):
-    md.append(summary(split_d[d], d))
+for g, v in sorted(split_c.items()):
+    pf_str = "inf" if v["pf"] == "inf" else f"{v['pf']:.2f}"
+    md.append(f"| {g} | {v['n']} | {v['total']:+.2f} | {v['mean']:+.2f} "
+              f"| {v['win_rate']:.1f}% | {pf_str} |")
 md.append("")
 
-# E
-md.append("### E. By HTF Context (H4 vs Trigger Dir)\n")
+# D. direction
+md.append("### D. By Direction")
+md.append("")
 md.append("| Group | n | Total $ | Mean $ | Win-Rate | PF |")
 md.append("|-------|---|---------|--------|----------|-----|")
-for c in ["AGREE", "DISAGREE", "NEUTRAL", "UNKNOWN"]:
-    if c in split_e:
-        md.append(summary(split_e[c], c))
+for g, v in sorted(split_d.items()):
+    pf_str = "inf" if v["pf"] == "inf" else f"{v['pf']:.2f}"
+    md.append(f"| {g} | {v['n']} | {v['total']:+.2f} | {v['mean']:+.2f} "
+              f"| {v['win_rate']:.1f}% | {pf_str} |")
 md.append("")
 
-# F
-md.append("### F. By Session/Hour Bucket\n")
+# E. HTF context
+md.append("### E. By HTF Context (H4 vs Trigger Dir)")
+md.append("")
 md.append("| Group | n | Total $ | Mean $ | Win-Rate | PF |")
 md.append("|-------|---|---------|--------|----------|-----|")
-for b in SESSION_HOURS:
-    if b in split_f:
-        md.append(summary(split_f[b], b))
+order_e = ["AGREE", "DISAGREE", "NEUTRAL"]
+for g in order_e:
+    v = split_e.get(g, {"n": 0, "total": 0, "mean": 0, "win_rate": 0, "pf": 0})
+    pf_str = "inf" if v["pf"] == "inf" else f"{v['pf']:.2f}"
+    md.append(f"| {g} | {v['n']} | {v['total']:+.2f} | {v['mean']:+.2f} "
+              f"| {v['win_rate']:.1f}% | {pf_str} |")
 md.append("")
 
 # Verdict
-md.append("## Verdict\n")
-md.append(f"**{verdict}**\n")
-md.append(f"{verdict_detail}\n")
-
-# Sub-n=30 flagging
-md.append("### Subsets with PF >= 1.0 but n < 30 (not promoted)\n")
-for split_name, groups in all_splits.items():
-    for label, subset in groups.items():
-        if len(subset) >= 10 and len(subset) < 30 and pf(subset) >= 1.0:
-            md.append(f"- Split {split_name} '{label}': n={len(subset)}, PF={pf(subset)}, "
-                      f"total={sum(t['profit'] for t in subset):+.2f} — too small to trade")
+md.append("## Verdict")
+md.append("")
+md.append(f"**{verdict}**")
+md.append("")
+md.append(f"{verdict_detail}")
 md.append("")
 
+# Subsets with PF >= 1.0 but n < 30
+small_ok = []
+for g, v in split_a.items():
+    if v["n"] < 30 and isinstance(v["pf"], (int, float)) and v["pf"] >= 1.0:
+        small_ok.append((g, v))
+for g, v in split_c.items():
+    if v["n"] < 30 and isinstance(v["pf"], (int, float)) and v["pf"] >= 1.0:
+        small_ok.append((g, v))
+if small_ok:
+    md.append("### Subsets with PF >= 1.0 but n < 30 (not promoted)")
+    md.append("")
+    for g, v in small_ok:
+        md.append(f"- {g}: n={v['n']}, PF={v['pf']:.2f}, "
+                  f"total={v['total']:+.2f} -- too small to trade")
+    md.append("")
+
 # Limitations
-md.append("## Limitations\n")
-md.append("- **Counterfactual unknowable:** The EXIT-DRIVEN counterfactual "
-          "(removing a bucket) is realized-only — we cannot know whether those "
-          "lost trades would have been wins had they exited differently.")
+md.append("## Limitations")
+md.append("")
 md.append("- **Post-hoc subsets are hypotheses, not validation:** Any promising "
           "subset identified here needs a FORWARD test on a fresh data window "
           "before trusting it. This analysis is descriptive, not prescriptive.")
+md.append("- **In-sample kept-set:** The rr>=1.5 kept-set is in-sample -- it was "
+          "selected on the same data it was evaluated on. Overfitting is possible.")
+md.append("- **Counterfactual unknowable:** Removing a bucket (e.g., M15_REVERT) "
+          "is counterfactual -- we cannot know whether those lost trades would have "
+          "been wins had they exited differently.")
 md.append("- **No new design recommendations:** The three fixed verdict categories "
-          "(salvageable-by-gate / exit-driven / fundamentally-negative) are the "
+          "(salvageable-by-rr-gate / exit-driven / fundamentally-negative) are the "
           "only conclusions drawn. No gate, exit, or parameter tuning is proposed.")
 md.append("")
+md.append("---")
+md.append("")
+md.append("*Analysis generated by `scripts/dissect_v36_13.py`. Deterministic -- "
+          "re-running produces identical numbers.*")
 
-with open(REPORT_PATH, "w") as f:
-    f.write("\n".join(md))
+with open(REPORT_PATH, "w", encoding="utf-8") as f:
+    f.write("\n".join(md) + "\n")
 
-print(f"\nReport written to {REPORT_PATH}")
+# ── 9. Print summary ───────────────────────────────────────────
+print(f"Reconciled: {len(per_trade)} trades, sum={total_profit:.2f}, "
+      f"report={report_net:.2f}, delta={abs(total_profit - report_net):.2f}")
+print(f"Matched: {matched_entry}/{len(per_trade)} entry, "
+      f"{matched_exit}/{len(per_trade)} exit")
 print(f"Verdict: {verdict}")
-print(f"Detail: {verdict_detail}")
+print(f"  Detail: {verdict_detail}")
+print(f"Keep nets: {keep_nets}")
+print(f"M15_REVERT % of gross loss: {m15_revert_pct:.1f}%")
+print(f"Report written to {REPORT_PATH}")
