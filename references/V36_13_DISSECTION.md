@@ -114,3 +114,70 @@ TRUE_REVERSAL: 52.4% of loss (53 trades), PAUSE_CUT: 43.1% of loss (92 trades), 
 - **Counterfactual unknowable:** Whether PAUSE-CUT trades would have recovered had the exit been held is unknowable from this data. The exit fired at the M15 state change; without the exit rule, price may have continued against the trade or recovered. We cannot simulate counterfactual outcomes here.
 - **Realized-only:** All figures below are realized profits/losses per the actual exit. The concentration of realized loss by class is informative — if PAUSE-CUT trades carry the bulk of the loss, loosening the exit (exit only on TRUE_REVERSAL) targets those trades. However, whether they would recover requires a backtest with the modified exit rule.
 
+
+## Winner-vs-loser entry separation (with BB_diffmid_trend ablation)
+
+45 TP_HIT winners vs 152 M15_REVERT losers (197 trades). TIMEOUT (8) and SL_HIT (9) excluded — not clean win/loss contrast.
+A feature separates if any category/threshold yields WR >= 50% at n >= 20.
+Two feature sets: BASE (dir, m30bbloc, h1bbloc, h4bbloc, rr, h4_state, h1_state, m30_state, entry_hour) and BASE + diffMid_trend (diffMid_Trend_M30/H1/H4 as sign and magnitude).
+
+### diffMid_Trend Parse Status
+
+| TF | Parsed | Missing |
+|----|--------|---------|
+| M30 | 197 | 0 |
+| H1 | 197 | 0 |
+| H4 | 197 | 0 |
+
+### Categorical Feature Separation
+
+| Feature | Type | Spread (%) | Best Category | WR (%) | n | Separator (>=50%/n>=20)? |
+|---------|------|------------|---------------|--------|---|-------------------------|
+| dir | cat | 2.9 | DOWN | 24.4 | 90 | DOWN (WR=24.4%, n=90) — below threshold |
+| m30_state | cat | 22.3 | C | 35.3 | 51 | C (WR=35.3%, n=51) — below threshold |
+| h1_state | cat | 21.8 | S | 32.7 | 49 | S (WR=32.7%, n=49) — below threshold |
+| h4_state | cat | 14.7 | S | 28.8 | 59 | S (WR=28.8%, n=59) — below threshold |
+| dm_trend_m30_sign | cat | 0.0 | POS | 22.8 | 197 | POS (WR=22.8%, n=197) — below threshold |
+| dm_trend_h1_sign | cat | 0.0 | POS | 22.8 | 197 | POS (WR=22.8%, n=197) — below threshold |
+| dm_trend_h4_sign | cat | 0.0 | POS | 22.8 | 197 | POS (WR=22.8%, n=197) — below threshold |
+| dm_trend_m30_mag | cat | 6.5 | MED | 25.7 | 101 | MED (WR=25.7%, n=101) — below threshold |
+| dm_trend_h1_mag | cat | 6.8 | LOW | 24.4 | 82 | LOW (WR=24.4%, n=82) — below threshold |
+| dm_trend_h4_mag | cat | 11.2 | HIGH | 30.0 | 20 | HIGH (WR=30.0%, n=20) — below threshold |
+
+### Numeric Feature Separation
+
+| Feature | Win Mean | Lose Mean | Gap | Separator (>=50%/n>=20)? |
+|---------|----------|-----------|-----|-------------------------|
+| m30bbloc | 5.18 | 5.25 | 0.07 | none |
+| h1bbloc | 5.64 | 5.23 | 0.41 | none |
+| h4bbloc | 5.07 | 5.56 | 0.49 | none |
+| rr | 0.71 | 3.03 | 2.32 | none |
+| entry_hour | 11.38 | 11.95 | 0.57 | none |
+| dm_trend_m30 | 2.24 | 1.91 | 0.33 | none |
+| dm_trend_h1 | 1.91 | 1.95 | 0.04 | none |
+| dm_trend_h4 | 2.2 | 1.97 | 0.23 | none |
+
+### Ablation Verdict — Does BB_diffmid_trend add value?
+
+**BB_DIFFMID_TREND REDUNDANT**
+
+Base has no separator >=50%/n>=20.
+
+| | Best Separator | WR (%) | n |
+|---|---|---|---|
+| BASE only | none | — | — |
+| BASE + trend | none | — | — |
+
+### Overall Salvage Verdict
+
+**NOT-SEPARABLE**
+
+No entry-time feature in either set isolates a >=50% win-rate subset at n>=20. Winners and losers are indistinguishable at entry time.
+
+### Limitations
+
+- **In-sample post-hoc:** Any separator identified here is in-sample — selected on the same data it was evaluated on. Overfitting is possible. A forward test on a fresh data window is required before trusting any entry filter.
+- **Win/loss by realized exit:** TP_HIT = realized win; M15_REVERT = realized loss. A REVERT exit does not mean the trade would have been a loss had it been held — and a TP_HIT does not mean the trade would not have reverted later. Exit reason ≠ ultimate outcome.
+- **Single-feature only:** This tests each feature in isolation. Multi-feature combos (e.g., h4_state=F AND dm_trend_h4_sign=POS) may separate better — but testing all combos is a different analysis.
+- **Sub-n=20 subsets not promoted:** Categories with WR >= 50% but n < 20 exist and are reported but not promoted — too small to trade.
+
