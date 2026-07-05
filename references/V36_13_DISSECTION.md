@@ -181,3 +181,64 @@ No entry-time feature in either set isolates a >=50% win-rate subset at n>=20. W
 - **Single-feature only:** This tests each feature in isolation. Multi-feature combos (e.g., h4_state=F AND dm_trend_h4_sign=POS) may separate better — but testing all combos is a different analysis.
 - **Sub-n=20 subsets not promoted:** Categories with WR >= 50% but n < 20 exist and are reported but not promoted — too small to trade.
 
+## How the dissection scripts work
+
+### dissect_v36_13.py — Reconcile, Split, Verdict
+
+Loads the report JSON and pairs in-deals with out-deals sequentially, yielding per-trade profit. Parses the clean log for [TRADE] ENTRY and EXIT lines, then matches each trade to its ENTRY line by timestamp (within +/-600 seconds, which covers the bar-boundary drift between deal timestamps and log bar-ticks). Exit lines are matched sequentially — both sources produce 214 exits in the same order, so index i of the exit log pairs with trade i. Five splits are computed: rr bucket (rr less than 1.0, 1.0-1.5, 1.5-2.0, >=2.0), exit reason (TP_HIT, M15_REVERT, TIMEOUT, SL_HIT), m30bbloc zone, direction, and HTF context (H4 state vs trigger direction). P&L is summed per bucket. The verdict applies fixed thresholds: SALVAGEABLE-BY-RR-GATE if rr>=1.5 yields net >=0 or PF >=1.0 at n >=30; EXIT-DRIVEN if one exit reason accounts for >60% of gross loss; FUNDAMENTALLY-NEGATIVE if no rr bucket or zone subset reaches PF >=1.0 at n >=30.
+
+### revert_split_v36_13.py — Classify M15_REVERT exits by reverted-to state
+
+From the 152 M15_REVERT exits, reads the [DUALTF] m15_state at each exit bar (timestamp lookup, with +/-15/30 minute fallback). For UP trades (triggered by F-state): reverted-to-R means TRUE_REVERSAL, to-S/C means PAUSE_CUT, to-F means STATE_UNCHANGED. For DOWN trades (triggered by R-state): reverted-to-F means TRUE_REVERSAL, to-S/C means PAUSE_CUT, to-R means STATE_UNCHANGED. P&L is summed per class. The verdict applies a fixed 60% threshold: PAUSE-CUT DOMINANT if pause-cuts account for >=60% of the M15_REVERT gross loss, REVERSAL-JUSTIFIED if true reversals account for >=60%, MIXED if neither reaches 60%.
+
+### separate_winners_v36_13.py — Entry-time feature separation with ablation
+
+Takes 45 TP_HIT winners and 152 M15_REVERT losers (197 trades; TIMEOUT/SL_HIT excluded). For each trade, parses entry-time features from the ENTRY log line (dir, m30bbloc, h1bbloc, h4bbloc, rr, m30_state) and from DUALTF (h4_state, h1_state). Also parses diffMid_Trend from the [M30]/[H1]/[H4] log lines by tracking log timestamps and finding the nearest value before the entry time. Two ablation sets: BASE (9 features) and BASE + diffMid_trend (12 features, adding sign and magnitude buckets for M30/H1/H4). For each feature, computes how well it separates winners from losers — categorical features get per-category win-rate and spread; numeric features get winner-vs-loser mean gap and threshold tests. A feature separates if any category or threshold yields >=50% win-rate at n >=20. The ablation verdict compares the best separator from each set: if a trend-only feature achieves separation that no base feature matches, BB_DIFFMID_TREND ADDS VALUE; otherwise BB_DIFFMID_TREND REDUNDANT. The overall verdict is SEPARABLE if any feature in either set meets the criterion, NOT-SEPARABLE if none does.
+
+### Data-Join Flowchart
+
+```mermaid
+flowchart TD
+    A["table_deals: in/out pairs"]
+    B["[TRADE] ENTRY log lines"]
+    C["[TRADE] EXIT log lines"]
+    A --> D["per-trade profit from in-deal + out-deal"]
+    D --> E["match to ENTRY line by time +/-600s"]
+    B --> E
+    E --> F{"best match within 600s?"}
+    F -->|yes| G["attach entry features: dir, rr, bbloc, m30_state"]
+    F -->|no| H["trade unattached to entry"]
+    G --> I["match EXIT sequentially: exit index i = trade i"]
+    C --> I
+    I --> J["per-trade record: profit + entry features + exit reason"]
+    H --> J
+```
+
+### Classification Flowchart
+
+```mermaid
+flowchart TD
+    A["214 reconciled trades"]
+    A --> B["split by rr bucket"]
+    A --> C["split by exit reason"]
+    A --> D["split by m30bbloc zone"]
+    A --> E["split by direction"]
+    A --> F["split by HTF context"]
+    B --> G["sum P&L per bucket"]
+    C --> G
+    D --> G
+    E --> G
+    F --> G
+    G --> H{"any exit reason >60% of gross loss?"}
+    H -->|yes| I["EXIT-DRIVEN"]
+    H -->|no| J{"rr>=1.5 yields net>=0 or PF>=1.0 at n>=30?"}
+    J -->|yes| K["SALVAGEABLE-BY-RR-GATE"]
+    J -->|no| L{"any rr bucket or zone subset PF>=1.0 at n>=30?"}
+    L -->|no| M["FUNDAMENTALLY-NEGATIVE"]
+    L -->|yes| N["NO CLEAR CATEGORY"]
+```
+
+### The Key Caveat
+
+These scripts measure REALIZED outcomes on historical trades. They classify what happened; they do not predict what will happen. A separable subset found here is in-sample and needs a forward test on fresh data before trusting.
+
