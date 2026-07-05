@@ -179,3 +179,26 @@ Key context:
 **What this means**: BBLoc trajectory carries some signal for MTF transitions, but it's not strong enough to be a standalone predictor. It may be useful as one factor among many (e.g., combined with HTF context, BBUpDn state, or price location). Part 4 could use BBLoc slope as a directional bias, but should not rely on it as the sole predictor.
 
 **For high-consistency transition types**, BBLoc slope is a more reliable signal — these could be candidates for targeted prediction rules.
+
+## Calculation method (plain explanation)
+
+**(a) COUNT** — Scan every DUALTF row in the V36.03 backtest log (7608 rows). Filter out no-data rows (htf contains "X" or htfbbloc==-1 or mtf contains "X" or mtfbbloc==-1), leaving 7333 rows. Walk the kept rows in time order and mark each bar where the MTF scenario changes (prev_mtf != curr_mtf) as a transition event. Total: 706 transitions across 7332 consecutive pairs; 6626 persistence rows (base rate 90.4%).
+
+**(b) RATE** — For each transition, compute the BBLoc slope over the 6 bars before the transition (linear regression of mtfbbloc). The predictor: rising slope (>0.3) predicts up-transition, falling slope (<-0.3) predicts down-transition, flat (<=0.3) predicts neutral. On transition rows only, the predictor hits 40.9% of the time vs 35.4% majority baseline (39 more correct out of 706) and 33.3% random.
+
+**(c) LIFT** — The margin over majority baseline is 40.9% - 35.4% = 5.5 percentage points. Margin near 0 means worthless; >=5% is modest but real. The 5.5% margin qualifies as MODEST SIGNAL.
+
+This analysis measures whether a signal EXISTS in the identification log — NOT whether trading it is profitable. A signal with high lift can still lose money in live trading (see V36.13 backtest: -$899).
+
+```mermaid
+flowchart TD
+    A["7608 DUALTF log rows"] --> B["Filter no-data: 7333 kept"]
+    B --> C["Mark transitions: 706 of 7332 pairs"]
+    C --> D["Compute 6-bar BBLoc slope per transition"]
+    D --> E["Predict: rising=up, falling=down, flat=neutral"]
+    E --> F["Transition accuracy: 40.9%"]
+    F --> G["Majority baseline: 35.4%"]
+    G --> H{"Margin >= 5%?"}
+    H -->|Yes| I["MODEST SIGNAL"]
+    H -->|No| J["NO SIGNAL"]
+```
