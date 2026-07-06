@@ -1,8 +1,13 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "36.13"
+#property version "36.14"
 //+------------------------------------------------------------------+
 //| TofyTrade6 — DualTF Stack logic                                   |
+//| V36.14 — M30-confirmed cascade entry.                              |
+//|   Enters when M30 confirms the M15 flip direction within 12 bars, |
+//|   instead of on M15-alone. Tests whether confirmed entry has a    |
+//|   real dollar edge (cascade proxy showed +65pp WR but negative     |
+//|   bbloc expectancy — only realized dollars decide).                |
 //| V36.13 — EXIT-RETRY FIX: pos.open cleared only on confirmed-flat.  |
 //|   exit_pending retry loop re-issues act=7 until broker closes.    |
 //|   Fixes orphan bug (ERROR 4756, 2026.01.14).                      |
@@ -504,6 +509,51 @@ void DrawTradeLabel(string tag, double price, BB_MTF_Data_struct &BB_datas[],
 // Static: previous M15 state (for flip detection)
 static string s_prevM15State = "";
 
+// V36.14 — Pending-trigger tracking for M30-confirmed cascade entry.
+// Tracks the bar index of each M15 F/R flip; enters only when M30 confirms
+// within 12 bars and m15 still == direction (no revert).
+static int    s_m30_pending_dir   = 0;       // 1=UP, 2=DOWN, 0=none
+static datetime s_m30_flip_time     = 0;      // M5 bar time of last qualifying M15 flip
+
+// V36.14: Check M30 confirmation against the pending M15 flip window.
+// Returns: -1 = stale (clear it), 0 = no trigger, 1 = UP confirmed, 2 = DOWN confirmed.
+int ConfirmM30(DualTFScenarioState &s)
+{
+   if(s.m15_state == "X")
+      return 0;
+
+   //--- No pending flip → nothing to confirm (unless same-bar below)
+   if(!s_m30_pending_dir && !s_m30_flip_time)
+      return 0;
+
+   int dir = -1;
+
+   // UP: m15 still F AND m30 now F
+   if(s.m15_state == "F" && s.mtf_m30_state == "F")
+   {
+      // If we have a pending flip, check staleness (iBarShift for M5 precision)
+      if(s_m30_pending_dir > 0 || s_m30_flip_time > 0)
+      {
+         int barsSince = iBarShift(_Symbol, PERIOD_M5, s_m30_flip_time);
+         if(barsSince >= 12) return -1;  // stale — clear it
+      }
+      dir = 1;
+   }
+
+   // DOWN: m15 still R AND m30 now R
+   else if(s.m15_state == "R" && s.mtf_m30_state == "R")
+   {
+      if(s_m30_pending_dir > 0 || s_m30_flip_time > 0)
+      {
+         int barsSince = iBarShift(_Symbol, PERIOD_M5, s_m30_flip_time);
+         if(barsSince >= 12) return -1;  // stale — clear it
+      }
+      dir = 2;
+   }
+
+   return dir;
+}
+
 TransitionTrigger DetectTransition(DualTFScenarioState &s, datetime curTime)
 {
    TransitionTrigger trig;
@@ -538,7 +588,11 @@ TransitionTrigger DetectTransition(DualTFScenarioState &s, datetime curTime)
       trig.active = true;
       trig.direction = 1;  // UP
       trig.fire_time = curTime;
-      trig.fire_bar = 0;   // bar 0 = fire bar
+      trig.fire_bar = 0;
+
+      // V36.14: record flip for M30-confirmation window
+      s_m30_pending_dir = 1;
+      s_m30_flip_time   = curTime;
    }
    // Flip to R = DOWN trigger
    else if(s.m15_state == "R" && s_prevM15State != "R")
@@ -547,6 +601,10 @@ TransitionTrigger DetectTransition(DualTFScenarioState &s, datetime curTime)
       trig.direction = 2;  // DOWN
       trig.fire_time = curTime;
       trig.fire_bar = 0;
+
+      // V36.14: record flip for M30-confirmation window
+      s_m30_pending_dir = 2;
+      s_m30_flip_time   = curTime;
    }
    // S/C flips → no trigger (excluded by lift measurement)
 
@@ -555,9 +613,6 @@ TransitionTrigger DetectTransition(DualTFScenarioState &s, datetime curTime)
    return trig;
 }
 
-//═══════════════════════════════════════════════════════════════════
-// PART 5 — Tradeability Gate
-// Evaluates at trigger bar. Returns gate result string.
 //═══════════════════════════════════════════════════════════════════
 string EvaluateGate(int triggerDir, int m30bbloc, bool positionOpen)
 {
@@ -819,69 +874,102 @@ void Trade_Strategy(
       return;
    }
 
-   //--- Detect M15 transition
+   //--- Detect M15 transition (also sets s_m30_pending_dir/flip_time)
    TransitionTrigger trig = DetectTransition(s, cur);
+
+   int dir = 0;
 
    if(trig.active)
    {
-      string trigDir = (trig.direction == 1) ? "UP" : "DOWN";
+      // Same-bar check: m15 flipped AND m30 already confirms this bar.
+      // ConfirmM30 will return the direction (no staleness on same bar).
+      int confirmedDir = ConfirmM30(s);
+      if(confirmedDir > 0)
+         dir = confirmedDir;
+   }
+
+   // M30-confirmation from previous flip window
+   if(!dir && s_m30_pending_dir)
+   {
+      int confirmedDir = ConfirmM30(s);
+      if(confirmedDir < 0)          // stale — clear it
+      {
+         s_m30_pending_dir = 0;
+         s_m30_flip_time   = 0;
+      }
+      else if(confirmedDir > 0)
+         dir = confirmedDir;
+   }
+
+   if(dir)
+   {
+      string trigDir = (dir == 1) ? "UP" : "DOWN";
 
       //--- Evaluate tradeability gate
-      string gateResult = EvaluateGate(trig.direction, s.m30_bbloc, positionOpen);
+      string gateResult = EvaluateGate(dir, s.m30_bbloc, positionOpen);
 
       if(gateResult == "PASS")
       {
-         //--- ENTRY
          double entryPx = close_prices[LA];
 
          // SL = opposite-side M15 band at entry
          double slPx;
-         if(trig.direction == 1)  // UP: SL = M15 lower band
+         if(dir == 1)              // UP: SL = M15 lower band
             slPx = BB_datas[1].BBLowLV[LA];
-         else                     // DOWN: SL = M15 upper band
+         else                      // DOWN: SL = M15 upper band
             slPx = BB_datas[1].BBUppLV[LA];
 
          // TP = M30 band at entry
          double tpPx;
-         if(trig.direction == 1)  // UP: TP = M30 upper band
+         if(dir == 1)              // UP: TP = M30 upper band
             tpPx = BB_datas[2].BBUppLV[LA];
-         else                     // DOWN: TP = M30 lower band
+         else                      // DOWN: TP = M30 lower band
             tpPx = BB_datas[2].BBLowLV[LA];
+
+         //--- V36.14: compute confirm-lag (bars between M15 flip and M30 confirm)
+         int m15flipBarIdx   = iBarShift(_Symbol, PERIOD_M5, s_m30_flip_time);
+         int confirmBarIdx   = 0;
+         int barsBetween     = MathMax(0, m15flipBarIdx - confirmBarIdx);
 
          // Set position state
          pos.open = true;
-         pos.direction = trig.direction;
+         pos.direction = dir;
          pos.entry_price = entryPx;
          pos.entry_time = cur;
          pos.tp_price = tpPx;
          pos.sl_price = slPx;
          pos.m30_followed = false;
          pos.bars_since_entry = 0;
-         pos.trigger_state = (trig.direction == 1) ? "F" : "R";
-         pos.trigger_dir = trig.direction;
+         pos.trigger_state = (dir == 1) ? "F" : "R";
+         pos.trigger_dir = dir;
 
          // Set trade outputs
-         Trade_act = (ENUM_Trade_Act)trig.direction;  // 1=BUY, 2=SELL
+         Trade_act = (ENUM_Trade_Act)dir;  // 1=BUY, 2=SELL
          Trade_lots = baseLot;
          Trade_sl = slPx;  // PRICE convention
+
+         //--- V36.14: Log confirm-lag on entry
+         Print("[TRADE] evt:M30_CONFIRM_LAG dir:", trigDir,
+               " m15_flip_bar:", IntegerToString(m15flipBarIdx),
+               " m30_confirm_bar:", IntegerToString(confirmBarIdx),
+               " bars_between:", IntegerToString(barsBetween));
 
          // Log entry
          LogTradeEntry(trigDir, gateResult, entryPx, slPx, tpPx,
                        s.m30_bbloc, s.m15_state, s.mtf_m30_state,
                        s.h1_bbloc, s.h4_bbloc, cur);
 
-         // Draw label
+         // Draw label — include confirm-lag in tag
          double slDist = MathAbs(entryPx - slPx);
          double tpDist = MathAbs(tpPx - entryPx);
          double rr = (slDist > 0) ? (tpDist / slDist) : 0.0;
-         string labelTag = "ENTRY-" + trigDir + "-rr" + DoubleToString(rr, 1);
+         string labelTag = "ENTRY-" + trigDir + "-lag" + IntegerToString(barsBetween) + "-rr" + DoubleToString(rr, 1);
          DrawTradeLabel(labelTag, entryPx, BB_datas, clrWhite, 2);
 
          Trade_info = "SIG:SIG evt:ENTRY dir:" + trigDir +
-                      " entry:" + DoubleToString(entryPx, _Digits) +
-                      " sl:" + DoubleToString(slPx, _Digits) +
-                      " tp:" + DoubleToString(tpPx, _Digits) +
+                      " confirm_lag:" + IntegerToString(barsBetween) +
                       " rr:" + DoubleToString(rr, 2);
+
          return;
       }
       else
@@ -924,4 +1012,7 @@ void Trade_Strategy(
 //    (BUYS==0 && SELLS==0). exit_pending retry loop re-issues act=7
 //    until broker closes. Fixes orphan bug (ERROR 4756).
 // 13. V36.13: Entry blocked while pos.open or pos.exit_pending.
+// 14. V36.14: M30-confirmed entry gate. Enters only when m30_state confirms
+//    the M15 flip direction within 12 bars and m15 still == that direction.
+//    Confirm-lag logged per trade via [TRADE] evt:M30_CONFIRM_LAG.
 //+------------------------------------------------------------------+
