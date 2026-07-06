@@ -1,5 +1,8 @@
 # DualTF Architecture — EA Implementation Design (MEASURED SPEC)
 
+> **STATUS NOTE:** DualTF band-state ENTRY is CLOSED (see V36.14 section).
+> Part 3 IDENTIFICATION remains validated and reusable for any future premise.
+>
 > **A three-layer EA design implementing the DualTF Stack model**
 > (DUALTF_IMAGE_ANALYSIS.md): Identify → Detect → Act.
 > Part 3 **BUILT & BACKTESTED** (TofyTrade6.mqh V36.10, backtests V36.01–V36.10,
@@ -127,6 +130,49 @@ These responsibilities are invariant across all three layers — they define wha
 | M5 | Optional within-M15-bar refinement — NOT a standalone trigger | L3 (tick refinement only, after M15 confirms) |
 
 **Key difference from 7-scenario system:** M15 is no longer just an entry trigger — it is the PRIMARY detection signal (Part 4) and the PRIMARY entry/exit timing trigger. M5 is NOT a standalone trigger — optional within-M15-bar refinement only after M15 confirms. The HTF axis (D1×H4) provides context but has no filter role (HTF filter killed by measurement).
+
+---
+
+## Evolution + Falsification UML
+
+```mermaid
+flowchart TD
+    subgraph PART3["PART 3 — IDENTIFICATION (VALIDATED, REUSABLE)"]
+        P3["IdentifyDualTF<br/>(per-TF states + BBLoc)"]
+    end
+
+    subgraph PREMISE["ENTRY PREMISE — band-state flip predicts direction"]
+        PR["Band-state flip = directional signal<br/>M15 flip alone → F/R"]
+    end
+
+    subgraph V36_13["V36.13 — M15-alone entry gate"]
+        V3_13["ENTRY: M15 flips to F or R<br/>No HTF filter, no M30 confirm"]
+    end
+
+    subgraph V36_14["V36.14 — M30-confirmed entry gate"]
+        V3_14["ENTRY: M15 flip + M30 confirms within 12 bars<br/>Same exits/SL/TP/sizing"]
+    end
+
+    subgraph V36_14_H4["V36.14 — H4×H1 filter (S-F)"]
+        V3_14_H4["ENTRY: M15 flip + M30 confirms + H4/H1 agree<br/>OOS-fail PF 3.62→0.13"]
+    end
+
+    PART3 --> PREMISE
+    PREMISE --> V36_13
+    PREMISE --> V36_14
+    PREMISE --> V36_14_H4
+
+    classDef validated fill:#e8f5e9,stroke:#0F6E56
+    classDef dead fill:#f1f1f1,stroke:#666,color:#666
+    classDef entry fill:#fff3e0,stroke:#ff9800
+
+    class P3 validated
+    class V3_13,PREMISE,V36_13 dead
+    class V3_14,V36_14 entry
+    class V3_14_H4 dead
+```
+
+**The diagram shows:** Part 3 identification (VALIDATED, reusable) feeding the entry premise, then the premise branching into the three tested variants — M15-alone (V36.13), M30-confirmed (V36.14), and H4×H1 filter (V36.14 S-F). All three terminate in their OOS verdict nodes (all REJECTED/DEAD). Part 3 alone survives; the shared dead core is the band-state flip premise.
 
 ---
 
@@ -777,6 +823,27 @@ from the prediction analysis. Noted, NOT a license to reopen prediction.
 
 ---
 
+## V36.14 — M30-confirmed cascade entry (CLOSED)
+
+> **STATUS: REJECTED.** Combined-clean OOS PF 0.71 (n=169); PRE 0.66, POST 0.88.
+> The DualTF band-state entry is CLOSED at all confirmation levels.
+
+### What changed vs V36.13
+
+- Entry gate now requires M30 to flip to the trigger direction within 12 bars of the M15 flip (confirmation), instead of M15-alone. Exits/SL/TP/sizing unchanged.
+
+### Measured result table
+
+| Confirmation level | Source report | OOS PF (n) | Verdict |
+|--------------------|----------------|------------|---------|
+| M15-alone (V36.13) | V36_13_DISSECTION.md | -0.5 pp, NOT-SEPARABLE | REJECTED |
+| H4xH1 filter (S-F) | SF_FORWARD_TEST.md | PF 0.13 (n=26) | REJECTED |
+| M30-confirmed (V36.14) | V36_14_FORWARD.md | PF 0.71 (n=169) | REJECTED |
+
+One row per confirmation level, each with its verdict. The failure is the PREMISE (band-state flip predicts direction), not the timing. No further DualTF entry variant is pursued.
+
+---
+
 ## Evidence Index
 
 | Hypothesis / Finding | Analysis File | Commit | Verdict |
@@ -789,3 +856,6 @@ from the prediction analysis. Noted, NOT a license to reopen prediction.
 | Multi-input prediction | MULTIINPUT_PREDICTION_ANALYSIS.md | 623f38d | **DEAD** — 43.9% OOS, overfit 40.8%→35.3% |
 | Zone gate (FAR skip) | TARGET_REACH_ANALYSIS.md | 3a0ea21 | **VIABLE** — FAR follow 13% (6/45) |
 | AT-band hold rate (H4) | TARGET_REACH_ANALYSIS.md | 3a0ea21 | **VIABLE** — 65% ride rate |
+| V36.14 M30-confirmed entry | V36_14_FORWARD.md | b194c56 | **REJECTED** PF 0.71 OOS |
+
+DualTF-entry line: **CLOSED** — all three entry-timing variants (M15-alone, HTF-filtered, M30-confirmed) failed out-of-sample. The failure is the PREMISE (band-state flip predicts direction), not the timing. Part 3 IDENTIFICATION survives as reusable.
