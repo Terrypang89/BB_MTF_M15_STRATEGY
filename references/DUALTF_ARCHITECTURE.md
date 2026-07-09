@@ -793,6 +793,12 @@ flowchart TD
 These are explicitly unmeasured — they follow from the analysis but need their own
 measurement before design work.
 
+### TofySideway filter (untested)
+
+See SIDEWAY_ARCHITECTURE.md for the sideways-classification detector. TofySideway
+is a candidate FILTER for the (now-closed) DualTF entry or any future premise, and
+its trading value is UNTESTED.
+
 ### AT-Band Trend-Ride (v2 candidate — highest priority)
 
 The skip rule discards the HIGHEST-following triggers: the at-band majority follows
