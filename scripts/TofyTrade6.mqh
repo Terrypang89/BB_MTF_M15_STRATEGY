@@ -433,51 +433,22 @@ MTFPrediction PredictNextMTF(DualTFScenarioState &s, string prevMtfScenario)
 }
 
 //═══════════════════════════════════════════════════════════════════
-// LOGGING — per-bar, parseable
+// LOGGING — per-bar, parseable (log simplified — Part 3 combos only, Part 4/5 removed from output)
 //═══════════════════════════════════════════════════════════════════
 void LogDualTFBar(BB_MTF_Data_struct &bb[], DualTFScenarioState &s, const MTFPrediction &pred)
 {
    datetime dt = iTime(_Symbol, PERIOD_M5, 0);
    string dtStr = TimeToString(dt, TIME_DATE|TIME_SECONDS);
 
+   // Identification computation intact — states/bbloc/combos computed and fed to trade logic
+   // Part 4 prediction (pred/predmtf/predbbloc/slope/predhit) removed from log output
+   // Part 5 trade ruleset (gate/entry/exit) computation unchanged, reads s.m15_state etc.
+
    string kvs =
       KV6("dt", dtStr)
-      +KV6("d1:stg", IntegerToString((int)bb[5].BBW_stage[LA]))
-      +KV6("d1:mid", IntegerToString(bb[5].BB_diffMid_Trend[LA]))
-      +KV6("d1:ud",  IntegerToString(bb[5].BBUpDn_state[LA]))
-      +KV6("d1:state", s.htf_d1_state)
-      +KVi6("d1bbloc", s.d1_bbloc)
-      +KV6("h4:stg", IntegerToString((int)bb[4].BBW_stage[LA]))
-      +KV6("h4:mid", IntegerToString(bb[4].BB_diffMid_Trend[LA]))
-      +KV6("h4:ud",  IntegerToString(bb[4].BBUpDn_state[LA]))
-      +KV6("h4:state", s.htf_h4_state)
-      +KVi6("h4bbloc", s.h4_bbloc)
-      +KV6("h1:stg", IntegerToString((int)bb[3].BBW_stage[LA]))
-      +KV6("h1:mid", IntegerToString(bb[3].BB_diffMid_Trend[LA]))
-      +KV6("h1:ud",  IntegerToString(bb[3].BBUpDn_state[LA]))
-      +KV6("h1:state", s.mtf_h1_state)
-      +KVi6("h1bbloc", s.h1_bbloc)
-      +KV6("m30:stg", IntegerToString((int)bb[2].BBW_stage[LA]))
-      +KV6("m30:mid", IntegerToString(bb[2].BB_diffMid_Trend[LA]))
-      +KV6("m30:ud",  IntegerToString(bb[2].BBUpDn_state[LA]))
-      +KV6("m30:state", s.mtf_m30_state)
-      +KVi6("m30bbloc", s.m30_bbloc)
-      +KV6("m15:stg", IntegerToString((int)bb[1].BBW_stage[LA]))
-      +KV6("m15:mid", IntegerToString(bb[1].BB_diffMid_Trend[LA]))
-      +KV6("m15:ud",  IntegerToString(bb[1].BBUpDn_state[LA]))
-      +KV6("m15:state", s.m15_state)
-      +KVi6("m15bbloc", s.m15_bbloc)
-      +KV6("htf", s.htf_scenario)
-      +KV6("mtf", s.mtf_scenario)
-      +KV6("htfcombo", s.htf_combo)
-      +KV6("mtfcombo", s.mtf_combo)
-      +KV6("ltfcombo", s.ltf_combo)
-      //--- Part 4 prediction fields (DIAGNOSTIC ONLY — not trade inputs)
-      +KV6("pred", pred.pred_direction)
-      +KV6("predmtf", pred.predicted_mtf)
-      +KVi6("predbbloc", pred.predicted_bbloc)
-      +KV6("slope", DoubleToString(pred.bbloc_slope, 2))
-      +KV6("predhit", pred.hit_miss);
+      +KV6("HTF", s.htf_combo)
+      +KV6("MTF", s.mtf_combo)
+      +KV6("LTF", s.ltf_combo);
 
    SigEvt6("BAR", kvs);
 }
