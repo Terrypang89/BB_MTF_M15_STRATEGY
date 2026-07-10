@@ -88,6 +88,7 @@ struct DualTFScenarioState {
    int    h1_bbloc;           // sparse, from H1 bands
    int    m30_bbloc;          // sparse, from M30 bands
    int    m15_bbloc;          // sparse, from M15 bands
+   int    m5_bbloc;          // sparse, from M15 bands
    //--- Paired combo strings (V36.05): HTF=F3F5, MTF=F3F5, LTF=F3
    string htf_combo;          // e.g. "F3F5" (D1-fly@3, H4-fly@5)
    string mtf_combo;          // e.g. "F3F5" (H1-fly@3, M30-fly@5)
@@ -97,6 +98,7 @@ struct DualTFScenarioState {
    string mtf_h1_state;       // "F"/"S"/"C"/"R"
    string mtf_m30_state;      // "F"/"S"/"C"/"R"
    string m15_state;          // "F"/"S"/"C"/"R" — leading edge
+   string m5_state;          // "F"/"S"/"C"/"R" — leading edge
    string info;               // human-readable reason string
 };
 
@@ -468,21 +470,21 @@ void LogDualTFBar(BB_MTF_Data_struct &bb[], DualTFScenarioState &s, const MTFPre
 
   //--- scenario labels (observation only): draw on combo change
   // HTF label at H4 midline, MTF label at H1 midline, LTF label at M5 midline
-  if(s.htf_combo != pos.prev_htf_combo)
-  {
-     DrawTradeLabel("HTF-" + s.htf_combo, BB_datas[4].BBMidLV[LA], BB_datas, clrYellow);
-     pos.prev_htf_combo = s.htf_combo;
-  }
-  if(s.mtf_combo != pos.prev_mtf_combo)
-  {
-     DrawTradeLabel("MTF-" + s.mtf_combo, BB_datas[3].BBMidLV[LA], BB_datas, clrOrange);
-     pos.prev_mtf_combo = s.mtf_combo;
-  }
-  if(s.ltf_combo != pos.prev_ltf_combo)
-  {
+//   if(s.htf_combo != pos.prev_htf_combo)
+//   {
+   //   DrawTradeLabel("HTF-" + s.htf_combo, BB_datas[4].BBMidLV[LA], BB_datas, clrYellow);
+//      pos.prev_htf_combo = s.htf_combo;
+//   }
+//   if(s.mtf_combo != pos.prev_mtf_combo)
+//   {
+     DrawTradeLabel("MTF-" + s.mtf_combo, BB_datas[2].BBMidLV[LA], BB_datas, clrOrange);
+//      pos.prev_mtf_combo = s.mtf_combo;
+//   }
+//   if(s.ltf_combo != pos.prev_ltf_combo)
+//   {
      DrawTradeLabel("LTF-" + s.ltf_combo, BB_datas[0].BBMidLV[LA], BB_datas, clrLime);
-     pos.prev_ltf_combo = s.ltf_combo;
-  }
+//      pos.prev_ltf_combo = s.ltf_combo;
+//   }
 }
 
 //═══════════════════════════════════════════════════════════════════
@@ -496,7 +498,7 @@ void DrawTradeLabel(string tag, double price, BB_MTF_Data_struct &BB_datas[],
    string nm = "DTF_" + tag + "_" + IntegerToString((int)curtime);
    ObjectCreate(0, nm, OBJ_TEXT, 0, curtime, price);
    ObjectSetString(0, nm, OBJPROP_TEXT, tag);
-   ObjectSetInteger(0, nm, OBJPROP_FONTSIZE, 10);
+   ObjectSetInteger(0, nm, OBJPROP_FONTSIZE, 9);
    ObjectSetInteger(0, nm, OBJPROP_COLOR, clrWhite);
    ObjectSetInteger(0, nm, OBJPROP_ANCHOR, ANCHOR_LEFT);
    ObjectSetDouble(0, nm, OBJPROP_ANGLE, 90);
@@ -768,7 +770,7 @@ void Trade_Strategy(
       {
          double px = close_prices[LA];
          LogTradeExit(pos.exit_reason, px, pos.bars_since_entry, pos.m30_followed, cur);
-         DrawTradeLabel("EXIT-" + pos.exit_reason, px, BB_datas, clrWhite, 2);
+         // DrawTradeLabel("EXIT-" + pos.exit_reason, px, BB_datas, clrWhite, 2);
          Trade_info = "SIG:SIG evt:EXIT reason:" + pos.exit_reason;
       }
       pos.open = false;
@@ -969,7 +971,7 @@ void Trade_Strategy(
          double tpDist = MathAbs(tpPx - entryPx);
          double rr = (slDist > 0) ? (tpDist / slDist) : 0.0;
          string labelTag = "ENTRY-" + trigDir + "-lag" + IntegerToString(barsBetween) + "-rr" + DoubleToString(rr, 1);
-         DrawTradeLabel(labelTag, entryPx, BB_datas, clrWhite, 2);
+         // DrawTradeLabel(labelTag, entryPx, BB_datas, clrWhite, 2);
 
          Trade_info = "SIG:SIG evt:ENTRY dir:" + trigDir +
                       " confirm_lag:" + IntegerToString(barsBetween) +
@@ -984,7 +986,7 @@ void Trade_Strategy(
 
          // Draw skip label
          string labelTag = "TRIG-" + trigDir + "-SKIP";
-         DrawTradeLabel(labelTag, close_prices[LA], BB_datas, clrWhite, 2);
+         // DrawTradeLabel(labelTag, close_prices[LA], BB_datas, clrWhite, 2);
 
          Trade_info = "SIG:SIG evt:SKIP dir:" + trigDir +
                       " reason:" + gateResult +
