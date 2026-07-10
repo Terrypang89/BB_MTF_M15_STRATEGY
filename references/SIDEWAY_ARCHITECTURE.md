@@ -128,68 +128,21 @@ The tier order is critical — each code only fires if earlier conditions were f
 
 ```mermaid
 sequenceDiagram
-    autonumber
-    participant Cluster as Midline cluster distances<br/>cluster M5-M15 / M15-M30 / M15-H1
-    participant ValM5 as M5 sideway_val score
-    participant ValM15 as M15 sideway_val score
-    participant ValM30 as M30 sideway_val score
-    participant ValH1 as H1 sideway_val score
-    participant ValH4 as H4 sideway_val score
-    participant Classifier as BBDatas_Midline_Sideway<br/>(tier cascade)
-    participant Code as Output code
-
-    Note over Cluster,ValH4: DETECTOR logic — outputs sideways codes only
-    Cluster->>Classifier: read clusterM5M15 / clusterM15M30 / clusterM15H1
-    ValM5->>Classifier: val0 (sum of +4/+2/+1)
-    ValM15->>Classifier: val1
-    ValM30->>Classifier: val2
-    ValH1->>Classifier: val3
-    ValH4->>Classifier: val4
-
-    Classifier->>Classifier: tier 1 check<br/>cluster M5-M15 at most 6 AND<br/>(clusterM15M30 at most 10 OR clusterM15H1 at most 10)
-    alt tier 1 conditions met
-        Classifier->>Code: S_11 if<br/>val0>=1 AND<br/>val1>=4 AND<br/>(val3>=2 OR val2>=4)
-        else
-        Classifier->>Code: S_12 if<br/>val0>=4 AND<br/>val1>=1 AND<br/>(val3>=2 OR val2>=4)
-        else
-        Classifier->>Code: S_13 if<br/>val0>=4 AND<br/>val1>=2
-    end
-
-    opt tier 1 false — proceed to tier 2
-        Classifier->>Classifier: tier 2 check<br/>cluster M5-M15 at most 6 for 2 bars<br/>AND current code == 0
-        alt tier 2 conditions met
-            Classifier->>Code: S_21 if<br/>val0>=6
-            else
-            Classifier->>Code: S_22 if<br/>val0>=4 AND<br/>val1>=2
-            else
-            Classifier->>Code: S_23 if<br/>val1>=2 AND<br/>val3>=5
-            else
-            Classifier->>Code: S_24 if<br/>val0>=5 AND<br/>val1>=1
-        end
-
-    opt tier 2 false — proceed to tier 3
-        Classifier->>Classifier: tier 3 check<br/>cluster M5-M15 at most 10 AND<br/>clusterM15M30 at most 15<br/>AND current code == 0
-        alt tier 3 conditions met
-            Classifier->>Code: S_31 if<br/>val0>=4 AND<br/>val1>=2
-            else
-            Classifier->>Code: S_32 if<br/>val1>=2 AND<br/>val3>=5
-        end
-
-    opt tier 3 false — proceed to tier 4
-        Classifier->>Classifier: tier 4 check<br/>prev code != 0<br/>AND cluster M5-M15 at most 6 AND<br/>clusterM15M30 at most 6 AND<br/>clusterM15H1 at most 10
-        alt tier 4 conditions met
-            Classifier->>Code: S_41 if<br/>val0>=1 OR<br/>val1>=1 AND<br/>val2>=2 AND<br/>val3>=2 AND<br/>val4>=2
-        end
-
-    opt tier 4 false — proceed to tier 5
-        Classifier->>Classifier: tier 5 check<br/>prev code != 0<br/>AND cluster M5-M15 at most 3 OR<br/>clusterM15M30 at most 3 AND<br/>cluster shrinking (current under prev)<br/>AND val1>=6
-        alt tier 5 conditions met
-            Classifier->>Code: S_51
-        end
-
-    opt all tiers false
-        Classifier->>Code: none (current code stays 0)
-    end
+    participant IN as Inputs per M5 bar
+    participant CL as Cluster distances
+    participant CLS as Classifier tier cascade
+    participant CODE as Output code
+    Note over IN,CODE: DETECTOR — outputs a code, never a trade
+    IN->>CL: compute midline distances M5-M15, M15-M30, M15-H1
+    IN->>CLS: score sideway_val per TF (plus4 diffmid, plus2 BBWunder500, plus1 flyshrink)
+    CL->>CLS: pass cluster distances
+    CLS->>CODE: TIER1 (cluster M5M15 max6 and M15M30 max10 or M15H1 max10) then S_11 or S_12 or S_13
+    CLS->>CODE: TIER2 (M5M15 max6 two bars, no prior code) then S_21 or S_22 or S_23 or S_24
+    CLS->>CODE: TIER3 (M5M15 max10 and M15M30 max15, no prior code) then S_31 or S_32
+    CLS->>CODE: TIER4 (prev sideways, tight cluster) then S_41
+    CLS->>CODE: TIER5 (prev sideways, cluster shrinking) then S_51
+    CLS->>CODE: else code 0 (no sideways)
+    Note over CLS,CODE: tiers checked top to bottom, first match wins, mutually exclusive
 ```
 
 The sequence mirrors the flowchart tier cascade: tier 1 fires first, and only if it fails does tier 2 get checked, and so on. Each terminal node is a sideways CODE, never a trade operation. This view emphasizes the DISPATCH ORDER — the mutual exclusion enforced by `sideway_selected[0] == 0` guards at each tier boundary.
