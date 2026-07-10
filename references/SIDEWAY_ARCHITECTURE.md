@@ -146,7 +146,7 @@ sequenceDiagram
     ValH1->>Classifier: val3
     ValH4->>Classifier: val4
 
-    Classifier->>Classifier: tier 1 check<br/>cluster M5-M15 <=6 AND<br/>(clusterM15M30 <=10 OR clusterM15H1 <=10)
+    Classifier->>Classifier: tier 1 check<br/>cluster M5-M15 at most 6 AND<br/>(clusterM15M30 at most 10 OR clusterM15H1 at most 10)
     alt tier 1 conditions met
         Classifier->>Code: S_11 if<br/>val0>=1 AND<br/>val1>=4 AND<br/>(val3>=2 OR val2>=4)
         else
@@ -156,7 +156,7 @@ sequenceDiagram
     end
 
     opt tier 1 false — proceed to tier 2
-        Classifier->>Classifier: tier 2 check<br/>cluster M5-M15 <=6 for 2 bars<br/>AND current code == 0
+        Classifier->>Classifier: tier 2 check<br/>cluster M5-M15 at most 6 for 2 bars<br/>AND current code == 0
         alt tier 2 conditions met
             Classifier->>Code: S_21 if<br/>val0>=6
             else
@@ -168,7 +168,7 @@ sequenceDiagram
         end
 
     opt tier 2 false — proceed to tier 3
-        Classifier->>Classifier: tier 3 check<br/>cluster M5-M15 <=10 AND<br/>clusterM15M30 <=15<br/>AND current code == 0
+        Classifier->>Classifier: tier 3 check<br/>cluster M5-M15 at most 10 AND<br/>clusterM15M30 at most 15<br/>AND current code == 0
         alt tier 3 conditions met
             Classifier->>Code: S_31 if<br/>val0>=4 AND<br/>val1>=2
             else
@@ -176,13 +176,13 @@ sequenceDiagram
         end
 
     opt tier 3 false — proceed to tier 4
-        Classifier->>Classifier: tier 4 check<br/>prev code != 0<br/>AND cluster M5-M15 <=6 AND<br/>clusterM15M30 <=6 AND<br/>clusterM15H1 <=10
+        Classifier->>Classifier: tier 4 check<br/>prev code != 0<br/>AND cluster M5-M15 at most 6 AND<br/>clusterM15M30 at most 6 AND<br/>clusterM15H1 at most 10
         alt tier 4 conditions met
             Classifier->>Code: S_41 if<br/>val0>=1 OR<br/>val1>=1 AND<br/>val2>=2 AND<br/>val3>=2 AND<br/>val4>=2
         end
 
     opt tier 4 false — proceed to tier 5
-        Classifier->>Classifier: tier 5 check<br/>prev code != 0<br/>AND cluster M5-M15 <=3 OR<br/>clusterM15M30 <=3 AND<br/>cluster shrinking (current < prev)<br/>AND val1>=6
+        Classifier->>Classifier: tier 5 check<br/>prev code != 0<br/>AND cluster M5-M15 at most 3 OR<br/>clusterM15M30 at most 3 AND<br/>cluster shrinking (current under prev)<br/>AND val1>=6
         alt tier 5 conditions met
             Classifier->>Code: S_51
         end
