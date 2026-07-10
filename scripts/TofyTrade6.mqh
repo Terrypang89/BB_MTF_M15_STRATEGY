@@ -138,6 +138,10 @@ struct PositionState {
    bool     exit_pending;        // V36.13: exit issued but not confirmed flat
    string   exit_reason;         // V36.13: original exit reason (preserved across retries)
    int      exit_pending_bar;    // V36.13: bars_since_entry when exit first issued
+   //--- scenario labels (observation only): track prev combos for on-change draw
+   string   prev_htf_combo;      // previous HTF combo (for label change detection)
+   string   prev_mtf_combo;      // previous MTF combo
+   string   prev_ltf_combo;      // previous LTF combo
 };
 
 //═══════════════════════════════════════════════════════════════════
@@ -461,6 +465,24 @@ void LogDualTFBar(BB_MTF_Data_struct &bb[], DualTFScenarioState &s, const MTFPre
       +KV6("LTF", s.ltf_combo);
 
    SigEvt6("BAR", kvs);
+
+  //--- scenario labels (observation only): draw on combo change
+  // HTF label at H4 midline, MTF label at H1 midline, LTF label at M5 midline
+  if(s.htf_combo != pos.prev_htf_combo)
+  {
+     DrawTradeLabel("HTF-" + s.htf_combo, BB_datas[4].BBMidLV[LA], BB_datas, clrYellow);
+     pos.prev_htf_combo = s.htf_combo;
+  }
+  if(s.mtf_combo != pos.prev_mtf_combo)
+  {
+     DrawTradeLabel("MTF-" + s.mtf_combo, BB_datas[3].BBMidLV[LA], BB_datas, clrOrange);
+     pos.prev_mtf_combo = s.mtf_combo;
+  }
+  if(s.ltf_combo != pos.prev_ltf_combo)
+  {
+     DrawTradeLabel("LTF-" + s.ltf_combo, BB_datas[0].BBMidLV[LA], BB_datas, clrLime);
+     pos.prev_ltf_combo = s.ltf_combo;
+  }
 }
 
 //═══════════════════════════════════════════════════════════════════
@@ -723,6 +745,8 @@ void Trade_Strategy(
       pos.tp_price=0; pos.sl_price=0; pos.m30_followed=false;
       pos.bars_since_entry=0; pos.trigger_state=""; pos.trigger_dir=0;
       pos.exit_pending=false; pos.exit_reason=""; pos.exit_pending_bar=0;
+      // scenario label prev combos (observation only)
+      pos.prev_htf_combo = ""; pos.prev_mtf_combo = ""; pos.prev_ltf_combo = "";
    }
 
    bool positionOpen = (BUYS + SELLS > 0);
