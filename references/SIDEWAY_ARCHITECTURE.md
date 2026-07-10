@@ -129,7 +129,7 @@ The tier order is critical — each code only fires if earlier conditions were f
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Cluster as Midline cluster distances<br/>BB_midline_Cluster[0/1/2]
+    participant Cluster as Midline cluster distances<br/>cluster M5-M15 / M15-M30 / M15-H1
     participant ValM5 as M5 sideway_val score
     participant ValM15 as M15 sideway_val score
     participant ValM30 as M30 sideway_val score
@@ -139,56 +139,56 @@ sequenceDiagram
     participant Code as Output code
 
     Note over Cluster,ValH4: DETECTOR logic — outputs sideways codes only
-    Cluster->>Classifier: read BB_midline_Cluster[0/1/2][LA]
-    ValM5->>Classifier: sideway_val[0] (sum of +4/+2/+1)
-    ValM15->>Classifier: sideway_val[1]
-    ValM30->>Classifier: sideway_val[2]
-    ValH1->>Classifier: sideway_val[3]
-    ValH4->>Classifier: sideway_val[4]
+    Cluster->>Classifier: read clusterM5M15 / clusterM15M30 / clusterM15H1
+    ValM5->>Classifier: val0 (sum of +4/+2/+1)
+    ValM15->>Classifier: val1
+    ValM30->>Classifier: val2
+    ValH1->>Classifier: val3
+    ValH4->>Classifier: val4
 
-    Classifier->>Classifier: tier 1 check<br/>cluster M5-M15 <=6 AND<br/>(M15-M30 <=10 OR M15-H1 <=10)
+    Classifier->>Classifier: tier 1 check<br/>cluster M5-M15 <=6 AND<br/>(clusterM15M30 <=10 OR clusterM15H1 <=10)
     alt tier 1 conditions met
-        Classifier->>Code: S_11 if<br/>sideway_val[0]>=1 AND<br/>sideway_val[1]>=4 AND<br/>(sideway_val[3]>=2 OR sideway_val[2]>=4)
+        Classifier->>Code: S_11 if<br/>val0>=1 AND<br/>val1>=4 AND<br/>(val3>=2 OR val2>=4)
         else
-        Classifier->>Code: S_12 if<br/>sideway_val[0]>=4 AND<br/>sideway_val[1]>=1 AND<br/>(sideway_val[3]>=2 OR sideway_val[2]>=4)
+        Classifier->>Code: S_12 if<br/>val0>=4 AND<br/>val1>=1 AND<br/>(val3>=2 OR val2>=4)
         else
-        Classifier->>Code: S_13 if<br/>sideway_val[0]>=4 AND<br/>sideway_val[1]>=2
+        Classifier->>Code: S_13 if<br/>val0>=4 AND<br/>val1>=2
     end
 
     opt tier 1 false — proceed to tier 2
-        Classifier->>Classifier: tier 2 check<br/>M5-M15 cluster <=6 for 2 bars<br/>AND sideway_selected[0] == 0
+        Classifier->>Classifier: tier 2 check<br/>cluster M5-M15 <=6 for 2 bars<br/>AND current code == 0
         alt tier 2 conditions met
-            Classifier->>Code: S_21 if<br/>sideway_val[0]>=6
+            Classifier->>Code: S_21 if<br/>val0>=6
             else
-            Classifier->>Code: S_22 if<br/>sideway_val[0]>=4 AND<br/>sideway_val[1]>=2
+            Classifier->>Code: S_22 if<br/>val0>=4 AND<br/>val1>=2
             else
-            Classifier->>Code: S_23 if<br/>sideway_val[1]>=2 AND<br/>sideway_val[3]>=5
+            Classifier->>Code: S_23 if<br/>val1>=2 AND<br/>val3>=5
             else
-            Classifier->>Code: S_24 if<br/>sideway_val[0]>=5 AND<br/>sideway_val[1]>=1
+            Classifier->>Code: S_24 if<br/>val0>=5 AND<br/>val1>=1
         end
 
     opt tier 2 false — proceed to tier 3
-        Classifier->>Classifier: tier 3 check<br/>M5-M15 cluster <=10 AND<br/>M15-M30 cluster <=15<br/>AND sideway_selected[0] == 0
+        Classifier->>Classifier: tier 3 check<br/>cluster M5-M15 <=10 AND<br/>clusterM15M30 <=15<br/>AND current code == 0
         alt tier 3 conditions met
-            Classifier->>Code: S_31 if<br/>sideway_val[0]>=4 AND<br/>sideway_val[1]>=2
+            Classifier->>Code: S_31 if<br/>val0>=4 AND<br/>val1>=2
             else
-            Classifier->>Code: S_32 if<br/>sideway_val[1]>=2 AND<br/>sideway_val[3]>=5
+            Classifier->>Code: S_32 if<br/>val1>=2 AND<br/>val3>=5
         end
 
     opt tier 3 false — proceed to tier 4
-        Classifier->>Classifier: tier 4 check<br/>prev bar sideways (sideway_selected[1] != 0)<br/>AND M5-M15 cluster <=6 AND<br/>M15-M30 cluster <=6 AND<br/>M15-H1 cluster <=10
+        Classifier->>Classifier: tier 4 check<br/>prev code != 0<br/>AND cluster M5-M15 <=6 AND<br/>clusterM15M30 <=6 AND<br/>clusterM15H1 <=10
         alt tier 4 conditions met
-            Classifier->>Code: S_41 if<br/>sideway_val[0]>=1 OR<br/>sideway_val[1]>=1 AND<br/>sideway_val[2]>=2 AND<br/>sideway_val[3]>=2 AND<br/>sideway_val[4]>=2
+            Classifier->>Code: S_41 if<br/>val0>=1 OR<br/>val1>=1 AND<br/>val2>=2 AND<br/>val3>=2 AND<br/>val4>=2
         end
 
     opt tier 4 false — proceed to tier 5
-        Classifier->>Classifier: tier 5 check<br/>prev bar sideways (sideway_selected[1] != 0)<br/>AND M5-M15 cluster <=3 OR<br/>M15-M30 cluster <=3 AND<br/>cluster shrinking (current < prev)<br/>AND sideway_val[1]>=6
+        Classifier->>Classifier: tier 5 check<br/>prev code != 0<br/>AND cluster M5-M15 <=3 OR<br/>clusterM15M30 <=3 AND<br/>cluster shrinking (current < prev)<br/>AND val1>=6
         alt tier 5 conditions met
             Classifier->>Code: S_51
         end
 
     opt all tiers false
-        Classifier->>Code: none (sideway_selected[0] stays 0)
+        Classifier->>Code: none (current code stays 0)
     end
 ```
 
