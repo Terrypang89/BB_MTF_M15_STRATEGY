@@ -21,6 +21,8 @@
 //| Repo logic file, sibling to TofyTrade5.mqh —                       |
 //| user integrates/compiles/backtests locally.                        |
 //| Separate from the 7-scenario system.                               |
+// M5 added to Part 3 LTF combo (observation only; not used in trade   |
+// decisions).                                                            |
 //+------------------------------------------------------------------+
 //═══════════════════════════════════════════════════════════════════
 // STEP 0 — ENUM_Trade_Act interface findings (from TofyTrade5.mqh):
@@ -269,6 +271,7 @@ DualTFScenarioState IdentifyDualTF(BB_MTF_Data_struct &bb[], double &close_price
    s.htf_scenario=""; s.mtf_scenario="";
    s.htf_bbloc=5; s.mtf_bbloc=5;
    s.d1_bbloc=5; s.h4_bbloc=5; s.h1_bbloc=5; s.m30_bbloc=5; s.m15_bbloc=5;
+   s.m5_state="S"; s.m5_bbloc=5;
    s.htf_combo=""; s.mtf_combo=""; s.ltf_combo="";
    s.htf_d1_state="S"; s.htf_h4_state="S";
    s.mtf_h1_state="S"; s.mtf_m30_state="S";
@@ -277,12 +280,14 @@ DualTFScenarioState IdentifyDualTF(BB_MTF_Data_struct &bb[], double &close_price
 
    double price = close_prices[LA];
 
-   //--- Per-TF F/S/C/R derivation
+   //--- Per-TF F/S/C/R derivation (bb[1..5] = M15/M30/H1/M30/M15, bb[0] = M5)
    DUAL_STATE d1_st  = BBStageToDualState((int)bb[5].BBW_stage[LA]);
    DUAL_STATE h4_st  = BBStageToDualState((int)bb[4].BBW_stage[LA]);
    DUAL_STATE h1_st  = BBStageToDualState((int)bb[3].BBW_stage[LA]);
    DUAL_STATE m30_st = BBStageToDualState((int)bb[2].BBW_stage[LA]);
    DUAL_STATE m15_st = BBStageToDualState((int)bb[1].BBW_stage[LA]);
+   // M5 (bb[0]) — observation only, not used in trade decisions
+   DUAL_STATE m5_st  = BBStageToDualState((int)bb[0].BBW_stage[LA]);
 
    //--- Store per-TF state strings
    s.htf_d1_state   = DualStateName(d1_st);
@@ -290,6 +295,7 @@ DualTFScenarioState IdentifyDualTF(BB_MTF_Data_struct &bb[], double &close_price
    s.mtf_h1_state   = DualStateName(h1_st);
    s.mtf_m30_state  = DualStateName(m30_st);
    s.m15_state      = DualStateName(m15_st);
+   s.m5_state       = DualStateName(m5_st);
 
    //--- HTF scenario pair: (D1-state)(H4-state)
    s.htf_scenario = s.htf_d1_state + s.htf_h4_state;
@@ -303,6 +309,8 @@ DualTFScenarioState IdentifyDualTF(BB_MTF_Data_struct &bb[], double &close_price
    s.h1_bbloc  = ComputeMTFBBLoc(price, bb[3].BBLowLV[LA], bb[3].BBUppLV[LA]);
    s.m30_bbloc = ComputeMTFBBLoc(price, bb[2].BBLowLV[LA], bb[2].BBUppLV[LA]);
    s.m15_bbloc = ComputeMTFBBLoc(price, bb[1].BBLowLV[LA], bb[1].BBUppLV[LA]);
+   // M5 (bb[0]) — observation only, same sparse LTF resolution as M15/M30
+   s.m5_bbloc  = ComputeMTFBBLoc(price, bb[0].BBLowLV[LA], bb[0].BBUppLV[LA]);
 
    //--- Legacy aliases (kept for backward compat)
    s.htf_bbloc = s.d1_bbloc;
@@ -314,13 +322,15 @@ DualTFScenarioState IdentifyDualTF(BB_MTF_Data_struct &bb[], double &close_price
    if(s.mtf_h1_state == "X") s.h1_bbloc = -1;
    if(s.mtf_m30_state == "X") s.m30_bbloc = -1;
    if(s.m15_state == "X") s.m15_bbloc = -1;
+   if(s.m5_state == "X") s.m5_bbloc = -1;
 
    //--- Build paired combo strings (V36.05)
    s.htf_combo = ComboSegment(s.htf_d1_state, s.d1_bbloc) +
                  ComboSegment(s.htf_h4_state, s.h4_bbloc);
    s.mtf_combo = ComboSegment(s.mtf_h1_state, s.h1_bbloc) +
                  ComboSegment(s.mtf_m30_state, s.m30_bbloc);
-   s.ltf_combo = ComboSegment(s.m15_state, s.m15_bbloc);
+   s.ltf_combo = ComboSegment(s.m15_state, s.m15_bbloc) +
+               ComboSegment(s.m5_state, s.m5_bbloc);
 
    //--- Info string
    s.info = "HTF="+s.htf_combo+" MTF="+s.mtf_combo+" LTF="+s.ltf_combo;
