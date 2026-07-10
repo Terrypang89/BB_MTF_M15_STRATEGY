@@ -122,6 +122,80 @@ The tier order is critical — each code only fires if earlier conditions were f
 
 ---
 
+## Classification dispatch (sequence view)
+
+**TofySideway is a CLASSIFIER, not a trading strategy. The terminal outputs are sideways CODES (S_11..S_51, or none), NOT trade actions.** This diagram shows the DISPATCH ORDER of the tier cascade — each tier only fires if all earlier tiers were false (mutual exclusion via `sideway_selected[0] == 0` guards).
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Cluster as Midline cluster distances<br/>BB_midline_Cluster[0/1/2]
+    participant ValM5 as M5 sideway_val score
+    participant ValM15 as M15 sideway_val score
+    participant ValM30 as M30 sideway_val score
+    participant ValH1 as H1 sideway_val score
+    participant ValH4 as H4 sideway_val score
+    participant Classifier as BBDatas_Midline_Sideway<br/>(tier cascade)
+    participant Code as Output code
+
+    Note over Cluster,ValH4: DETECTOR logic — outputs sideways codes only
+    Cluster->>Classifier: read BB_midline_Cluster[0/1/2][LA]
+    ValM5->>Classifier: sideway_val[0] (sum of +4/+2/+1)
+    ValM15->>Classifier: sideway_val[1]
+    ValM30->>Classifier: sideway_val[2]
+    ValH1->>Classifier: sideway_val[3]
+    ValH4->>Classifier: sideway_val[4]
+
+    Classifier->>Classifier: tier 1 check<br/>cluster M5-M15 <=6 AND<br/>(M15-M30 <=10 OR M15-H1 <=10)
+    alt tier 1 conditions met
+        Classifier->>Code: S_11 if<br/>sideway_val[0]>=1 AND<br/>sideway_val[1]>=4 AND<br/>(sideway_val[3]>=2 OR sideway_val[2]>=4)
+        else
+        Classifier->>Code: S_12 if<br/>sideway_val[0]>=4 AND<br/>sideway_val[1]>=1 AND<br/>(sideway_val[3]>=2 OR sideway_val[2]>=4)
+        else
+        Classifier->>Code: S_13 if<br/>sideway_val[0]>=4 AND<br/>sideway_val[1]>=2
+    end
+
+    opt tier 1 false — proceed to tier 2
+        Classifier->>Classifier: tier 2 check<br/>M5-M15 cluster <=6 for 2 bars<br/>AND sideway_selected[0] == 0
+        alt tier 2 conditions met
+            Classifier->>Code: S_21 if<br/>sideway_val[0]>=6
+            else
+            Classifier->>Code: S_22 if<br/>sideway_val[0]>=4 AND<br/>sideway_val[1]>=2
+            else
+            Classifier->>Code: S_23 if<br/>sideway_val[1]>=2 AND<br/>sideway_val[3]>=5
+            else
+            Classifier->>Code: S_24 if<br/>sideway_val[0]>=5 AND<br/>sideway_val[1]>=1
+        end
+
+    opt tier 2 false — proceed to tier 3
+        Classifier->>Classifier: tier 3 check<br/>M5-M15 cluster <=10 AND<br/>M15-M30 cluster <=15<br/>AND sideway_selected[0] == 0
+        alt tier 3 conditions met
+            Classifier->>Code: S_31 if<br/>sideway_val[0]>=4 AND<br/>sideway_val[1]>=2
+            else
+            Classifier->>Code: S_32 if<br/>sideway_val[1]>=2 AND<br/>sideway_val[3]>=5
+        end
+
+    opt tier 3 false — proceed to tier 4
+        Classifier->>Classifier: tier 4 check<br/>prev bar sideways (sideway_selected[1] != 0)<br/>AND M5-M15 cluster <=6 AND<br/>M15-M30 cluster <=6 AND<br/>M15-H1 cluster <=10
+        alt tier 4 conditions met
+            Classifier->>Code: S_41 if<br/>sideway_val[0]>=1 OR<br/>sideway_val[1]>=1 AND<br/>sideway_val[2]>=2 AND<br/>sideway_val[3]>=2 AND<br/>sideway_val[4]>=2
+        end
+
+    opt tier 4 false — proceed to tier 5
+        Classifier->>Classifier: tier 5 check<br/>prev bar sideways (sideway_selected[1] != 0)<br/>AND M5-M15 cluster <=3 OR<br/>M15-M30 cluster <=3 AND<br/>cluster shrinking (current < prev)<br/>AND sideway_val[1]>=6
+        alt tier 5 conditions met
+            Classifier->>Code: S_51
+        end
+
+    opt all tiers false
+        Classifier->>Code: none (sideway_selected[0] stays 0)
+    end
+```
+
+The sequence mirrors the flowchart tier cascade: tier 1 fires first, and only if it fails does tier 2 get checked, and so on. Each terminal node is a sideways CODE, never a trade operation. This view emphasizes the DISPATCH ORDER — the mutual exclusion enforced by `sideway_selected[0] == 0` guards at each tier boundary.
+
+---
+
 ## Cross-reference
 
 See `DUALTF_ARCHITECTURE.md` for the DualTF Architecture overview. TofySideway is a candidate FILTER for the (now-closed) DualTF entry or any future premise, and its trading value is UNTESTED.
