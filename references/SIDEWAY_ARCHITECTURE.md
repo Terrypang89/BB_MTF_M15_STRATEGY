@@ -145,7 +145,8 @@ sequenceDiagram
     Note over CLS,CODE: tiers checked top to bottom, first match wins, mutually exclusive
 ```
 
-![TofySideway](Backtest_data/extras/DRAWIO/TofySideway_sequence.svg)
+**Figure: TofySideway classification sequence.** The dispatcher tier cascade — tier 1 fires first, and only if it fails does tier 2 get checked, and so on. Each terminal node is a sideways CODE (S_11..S_51, or none), never a trade operation.
+![TofySideway sequence](Backtest_data/extras/DRAWIO/TofySideway_sequence.svg)
 
 The sequence mirrors the flowchart tier cascade: tier 1 fires first, and only if it fails does tier 2 get checked, and so on. Each terminal node is a sideways CODE, never a trade operation. This view emphasizes the DISPATCH ORDER — the mutual exclusion enforced by `sideway_selected[0] == 0` guards at each tier boundary.
 

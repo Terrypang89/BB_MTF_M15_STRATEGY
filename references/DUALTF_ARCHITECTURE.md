@@ -850,6 +850,18 @@ One row per confirmation level, each with its verdict. The failure is the PREMIS
 
 ---
 
+## CLOSED design — V36.14 M30-confirmed entry gate
+
+These diagrams document the CLOSED entry-timing variants (M15-alone, H4×H1 filter, M30-confirmed). The shared dead core is the band-state flip premise; Part 3 IDENTIFICATION survives as reusable.
+
+**Figure: DualTF architecture overview.** Four-layer model (Identify → Detect → Act → Measurement gate).
+![DualTF architecture](Backtest_data/extras/DRAWIO/dualtf_architecture.drawio.svg)
+
+**Figure: M15 flip detailed sequence.** The CLOSED entry-timing variants showing the M15 flip detection leading to M30 confirmation and gate evaluation.
+![M15-flip detailed](Backtest_data/extras/DRAWIO/m15_flip_detailed.drawio.svg)
+
+---
+
 ## Evidence Index
 
 | Hypothesis / Finding | Analysis File | Commit | Verdict |
