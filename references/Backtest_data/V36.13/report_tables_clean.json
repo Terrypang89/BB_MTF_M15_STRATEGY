@@ -12142,3 +12142,20 @@
         }
     ]
 }
+# Sideways filter test (V36.13){
+  "sideways_test": {
+    "active_entries": 114,
+    "none_entries": 577,
+    "active_sum": 0.0,
+    "none_sum": 0.0,
+    "counterfactual": 0.0,
+    "per_code": {
+      "S_22": 11,
+      "S_13": 17,
+      "S_11": 41,
+      "S_23": 25
+    },
+    "verdict": "NO SEPARATION",
+    "pf_gap": 0.0
+  }
+}
