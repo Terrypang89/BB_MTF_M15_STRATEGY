@@ -470,26 +470,26 @@ void LogDualTFBar(BB_MTF_Data_struct &bb[], DualTFScenarioState &s, const MTFPre
 
   //--- scenario labels (observation only): draw on combo change
   // HTF label at H4 midline, MTF label at H1 midline, LTF label at M5 midline
-//   if(s.htf_combo != pos.prev_htf_combo)
-//   {
-   //   DrawTradeLabel("HTF-" + s.htf_combo, BB_datas[4].BBMidLV[LA], BB_datas, clrYellow);
-//      pos.prev_htf_combo = s.htf_combo;
-//   }
-//   if(s.mtf_combo != pos.prev_mtf_combo)
-//   {
-     DrawTradeLabel("MTF-" + s.mtf_combo, BB_datas[2].BBMidLV[LA], BB_datas, clrOrange);
-//      pos.prev_mtf_combo = s.mtf_combo;
-//   }
-//   if(s.ltf_combo != pos.prev_ltf_combo)
-//   {
-     DrawTradeLabel("LTF-" + s.ltf_combo, BB_datas[0].BBMidLV[LA], BB_datas, clrLime);
-//      pos.prev_ltf_combo = s.ltf_combo;
-//   }
+if(s.htf_combo != pos.prev_htf_combo)
+   {
+      DrawTradeLabel("HTF-" + s.htf_combo, BB_datas[4].BBMidLV[LA], BB_datas, clrYellow);
+      pos.prev_htf_combo = s.htf_combo;
+   }
+if(s.mtf_combo != pos.prev_mtf_combo)
+   {
+      DrawTradeLabel("MTF-" + s.mtf_combo, BB_datas[3].BBMidLV[LA], BB_datas, clrOrange);
+      pos.prev_mtf_combo = s.mtf_combo;
+   }
+if(s.ltf_combo != pos.prev_ltf_combo)
+   {
+      DrawTradeLabel("LTF-" + s.ltf_combo, BB_datas[0].BBMidLV[LA], BB_datas, clrLime);
+      pos.prev_ltf_combo = s.ltf_combo;
+   }
 }
 
 //═══════════════════════════════════════════════════════════════════
-// DRAW LABEL — trade events only (V36.11)
-// Removed [LABELDBG] Print. Scenario-change labels disabled.
+// DRAW LABEL — trade events + scenario labels (V36.14)
+// Scenario labels (HTF@H4mid, MTF@H1mid, LTF@M5mid) drawn on combo change — observation only
 //═══════════════════════════════════════════════════════════════════
 void DrawTradeLabel(string tag, double price, BB_MTF_Data_struct &BB_datas[],
                     color labelColor, int tf_idx=1)
