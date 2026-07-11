@@ -62,7 +62,7 @@ VALUE_IMPROVEMENT_PCT = 10
 
 def read_log(path: Path):
     """
-    Read the plain-text clean log and yield dicts of parsed fields per line.
+    Read the plain-text clean log and yield dicts of parsed fields per bar.
 
     Line types used:
       [BBTFImpact]   -> line_seq_touch (H4 cur/prev)
@@ -71,49 +71,41 @@ def read_log(path: Path):
       [M15]          -> close_M15 (M5 close)
 
     Returns only bars where all required fields are present.
+
+    The log interleaves M5 bars (DUALTF/ATRSL1buf) with EA internal logs.
+    Each M5 bar has exactly one DUALTF line and one ATRSL1buf line.
+    We build lookup dictionaries keyed by timestamp to match them.
     """
     with open(path, encoding="utf-8") as f:
-        raw_lines = [line.strip() for line in f if line.strip()]
+        # Handle Windows line endings (CRLF)
+        raw_lines = [line.replace("\r", "").strip() for line in f if line.strip()]
 
-    # Parse touch data from BBTFImpact lines
-    touch_data = {}
-    for idx, r in enumerate(raw_lines):
-        if "[BBTFImpact]" not in r:
-            continue
-        try:
-            tm = r.split("line_seq_touch:", 1)[1].split("],")[0].strip() if "line_seq_touch:" in r else ""
-            h4_cur, h4_prev = None, None
-            for part in tm.split(", "):
-                part = part.strip()
-                if part.startswith("H4_"):
-                    sub = part.split("-")[1]
-                    try:
-                        h4_cur, h4_prev = int(sub.split(",")[0]), int(sub.split(",")[1])
-                    except (ValueError, IndexError):
-                        pass
-            if h4_cur is not None and h4_prev is not None:
-                touch_data[idx] = {"cur": h4_cur, "prev": h4_prev}
-        except Exception:
-            pass
+    n = len(raw_lines)
 
-    # Parse state data from DUALTF lines
-    state_data = {}
+    # Build timestamp -> data dict for DUALTF lines
+    dualtf_by_ts = {}
     for idx, r in enumerate(raw_lines):
         if "[DUALTF]" not in r:
             continue
         d = {}
-        # Extract h4:state:X value
         m = re.search(r"h4:state:([SFCR])", r)
         d["h4_state"] = m.group(1) if m else None
         m = re.search(r"m30:state:([SFCR])", r)
         d["m30_state"] = m.group(1) if m else None
         m = re.search(r"h1:state:([SFCR])", r)
         d["h1_state"] = m.group(1) if m else None
-        if any(d.values()):
-            state_data[idx] = d
+        # Extract timestamp from line (first two fields: YYYY-MM-DD HH:MM)
+        ts_match = re.match(r"(\d{4}\.\d{2}\.\d{2}) (\d{2}):", r)
+        if ts_match:
+            date_str = ts_match.group(1)
+            hour = int(ts_match.group(2))
+            # M5 bars occur at :00, :15, :30, :45 — we'll use hour*15 as a coarse key
+            minute_key = hour * 15
+            ts = f"{date_str}:{minute_key:02d}"
+            dualtf_by_ts[ts] = d
 
-    # Parse band prices from ATRSL1buf lines
-    band_data = {}
+    # Build timestamp -> data dict for ATRSL1buf lines
+    atrs_by_ts = {}
     for idx, r in enumerate(raw_lines):
         if "[ATRSL1buf]" not in r:
             continue
@@ -131,97 +123,102 @@ def read_log(path: Path):
         if lower_match:
             vals = [float(v.strip()) for v in lower_match.group(1).split(",") if v.strip()]
             bb_low = vals[0] if vals else None
-        if any(v is not None for v in (bb_mid, bb_up, bb_low)):
-            band_data[idx] = {"bb_mid": bb_mid, "bb_up": bb_up, "bb_low": bb_low}
+        ts_match = re.match(r"(\d{4}\.\d{2}\.\d{2}) (\d{2}):", r)
+        if ts_match:
+            date_str = ts_match.group(1)
+            hour = int(ts_match.group(2))
+            minute_key = hour * 15
+            ts = f"{date_str}:{minute_key:02d}"
+            atrs_by_ts[ts] = {"bb_mid": bb_mid, "bb_up": bb_up, "bb_low": bb_low}
 
-    # Parse close from M15 lines
-    close_data = {}
+    # Parse close from M15 lines — extract the first (M5) close value
+    close_by_ts = {}
     for idx, r in enumerate(raw_lines):
         if "[M15]" not in r:
             continue
-        m15_match = re.search(r"close_M15:\s*\[(.*?)\]", r)
+        m15_match = re.search(r"close_M15:\s*\[(.*?)\](?:,\s*|\])", r)
         if not m15_match:
             continue
         vals_str = m15_match.group(1).strip()
         vals = [float(v.strip()) for v in vals_str.split(",") if v.strip()]
-        close_data[idx] = {"close": vals[0]} if vals else {}
+        # Store by the first timestamp we see (M5 bar)
+        ts_match = re.match(r"(\d{4}\.\d{2}\.\d{2}) (\d{2}):", r)
+        if ts_match:
+            date_str = ts_match.group(1)
+            hour = int(ts_match.group(2))
+            minute_key = hour * 15
+            ts = f"{date_str}:{minute_key:02d}"
+            close_by_ts[ts] = vals[0] if vals else None
 
-    # Combine data from different line types into dicts per bar
-    seen_indices = set()
-    for idx in touch_data:
-        if idx in seen_indices:
+    # Parse touch data from BBTFImpact lines — extract H4 cur/prev
+    touch_data = {}
+    for idx, r in enumerate(raw_lines):
+        if "[BBTFImpact]" not in r:
             continue
-        seen_indices.add(idx)
-
-        d["cur"] = touch_data[idx]["cur"]
-        d["prev"] = touch_data[idx]["prev"]
-
-        # Try to find matching DUALTF and ATRSL1buf lines within ~5 bars after the touch line
-        for offset in range(3, 8):
-            cand_idx = idx + offset
-            if cand_idx < 0 or cand_idx >= len(raw_lines):
-                continue
-            cand_r = raw_lines[cand_idx]
-            if "[DUALTF]" in cand_r:
-                d["h4_state"] = state_data.get(cand_idx, {}).get("h4_state")
-                d["m30_state"] = state_data.get(cand_idx, {}).get("m30_state")
-                d["h1_state"] = state_data.get(cand_idx, {}).get("h1_state")
-            if "[ATRSL1buf]" in cand_r:
-                bd = band_data.get(cand_idx, {})
-                d["bb_mid"] = bd.get("bb_mid")
-                d["bb_up"] = bd.get("bb_up")
-                d["bb_low"] = bd.get("bb_low")
-
-            # Also try to find matching M15 close line within ~8 bars after the touch line
-            for offset2 in range(3, 12):
-                cand_idx2 = idx + offset2
-                if cand_idx2 < 0 or cand_idx2 >= len(raw_lines):
-                    continue
-                cand_r2 = raw_lines[cand_idx2]
-                if "[M15]" in cand_r2 and "close_M15:" in cand_r2:
-                    match2 = re.search(r"close_M15:\s*\[(.*?)\](?:,\s*|\])", cand_r2)
-                    if not match2:
+        try:
+            tm = r.split("line_seq_touch:", 1)[1].split("],")[0].strip() if "line_seq_touch:" in r else ""
+            h4_cur, h4_prev = None, None
+            for part in tm.split(", "):
+                part = part.strip()
+                if part.startswith("H4_"):
+                    sub = part[len("H4_"):]  # e.g. "6-9,9"
+                    dash_idx = sub.find("-")
+                    if dash_idx == -1:
                         continue
-                    vals2_str = match2.group(1).strip()
-                    vals2 = [float(v.strip()) for v in vals2_str.split(",") if v.strip()]
-                    d["close"] = close_data.get(cand_idx2, {}).get("close")
+                    cur_str = sub[:dash_idx]
+                    after_dash = sub[dash_idx+1:]
+                    comma_idx = after_dash.find(",")
+                    if comma_idx == -1:
+                        continue
+                    prev_str = after_dash[:comma_idx]
+                    try:
+                        h4_cur, h4_prev = int(cur_str), int(prev_str)
+                    except ValueError:
+                        pass
+            # Extract timestamp from this BBTFImpact line
+            ts_match = re.match(r"(\d{4}\.\d{2}\.\d{2}) (\d{2}):", r)
+            if ts_match and h4_cur is not None:
+                date_str = ts_match.group(1)
+                hour = int(ts_match.group(2))
+                minute_key = hour * 15
+                ts = f"{date_str}:{minute_key:02d}"
+                touch_data[ts] = {"cur": h4_cur, "prev": h4_prev}
+        except Exception:
+            pass
 
-                if all(k is not None for k in ("h4_state", "m30_state", "h1_state", "bb_mid", "bb_up", "bb_low")):
-                    yield d
+    # Now yield records — for each timestamp with H4 touch data, try to find
+    # matching DUALTF/ATRSL1buf/close. If any is missing, skip this bar.
+    seen_ts = set()
+    for ts in touch_data:
+        if ts in seen_ts:
+            continue
+        seen_ts.add(ts)
 
-        # Also try to find matching DUALTF and ATRSL1buf lines within ~5 bars before the touch line
-        for offset in range(2, 6):
-            cand_idx = idx - offset
-            if cand_idx < 0 or cand_idx >= len(raw_lines):
-                continue
-            cand_r = raw_lines[cand_idx]
-            if "[DUALTF]" in cand_r:
-                d["h4_state"] = state_data.get(cand_idx, {}).get("h4_state")
-                d["m30_state"] = state_data.get(cand_idx, {}).get("m30_state")
-                d["h1_state"] = state_data.get(cand_idx, {}).get("h1_state")
-            if "[ATRSL1buf]" in cand_r:
-                bd = band_data.get(cand_idx, {})
-                d["bb_mid"] = bd.get("bb_mid")
-                d["bb_up"] = bd.get("bb_up")
-                d["bb_low"] = bd.get("bb_low")
+        d = {"cur": touch_data[ts]["cur"], "prev": touch_data[ts]["prev"]}
 
-            # Also try to find matching M15 close line within ~8 bars before the touch line
-            for offset2 in range(2, 12):
-                cand_idx2 = idx - offset2
-                if cand_idx2 < 0 or cand_idx2 >= len(raw_lines):
-                    continue
-                cand_r2 = raw_lines[cand_idx2]
-                cand_close = close_data.get(cand_idx2, {})
-                if cand_close and cand_close.get("close") is not None:
-                    d["close"] = cand_close["close"]
+        # Look up DUALTF state
+        dualtf = dualtf_by_ts.get(ts, {})
+        d["h4_state"] = dualtf.get("h4_state")
+        d["m30_state"] = dualtf.get("m30_state")
+        d["h1_state"] = dualtf.get("h1_state")
 
-                    if all(k is not None for k in ("h4_state", "m30_state", "h1_state", "bb_mid", "bb_up", "bb_low")):
-                        yield d
+        # Look up ATRSL1buf bands
+        atrs = atrs_by_ts.get(ts, {})
+        d["bb_mid"] = atrs.get("bb_mid")
+        d["bb_up"] = atrs.get("bb_up")
+        d["bb_low"] = atrs.get("bb_low")
+
+        # Look up close
+        d["close"] = close_by_ts.get(ts)
+
+        if all(v is not None for v in (d["h4_state"], d["m30_state"], d["h1_state"],
+                                       d["bb_mid"], d["bb_up"], d["bb_low"], d["close"])):
+            yield d
 
 
 def is_touch_event(d: dict) -> bool:
-    """Return True if H4 touch is currently at 6/7/8/9."""
-    return d["cur"] in {6, 7, 8, 9}
+    """Return True if H4 touches a band (cur in {6,7,8,9}) AND it's a NEW touch (cur != prev)."""
+    return d["cur"] in {6, 7, 8, 9} and d["cur"] != d["prev"]
 
 
 def predicted_direction(d: dict) -> str:

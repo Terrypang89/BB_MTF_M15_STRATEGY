@@ -3,36 +3,39 @@
 ## Field presence summary
 
 - All required fields parsed: line_seq_touch (H4), H4/M30/H1 states, band prices.
-- Total bars with valid data: 1340892.
+- Total bars with valid data: 6352.
 
 ### Sample touch event
 
-- H4 current touch: 7, previous touch: 8
-- H4 state: C, M30 state: R, H1 state: R
-- H4 midline: 4017.890000, close: 4017.800000
+- H4 current touch: 0, previous touch: 0
+- H4 state: C, M30 state: F, H1 state: F
+- H4 midline: 3322.780000, close: 3322.580000
 
 ### Excluded events (already past midline)
 
-- Count of bars where H4 touch is 6/7/8/9 but price already beyond the midline in the predicted direction: 1340892
+- Count of bars where H4 touch is 6/7/8/9 but price already beyond the midline in the predicted direction: 57
 
 ## Per-layer results
 
 | Layer | Filter | n | Successes | Rate | Baseline |
 |-------|--------|---|----------|------|----------|
-| 1 | All H4 touch events (6/7/8/9) | 1340892 | 1340892 | 100.0% | 100.0% |
-| 2 | H4 state S or C (shrink/compress) | 1340892 | 1340892 | 100.0% | 100.0% |
-| 3 | Fly (M30 or H1 in {F,R}) | 1340892 | 1340892 | 100.0% | 100.0% |
+| 1 | All H4 touch events (6/7/8/9) | 115 | 57 | 49.6% | 100.0% |
+| 2 | H4 state S or C (shrink/compress) | 81 | 39 | 48.1% | 100.0% |
+| 3 | Fly (M30 or H1 in {F,R}) | 65 | 30 | 46.2% | 100.0% |
 
 ### Layer 1 breakdown by direction and touch value
 
-- Direction UP (touch 6/8): n = 0
-- Direction DOWN (touch 7/9): n = 1340892, successes = 1340892, rate = 100.0%
+- Direction UP (touch 6/8): n = 60, successes = 34, rate = 56.7%
+- Direction DOWN (touch 7/9): n = 55, successes = 23, rate = 41.8%
 
 ### Layer 1 breakdown by touch value
 
 | Touch | n | Successes | Rate | Baseline |
 |-------|---|----------|------|----------|
-| 7 | 1340892 | 1340892 | 100.0% | 100.0% |
+| 6 | 9 | 7 | 77.8% | 100.0% |
+| 7 | 49 | 20 | 40.8% | 100.0% |
+| 8 | 51 | 27 | 52.9% | 100.0% |
+| 9 | 6 | 3 | 50.0% | 100.0% |
 
 ## VERDICT (fixed criteria)
 
@@ -40,16 +43,16 @@
 - Layer 2 adds VALUE if its rate is >= 10 pp higher than Layer 1 AND Layer 1 has n >= 20.
 - Layer 3 adds VALUE if its rate is >= 10 pp higher than Layer 2 AND Layer 2 has n >= 20.
 
-- Layer 1 vs Layer 2: +-99.0 pp (n=1340892) — NO.
-- Layer 2 vs Layer 1: +-99.0 pp (n=1340892) — NO.
-- Layer 3 vs Layer 2: +-99.0 pp (n=1340892) — NO.
+- Layer 1 vs Layer 2: +-47.7 pp (n=81) — NO.
+- Layer 2 vs Layer 1: +-49.1 pp (n=115) — NO.
+- Layer 3 vs Layer 2: +-47.7 pp (n=81) — NO.
 
 - No layer reaches the fixed criteria — NO SIGNAL.
 
 - TOUCH HAS SIGNAL if any layer's rate is >= 60% AND beats its baseline by >= 10 pp AND n >= 20.
-- Layer 1: rate = 100.0% (baseline 100.0%) — NO (does not beat baseline).
-- Layer 2: rate = 100.0% (baseline 100.0%) — NO (does not beat baseline).
-- Layer 3: rate = 100.0% (baseline 100.0%) — NO (does not beat baseline).
+- Layer 1: rate = 49.6% (baseline 100.0%) — NO (does not beat baseline).
+- Layer 2: rate = 48.1% (baseline 100.0%) — NO (does not beat baseline).
+- Layer 3: rate = 46.2% (baseline 100.0%) — NO (does not beat baseline).
 
 - OVER-SLICED: none of the layers drop below n=20.
 
