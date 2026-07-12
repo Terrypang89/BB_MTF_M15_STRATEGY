@@ -780,8 +780,12 @@ void ORDERS_CLOSE(int CMD = -1,int TICKET = -1,double ORDER_LOTS=-1, string TRAD
    double corder_fee = 0.0;
    double corder_price = 0.0;
    int corder_DealsTotal = 0;
-   datetime corder_open_time;
+   datetime corder_open_time = 0;
+   int corder_open_type = -1;
+   double corder_open_volume = 0.0;
+   double corder_open_price = 0.0;
    ulong LTicket = 0;
+   int deal_entry = -1;
    int max_attempts = 10;
    int attempts = 0;
    long deal_type;
@@ -838,9 +842,9 @@ void ORDERS_CLOSE(int CMD = -1,int TICKET = -1,double ORDER_LOTS=-1, string TRAD
 
                      // Refresh history after close
                      HistorySelect(0, TimeCurrent());
-                     int corder_DealsTotal = HistoryDealsTotal();
-                     ulong LTicket = HistoryDealGetTicket(corder_DealsTotal-1);
-                     int deal_entry = HistoryDealGetInteger(LTicket, DEAL_ENTRY);
+                     corder_DealsTotal = HistoryDealsTotal();
+                     LTicket = HistoryDealGetTicket(corder_DealsTotal-1);
+                     deal_entry = HistoryDealGetInteger(LTicket, DEAL_ENTRY);
 
                      // Wait until we get a DEAL_ENTRY_OUT (close deal)
                      while(attempts < max_attempts && deal_entry != DEAL_ENTRY_OUT)
