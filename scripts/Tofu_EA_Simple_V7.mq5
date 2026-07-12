@@ -779,13 +779,13 @@ void ORDERS_CLOSE(int CMD = -1,int TICKET = -1,double ORDER_LOTS=-1, string TRAD
    double corder_comm = 0.0;
    double corder_fee = 0.0;
    double corder_price = 0.0;
-   int corder_DealsTotal = 0.0;
-   datetime corder_open_time ;
+   int corder_DealsTotal = 0;
+   datetime corder_open_time;
    ulong LTicket = 0;
    int max_attempts = 10;
    int attempts = 0;
    long deal_type;
-   for(int i=OrdersTotal(); i>=0; i--)
+   for(int i=OrdersTotal()-1; i>=0; i--)
    {
       if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES))
       {
@@ -800,10 +800,21 @@ void ORDERS_CLOSE(int CMD = -1,int TICKET = -1,double ORDER_LOTS=-1, string TRAD
                   CMD2string = "SELL";
                if((OrderTicket()==TICKET || TICKET==-1))
                {
-                  datetime corder_open_time = HistoryDealGetInteger(TICKET, DEAL_TIME);
-                  int corder_open_type = HistoryDealGetInteger(TICKET, DEAL_TYPE);
-                  double corder_open_volume = HistoryDealGetDouble(TICKET, DEAL_VOLUME);
-                  double corder_open_price    = HistoryDealGetDouble(TICKET, DEAL_PRICE); // <-- actual dealt price
+                  // When TICKET==-1 (close-all), derive OPEN_* from the selected order, not history
+                  if(TICKET == -1)
+                  {
+                     corder_open_time = OrderOpenTime();
+                     corder_open_type = (int)OrderType();
+                     corder_open_volume = OrderLots();
+                     corder_open_price = OrderOpenPrice();
+                  }
+                  else
+                  {
+                     corder_open_time = HistoryDealGetInteger(TICKET, DEAL_TIME);
+                     corder_open_type = HistoryDealGetInteger(TICKET, DEAL_TYPE);
+                     corder_open_volume = HistoryDealGetDouble(TICKET, DEAL_VOLUME);
+                     corder_open_price = HistoryDealGetDouble(TICKET, DEAL_PRICE); // <-- actual dealt price
+                  }
                   ORDER_CLOSE_info += ", OPEN_TICKET:" + TICKET;
                   ORDER_CLOSE_info += ", OPEN_Type:" + (corder_open_type == DEAL_TYPE_SELL ? "SELL" : "BUY");
                   ORDER_CLOSE_info += ", OPEN_LOTS:" + corder_open_volume;
@@ -822,8 +833,7 @@ void ORDERS_CLOSE(int CMD = -1,int TICKET = -1,double ORDER_LOTS=-1, string TRAD
                                     clrNONE))
                      {
                         Print(__FUNCTION__," ",__LINE__," ERROR: ",GetLastError());
-                        Sleep(1000);
-                        return;
+                        continue;  // try next order - do NOT return (orphan-freeze bug)
                      }
 
                      // Refresh history after close
@@ -833,15 +843,22 @@ void ORDERS_CLOSE(int CMD = -1,int TICKET = -1,double ORDER_LOTS=-1, string TRAD
                      int deal_entry = HistoryDealGetInteger(LTicket, DEAL_ENTRY);
 
                      // Wait until we get a DEAL_ENTRY_OUT (close deal)
-                     int attempts = 0;
                      while(attempts < max_attempts && deal_entry != DEAL_ENTRY_OUT)
                      {
-                        Sleep(100);
+                        if(MQLInfoInteger(MQL_TESTER))
+                           // In tester, history is synchronous - no need to sleep/wait
+                           ;
+                        else
+                           Sleep(100);
                         HistorySelect(0, TimeCurrent());
                         corder_DealsTotal = HistoryDealsTotal();
                         LTicket = HistoryDealGetTicket(corder_DealsTotal-1);
                         deal_entry = HistoryDealGetInteger(LTicket, DEAL_ENTRY);
                         attempts++;
+                     }
+                     if(deal_entry != DEAL_ENTRY_OUT)
+                     {
+                        Print(__FUNCTION__, " WARNING: DEAL_ENTRY_OUT not received within ", max_attempts, " attempts");
                      }
                      int deal_type = HistoryDealGetInteger(LTicket, DEAL_TYPE);
                      double deal_volume = HistoryDealGetDouble(LTicket, DEAL_VOLUME);
@@ -979,8 +996,7 @@ void ORDER_SEND(ENUM_ORDER_TYPE CMD, double LOTS, string COMMENT, int MAGIC,
          (AccountInfoDouble(ACCOUNT_MARGIN_FREE) <= marginRequired * minVolume))
       {
          Print(__FUNCTION__, " ", __LINE__, " MARGIN_ERROR: ", GetLastError());
-         Sleep(1000);
-         return;
+         return;  // no sleep needed - not mid-loop
       }
 
       if((ENUM_SYMBOL_TRADE_MODE)SymbolInfoInteger(NULL, SYMBOL_TRADE_MODE) != SYMBOL_TRADE_MODE_FULL)
