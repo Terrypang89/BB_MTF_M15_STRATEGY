@@ -7,7 +7,6 @@ This is a DIAGNOSTIC listing — the "reverted" column mirrors the already-compu
 
 | # | datetime | H4 touch | H4 state | M30 state | H1 state | pred dir | reverted | bars |
 |---|---|---|---|---|---|---|---|---|
-
 | 1 | 2025.06.06 11:45 | 8 | C | C | S | UP | Y | 1 |
 | 2 | 2025.06.10 14:30 | 7 | R | F | F | DOWN | N | - |
 | 3 | 2025.06.10 15:45 | 8 | R | F | F | UP | Y | 1 |
