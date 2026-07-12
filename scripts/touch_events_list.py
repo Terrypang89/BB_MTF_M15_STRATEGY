@@ -200,27 +200,34 @@ def main():
 
         pred_dir = predicted_direction(d)
         reverted, bars = count_reversions(d, d["bb_mid"], pred_dir, HORIZON)
-        # Format datetime for sorting: YYYYMMDDHH (remove colon, ensure HH is 2 digits)
-        dt_sortable = dt_str.replace(":", "")
+        # Reconstruct proper datetime: YYYY-MM-DD HH:MM
+        date_part = ts_match.group(1)  # YYYY-MM-DD
+        hour = int(ts_match.group(2))
+        minute_key = (hour * 15) % 60  # :00, :15, :30, :45
+        dt_sortable = f"{date_part} {hour:02d}:{minute_key:02d}"
+
         rows.append({
             "datetime": dt_sortable,
             "touch": d["cur"],
             "dir": pred_dir,
             "reverted": "Y" if reverted else "N",
             "bars": bars,
+            "h4_state": d.get("h4_state"),  # F/S/C/R/X
+            "m30_state": d.get("m30_state"),  # F/S/C/R/X
+            "h1_state": d.get("h1_state"),  # F/S/C/R/X
         })
 
-    # Sort chronologically by datetime string (YYYYMMDDHH format)
-    rows.sort(key=lambda r: int(r["datetime"].replace("-", "")))
+    # Sort chronologically by datetime string
+    rows.sort(key=lambda r: r["datetime"])
 
-    # Output markdown table
-    header = "| # | datetime | H4 touch value | predicted dir | reverted | bars-to-midline |\n"
-    header += "|---|---|---|---|---|---|\n"
+    # Output markdown table with state columns
+    header = "| # | datetime | H4 touch | H4 state | M30 state | H1 state | pred dir | reverted | bars |\n"
+    header += "|---|---|---|---|---|---|---|---|---|\n"
     print(header)
     for i, r in enumerate(rows):
-        # Add colon back for display: YYYY-MM-DD HH
-        dt_display = f"{r['datetime'][:10]}-{r['datetime'][10:]:02d}" if len(r['datetime']) >= 14 else r['datetime']
-        print(f"| {i+1} | {dt_display} | {r['touch']} | {r['dir']} | {r['reverted']} | {r['bars'] if r['bars'] != -1 else '-'} |")
+        # datetime is already properly formatted as "YYYY-MM-DD HH:MM"
+        dt_display = r["datetime"]
+        print(f"| {i+1} | {dt_display} | {r['touch']} | {r['h4_state']} | {r['m30_state']} | {r['h1_state']} | {r['dir']} | {r['reverted']} | {r['bars'] if r['bars'] != -1 else '-'} |")
 
     print(f"\n### Summary")
     print(f"- Total H4 touch events listed: {len(rows)}")
