@@ -1541,38 +1541,42 @@ flowchart TD
 >
 > ### Sub-Scenario → Trigger Timeframe Map (scoping reference)
 >
-> Trigger timeframe per sub-scenario, extracted from the sub-state tables. Tier
-> follows the Timeframe-scope note (M15/M30 = trigger; H1/H4 = context/gate; D1/W1 =
-> excluded). Some scenarios are multi-TF alignment states, not single-TF triggers —
-> marked accordingly.
+> One row per sub-state. Trigger / defining timeframe per sub-scenario, extracted from 
+> the sub-state tables. Role indicates whether it can START a trade (ENTRY), PREPARE 
+> without entry yet (ARM), CLOSE/BLOCK entries (EXIT-BLOCK), or is not yet actionable. 
+> Tier follows the Timeframe-scope note (M15/M30 = trigger; H1/H4 = context/gate; D1/W1 =
+> excluded). Some scenarios are multi-TF alignment states — marked accordingly.
 >
-> | Sub-scenario | Trigger / defining timeframe | Tier |
-> |--------------|------------------------------|------|
-> | F1 | multi-TF alignment (W1/D1/H4/H1/M30/M15) | identification — not a single-TF trigger |
-> | F2 | multi-TF alignment (H4 fly, W1/D1 counter) | identification — not a single-TF trigger |
-> | F3 | multi-TF alignment (brief M5/M15 squeeze) | identification — not a single-TF trigger |
-> | S1 | M15 (enters 513/523) | FAST — trigger |
-> | S2 | M30 (enters 513/523) | FAST — trigger |
-> | S3 | H1 (enters 513/523) | CONTEXT/GATE |
-> | C1 | LTF partial SQZ (M15/M5) | CONTEXT — compression state |
-> | C2 | LTF full SQZ (M15+M5) | CONTEXT — compression state |
-> | C3 | M5 loading (arm) | FAST — arm only, not entry |
-> | C4 | H4 compressing + D1-gated | EXCLUDED — leads to D1-scale V/R |
-> | V1 | D1 (aligned) | EXCLUDED — D1-scale, discarded |
-> | V2 | D1 (opposing) | EXCLUDED — D1-scale, discarded |
-> | V3 | any (false breakout) | EXCLUDED — discarded |
-> | V4 | any (whipsaw) | EXCLUDED — discarded |
-> | P  | H4 intact + brief LTF compress | CONTEXT — continuation check |
-> | B1 | LTF only (wait) | CONTEXT — not yet actionable |
-> | B2 | M15/M30 (MTF confirm) | FAST — trigger |
-> | B3 | H4 (HTF confirm) | CONTEXT/GATE |
-> | R1 | M30 vs H4 divergence [UNIMPLEMENTED] | EXCLUDED — unimplemented, D1-scale progression |
-> | R2 | D1 (new dir confirmed) | EXCLUDED — D1-scale, discarded |
-> | R3 | D1 (still original) | EXCLUDED — D1-scale, discarded |
+> | Sub-scenario | Trigger / defining timeframe | Role | Tier |
+> |--------------|------------------------------|------|------|
+> | F1 | multi-TF alignment (W1/D1/H4/H1/M30/M15) | IDENTIFICATION | context |
+> | F2 | multi-TF alignment (H4 fly, W1/D1 counter) | IDENTIFICATION | context |
+> | F3 | multi-TF alignment (brief M5/M15 squeeze) | IDENTIFICATION | context |
+> | S1 | M15 shrink onset (513/523 or 512/522+diffBBW<0) | ENTRY candidate | FAST |
+> | S2 | M30 shrink onset | ENTRY candidate | FAST |
+> | S3 | H1 shrink onset | GATE | context |
+> | C1 | M15/M30 partial SQZ onset (400-499) | EXIT-BLOCK | FAST |
+> | C2 | M15+M5 full SQZ onset | EXIT-BLOCK | FAST |
+> | C3 | M5 loading | ARM | FAST |
+> | C4 | H4 compressing + D1-gated | EXCLUDED (leads to D1-scale V/R) | excluded |
+> | V1 | D1 aligned | EXCLUDED (D1-scale) | excluded |
+> | V2 | D1 opposing | EXCLUDED (D1-scale) | excluded |
+> | V3 | any (false breakout) | EXCLUDED | excluded |
+> | V4 | any (whipsaw) | EXCLUDED | excluded |
+> | P1 | M5 break (was D1) | ARM | FAST |
+> | P2 | M15 mid-flip confirm (was D2) | ENTRY candidate | FAST |
+> | P3 | MTF re-align (was D3) | HOLD/MANAGE | context |
+> | B1 | LTF only | WAIT | context |
+> | B2 | M15/M30 MTF confirm | ENTRY candidate | FAST |
+> | B3 | H4 HTF confirm | GATE | context |
+> | R1 | M30 vs H4 divergence [UNIMPLEMENTED] | EXCLUDED | excluded |
+> | R2 | D1 new dir confirmed | EXCLUDED (D1-scale) | excluded |
+> | R3 | D1 still original | EXCLUDED (D1-scale) | excluded |
 >
-> Active trade-action candidates (FAST triggers): S1, S2, B2 — plus C3 as an arm and
-> F/S/B context states. Everything EXCLUDED is parked per the V/R discard + TF-scope
-> notes.
+> Fast ENTRY candidates: S1, S2, B2, P2 (all fire on M15/M30 shrink, release, or mid-flip). 
+> Fast EXIT-BLOCK signals: C1, C2 (M15/M30 compression). Fast ARM: C3, P1. Everything EXCLUDED 
+> is parked per the V/R discard + TF-scope notes. GATE/CONTEXT sub-states inform but don't 
+> trigger entries.
 
 Apply after HTF context is established.
 Read Part 2 HTF context first — every scenario below only makes sense
@@ -1983,19 +1987,19 @@ Chart-image analysis for Scenario P: see [IMAGE_ANALYSIS.md](./IMAGE_ANALYSIS.md
 > **Cascade direction:** D2 flowing upward — M5 led, MTF confirming
 > **Leading TF:** M5 (BBUpDn 2→1 expanding), then M15 (entry trigger: mid flip)
 > **Previous scenario:** Came from B (Shallow compression) — H4 fly maintained throughout
-> **Next scenario:** → F (Full fly alignment) when MTF re-aligns fully (D3 complete)
+> **Next scenario:** → F (Full fly alignment) when MTF re-aligns fully (P3 complete)
 
 ### Sub-Scenarios
 
 | Sub | Name | Gate | H4 | H1 | M30 | M15 | M5 | Entry | Size |
 |-----|------|------|----|----|-----|-----|----|-------|------|
-| D1 | M5 break | G6-LOAD fires | 511/512 | 511/512 | 513/523 or 400-499 | 513/523 or 400-499 | Breaking SQZ — REVUP/REVDN | WAIT — arm only, M15 not confirmed | — |
-| D2 | M15 confirm | G6-BUY/SELL fires | 511/512 | 511/512 | 511/512 or 513 | FLAT→UP/DN transition | 511/512 | ENTER — M15 mid flip is the trigger | 0.75× |
-| D3 | MTF re-align | — | 511/512 | 511/512 | 511/512 | 511/512 | 511/512 | Hold existing / add if quality ≥ 90 | → 1.0× |
+| P1 | M5 break | G6-LOAD fires | 511/512 | 511/512 | 513/523 or 400-499 | 513/523 or 400-499 | Breaking SQZ — REVUP/REVDN | WAIT — arm only, M15 not confirmed | — |
+| P2 | M15 confirm | G6-BUY/SELL fires | 511/512 | 511/512 | 511/512 or 513 | FLAT→UP/DN transition | 511/512 | ENTER — M15 mid flip is the trigger | 0.75× |
+| P3 | MTF re-align | — | 511/512 | 511/512 | 511/512 | 511/512 | 511/512 | Hold existing / add if quality ≥ 90 | → 1.0× |
 
-**D1 sub-state BBUpDn sequence:** M5 BBUpDn_state 2→1 (shrinking→expanding) = band actively expanding = D2 signal initiated. PriceLoc simultaneously transitions from at_lower → above_upper as expansion drives price upward.
-**D2 trigger:** M15 mid=3 → mid=1 (REVUP) or mid=3 → mid=2 (REVDN) = G6-BUY/SELL fires
-**D3 confirmation:** M30 BBW_stage reaches 511/512 = D2 fully confirmed → back toward A
+**P1 sub-state BBUpDn sequence:** M5 BBUpDn_state 2→1 (shrinking→expanding) = band actively expanding = P2 signal initiated. PriceLoc simultaneously transitions from at_lower → above_upper as expansion drives price upward.
+**P2 trigger:** M15 mid=3 → mid=1 (REVUP) or mid=3 → mid=2 (REVDN) = G6-BUY/SELL fires
+**P3 confirmation:** M30 BBW_stage reaches 511/512 = P2 fully confirmed → back toward A
 
 **HTF context:** W1/D1 remain in fly throughout. H4 also stays in fly. Only M30/M15/M5 briefly compress. The macro tailwind (H4 fly) guarantees fly resumes.
 
