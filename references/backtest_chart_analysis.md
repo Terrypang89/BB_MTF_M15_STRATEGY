@@ -1,5 +1,7 @@
 # Backtest Chart Analysis — BB MTF Strategy
 
+**Note:** Scenarios V and R are currently **discarded from trade-action candidates** (D1-scale, rare, slow, OOS-unvalidated). Retained as reference. See the status callouts in their sections. Fast-timeframe scenarios (F identification, S, B) remain the active trade-action candidates.
+
 Visual interpretation guide for Tofu EA backtest chart screenshots.
 **Always analyze top-down: W1 → D1 → H4 → M30 -> M15.**
 Higher TFs determine where lower TF trades travel to, and why lower TFs go sideway.
@@ -1874,6 +1876,11 @@ SIZE: 0.75× (M15 or M30 shrink alone) → 0.50× (M30+H1 both) → 0.25× (all 
 
 ## Scenario R — Trend Reversal (consolidated under Scenario V)
 
+> **STATUS: TEMPORARILY DISCARDED FROM TRADE-ACTION CANDIDATES (not deleted — kept for future validation).**
+> Reason: these scenarios pivot on **D1-scale** direction (V1/V2 require D1 alignment; R2/R3 require D1 reversal or D1-original). D1 events are **rare** (few per backtest window → sample size below the ~20 needed to validate) and **slow to resolve** (days — the confirmation arrives after the tradeable moment). R1 is additionally `UNIMPLEMENTED` (directional-agreement check not in identify_scenario — currently falls through to F-tier), and the whole V/R branch is already flagged `OOS-UNVALIDATED` in this document.
+> Decision: excluded from trade-action testing for now because they are structurally hard to validate (rare + slow + D1-scale). The identification/description logic is RETAINED as reference and may be revisited if fast-timeframe scenarios (S, B) validate and a D1-scale extension becomes worth the sample-size cost.
+> To re-activate: a dedicated out-of-sample test with enough D1-scale pivot events (likely requires a multi-year window) must show the scenario separates winners from losers.
+
 Scenario R (the reversal progression R1 → C4 → V2 → R2/R3) is documented
 under **Scenario V** as the "Reversal Progression" (formerly Scenario R),
 because C is structurally the G-reversal branch (V2 is the pivot; C
@@ -2936,6 +2943,11 @@ TARGET: H4 outer band (if H4 also breaking) → D1 outer band
 ---
 
 ## Scenario V — Direction Pivot (formerly Scenario H)
+
+> **STATUS: TEMPORARILY DISCARDED FROM TRADE-ACTION CANDIDATES (not deleted — kept for future validation).**
+> Reason: these scenarios pivot on **D1-scale** direction (V1/V2 require D1 alignment; R2/R3 require D1 reversal or D1-original). D1 events are **rare** (few per backtest window → sample size below the ~20 needed to validate) and **slow to resolve** (days — the confirmation arrives after the tradeable moment). R1 is additionally `UNIMPLEMENTED` (directional-agreement check not in identify_scenario — currently falls through to F-tier), and the whole V/R branch is already flagged `OOS-UNVALIDATED` in this document.
+> Decision: excluded from trade-action testing for now because they are structurally hard to validate (rare + slow + D1-scale). The identification/description logic is RETAINED as reference and may be revisited if fast-timeframe scenarios (S, B) validate and a D1-scale extension becomes worth the sample-size cost.
+> To re-activate: a dedicated out-of-sample test with enough D1-scale pivot events (likely requires a multi-year window) must show the scenario separates winners from losers.
 
 **When user asks to analyze a Scenario V:**
 - Read `./Backtest_data/extras/backtested_EA_trend_reversal.jpg`
