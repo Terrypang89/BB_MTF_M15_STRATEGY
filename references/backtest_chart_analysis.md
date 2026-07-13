@@ -1959,7 +1959,7 @@ detection is UNIMPLEMENTED — currently this falls through to F-tier.
 
 ---
 
-## Scenario P — Rest Recovery
+## Scenario P — Pause / Rest Recovery
 
 **When user asks to analyze part 3 Scenario P:**
 - Read `./Backtest_data/extras/backtested_EA_fly_2_shrink_2_fly.jpg` as the Fly to Shrink to Fly scenario visual reference.
@@ -1973,18 +1973,18 @@ Chart-image analysis for Scenario P: see [IMAGE_ANALYSIS.md](./IMAGE_ANALYSIS.md
 
 | Image | Cascade Position | Depth | Leading TF | Key Observable |
 |-------|-----------------|-------|------------|----------------|
-| Image 1 | D1→D2 transition | M5 SQZ (BOTTOM) | M5 | M5 REVUP — SQZ break |
-| Image 2 | D2 complete — TOP | None | M30 | M30 fly re-confirmed |
+| Image 1 | C→B transition | M5 SQZ (BOTTOM) | M5 | M5 REVUP — SQZ break |
+| Image 2 | B complete — TOP | None | M30 | M30 fly re-confirmed |
 
-**Progression confirmed:** D1 compression (M5 SQZ) → BOTTOM → D2 expansion (M5→M15→M30 fly) → TOP (Scenario F)
+**Progression confirmed:** C shallow compression (M5 SQZ) → BOTTOM → B breakout release (M5→M15→M30 fly) → TOP (Scenario F)
 **Touch type evolution:** Type 1 (compression) image 1 → Type 2 (breakout) image 2
 **Entry point:** Image 2 — M15 FLAT→UP transition with M30 fly confirmation
-**Duration observed:** [TO BE FILLED — count bars from D1 start to D2 complete]
+**Duration observed:** [TO BE FILLED — count bars from C start to B complete]
 
-> **Tier:** TIER 3 — EXPANSION IN PROGRESS (D2)
+> **Tier:** TIER 3 — EXPANSION IN PROGRESS (B)
 > **Scenario:** P — Rest recovery
-> **Cascade position:** D2 initiated in same direction as previous trend — shallow D1 rest
-> **Cascade direction:** D2 flowing upward — M5 led, MTF confirming
+> **Cascade position:** B initiated in same direction as previous trend — shallow C rest
+> **Cascade direction:** B flowing upward — M5 led, MTF confirming
 > **Leading TF:** M5 (BBUpDn 2→1 expanding), then M15 (entry trigger: mid flip)
 > **Previous scenario:** Came from B (Shallow compression) — H4 fly maintained throughout
 > **Next scenario:** → F (Full fly alignment) when MTF re-aligns fully (P3 complete)
@@ -2075,12 +2075,12 @@ EXIT: ATRSL stop | M5 UP→FLAT (G5-FADE) | M30+M15 go sideway
 
 | Dimension | Value |
 |-----------|-------|
-| Cascade direction now | D2 (expansion — fly resuming) |
+| Cascade direction now | B (expansion — fly resuming) |
 | Cascade depth | TOP — all fly again |
 | Leading TF | M30 (confirm fly = full entry) |
-| Next scenario if D1 continues | B (Fly → Shrink) |
-| Next scenario if D2 initiates same direction | F (Normal Fly) |
-| Next scenario if D2 initiates opposite direction | V (Direction pivot) via reversal |
+| Next scenario if C continues | B (Fly → Shrink) |
+| Next scenario if B initiates same direction | F (Normal Fly) |
+| Next scenario if B initiates opposite direction | V (Direction pivot) via reversal |
 | Discriminator observable | H1 step direction maintained or reversed |
 
 ---
