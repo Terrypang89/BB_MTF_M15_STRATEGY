@@ -1887,6 +1887,41 @@ SIZE: 0.75× (M15 or M30 shrink alone) → 0.50× (M30+H1 both) → 0.25× (all 
 > - **Excluded (too slow to act on): D1, W1.** Too few bars per backtest window (sample size below the ~20 needed to validate) and too slow to resolve (confirmation arrives days after the tradeable moment). D1/W1 states may still be READ as background context, but no scenario is triggered or validated on a D1/W1 signal for now.
 >
 > Rationale: signal frequency must match trade frequency. Entries happen on fast-TF moves (M15/M30); gating on D1/W1 cannot inform most trades because those states barely change across many trades. This is the same reasoning behind discarding the D1-scale V/R scenarios. Revisit D1/W1 only if a multi-year window and a proven fast-TF edge justify the sample-size cost.
+>
+> ### Sub-Scenario → Trigger Timeframe Map (scoping reference)
+>
+> Trigger timeframe per sub-scenario, extracted from the sub-state tables. Tier
+> follows the Timeframe-scope note (M15/M30 = trigger; H1/H4 = context/gate; D1/W1 =
+> excluded). Some scenarios are multi-TF alignment states, not single-TF triggers —
+> marked accordingly.
+>
+> | Sub-scenario | Trigger / defining timeframe | Tier |
+> |--------------|------------------------------|------|
+> | F1 | multi-TF alignment (W1/D1/H4/H1/M30/M15) | identification — not a single-TF trigger |
+> | F2 | multi-TF alignment (H4 fly, W1/D1 counter) | identification — not a single-TF trigger |
+> | F3 | multi-TF alignment (brief M5/M15 squeeze) | identification — not a single-TF trigger |
+> | S1 | M15 (enters 513/523) | FAST — trigger |
+> | S2 | M30 (enters 513/523) | FAST — trigger |
+> | S3 | H1 (enters 513/523) | CONTEXT/GATE |
+> | C1 | LTF partial SQZ (M15/M5) | CONTEXT — compression state |
+> | C2 | LTF full SQZ (M15+M5) | CONTEXT — compression state |
+> | C3 | M5 loading (arm) | FAST — arm only, not entry |
+> | C4 | H4 compressing + D1-gated | EXCLUDED — leads to D1-scale V/R |
+> | V1 | D1 (aligned) | EXCLUDED — D1-scale, discarded |
+> | V2 | D1 (opposing) | EXCLUDED — D1-scale, discarded |
+> | V3 | any (false breakout) | EXCLUDED — discarded |
+> | V4 | any (whipsaw) | EXCLUDED — discarded |
+> | P  | H4 intact + brief LTF compress | CONTEXT — continuation check |
+> | B1 | LTF only (wait) | CONTEXT — not yet actionable |
+> | B2 | M15/M30 (MTF confirm) | FAST — trigger |
+> | B3 | H4 (HTF confirm) | CONTEXT/GATE |
+> | R1 | M30 vs H4 divergence [UNIMPLEMENTED] | EXCLUDED — unimplemented, D1-scale progression |
+> | R2 | D1 (new dir confirmed) | EXCLUDED — D1-scale, discarded |
+> | R3 | D1 (still original) | EXCLUDED — D1-scale, discarded |
+>
+> Active trade-action candidates (FAST triggers): S1, S2, B2 — plus C3 as an arm and
+> F/S/B context states. Everything EXCLUDED is parked per the V/R discard + TF-scope
+> notes.
 
 Scenario R (the reversal progression R1 → C4 → V2 → R2/R3) is documented
 under **Scenario V** as the "Reversal Progression" (formerly Scenario R),
@@ -2776,7 +2811,7 @@ SIZE: 0.75× (1-2 TFs compress) → 0.50× (3 TFs compress) → 0.25× (all 3 co
 
 ---
 
-## Scenario B — Compression Release
+## Scenario B — Breakout / Compression Release
 
 > **Tier:** TIER 3 — EXPANSION IN PROGRESS (D2)
 > **Scenario:** F — Compression release
