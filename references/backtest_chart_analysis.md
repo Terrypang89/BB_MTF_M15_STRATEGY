@@ -14,8 +14,6 @@ Work through: **Part 1** (read the chart) → **Part 2** (HTF context) → **Par
 
 | Looking for... | Go to... |
 |----------------|----------|
-| **HOW TO TRADE** | |
-| How to Trade — Summary | [How to Trade — Summary](#how-to-trade--summary) |
 | **PART 1 — CHART BASICS** | |
 | Chart Layers | [Chart Layers](#1-chart-layers) |
 | BB Color Reference | [BB Color Reference](#2-bollinger-band-color-reference) |
@@ -81,60 +79,6 @@ Work through: **Part 1** (read the chart) → **Part 2** (HTF context) → **Par
 | **PART 7 — COMMON MISREADS** | |
 | Common misreads | [Common Misreads](#part-7--common-misreads) |
 
----
-
-## How to Trade — Summary
-
-### Step 1: Read HTF (W1 → D1 → H4) first
-- **W1 fly BUY + D1 fly BUY + H4 fly BUY** → full tailwind. M30 BUY trades ride toward H4 outer band then D1 outer band. Hold through brief M5/M15 squeezes.
-- **H4 shrink (513/523)** → M30 is ranging inside H4's band. Take short trades only. Exit when price touches H4 outer band (G8-BNDTGT fires automatically).
-- **H4 SQZ (400-499)** → no macro target. Only cascade band-touch entries (G0b path) are valid. M5 must confirm direction.
-- **H4 opposing direction** → G4e-H4OPP or H4-OPPOSE blocks entry. Do not fight H4.
-
-### Step 2: Identify your scenario
-| MTF state | Action |
-|-----------|--------|
-| M30+M15 both fly, same direction | Enter on M15 FLAT→UP or FLAT→DN transition |
-| M30 fly, M15 shrinking | Shrink path entry — M15 transition is the trigger |
-| Only M5 shrinking | **Ignore** — M5 is noise; not used as trigger (V30.02+) |
-| H1/M30 SQZ, price at outer band | Cascade entry (G0b-TOUCH) if all filters pass |
-| M15+M30 both SQZ | **No entry** — G0b-PINK exits all open positions |
-| M30 mid≥3 AND M15 mid≥3 | **No new entries** — G0 or G0-HOLD depending on H1 *(HISTORICAL — visible on old EA charts; G0/G0-HOLD deleted in v31)* |
-
-### Step 3: Entry trigger — M15 transition (V30.02+)
-The entry signal is a **BBMidTrend change on M15** (EA runs on M5 chart, fires on M15 bar close):
-- `FLAT(3) → UP(1)` or `FLAT(3) → DN(2)` → base quality 80
-- `UP(1) → DN(2)` or `DN(2) → UP(1)` (reversal) → base quality 80
-- M30 confirming fly stage (511/512 for BUY, 521/522 for SELL) → +10 to +15 quality boost
-- Without M30 confirm on FLAT→UP/DN, quality capped at 59 (blocked by G5-WEAK)
-- Quality ≥ 90 → 1.0× size | ≥ 75 → 0.75× | ≥ 60 → 0.5× | ≥ 45 → 0.25× | < 45 → skip
-
-### Step 4: Know your price target before entering
-| HTF state | Target for M30 trade | Exit signal |
-|-----------|----------------------|-------------|
-| H4 fly | H4 outer band | G8-BNDTGT or G5-FADE |
-| H4 shrink | H4 outer band boundary (range reversal) | G8-BNDTGT |
-| D1 fly + H4 fly | D1 outer band (long hold) | D1 starts shrinking |
-| H4 SQZ | Within H4 band range only | G0b-PINK or G0 |
-
-### Step 5: Know what blocks entry
-Block gates fire **before** the entry. If you see a DimGray or DarkOrange label, that bar was blocked:
-- **G4e-H4OPP / H4-OPPOSE** — H4 opposing the trade direction
-- **G4c-M15OPP / G0b-M15OPP** — M15 opposing fly/shrink/SQZ
-- **G4f-M30OPP / G0b-M30OPP** — M30 opposing fly/shrink/SQZ
-- **G0b-M5FLY / G0b-M5OPP** — M5 itself contradicting the cascade direction
-- **V1-FAIL** — neither M30 nor M15 midtrend confirms direction
-- **V4-BLOCK** — M15 hard conflict (clear mid=1 vs SELL or mid=2 vs BUY)
-
-### Step 6: Exit rules
-| Trigger | Gate | Act |
-|---------|------|-----|
-| M15 UP→FLAT or DN→FLAT | G5-FADE | 7 — exit all |
-| M30+M15+H1 all mid≥3 | G0 *(HISTORICAL — deleted in v31)* | 7 — exit all |
-| M15+M30 both SQZ | G0b-PINK | 7 — exit all |
-| Price hits outer band (cascade context) | G8-BNDTGT | 7 — exit all |
-| Float loss < −$50 | G0e-MAXLOSS | 7 — exit all |
-| ATRSL trailing stop hit | ATRSL | Broker closes |
 
 ---
 
