@@ -173,7 +173,8 @@ for i, line in enumerate(raw_lines):
         continue
 
     entry_line_idx = i
-    dir_str = m.group(1)  # "UP" or "DN"
+    dir_str = m.group(1)  # captured as "dir:UP" or "dir:DN" — strip prefix
+    dir_str = re.sub(r"^dir:", "", dir_str)
     entry_px = float(m.group(2))
     sl_px = float(m.group(3))
     tp_px = float(m.group(4))
@@ -352,8 +353,78 @@ with open(REPORT, "w", encoding="utf-8") as out:
     else:
         out.write("   - PF: 0 (either no losses or no wins — see notes)\n")
 
+    # --- Grouped tables ---
+
+    # By m15 state (skip empty groups)
+    out.write("\n## 1. Grouped by M15 State\n\n")
+    out.write("| M15 | Count | Win-Rate | Total Profit | PF |")
+    out.write("\n|-----|-------|----------|---------------|-----|")
+    for key in sorted(group_m15.keys()):
+        s = stats_for(group_m15[key])
+        if s is None:
+            continue  # skip empty group
+        pf_str = f"{s['pf']:.2f}" if s['pf'] is not None else "—"
+        out.write(f"\n| {key} | {s['count']} | {s['win_rate']:.1%} | {s['total_profit']:+.2f} | {pf_str} |")
+    out.write("\n\n")
+
+    # By m30 state (skip empty groups)
+    out.write("## 2. Grouped by M30 State\n\n")
+    out.write("| M30 | Count | Win-Rate | Total Profit | PF |")
+    out.write("\n|-----|-------|----------|---------------|-----|")
+    for key in sorted(group_m30.keys()):
+        s = stats_for(group_m30[key])
+        if s is None:
+            continue  # skip empty group
+        pf_str = f"{s['pf']:.2f}" if s['pf'] is not None else "—"
+        out.write(f"\n| {key} | {s['count']} | {s['win_rate']:.1%} | {s['total_profit']:+.2f} | {pf_str} |")
+    out.write("\n\n")
+
+    # By direction (skip empty)
+    out.write("## 3. Grouped by Direction\n\n")
+    out.write("| Dir | Count | Win-Rate | Total Profit | PF |")
+    out.write("\n|-----|-------|----------|---------------|-----|")
+    for d in ("UP", "DN"):
+        s = stats_for(group_dir[d])
+        if s is None or s['count'] == 0:
+            continue  # skip empty direction
+        pf_str = f"{s['pf']:.2f}" if s['pf'] is not None else "—"
+        out.write(f"\n| {d} | {s['count']} | {s['win_rate']:.1%} | {s['total_profit']:+.2f} | {pf_str} |")
+    out.write("\n\n")
+
+    # By (M15 × Dir) (skip empty)
+    out.write("## 4. Grouped by (M15 × Direction)\n\n")
+    out.write("| M15 | Dir | Count | Win-Rate | Total Profit | PF |")
+    out.write("\n|-----|------|-------|----------|---------------|-----|")
+    for (m15, d) in sorted(group_m15_dir.keys()):
+        s = stats_for(group_m15_dir[(m15, d)])
+        if s is None or s['count'] == 0:
+            continue  # skip empty group
+        pf_str = f"{s['pf']:.2f}" if s['pf'] is not None else "—"
+        out.write(f"\n| {m15} | {d} | {s['count']} | {s['win_rate']:.1%} | {s['total_profit']:+.2f} | {pf_str} |")
+    out.write("\n\n")
+
+    # By (M30 × Dir) (skip empty)
+    out.write("## 5. Grouped by (M30 × Direction)\n\n")
+    out.write("| M30 | Dir | Count | Win-Rate | Total Profit | PF |")
+    out.write("\n|-----|------|-------|----------|---------------|-----|")
+    for (m30, d) in sorted(group_m30_dir.keys()):
+        s = stats_for(group_m30_dir[(m30, d)])
+        if s is None or s['count'] == 0:
+            continue  # skip empty group
+        pf_str = f"{s['pf']:.2f}" if s['pf'] is not None else "—"
+        out.write(f"\n| {m30} | {d} | {s['count']} | {s['win_rate']:.1%} | {s['total_profit']:+.2f} | {pf_str} |")
+    out.write("\n\n")
+
+    # Low-confidence note (skip empty groups)
+    low_conf = [(k, stats_for(group_m15[k])) for k in group_m15 if len(group_m15[k]) > 0 and stats_for(group_m15[k])['count'] < 20]
+    if low_conf:
+        out.write("## Notes\n\n- **Low-confidence groups** (< 20 trades):")
+        for (k, s) in low_conf:
+            out.write(f"\n  - `{k}`: {s['count']} trades — win-rate may be unstable")
+        out.write("\n\n")
+
     # --- Level 2 stub (unimplemented) ---
-    out.write("\n---\n\n")
+    out.write("---\n\n")
     out.write("### LEVEL 2 Hook (not implemented yet)\n\n")
     out.write("```python\n")
     out.write("def compute_subscenario(bar_fields):\n")

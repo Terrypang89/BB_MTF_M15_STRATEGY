@@ -15,6 +15,36 @@
    - Total profit: -115.12
    - PF (gross profit / gross loss): -135.12 / +125.12 = -1.08
 
+## 1. Grouped by M15 State
+
+| M15 | Count | Win-Rate | Total Profit | PF |
+|-----|-------|----------|---------------|-----|
+| F | 39 | 25.6% | -115.12 | -1.08 |
+
+## 2. Grouped by M30 State
+
+| M30 | Count | Win-Rate | Total Profit | PF |
+|-----|-------|----------|---------------|-----|
+| F | 39 | 25.6% | -115.12 | -1.08 |
+
+## 3. Grouped by Direction
+
+| Dir | Count | Win-Rate | Total Profit | PF |
+|-----|-------|----------|---------------|-----|
+| UP | 39 | 25.6% | -115.12 | -1.08 |
+
+## 4. Grouped by (M15 × Direction)
+
+| M15 | Dir | Count | Win-Rate | Total Profit | PF |
+|-----|------|-------|----------|---------------|-----|
+| F | UP | 39 | 25.6% | -115.12 | -1.08 |
+
+## 5. Grouped by (M30 × Direction)
+
+| M30 | Dir | Count | Win-Rate | Total Profit | PF |
+|-----|------|-------|----------|---------------|-----|
+| F | UP | 39 | 25.6% | -115.12 | -1.08 |
+
 ---
 
 ### LEVEL 2 Hook (not implemented yet)
