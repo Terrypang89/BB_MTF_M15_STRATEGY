@@ -1881,6 +1881,13 @@ SIZE: 0.75× (M15 or M30 shrink alone) → 0.50× (M30+H1 both) → 0.25× (all 
 > Decision: excluded from trade-action testing for now because they are structurally hard to validate (rare + slow + D1-scale). The identification/description logic is RETAINED as reference and may be revisited if fast-timeframe scenarios (S, B) validate and a D1-scale extension becomes worth the sample-size cost.
 > To re-activate: a dedicated out-of-sample test with enough D1-scale pivot events (likely requires a multi-year window) must show the scenario separates winners from losers.
 
+> **Timeframe scope for trade-action testing:**
+> - **Trigger timeframes (fast — where entries fire): M15, M30.** Frequent bars → enough events to validate; fast to resolve so the signal is actionable.
+> - **Context / gate timeframes (medium-slow — higher-TF backdrop the trigger must agree with): H1, H4.** Used as confirmation/context around a fast trigger, NOT as the entry trigger themselves. H1/H4 is the slowest timeframe used in active testing.
+> - **Excluded (too slow to act on): D1, W1.** Too few bars per backtest window (sample size below the ~20 needed to validate) and too slow to resolve (confirmation arrives days after the tradeable moment). D1/W1 states may still be READ as background context, but no scenario is triggered or validated on a D1/W1 signal for now.
+>
+> Rationale: signal frequency must match trade frequency. Entries happen on fast-TF moves (M15/M30); gating on D1/W1 cannot inform most trades because those states barely change across many trades. This is the same reasoning behind discarding the D1-scale V/R scenarios. Revisit D1/W1 only if a multi-year window and a proven fast-TF edge justify the sample-size cost.
+
 Scenario R (the reversal progression R1 → C4 → V2 → R2/R3) is documented
 under **Scenario V** as the "Reversal Progression" (formerly Scenario R),
 because C is structurally the G-reversal branch (V2 is the pivot; C
