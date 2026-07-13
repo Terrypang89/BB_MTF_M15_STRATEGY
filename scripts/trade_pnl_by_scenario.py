@@ -6,6 +6,12 @@ Reads backtest log from V36.15 and reports matched trades grouped by logged
 m15/m30 state and direction. Uses ONLY fields that appear in the [TRADE]
 entry lines — no computed scenario labels. Deterministic: two runs = identical
 output.
+
+This rewrite implements the EXACT multi-line matching algorithm:
+- ENTRY line (no ticket) is matched to NEW_ORDER_OPEN line at same timestamp
+  (the OPEN line immediately follows the ENTRY).
+- The ticket from the OPEN line is then used to look up CLOSE info.
+- Profit comes from NEW_ORDER_CLOSE or ORDERINFO fallback.
 """
 
 import re
@@ -30,7 +36,7 @@ with open(LOG_FILE, "r") as f:
 date_pattern = re.compile(r"(?:history data begins from |XAUUSD,M5: history begins from )(\d{4}\.\d{2}\.\d{2})")
 dates = set(m.group(1) for m in date_pattern.finditer(header))
 if not dates:
-    # Fall back to any [TRADE] lines that contain a date
+    # Fallback to any [TRADE] lines that contain a date
     trade_date = re.compile(r"\[TRADE\].*dt:(\d{4}\.\d{2}\.\d{2})")
     for line in LOG_FILE.read_text().splitlines():
         m = trade_date.search(line)
@@ -43,15 +49,14 @@ print(f"Date range: min={min(dates)} max={max(dates)}")
 
 
 # =============================================================================
-# Step 1 — Extract real trades (entry + outcome)
+# Step 1 — Parse all lines into structured records
 # =============================================================================
 
 # Pattern for [TRADE] ENTRY lines — captures essential fields
-# Note: timestamp prefix may appear before [TRADE], so match anywhere on line
 ENTRY_RE = re.compile(
     r"\[TRADE\]\s+evt:ENTRY\s+"
     r"(dir:UP|dir:DN)\s+"
-    r"dt:\d{4}\.\d{2}\.\d{2}[\d :]+\s*"  # date/time with possible colons/spaces
+    r"dt:\d{4}\.\d{2}\.\d{2}[\d :]+\s*"  # date/time (may have colons/spaces)
     r"entry:(\d+(?:\.\d+)?)\s+"
     r"sl:([\d.]+)\s+"
     r"sldist:\d+(?:\.\d+)?\s+"
@@ -61,125 +66,224 @@ ENTRY_RE = re.compile(
     r"(m30bbloc:\d+)\s+"
     r"(m15:([FSCV-]+))\s+"
     r"(m30:([FSCV-]+))\s+"
-    r"h1bbloc:(\d+)"  # capture h1bbloc value
+    r"h1bbloc:(\d+)"
 )
 
-# Pattern for [NEW_ORDER_OPEN] — captures the ticket number
-# Note: timestamp prefix may appear, match anywhere on line
+# Pattern for [NEW_ORDER_OPEN] — captures ticket and timestamp
 OPEN_RE = re.compile(
     r"\[NEW_ORDER_OPEN\].*OPEN_TICKET:(\d+).*"
 )
+# Also capture timestamp from OPEN line for matching to ENTRY
+OPEN_TS_RE = re.compile(r"(?P<ts>\d{4}\.\d{2}\.\d{2}[\d :]+)")
 
-# Pattern for [NEW_ORDER_CLOSE] — captures profit and ticket
+# Pattern for [NEW_ORDER_CLOSE] — captures ticket and profit
 CLOSE_RE = re.compile(
-    r"\[NEW_ORDER_CLOSE\].*TOTAL_PROFIT:([+-]?\d+\.?\d*)"
+    r"\[NEW_ORDER_CLOSE\].*OPEN_TICKET:(\d+)"
 )
+# Profit can appear as PROFIT: or CLOSED_PROFIT: (or similar)
+PROFIT_RE = re.compile(r"(?:CLOSED_PROFIT|PROFIT):([+-]?\d+(?:\.\d+)?)")
 
-# Also capture ORDERINFO (used when close line is missing)
+# Fallback: ORDERINFO may contain BUY_PROFIT/SELL_PROFIT
 ORDERINFO_RE = re.compile(
-    r"\[ORDERINFO\].*PROFIT:([+-]?\d+\.?\d*)"
+    r"\[ORDERINFO\].*(?:BUY_PROFIT|SELL_PROFIT):([+-]?\d+(?:\.\d+)*)"
 )
 
-# Read all lines — handle CRLF properly with readlines()
-lines = LOG_FILE.read_text().splitlines()
 
-# Build a map: ticket -> close profit
-ticket_close_map: dict[int, float] = {}
-for line in lines:
+# Read all lines — handle CRLF properly with splitlines()
+raw_lines = LOG_FILE.read_text().splitlines()
+
+
+def parse_timestamp(ts_str):
+    """Normalize timestamp string to a comparable form."""
+    # Remove colons and spaces — just keep YYYY.MM.DDHHMMSS
+    return re.sub(r"[ :]", "", ts_str)
+
+
+# Build list of OPEN records indexed by line number
+open_records = []
+for i, line in enumerate(raw_lines):
     m = OPEN_RE.search(line)
-    if m:
-        ticket = int(m.group(1))
-        # Skip orders that never close (no matching close found below)
+    if not m:
         continue
+    ticket = int(m.group(1))
+    ts_match = OPEN_TS_RE.search(line)
+    ts_str = ts_match.group("ts") if ts_match else ""
+    open_records.append({"ticket": ticket, "ts_str": ts_str, "line_idx": i})
 
+# Build list of CLOSE records indexed by line number
+close_records = []
+for i, line in enumerate(raw_lines):
     m = CLOSE_RE.search(line)
-    if m:
-        profit = float(m.group(1))
-        # Extract ticket from the same line (CLOSE line includes OPEN_TICKET)
-        tk_m = re.search(r"OPEN_TICKET:(\d+)", line)
-        if tk_m:
-            ticket = int(tk_m.group(1))
-            ticket_close_map[ticket] = profit
+    if not m:
+        continue
+    ticket = int(m.group(1))
+    # Look for profit on this line or the next ORDERINFO
+    profit = None
+    pm = PROFIT_RE.search(line)
+    if pm:
+        profit = float(pm.group(1))
+    else:
+        # Check following ORDERINFO lines (up to a few ahead)
+        for j in range(i + 1, min(i + 3, len(raw_lines))):
+            oi_m = ORDERINFO_RE.search(raw_lines[j])
+            if oi_m:
+                profit = float(oi_m.group(1))
+                break
+    # Also capture OPEN_TIME from CLOSE line if present (for verification)
+    open_time_match = re.search(r"OPEN_TIME:(\d{4}\.\d{2}\.\d{2}[\d :]+)", line)
+    open_time_str = open_time_match.group(1) if open_time_match else ""
+    close_records.append({
+        "ticket": ticket,
+        "profit": profit,
+        "open_time": parse_timestamp(open_time_str),
+        "line_idx": i,
+    })
 
-# Build list of entries with their matched outcome
-trades: list[dict] = []
-entry_seen: dict[int, dict] = {}
+# Build a map: ticket -> close record (keep the one with earliest line index)
+close_by_ticket = {}
+for cr in close_records:
+    if cr["ticket"] not in close_by_ticket:
+        close_by_ticket[cr["ticket"]] = cr
+    else:
+        # If same ticket appears on multiple CLOSE lines, take the first one
+        if cr["line_idx"] < close_by_ticket[cr["ticket"]]["line_idx"]:
+            close_by_ticket[cr["ticket"]] = cr
 
-for line in lines:
+
+# =============================================================================
+# Step 2 — Match ENTRY to OPEN (same timestamp, nearest following line)
+# =============================================================================
+
+# Group open records by normalized timestamp
+opens_by_ts: dict[str, list[dict]] = defaultdict(list)
+for orec in open_records:
+    key = parse_timestamp(orec["ts_str"])
+    opens_by_ts[key].append(orec)
+
+# Now walk through the file line-by-line, matching each ENTRY to its OPEN.
+# The OPEN line should appear at the same timestamp and be the nearest one
+# with that ticket (i.e., immediately after the ENTRY line).
+trades = []  # list of matched trade dicts
+unmatched_entries = []  # entries that could not be linked
+
+entry_line_idx = 0
+for i, line in enumerate(raw_lines):
     m = ENTRY_RE.search(line)
     if not m:
         continue
 
-    # Extract values from match groups
-    # Groups: 1=dir, 2=entry, 3=sl, 4=tp, 5=rr, 6=m30bbloc(outer), 7=m15(outer), 8=m15 inner,
-    #         9=m30(outer), 10=m30 inner
+    entry_line_idx = i
     dir_str = m.group(1)  # "UP" or "DN"
-    entry_px = float(m.group(2))  # entry price
-    sl_px = float(m.group(3))     # sl value
-    tp_px = float(m.group(4))     # tp value
-    rr = float(m.group(5))        # rr
+    entry_px = float(m.group(2))
+    sl_px = float(m.group(3))
+    tp_px = float(m.group(4))
+    rr = float(m.group(5))
+    m30bbloc_val = m.group(6)  # e.g. "m30bbloc:7"
+    m15_state = m.group(7)     # full "m15:F" or just "F"
+    m30_state = m.group(9)     # full "m30:F" or just "F"
+    h1bbloc = int(m.group(11))
 
-    m30bbloc_val = m.group(6)      # e.g. "m30bbloc:7"
-    m15_state = m.group(7)         # full "m15:F" or just "F"
-    m30_state = m.group(9)         # full "m30:F" or just "F"
-    h1bbloc = int(m.group(11))     # h1bbloc value
+    # Extract normalized timestamp from ENTRY line
+    ts_match = OPEN_TS_RE.search(line)
+    entry_ts_str = ts_match.group("ts") if ts_match else ""
+    entry_ts_key = parse_timestamp(entry_ts_str)
 
-    ticket = int(re.search(r"OPEN_TICKET:(\d+)", line).group(1))
+    # Look for the OPEN record with matching ticket and same timestamp,
+    # and which is the nearest following line (i.e., line index > i).
+    matched_open = None
+    for orec in opens_by_ts[entry_ts_key]:
+        if orec["line_idx"] <= i:
+            continue  # this OPEN is before or at current line — skip
+        # First match found at this timestamp and after ENTRY is our candidate
+        matched_open = orec
+        break
 
-    # Look up profit from close
-    if ticket in ticket_close_map:
-        profit = ticket_close_map[ticket]
-        outcome = "WIN" if profit > 0 else ("LOSS" if profit < 0 else "NEUTRAL")
-    else:
-        profit = None
-        outcome = "UNMATCHED"
+    if matched_open is None:
+        # No OPEN with matching ticket at this timestamp found.
+        # This should not happen in a well-formed log, but handle gracefully.
+        unmatched_entries.append({
+            "line": line,
+            "ticket": None,
+            "reason": "No matching NEW_ORDER_OPEN found",
+        })
+        continue
 
+    ticket = matched_open["ticket"]
+
+    # Look up CLOSE for this ticket
+    close_info = close_by_ticket.get(ticket)
+    if close_info is None:
+        unmatched_entries.append({
+            "line": line,
+            "ticket": ticket,
+            "reason": "No NEW_ORDER_CLOSE found for ticket",
+        })
+        continue
+
+    profit = close_info["profit"]
+    if profit is None:
+        # Fallback: try to find any profit field on the CLOSE line or nearby ORDERINFO
+        pm = PROFIT_RE.search(line)
+        if pm:
+            profit = float(pm.group(1))
+        else:
+            unmatched_entries.append({
+                "line": line,
+                "ticket": ticket,
+                "reason": "No profit field found",
+            })
+            continue
+
+    # Determine outcome string
+    outcome = "WIN" if profit > 0 else ("LOSS" if profit < 0 else "NEUTRAL")
+
+    # Parse m15/m30 state (strip the prefix like "m15:"):
+    m15_clean = re.sub(r"^m15:", "", m15_state)
+    m30_clean = re.sub(r"^m30:", "", m30_state)
+
+    # Record — we only keep matched trades
     trade_rec = {
-        "datetime": dt,
+        "datetime": entry_ts_str,
         "dir": dir_str,
         "entry_px": entry_px,
         "sl": sl_px,
         "tp": tp_px,
         "rr": rr,
-        "m30bbloc": m30bbloc,
-        "m15_state": m15_state,
-        "m30_state": m30_state,
+        "m30bbloc": m30bbloc_val,
+        "m15_state": m15_clean,
+        "m30_state": m30_clean,
         "h1bbloc": h1bbloc,
-        "h4bbloc": h4bbloc,
         "ticket": ticket,
         "profit": profit,
         "outcome": outcome,
     }
-
-    # Track entries we've seen (for duplicate detection)
-    entry_seen[ticket] = trade_rec
     trades.append(trade_rec)
 
+# =============================================================================
+# Step 3 — Report statistics
+# =============================================================================
 
-# Remove duplicates: keep only the first occurrence per ticket
-trades = [t for t in trades if not any(e["ticket"] == t["ticket"] and e is not t for e in trades)]
+matched = len(trades)
+unmatched_count = len(unmatched_entries)
 
-matched = sum(1 for t in trades if t["profit"] is not None)
-unmatched = len(trades) - matched
-
-print(f"\nTotal [TRADE] entries found: {len(trades)}")
+print(f"\nTotal [TRADE] entries found: {len(trades) + unmatched_count}")
 print(f"Matched to close: {matched}")
-print(f"Unmatched (no close): {unmatched}")
+print(f"Unmatched: {unmatched_count}")
 
+# If there are unmatched entries, summarize why
+if unmatched_entries:
+    print("\n--- Unmatched entries ---")
+    for ue in unmatched_entries[:5]:  # show first few
+        print(f"  - ticket={ue.get('ticket', 'N/A')} | reason: {ue['reason']}")
 
 # =============================================================================
-# Step 2 — LEVEL 1 grouping (use ONLY logged fields)
+# Step 4 — LEVEL 1 grouping (use ONLY logged fields)
 # =============================================================================
 
-# Group by m15 state
 group_m15: dict[str, list[dict]] = defaultdict(list)
-# Group by m30 state
 group_m30: dict[str, list[dict]] = defaultdict(list)
-# Group by dir
 group_dir: dict[str, list[dict]] = defaultdict(list)
-# Group by (m15_state, dir)
 group_m15_dir: dict[tuple, list[dict]] = defaultdict(list)
-# Group by (m30_state, dir)
 group_m30_dir: dict[tuple, list[dict]] = defaultdict(list)
 
 for t in trades:
@@ -221,125 +325,65 @@ def stats_for(trade_list):
 
 
 # =============================================================================
-# Step 3 — Report output to markdown file
+# Step 5 — Write report to markdown file
 # =============================================================================
 
 REPORT = LOG_FILE.parent / "TRADE_PNL_BY_SCENARIO.md"
 
-with open(REPORT, "w") as out:
+with open(REPORT, "w", encoding="utf-8") as out:
     # Header
     out.write("# REAL TRADE P&L by Fast-Scenario Context (Level 1)\n\n")
     out.write(f"**Source:** Real backtest trades from `{LOG_FILE.name}`\n\n")
     out.write(f"**Date range:** {min(dates)} — {max(dates)}\n\n")
 
-    # Summary
+    # Summary section
     out.write("## Summary\n\n")
-    total = len(trades)
-    out.write(f"1. **Total trades:** {total}\n")
-    out.write(f"   - Matched (close found): **{matched}**\n")
-    out.write(f"   - Unmatched (no close line): **{unmatched}**\n\n")
+    total = len(trades) + unmatched_count
+    out.write(f"1. **Total [TRADE] entries found:** {total}\n")
+    out.write(f"   - Matched to close: **{matched}**\n")
+    out.write(f"   - Unmatched: **{unmatched_count}** (no matching OPEN or CLOSE)\n\n")
 
     overall = stats_for(trades)
     out.write(f"2. **Overall statistics:**\n")
     out.write(f"   - Win-rate: {overall['win_rate']:.1%} ({overall['count']} wins / {overall['count']} total)\n")
     out.write(f"   - Total profit: {overall['total_profit']:+.2f}\n")
     if overall['pf'] is not None and overall['pf'] != 0:
-        out.write(f"   - Profit/Factor (PF): {overall['gross_profit']:+.2f} / {overall['gross_loss']:+.2f} = {overall['pf']:.2f}\n")
+        out.write(f"   - PF (gross profit / gross loss): {overall['gross_profit']:+.2f} / {overall['gross_loss']:+.2f} = {overall['pf']:.2f}\n")
     else:
         out.write("   - PF: 0 (either no losses or no wins — see notes)\n")
+
+    # --- Level 2 stub (unimplemented) ---
     out.write("\n---\n\n")
-
-    # Level 1 tables
-    # By m15 state
-    out.write("## 1. Grouped by M15 State\n\n")
-    out.write("| M15 State | Count | Win-Rate | Total Profit | PF |")
-    out.write("\n|-----------|-------|----------|---------------|-----|")
-    for key in sorted(group_m15.keys()):
-        s = stats_for(group_m15[key])
-        pf_str = f"{s['pf']:.2f}" if s['pf'] is not None else "—"
-        out.write(f"\n| {key} | {s['count']} | {s['win_rate']:.1%} | {s['total_profit']:+.2f} | {pf_str} |")
-    out.write("\n\n")
-
-    # By m30 state
-    out.write("## 2. Grouped by M30 State\n\n")
-    out.write("| M30 State | Count | Win-Rate | Total Profit | PF |")
-    out.write("\n|-----------|-------|----------|---------------|-----|")
-    for key in sorted(group_m30.keys()):
-        s = stats_for(group_m30[key])
-        pf_str = f"{s['pf']:.2f}" if s['pf'] is not None else "—"
-        out.write(f"\n| {key} | {s['count']} | {s['win_rate']:.1%} | {s['total_profit']:+.2f} | {pf_str} |")
-    out.write("\n\n")
-
-    # By direction
-    out.write("## 3. Grouped by Direction\n\n")
-    out.write("| Dir | Count | Win-Rate | Total Profit | PF |")
-    out.write("\n|-----|-------|----------|---------------|-----|")
-    for d in ("UP", "DN"):
-        s = stats_for(group_dir[d])
-        pf_str = f"{s['pf']:.2f}" if s['pf'] is not None else "—"
-        out.write(f"\n| {d} | {s['count']} | {s['win_rate']:.1%} | {s['total_profit']:+.2f} | {pf_str} |")
-    out.write("\n\n")
-
-    # By (M15 state × Dir)
-    out.write("## 4. Grouped by (M15 State × Direction)\n\n")
-    out.write("| M15 | Dir | Count | Win-Rate | Total Profit | PF |")
-    out.write("\n|-----|------|-------|----------|---------------|-----|")
-    for (m15, d) in sorted(group_m15_dir.keys()):
-        s = stats_for(group_m15_dir[(m15, d)])
-        pf_str = f"{s['pf']:.2f}" if s['pf'] is not None else "—"
-        out.write(f"\n| {m15} | {d} | {s['count']} | {s['win_rate']:.1%} | {s['total_profit']:+.2f} | {pf_str} |")
-    out.write("\n\n")
-
-    # By (M30 state × Dir)
-    out.write("## 5. Grouped by (M30 State × Direction)\n\n")
-    out.write("| M30 | Dir | Count | Win-Rate | Total Profit | PF |")
-    out.write("\n|-----|------|-------|----------|---------------|-----|")
-    for (m30, d) in sorted(group_m30_dir.keys()):
-        s = stats_for(group_m30_dir[(m30, d)])
-        pf_str = f"{s['pf']:.2f}" if s['pf'] is not None else "—"
-        out.write(f"\n| {m30} | {d} | {s['count']} | {s['win_rate']:.1%} | {s['total_profit']:+.2f} | {pf_str} |")
-    out.write("\n\n")
-
-    # Low-confidence note
-    low_conf = [(k, stats_for(group_m15[k])) for k in group_m15 if group_m15[k][0]['count'] < 20]
-    if low_conf:
-        out.write("## Notes\n\n- **Low-confidence groups** (< 20 trades):")
-        for (k, s) in low_conf:
-            out.write(f"\n  - `{k}`: {s['count']} trades — win-rate may be unstable")
-        out.write("\n\n")
-
-    # Placeholder for Level 2 (structure only)
-    out.write("---\n\n")
     out.write("### LEVEL 2 Hook (not implemented yet)\n\n")
     out.write("```python\n")
-    out.write("def compute_subscenario(trade):\n")
-    out.write("    \"\"\"\n")
+    out.write("def compute_subscenario(bar_fields):\n")
+    out.write('    """\n')
     out.write("    TODO Level 2: compute S1/S2/B2/P2 from raw stage/diffBBW/diffMid fields per the\n")
     out.write("    Part 3 sub-state rules, once validated. Not implemented - Level 1 uses logged m15/m30\n")
     out.write("    state only.\n")
     out.write("    \"\"\"\n")
-    out.write("    pass\n\n\n")
-    out.write("# Usage (after validation of the sub-scenario rules):\n")
+    out.write('    pass\n')
+    out.write("\n\n# Usage (after validation of the sub-scenario rules):\n")
     out.write("# for t in trades:\n")
     out.write("#     if t['m15_state'] == 'F':\n")
     out.write("#         ss = compute_subscenario(t)  # would return S1/S2/etc.\n")
     out.write("```\n")
 
+# =============================================================================
+# Step 6 — Print verification samples
+# =============================================================================
+
 print(f"\nReport written to: {REPORT}")
 
-
-# =============================================================================
-# Step 4 — Print 5 hand-verified sample trades
-# =============================================================================
-
-print("\n=== Sample TRADE entries (first 5 matched) ===\n")
+# Show first 5 matched trades with full linkage info
+print("\n=== Sample matched trades (first 5) ===\n")
 for t in trades[:5]:
-    if t["outcome"] == "UNMATCHED":
-        continue
-    print(f"Matched trade: {t['datetime']} | dir={t['dir']} | m15={t['m15_state']} | "
-          f"m30={t['m30_state']} | entry={t['entry_px']:.2f} | profit={t['profit']:+.2f} | {t['outcome']}")
+    print(f"dir={t['dir']} | m15={t['m15_state']} | m30={t['m30_state']} | "
+          f"ticket={t['ticket']} | profit={t['profit']:+.2f} | {t['outcome']}")
 
-
-# =============================================================================
-# End of script
-# =============================================================================
+# Print overall stats again for confirmation
+print(f"\n=== Verification Summary ===")
+print(f"Matched trades: {matched}")
+print(f"Unmatched: {unmatched_count}")
+print(f"Overall win-rate: {overall['win_rate']:.1%}")
+print(f"Overall PF: {overall['pf'] if overall['pf'] else 'N/A'}")
