@@ -130,12 +130,15 @@ for i, line in enumerate(raw_lines):
                 if oi_m:
                     profit = float(oi_m.group(1))
                     break
-        # Also capture OPEN_TIME from CLOSE line if present (for verification)
+        # Also capture CLOSED_PRICE and OPEN_TIME from CLOSE line if present
+        exit_price_match = re.search(r"CLOSED_PRICE:([+-]?\d+(?:\.\d+)?)", line)
+        exit_price_str = exit_price_match.group(1) if exit_price_match else None
         open_time_match = re.search(r"OPEN_TIME:(\d{4}\.\d{2}\.\d{2}[\d :]+)", line)
         open_time_str = open_time_match.group(1) if open_time_match else ""
         close_records.append({
             "ticket": ticket,
             "profit": profit,
+            "exit_price": float(exit_price_str) if exit_price_str is not None else None,
             "open_time": parse_timestamp(open_time_str),
             "line_idx": i,
         })
@@ -161,6 +164,7 @@ for i, line in enumerate(raw_lines):
                 close_records.append({
                     "ticket": ticket,
                     "profit": profit_val,
+                    "exit_price": None,  # SELL orders may not have CLOSED_PRICE
                     "open_time": "",  # SELL orders don't have OPEN_TIME
                     "line_idx": i,
                 })
@@ -250,6 +254,8 @@ for i, line in enumerate(raw_lines):
         continue
 
     profit = close_info["profit"]
+    exit_price = close_info.get("exit_price")  # None if not available
+
     if profit is None:
         # Fallback: try to find any profit field on the CLOSE line or nearby ORDERINFO
         pm = PROFIT_RE.search(line)
@@ -284,6 +290,7 @@ for i, line in enumerate(raw_lines):
         "h1bbloc": h1bbloc,
         "ticket": ticket,
         "profit": profit,
+        "exit_price": exit_price,
         "outcome": outcome,
     }
     trades.append(trade_rec)
@@ -455,16 +462,21 @@ with open(REPORT, "w", encoding="utf-8") as out:
     # Sort trades chronologically by entry datetime
     sorted_trades = sorted(trades, key=lambda t: t["datetime"])
 
+    # Build cumulative P&L
+    cum_pnl = 0.0
+
     out.write("## Per-Trade Ledger\n\n")
-    out.write("| # | Entry datetime | Dir | M15 | M30 | Entry px | Exit px | Profit | W/L |\n")
-    out.write("|---|----------------|-----|-----|-----|----------|---------|--------|-----|\n")
+    out.write("| # | Entry datetime | Dir | M15 | M30 | Entry px | Exit px | Profit | Cum P&L | W/L |\n")
+    out.write("|---|----------------|-----|-----|-----|----------|---------|--------|---------|-----|\n")
 
     for idx, t in enumerate(sorted_trades, 1):
         # Format datetime nicely (remove any trailing zeros after decimal)
         dt = t["datetime"].rstrip("0").rstrip(".")
+        exit_px_str = f"{t['exit_price']:.2f}" if t['exit_price'] is not None else "-"
+        cum_pnl += t['profit']  # running sum
         out.write(f"| {idx} | {dt} | {t['dir']} | {t['m15_state']} | {t['m30_state']} | "
-                  f"{t['entry_px']:.2f} | {t['profit']:+.2f} | "
-                  f"{t['outcome']} |\n")
+                  f"{t['entry_px']:.2f} | {exit_px_str} | {t['profit']:+.2f} | "
+                  f"{cum_pnl:+.2f} | {t['outcome']} |\n")
 
     # Total row
     out.write(f"\n**Total:** {matched} trades | — | — | — | — | — | — | **{overall['total_profit']:+.2f}** | — |\n")
