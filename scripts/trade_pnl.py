@@ -245,7 +245,7 @@ def extract_trades():
                     prev1 = int(w_match.group(2))
                     # Also capture diffMid_Trend for M15/M30 (used for direction: 1=up, 2=down, >=3=sideways)
                     if tf in ("M15", "M30"):
-                        mid_match = re.search(rf"diffMid_Trend_{tf}:\s*\([^)]*\)\[([0-9.]+),\s*([0-9.]+),\s*([0-9.]+)", ln)
+                        mid_match = re.search(rf"diffMid_Trend_{tf}:\s*\[\s*([0-9.]+)", ln)
                         if mid_match:
                             # Use the first value (cur) for diffMid_Trend direction
                             dmt_val = int(float(mid_match.group(1)))  # Convert float to int
@@ -253,7 +253,7 @@ def extract_trades():
                         dmt_val = None
 
                     # Capture BBUpDn (state 1=up, 2=down) for direction fallback — 3 values
-                    bb_match = re.search(rf"BBUpDn_{tf}:\s*\([^)]*\)\[([0-9]+),\s*([0-9]+),\s*([0-9]+)", ln)
+                    bb_match = re.search(rf"BBUpDn_{tf}:\s*\[\s*([0-9]+)", ln)
                     if bb_match:
                         bb_val = int(bb_match.group(1))
                     else:
@@ -385,25 +385,31 @@ def compute_direction_from_raw(tf_lines):
     """
     Direction is derived from diffMid_Trend_M15 (preferred) or BBUpDn_M15/trend_M15.
     We scan the same window used for tf_lines and look for any line that
-    contains "diffMid_Trend_M15:". If found, use its value:
+    contains "diffMid_Trend_M15:". If found, use its first value:
       1 → UP, 2 → DOWN, >=3 → SIDEWAYS.
     If not found, fall back to BBUpDn_M15 / trend_M15.
 
     Returns {"dir": ..., "used_field": ...}.
     """
+    # Try diffMid_Trend first (only M15 and M30 have this field)
+    for tf in ("M15", "M30"):
+        if tf not in tf_lines:
+            continue
+        dmt = tf_lines[tf].get("diffMid_Trend")  # our captured value
+        if dmt is not None:
+            if dmt == 1:
+                return {"dir": "UP", "used_field": f"diffMid_Trend_{tf}"}
+            elif dmt == 2:
+                return {"dir": "DOWN", "used_field": f"diffMid_Trend_{tf}"}
+            else:  # >=3 means sideways (sideways/sideway-down/sideway-up)
+                return {"dir": "SIDEWAYS", "used_field": f"diffMid_Trend_{tf}"}
+
+    # Fallback to BBUpDn (state 1=up, 2=down)
     for tf in ("M5", "M15", "M30", "H1", "H4"):
         if tf not in tf_lines:
             continue
-        cur = tf_lines[tf]["cur"]
-        # Check diffMid_Trend first (only M15 and M30 have it)
-        if tf in ("M15", "M30") and cur is not None:
-            if cur == 1:
-                return {"dir": "UP", "used_field": f"diffMid_Trend_{tf}"}
-            elif cur == 2:
-                return {"dir": "DOWN", "used_field": f"diffMid_Trend_{tf}"}
-        # Fallback to BBUpDn (state 1→up, 2→down)
-        if tf_lines[tf].get("bbupdn") is not None:
-            bb = tf_lines[tf]["bbupdn"]
+        bb = tf_lines[tf].get("BBUpDn")
+        if bb is not None:
             if bb == 1:
                 return {"dir": "UP", "used_field": f"BBUpDn_{tf}"}
             elif bb == 2:
