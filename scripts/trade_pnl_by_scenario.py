@@ -448,7 +448,33 @@ with open(REPORT, "w", encoding="utf-8") as out:
         out.write(f"\n| {m30} | {d} | {s['count']} | {s['win_rate']:.1%} | {s['total_profit']:+.2f} | {pf_str} |")
     out.write("\n\n")
 
-    # Low-confidence note (skip empty groups)
+    # =============================================================================
+    # Per-trade ledger (append after aggregate tables)
+    # =============================================================================
+
+    # Sort trades chronologically by entry datetime
+    sorted_trades = sorted(trades, key=lambda t: t["datetime"])
+
+    out.write("## Per-Trade Ledger\n\n")
+    out.write("| # | Entry datetime | Dir | M15 | M30 | Entry px | Exit px | Profit | W/L |\n")
+    out.write("|---|----------------|-----|-----|-----|----------|---------|--------|-----|\n")
+
+    for idx, t in enumerate(sorted_trades, 1):
+        # Format datetime nicely (remove any trailing zeros after decimal)
+        dt = t["datetime"].rstrip("0").rstrip(".")
+        out.write(f"| {idx} | {dt} | {t['dir']} | {t['m15_state']} | {t['m30_state']} | "
+                  f"{t['entry_px']:.2f} | {t['profit']:+.2f} | "
+                  f"{t['outcome']} |\n")
+
+    # Total row
+    out.write(f"\n**Total:** {matched} trades | — | — | — | — | — | — | **{overall['total_profit']:+.2f}** | — |\n")
+
+    # List unmatched entries
+    if unmatched_entries:
+        out.write("\n### Unmatched entries\n\n")
+        for ue in unmatched_entries:
+            out.write(f"- **Unmatched:** {ue.get('line', 'N/A')[:60]}…\n")
+
     low_conf = [(k, stats_for(group_m15[k])) for k in group_m15 if len(group_m15[k]) > 0 and stats_for(group_m15[k])['count'] < 20]
     if low_conf:
         out.write("## Notes\n\n- **Low-confidence groups** (< 20 trades):")
