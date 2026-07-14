@@ -14,6 +14,7 @@ This rewrite implements the EXACT multi-line matching algorithm:
 - Profit comes from NEW_ORDER_CLOSE or ORDERINFO fallback.
 """
 
+import math
 import re
 from collections import defaultdict
 from pathlib import Path
@@ -55,7 +56,7 @@ print(f"Date range: min={min(dates)} max={max(dates)}")
 # Pattern for [TRADE] ENTRY lines — captures essential fields
 ENTRY_RE = re.compile(
     r"\[TRADE\]\s+evt:ENTRY\s+"
-    r"(dir:UP|dir:DN)\s+"
+    r"(dir:UP|dir:DOWN)\s+"
     r"dt:\d{4}\.\d{2}\.\d{2}[\d :]+\s*"  # date/time (may have colons/spaces)
     r"entry:(\d+(?:\.\d+)?)\s+"
     r"sl:([\d.]+)\s+"
@@ -64,8 +65,8 @@ ENTRY_RE = re.compile(
     r"tpdist:\d+(?:\.\d+)?\s+"
     r"rr:([\d.]+)\s+"
     r"(m30bbloc:\d+)\s+"
-    r"(m15:([FSCV-]+))\s+"
-    r"(m30:([FSCV-]+))\s+"
+    r"(m15:([FSCVR-]+))\s+"     # Group 7: full m15, Group 8: clean (includes R)
+    r"(m30:([FSCVR-]+))\s+"    # Group 9: full m30, Group 10: clean (includes R)
     r"h1bbloc:(\d+)"
 )
 
@@ -76,7 +77,7 @@ OPEN_RE = re.compile(
 # Also capture timestamp from OPEN line for matching to ENTRY
 OPEN_TS_RE = re.compile(r"(?P<ts>\d{4}\.\d{2}\.\d{2}[\d :]+)")
 
-# Pattern for [NEW_ORDER_CLOSE] — captures ticket and profit
+# Pattern for [NEW_ORDER_CLOSE] — captures ticket (for BUY orders)
 CLOSE_RE = re.compile(
     r"\[NEW_ORDER_CLOSE\].*OPEN_TICKET:(\d+)"
 )
@@ -113,31 +114,56 @@ for i, line in enumerate(raw_lines):
 # Build list of CLOSE records indexed by line number
 close_records = []
 for i, line in enumerate(raw_lines):
+    # First try [NEW_ORDER_CLOSE] (BUY orders)
     m = CLOSE_RE.search(line)
-    if not m:
-        continue
-    ticket = int(m.group(1))
-    # Look for profit on this line or the next ORDERINFO
-    profit = None
-    pm = PROFIT_RE.search(line)
-    if pm:
-        profit = float(pm.group(1))
-    else:
-        # Check following ORDERINFO lines (up to a few ahead)
-        for j in range(i + 1, min(i + 3, len(raw_lines))):
-            oi_m = ORDERINFO_RE.search(raw_lines[j])
-            if oi_m:
-                profit = float(oi_m.group(1))
-                break
-    # Also capture OPEN_TIME from CLOSE line if present (for verification)
-    open_time_match = re.search(r"OPEN_TIME:(\d{4}\.\d{2}\.\d{2}[\d :]+)", line)
-    open_time_str = open_time_match.group(1) if open_time_match else ""
-    close_records.append({
-        "ticket": ticket,
-        "profit": profit,
-        "open_time": parse_timestamp(open_time_str),
-        "line_idx": i,
-    })
+    if m:
+        ticket = int(m.group(1))
+        # Look for profit on this line or the next ORDERINFO
+        profit = None
+        pm = PROFIT_RE.search(line)
+        if pm:
+            profit = float(pm.group(1))
+        else:
+            # Check following ORDERINFO lines (up to 30 ahead for SELL orders)
+            for j in range(i + 1, min(i + 31, len(raw_lines))):
+                oi_m = ORDERINFO_RE.search(raw_lines[j])
+                if oi_m:
+                    profit = float(oi_m.group(1))
+                    break
+        # Also capture OPEN_TIME from CLOSE line if present (for verification)
+        open_time_match = re.search(r"OPEN_TIME:(\d{4}\.\d{2}\.\d{2}[\d :]+)", line)
+        open_time_str = open_time_match.group(1) if open_time_match else ""
+        close_records.append({
+            "ticket": ticket,
+            "profit": profit,
+            "open_time": parse_timestamp(open_time_str),
+            "line_idx": i,
+        })
+        continue  # Already handled this line as a CLOSE
+
+    # For SELL orders: look for ORDERINFO with SELL_PROFIT and SELL_TICKET_NUM
+    oi_m = ORDERINFO_RE.search(line)
+    if oi_m:
+        profit_val = float(oi_m.group(1))
+        # Check if this is BUY or SELL by looking for the type indicator
+        buy_match = re.search(r"BUY_PROFIT", line)
+        sell_match = re.search(r"SELL_PROFIT", line)
+        if sell_match and not buy_match:
+            # This is a SELL order — look for OPEN_TICKET on this or previous lines
+            ticket = None
+            # Search backwards up to 100 lines for matching OPEN_TICKET (SELL can be far)
+            for k in range(max(0, i - 100), i):
+                open_m = re.search(r"\[NEW_ORDER_OPEN\].*OPEN_TICKET:(\d+)", raw_lines[k])
+                if open_m and int(open_m.group(1)) == oi_m.group("SELL_TICKET_NUM"):
+                    ticket = int(open_m.group(1))
+                    break
+            if ticket:
+                close_records.append({
+                    "ticket": ticket,
+                    "profit": profit_val,
+                    "open_time": "",  # SELL orders don't have OPEN_TIME
+                    "line_idx": i,
+                })
 
 # Build a map: ticket -> close record (keep the one with earliest line index)
 close_by_ticket = {}
@@ -189,23 +215,25 @@ for i, line in enumerate(raw_lines):
     entry_ts_str = ts_match.group("ts") if ts_match else ""
     entry_ts_key = parse_timestamp(entry_ts_str)
 
-    # Look for the OPEN record with matching ticket and same timestamp,
-    # and which is the nearest following line (i.e., line index > i).
+    # Look for the nearest OPEN record after this ENTRY (by line index).
+    # We don't rely on timestamp matching because ENTRY's dt: field is
+    # slightly earlier than the actual NEW_ORDER_OPEN timestamp.
     matched_open = None
-    for orec in opens_by_ts[entry_ts_key]:
-        if orec["line_idx"] <= i:
-            continue  # this OPEN is before or at current line — skip
-        # First match found at this timestamp and after ENTRY is our candidate
-        matched_open = orec
-        break
+    ticket = None
+    for j in range(i + 1, min(i + 30, len(raw_lines))):  # look ahead ~30 lines
+        if 'OPEN_TICKET:' in raw_lines[j]:
+            tk = re.search(r'OPEN_TICKET:(\d+)', raw_lines[j])
+            if tk:
+                ticket = int(tk.group(1))
+                matched_open = {"ticket": ticket, "line_idx": j}
+                break
 
     if matched_open is None:
-        # No OPEN with matching ticket at this timestamp found.
-        # This should not happen in a well-formed log, but handle gracefully.
+        # No OPEN found after this ENTRY — this is unexpected.
         unmatched_entries.append({
             "line": line,
             "ticket": None,
-            "reason": "No matching NEW_ORDER_OPEN found",
+            "reason": "No NEW_ORDER_OPEN found after ENTRY",
         })
         continue
 
@@ -309,18 +337,20 @@ def stats_for(trade_list):
     losses = sum(1 for t in trade_list if t["outcome"] == "LOSS")
     total_profit = sum(t["profit"] for t in trade_list)
 
-    gp = total_profit - losses  # gross profit (wins only)
-    gl = -(total_profit - wins)  # gross loss (absolute value of losses)
+    # gross_profit: sum of positive profits (from WIN trades)
+    gross_profit = sum(t["profit"] for t in trade_list if t["profit"] > 0)
+    # gross_loss: absolute value of sum of negative profits (from LOSS trades)
+    gross_loss = abs(sum(t["profit"] for t in trade_list if t["profit"] < 0))
 
     win_rate = wins / len(trade_list) if len(trade_list) > 0 else None
-    pf = gp / gl if gl != 0 else None
+    pf = gross_profit / gross_loss if gross_loss != 0 else (inf if gross_profit != 0 else None)
 
     return {
         "count": len(trade_list),
         "win_rate": win_rate,
         "total_profit": total_profit,
-        "gross_profit": gp,
-        "gross_loss": abs(gl),
+        "gross_profit": gross_profit,
+        "gross_loss": gross_loss,
         "pf": pf,
     }
 
@@ -329,7 +359,8 @@ def stats_for(trade_list):
 # Step 5 — Write report to markdown file
 # =============================================================================
 
-REPORT = LOG_FILE.parent / "TRADE_PNL_BY_SCENARIO.md"
+# BUG 4 fix: write to canonical path (not inside Backtest_data subfolder)
+REPORT = Path("references/TRADE_PNL_BY_SCENARIO.md")
 
 with open(REPORT, "w", encoding="utf-8") as out:
     # Header
@@ -346,7 +377,9 @@ with open(REPORT, "w", encoding="utf-8") as out:
 
     overall = stats_for(trades)
     out.write(f"2. **Overall statistics:**\n")
-    out.write(f"   - Win-rate: {overall['win_rate']:.1%} ({overall['count']} wins / {overall['count']} total)\n")
+    # BUG 2 fix: win_count is number of WIN outcomes, not total trades
+    win_count = sum(1 for t in trades if t["outcome"] == "WIN")
+    out.write(f"   - Win-rate: {overall['win_rate']:.1%} ({win_count} wins / {len(trades)} total)\n")
     out.write(f"   - Total profit: {overall['total_profit']:+.2f}\n")
     if overall['pf'] is not None and overall['pf'] != 0:
         out.write(f"   - PF (gross profit / gross loss): {overall['gross_profit']:+.2f} / {overall['gross_loss']:+.2f} = {overall['pf']:.2f}\n")
@@ -383,7 +416,7 @@ with open(REPORT, "w", encoding="utf-8") as out:
     out.write("## 3. Grouped by Direction\n\n")
     out.write("| Dir | Count | Win-Rate | Total Profit | PF |")
     out.write("\n|-----|-------|----------|---------------|-----|")
-    for d in ("UP", "DN"):
+    for d in ("UP", "DOWN"):
         s = stats_for(group_dir[d])
         if s is None or s['count'] == 0:
             continue  # skip empty direction
