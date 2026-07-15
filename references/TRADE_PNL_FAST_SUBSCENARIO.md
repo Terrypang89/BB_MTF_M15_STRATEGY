@@ -25,13 +25,17 @@ Source: Raw log fields at entry bar (W_stage_M15 / diffMid_Trend_M15 or BBUpDn).
 
 | Dir | Dir | Count | Win-Rate | Total Profit | PF |
 |-----|------|-------|----------|---------------|-----|
-| SIDEWAYS |  | 78 | 30.8% | +69.37 | 1.12 |
+| DOWN |  | 26 | 42.3% | +203.13 | 1.90 |
+| SIDEWAYS |  | 35 | 25.7% | -132.30 | 0.44 |
+| UP |  | 17 | 23.5% | -1.46 | 0.99 |
 
 ## By (State × Direction)
 
 |  | Dir | Count | Win-Rate | Total Profit | PF |
 |-----|------|-------|----------|---------------|-----|
-| FLY | SIDEWAYS | 78 | 30.8% | +69.37 | 1.12 |
+| FLY | DOWN | 26 | 42.3% | +203.13 | 1.90 |
+| FLY | SIDEWAYS | 35 | 25.7% | -132.30 | 0.44 |
+| FLY | UP | 17 | 23.5% | -1.46 | 0.99 |
 
 ## Per-Trade Ledger
 
