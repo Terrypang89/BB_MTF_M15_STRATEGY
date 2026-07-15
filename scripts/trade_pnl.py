@@ -480,7 +480,8 @@ def group_and_report(trades, labeler, out_path, title):
                 k1 = key
                 k2 = ""
             s = stats_for(lst)
-            if s["count"] < 20:
+            # For direction-only tables, always show (state table already filtered by count)
+            if header1 == "State" and s["count"] < 20:
                 continue
             pf_str = f"{s['pf']:.2f}" if s["pf"] is not None else "—"
             lines.append(
