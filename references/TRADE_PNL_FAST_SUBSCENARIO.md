@@ -19,23 +19,27 @@ Source: Raw log fields at entry bar (W_stage_M15 / diffMid_Trend_M15 or BBUpDn).
 
 | State | Dir | Count | Win-Rate | Total Profit | PF |
 |-----|------|-------|----------|---------------|-----|
-| FLY |  | 78 | 30.8% | +69.37 | 1.12 |
+| FLY |  | 57 | 35.1% | +63.07 | 1.14 |
+| FLY_PSHRINK |  | 21 | 19.0% | +6.30 | 1.04 |
 
 ## By Direction
 
 | Dir | Dir | Count | Win-Rate | Total Profit | PF |
 |-----|------|-------|----------|---------------|-----|
-| DOWN |  | 26 | 42.3% | +203.13 | 1.90 |
-| SIDEWAYS |  | 35 | 25.7% | -132.30 | 0.44 |
-| UP |  | 17 | 23.5% | -1.46 | 0.99 |
+| DOWN |  | 17 | 41.2% | +250.89 | 2.97 |
+| SIDEWAYS |  | 43 | 30.2% | -38.92 | 0.86 |
+| UP |  | 18 | 22.2% | -142.60 | 0.29 |
 
 ## By (State × Direction)
 
 |  | Dir | Count | Win-Rate | Total Profit | PF |
 |-----|------|-------|----------|---------------|-----|
-| FLY | DOWN | 26 | 42.3% | +203.13 | 1.90 |
-| FLY | SIDEWAYS | 35 | 25.7% | -132.30 | 0.44 |
-| FLY | UP | 17 | 23.5% | -1.46 | 0.99 |
+| FLY | DOWN | 11 | 36.4% | +123.85 | 2.07 |
+| FLY | SIDEWAYS | 35 | 34.3% | +1.45 | 1.01 |
+| FLY | UP | 11 | 36.4% | -62.23 | 0.48 |
+| FLY_PSHRINK | DOWN | 6 | 50.0% | +127.04 | 11.88 |
+| FLY_PSHRINK | SIDEWAYS | 8 | 12.5% | -40.37 | 0.26 |
+| FLY_PSHRINK | UP | 7 | 0.0% | -80.37 | 0.00 |
 
 ## Per-Trade Ledger
 
