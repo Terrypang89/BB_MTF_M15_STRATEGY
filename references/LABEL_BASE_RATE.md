@@ -1,27 +1,54 @@
-M15 lines parsed: 7610  (date range: 2026-01-02 01:00:02 to 2026-04-29 23:45:02)
-M5 lines parsed: 22821
+# Script / Command (`python scripts/label_base_rate.py`) / Input log / Generated (UTC)
+# X=10.0, N=8 M15 bars (120 min), first-touch barrier, labels from [M15], outcome from close_M5, NO trades read.
 
-Label distribution:
-  UNLABELED: n=26, WIN=0, LOSS=0, NEUTRAL=26
-  FLY_UP: n=1934, WIN=850, LOSS=833, NEUTRAL=251
-  SHRINK: n=1254, WIN=0, LOSS=0, NEUTRAL=1254
-  SQZ: n=376, WIN=0, LOSS=0, NEUTRAL=376
-  SIDEWAYS: n=2279, WIN=475, LOSS=1804, NEUTRAL=0
-  FLY_DOWN: n=1741, WIN=746, LOSS=829, NEUTRAL=166
+## Results
 
-Hit rate per label (WIN/(WIN+LOSS), excluding NEUTRAL):
-  FLY_DOWN: 0.4737 (746/1575)
-  FLY_UP: 0.5051 (850/1683)
-  SHRINK: n/a (no directional outcomes)
-  SIDEWAYS: 0.2084 (475/2279)
-  SQZ: n/a (no directional outcomes)
-  UNLABELED: n/a (no directional outcomes)
-  SHRINK: UP=1254, DOWN=1254, NEUTRAL=1254
-  SQZ: UP=376, DOWN=376, NEUTRAL=376
+**Parsed data:**
+- M15 lines: 7610 (date range: 2026-01-02 01:00:02 to 2026-04-29 23:45:02)
+- M5 lines: 22821
 
-AMBIGUOUS: 0
+## Verification: tag filter
 
-Worked examples (5 bars):
+The script only parses lines containing `[M15]` or `[M5]` tags. All other tags (`[TRADE]`, `[TRADEINFO]`, `[ORDERINFO]`, `[DUALTF]`, `[ATRSL1buf]`, `[NEW_ORDER_*]`, `[BBTFImpact]`) are ignored.
+
+**Parsed counts:**
+- M15: 7610 lines
+- M5: 22821 lines
+
+## Label distribution
+
+| Label | n | WIN | LOSS | NEUTRAL | Hit rate |
+|-------|---|-----|------|---------|----------|
+| UNLABELED | 26 | 0 | 0 | 26 | — |
+| FLY_UP | 1934 | 850 | 833 | 251 | 0.5051 (850/1683) |
+| SHRINK | 1254 | 0 | 0 | 1254 | n/a (direction-blind) |
+| SQZ | 376 | 0 | 0 | 376 | n/a (direction-blind) |
+| SIDEWAYS | 2279 | 475 | 1804 | 0 | 0.2084 (475/2279) |
+| FLY_DOWN | 1741 | 746 | 829 | 166 | 0.4737 (746/1575) |
+
+## Hit rate per label (WIN/(WIN+LOSS), excluding NEUTRAL)
+
+| Label | WIN / (WIN+LOSS) |
+|-------|------------------|
+| FLY_DOWN | **47.37%** (746/1575) |
+| FLY_UP | **50.51%** (850/1683) |
+| SIDEWAYS | **20.84%** (475/2279) |
+| SHRINK | n/a (direction-blind) |
+| SQZ | n/a (direction-blind) |
+| UNLABELED | n/a (no directional outcomes) |
+
+## Direction-blind labels (SHRINK, SQZ)
+
+| Label | UP | DOWN | NEUTRAL |
+|-------|----|------|---------|
+| SHRINK | 1254 | 1254 | 1254 |
+| SQZ | 376 | 376 | 376 |
+
+## AMBIGUOUS
+
+0 bars were ambiguous (both barriers touched in the same bar).
+
+## Worked examples (5 bars)
   [2026-01-02] label=UNLABELED, outcome=NEUTRAL
   [2026-01-02] label=FLY_UP, outcome=NEUTRAL
   [2026-01-02] label=FLY_UP, outcome=WIN
