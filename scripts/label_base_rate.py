@@ -31,10 +31,12 @@ TAG_IGNORE = {"[TRADE]", "[TRADEINFO]", "[ORDERINFO]", "[DUALTF]",
 # Note: the first value in W_stage_M15 can be empty during warmup
 # M15 line: timestamp, then [M15], W_stage list, diffMid_Trend
 # We only need the first value of W_stage (index 0) as "cur"
+# M15 line: timestamp, [M15], W_stage list, diffMid_Trend list
+# We capture w_stage (first value) and dm (diffMid_Trend cur, which is the first value of the list)
 M15_LINE_RE = re.compile(
     r"^(\d{4}\.\d{2}\.\d{2}[-\s]\d{2}:\d{2}:\d{2})"
     r".*\[M15\]"
-    r",.*W_stage_M15:\s*\(.*?\)\s*\[\s*(\d+)"
+    r",.*W_stage_M15:\s*\(.*?\)\s*\[\s*(\d+).*diffMid_Trend_M15:\s*\[\s*(\d+\.?)"
 )
 
 # Regex for an M5 line — close_M5 is a list of 3 values; we take the first (cur)
@@ -62,17 +64,15 @@ def parse_log():
 
             m15_match = M15_LINE_RE.search(raw)
             if m15_match:
-                ts, w_stage = m15_match.groups()
-                # Convert timestamp to a sortable format (replace dots with dashes)
-                ts_sortable = ts.replace(".", "-")
-                m15_data.append((ts_sortable, int(w_stage)))
+                ts, w_stage, dm = m15_match.groups()
+                # Keep timestamp in original format (dots) for consistent comparison
+                m15_data.append((ts, int(w_stage), float(dm)))
 
             m5_match = M5_LINE_RE.search(raw)
             if m5_match:
                 ts, close = m5_match.groups()
-                # Convert timestamp to a sortable format (replace dots with dashes)
-                ts_sortable = ts.replace(".", "-")
-                m5_data.append((ts_sortable, float(close)))
+                # Keep timestamps in original format (dots) for consistent comparison
+                m5_data.append((ts, float(close)))
 
     # Sort by timestamp
     m15_data.sort(key=lambda x: x[0])
@@ -81,23 +81,22 @@ def parse_log():
     return m15_data, m5_data
 
 # Label definitions — exactly as specified
-# Note: We label based on W_stage only (the first value of the M15 line)
-# diffMid_Trend is NOT used for labeling in this script
-def label_m15(w_stage):
+# Label M15 bars using W_stage (first value) and diffMid_Trend (cur, first value)
+def label_m15(w_stage, dm):
     """
     Assign ONE label per M15 bar, priority order:
-      FLY_DOWN  = W_stage in {521,522}
-      FLY_UP    = W_stage in {511,512}
-      SIDEWAYS  = w_stage == 0 (warmup / unknown)
+      FLY_DOWN  = W_stage in {521,522} AND diffMid_Trend == 2
+      FLY_UP    = W_stage in {511,512} AND diffMid_Trend == 1
+      SIDEWAYS  = diffMid_Trend >= 3 (warmup bars have dm=0, not classified as SIDEWAYS)
       SHRINK    = W_stage in {513,523}
       SQZ       = 400 <= W_stage <= 499
-      UNLABELED = anything else
+      UNLABELED = anything else (including warmup with w_stage=0, dm=0)
     """
-    if w_stage in {521, 522}:
+    if w_stage in {521, 522} and dm == 2:
         return "FLY_DOWN"
-    if w_stage in {511, 512}:
+    if w_stage in {511, 512} and dm == 1:
         return "FLY_UP"
-    if w_stage == 0:
+    if dm >= 3:
         return "SIDEWAYS"
     if w_stage in {513, 523}:
         return "SHRINK"
@@ -115,15 +114,19 @@ def evaluate_outcome(m15_ts, label, m5_lookup):
 
     Returns (outcome: WIN|LOSS|NEUTRAL|AMBIGUOUS, touched: UP|DOWN|NEUTRAL)
     """
-    # Find the nearest M5 line <= m15_ts
+    # Find the NEAREST M5 line AT OR BEFORE T:
+    # iterate REVERSE chronological and stop at first ts <= m15_ts.
+    # (This avoids using an ancient January price for all bars.)
     start_price = None
-    for ts, price in m5_lookup:
+    for ts, price in reversed(m5_lookup):
         if ts <= m15_ts:
             start_price = price
-        else:
             break
     if start_price is None:
+        print(f'DEBUG: No M5 found for M15 {m15_ts}, returning NEUTRAL')
+    if start_price is None:
         # No M5 before this M15 — treat as NEUTRAL (cannot evaluate)
+        print(f'DEBUG: No M5 for {m15_ts}')
         return "NEUTRAL", "NEUTRAL"
 
     # Walk forward, up to N bars
@@ -175,8 +178,8 @@ def main():
 
     # Evaluate each M15 bar
     results = []
-    for ts, w_stage in m15_data:
-        label = label_m15(w_stage)
+    for ts, w_stage, dm in m15_data:
+        label = label_m15(w_stage, dm)
         outcome, touched = evaluate_outcome(ts, label, m5_lookup)
         results.append({
             "ts": ts,
