@@ -15,7 +15,7 @@ import argparse
 import math
 import re
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -226,40 +226,67 @@ def extract_trades():
         m30_clean = re.sub(r"^m30:", "", raw_m30_state)
 
         # ---- Capture the per-TF log lines at this bar for DESIGN B ----
-        # Find the [M5]/[M15]/[M30]/[H1]/[H4] lines that appear at/just before the entry minute.
-        # We'll look a small window backwards from the OPEN line (which is right after ENTRY).
-        tf_lines = {}
-        # Look back up to ~80 lines (to catch M5 line at 08:15:01 which is before ENTRY at 08:15:02)
-        for j in range(max(0, entry_line_idx - 80), min(entry_line_idx + 60, len(raw_lines))):
+        # Scan BACKWARD ONLY: j from entry_line_idx down to entry_line_idx-80.
+        # Never read a line after the entry — that would be lookahead bias.
+        tf_state = {}  # Will hold M15 and M30 data; we stop when both are found
+        m15_found = False
+        m30_found = False
+
+        for j in range(entry_line_idx - 1, max(-1, entry_line_idx - 81), -1):
+            if j < 0:
+                break
             ln = raw_lines[j]
-            # Look for any line containing a W_stage pattern for our TFs
-            if not any(re.search(rf"W_stage_{tf}:", ln) for tf in ("M5", "M15", "M30", "H1", "H4")):
-                # print(f"DEBUG: skipping line {j}: {ln[:60]}")
+
+            # A per-TF line contains exactly one [M5]/[M15]/[M30]/[H1]/[H4] marker.
+            # Determine which single TF this line is for.
+            tf_match = re.search(r"\[(M[0-9]+|H[14])\]", ln)
+            if not tf_match:
                 continue
-            # Extract TF name from "W_stage_M15:" etc.
-            # Format: W_stage_<tf>:(STAGE)[cur, prev1] — capture cur and prev1 from the second bracketed group.
-            for tf in ("M5", "M15", "M30", "H1", "H4"):
-                w_match = re.search(rf"W_stage_{tf}:\s*\([^)]*\)\[([0-9]+),\s*([0-9]+)", ln)
-                if w_match:
-                    cur = int(w_match.group(1))
-                    prev1 = int(w_match.group(2))
-                    # Also capture diffMid_Trend for M15/M30 (used for direction: 1=up, 2=down, >=3=sideways)
-                    if tf in ("M15", "M30"):
-                        mid_match = re.search(rf"diffMid_Trend_{tf}:\s*\[\s*([0-9.]+)", ln)
-                        if mid_match:
-                            # Use the first value (cur) for diffMid_Trend direction
-                            dmt_val = int(float(mid_match.group(1)))  # Convert float to int
-                    else:
-                        dmt_val = None
+            tf = tf_match.group(1)
 
-                    # Capture BBUpDn (state 1=up, 2=down) for direction fallback — 3 values
-                    bb_match = re.search(rf"BBUpDn_{tf}:\s*\[\s*([0-9]+)", ln)
-                    if bb_match:
-                        bb_val = int(bb_match.group(1))
-                    else:
-                        bb_val = None
+            # Reset locals for THIS line — no leakage between timeframes.
+            cur = None
+            prev1 = None
+            dmt_val = None
+            bb_val = None
 
-                    tf_lines[tf] = {"cur": cur, "prev1": prev1, "diffMid_Trend": dmt_val, "BBUpDn": bb_val}
+            # Parse W_stage (has parens around stage name): W_stage_<tf>:(STAGE)[cur, prev1]
+            w_match = re.search(rf"W_stage_{tf}:\s*\((\w+)\)\[\s*([0-9]+)", ln)
+            if not w_match:
+                continue
+            cur = int(w_match.group(2))
+            stage = w_match.group(1)
+
+            # Only M15 and M30 are used for DESIGN B state classification.
+            if tf not in ("M15", "M30"):
+                # Skip non-relevant TFs; we only need M15/M30 here
+                continue
+
+            # diffBBW: may be negative (shrinking) — no parens
+            bb_match = re.search(rf"diffBBW_{tf}:\s*\[\s*(-?[0-9.]+)", ln)
+            if bb_match:
+                bb_val = float(bb_match.group(1))
+
+            # diffMid_Trend for M15/M30 — no parens (we already fixed this earlier)
+            mid_match = re.search(rf"diffMid_Trend_{tf}:\s*\[\s*([0-9.]+)", ln)
+            if mid_match:
+                dmt_val = int(float(mid_match.group(1)))
+
+            # Only write once — first hit walking backward is the nearest bar at/before entry
+            if tf not in tf_state:
+                tf_state[tf] = {"cur": cur, "stage": stage, "diffMid_Trend": dmt_val, "BBUpDn": int(bb_val) if bb_val is not None else None}
+                if tf == "M15":
+                    m15_found = True
+                elif tf == "M30":
+                    m30_found = True
+
+            # BREAK as soon as both M15 and M30 are filled
+            if m15_found and m30_found:
+                break
+
+        # If we didn't find M15 in the window, label state NONE (no default to FLY)
+        if "M15" not in tf_state:
+            tf_state["M15"] = {"cur": None, "prev1": None, "diffMid_Trend": None, "BBUpDn": None}
 
         # Store raw_dir from EA (used by Design A)
         trade_rec = {
@@ -277,7 +304,7 @@ def extract_trades():
             "outcome": outcome,
             "ticket": ticket,
             # DESIGN B fields (computed from raw log lines)
-            "tf_lines": tf_lines,
+            "tf_lines": tf_state,
         }
         trades.append(trade_rec)
 
@@ -352,32 +379,52 @@ def classify_touch(cur, prev1):
 def compute_state_from_raw(tf_lines, tf_name):
     """
     Compute the in-state for a given TF using the raw log fields.
-    We look at the line that contains W_stage_<tf>: and diffBBW_<tf>:
-    (these are typically the same line). The classification follows the
-    rules used in fast_subscenario_compute.py: FLY_PSHRINK is only
-    reported when prev1 was 500-599 and cur is 512/522.
+    Classification rules (per task requirements):
+      - stage name FLY and diffBBW >= 0 → FLY
+      - stage name FLY and diffBBW < 0 → FLY_PSHRINK
+      - stage name SHRINK → SHRINK
+      - stage name SQZ → SQZ
+      - cur == 0 or missing → NONE
 
     Returns a dict: {"state": ..., "touch": ..., "used_field": ...}.
     """
     if tf_name not in tf_lines:
-        return {"state": "UNKNOWN", "touch": "N/A", "used_field": "none"}
+        return {"state": "NONE", "touch": "Type 3", "used_field": "none"}
 
     cur = tf_lines[tf_name]["cur"]
-    prev1 = tf_lines[tf_name].get("prev1")
+    bb_val = tf_lines[tf_name].get("BBUpDn")  # diffBBW (first value, may be negative)
 
-    # Determine state
-    if 400 <= prev1 < 500 and cur in (512, 522):
+    # Handle missing/zero data
+    if cur is None or cur == 0:
+        return {"state": "NONE", "touch": "Type 3", "used_field": "none"}
+
+    # Use the captured stage name directly
+    stage = tf_lines[tf_name].get("stage")
+
+    # Classification
+    if stage in {"FLY_PSHRINK"}:
         state = "FLY_PSHRINK"
-    elif prev1 is not None and 400 <= prev1 < 500:
-        state = "SQZ"
-    elif cur is not None and cur >= 0:
+    elif bb_val is not None and bb_val < 0:
+        # FLY stage with negative diffBBW → FLY_PSHRINK
+        state = "FLY_PSHRINK"
+    elif stage in {"FLY", "SQZ"}:
         state = "FLY"
-    elif cur is not None:
+    elif stage == "SHRINK":
         state = "SHRINK"
+    elif 400 <= cur < 500:
+        # SQZ range (no stage name captured, infer from cur)
+        state = "SQZ"
     else:
-        state = "NONE"
+        return {"state": "UNKNOWN", "touch": "N/A", "used_field": "none"}
 
-    touch = classify_touch(cur, prev1)
+    # Touch type: simplified mapping
+    if state == "FLY_PSHRINK":
+        touch = "Type 2"
+    elif state == "SQZ":
+        touch = "Type 2"
+    else:
+        touch = "Type 1"
+
     return {"state": state, "touch": touch, "used_field": f"W_stage_{tf_name}"}
 
 
@@ -434,10 +481,10 @@ def label_fast_subscenario(trade):
 # GROUPING AND REPORT WRITER (shared by both designs)
 # =============================================================================
 
-def group_and_report(trades, labeler, out_path, title):
+def group_and_report(trades, labeler, out_path, title, args):
     """
     Apply labeler to each trade to get (state, dir), then write the same tables
-    and per-trade ledger as the original report. Skips groups < 20.
+    and per-trade ledger as the original report. Never hides small groups — marks them.
     """
     # Group by (state, dir) for cross-tab; also keep single-groupings
     groups = defaultdict(list)
@@ -472,7 +519,7 @@ def group_and_report(trades, labeler, out_path, title):
             sep_line = "|-----|------|-------|----------|---------------|-----|"
         lines = [header_line]
         lines.append(sep_line)
-        # Handle both single-key and tuple-key groupings
+        # Handle both single-key and tuple-key groupings — never hide rows, just mark small ones
         for key, lst in sorted(groups_dict.items()):
             if isinstance(key, tuple):
                 k1, k2 = key
@@ -480,24 +527,37 @@ def group_and_report(trades, labeler, out_path, title):
                 k1 = key
                 k2 = ""
             s = stats_for(lst)
-            # For direction-only tables, always show (state table already filtered by count)
-            if header1 == "State" and s["count"] < 20:
-                continue
+            # Build row label — add ⚠ marker if fewer than 20 trades
+            row_label = f"{k1}"
+            if s["count"] < 20:
+                row_label += " ⚠ n<20"
             pf_str = f"{s['pf']:.2f}" if s["pf"] is not None else "—"
             lines.append(
-                f"| {k1} | {k2} | {s['count']} | {s['win_rate']:.1%} | {s['total_profit']:+.2f} | {pf_str} |"
+                f"| {row_label} | {k2} | {s['count']} | {s['win_rate']:.1%} | {s['total_profit']:+.2f} | {pf_str} |"
             )
+        # Add explanatory note if any rows were marked
+        needs_note = any(stats_for(lst)["count"] < 20 for lst in groups_dict.values())
+        if needs_note:
+            lines.append("\n⚠ = fewer than 20 trades; rate/PF not statistically meaningful.\n")
         return "\n".join(lines)
 
     lines = []
 
-    # Header
+    # Header with provenance block
     lines.append(f"# TRADE P&L by Scenario — Design: {title}\n")
     lines.append(f"**Labels:** {title}")
     if "ea_labels" in title:
         lines.append("Source: EA-logged fields (raw_m15, raw_dir).")
     else:
         lines.append("Source: Raw log fields at entry bar (W_stage_M15 / diffMid_Trend_M15 or BBUpDn).")
+
+    # Provenance block — auto-generated by this script
+    lines.append("\n## How this file was generated\n")
+    lines.append(f"- **Script:** `scripts/trade_pnl.py`\n")
+    lines.append(f"- **Command:** `python scripts/trade_pnl.py --design {args.design}`\n")
+    lines.append(f"- **Design:** `{title}` — labels from raw log fields at entry bar\n")
+    lines.append(f"- **Input log:** `{LOG_FILE}`\n")
+    lines.append(f"- **Generated:** `{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}`\n")
 
     # Summary
     overall = stats_for(trades)
@@ -572,7 +632,7 @@ def main():
     labeler_map = {"ea_labels": label_ea, "fast_subscenario": label_fast_subscenario}
 
     out_path = f"references/TRADE_PNL_{args.design.upper().replace('-', '_')}.md"
-    group_and_report(trades, labeler_map[args.design], out_path, title_map[args.design])
+    group_and_report(trades, labeler_map[args.design], out_path, title_map[args.design], args)
 
     print(f"\nDesign: {args.design}")
     print(f"Matched trades: {len(trades)}")
