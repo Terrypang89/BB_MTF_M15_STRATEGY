@@ -3,6 +3,19 @@
 **Labels:** Raw-Computed
 Source: Raw log fields at entry bar (W_stage_M15 / diffMid_Trend_M15 or BBUpDn).
 
+## How this file was generated
+
+- **Script:** `scripts/trade_pnl.py`
+
+- **Command:** `python scripts/trade_pnl.py --design fast_subscenario`
+
+- **Design:** `Raw-Computed` — labels from raw log fields at entry bar
+
+- **Input log:** `references\Backtest_data\V36.15\20260712_clean.log`
+
+- **Generated:** `2026-07-16 12:06:58 UTC`
+
+
 ## Summary
 
 1. **Total [TRADE] entries found:** 78
@@ -26,20 +39,26 @@ Source: Raw log fields at entry bar (W_stage_M15 / diffMid_Trend_M15 or BBUpDn).
 
 | Dir | Dir | Count | Win-Rate | Total Profit | PF |
 |-----|------|-------|----------|---------------|-----|
-| DOWN |  | 17 | 41.2% | +250.89 | 2.97 |
+| DOWN ⚠ n<20 |  | 17 | 41.2% | +250.89 | 2.97 |
 | SIDEWAYS |  | 43 | 30.2% | -38.92 | 0.86 |
-| UP |  | 18 | 22.2% | -142.60 | 0.29 |
+| UP ⚠ n<20 |  | 18 | 22.2% | -142.60 | 0.29 |
+
+⚠ = fewer than 20 trades; rate/PF not statistically meaningful.
+
 
 ## By (State × Direction)
 
 |  | Dir | Count | Win-Rate | Total Profit | PF |
 |-----|------|-------|----------|---------------|-----|
-| FLY | DOWN | 11 | 36.4% | +123.85 | 2.07 |
+| FLY ⚠ n<20 | DOWN | 11 | 36.4% | +123.85 | 2.07 |
 | FLY | SIDEWAYS | 35 | 34.3% | +1.45 | 1.01 |
-| FLY | UP | 11 | 36.4% | -62.23 | 0.48 |
-| FLY_PSHRINK | DOWN | 6 | 50.0% | +127.04 | 11.88 |
-| FLY_PSHRINK | SIDEWAYS | 8 | 12.5% | -40.37 | 0.26 |
-| FLY_PSHRINK | UP | 7 | 0.0% | -80.37 | 0.00 |
+| FLY ⚠ n<20 | UP | 11 | 36.4% | -62.23 | 0.48 |
+| FLY_PSHRINK ⚠ n<20 | DOWN | 6 | 50.0% | +127.04 | 11.88 |
+| FLY_PSHRINK ⚠ n<20 | SIDEWAYS | 8 | 12.5% | -40.37 | 0.26 |
+| FLY_PSHRINK ⚠ n<20 | UP | 7 | 0.0% | -80.37 | 0.00 |
+
+⚠ = fewer than 20 trades; rate/PF not statistically meaningful.
+
 
 ## Per-Trade Ledger
 

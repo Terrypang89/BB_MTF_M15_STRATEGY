@@ -3,6 +3,19 @@
 **Labels:** EA-Logged
 Source: Raw log fields at entry bar (W_stage_M15 / diffMid_Trend_M15 or BBUpDn).
 
+## How this file was generated
+
+- **Script:** `scripts/trade_pnl.py`
+
+- **Command:** `python scripts/trade_pnl.py --design ea_labels`
+
+- **Design:** `EA-Logged` — labels from raw log fields at entry bar
+
+- **Input log:** `references\Backtest_data\V36.15\20260712_clean.log`
+
+- **Generated:** `2026-07-16 12:07:00 UTC`
+
+
 ## Summary
 
 1. **Total [TRADE] entries found:** 78
