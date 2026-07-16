@@ -9,12 +9,17 @@ X=10.0, N=8 M15 bars (120 min), first-touch barrier, labels from [M15],
 outcome from close_M5, NO trades read.
 """
 
+import datetime
 import re
 from pathlib import Path
 
 # Constants — PRE-REGISTERED, do NOT tune
 X = 10.0          # barrier in price units (gold dollars)
 N = 8             # bars ahead to watch (M15 -> 120 min)
+
+# Helper: convert dot-sep timestamp to datetime for arithmetic
+def _parse_ts(ts):
+    return datetime.datetime.strptime(ts.replace(".", "-"), "%Y-%m-%d %H:%M:%S")
 
 LOG_PATH = Path(r"references/Backtest_data/V36.15/20260712_clean.log")
 
@@ -65,14 +70,16 @@ def parse_log():
             m15_match = M15_LINE_RE.search(raw)
             if m15_match:
                 ts, w_stage, dm = m15_match.groups()
-                # Keep timestamp in original format (dots) for consistent comparison
-                m15_data.append((ts, int(w_stage), float(dm)))
+                # Convert to dash format for consistent datetime arithmetic
+                ts_dash = ts.replace(".", "-")
+                m15_data.append((ts_dash, int(w_stage), float(dm)))
 
             m5_match = M5_LINE_RE.search(raw)
             if m5_match:
                 ts, close = m5_match.groups()
-                # Keep timestamps in original format (dots) for consistent comparison
-                m5_data.append((ts, float(close)))
+                # Convert to dash format for consistent datetime arithmetic
+                ts_dash = ts.replace(".", "-")
+                m5_data.append((ts_dash, float(close)))
 
     # Sort by timestamp
     m15_data.sort(key=lambda x: x[0])
@@ -116,59 +123,54 @@ def evaluate_outcome(m15_ts, label, m5_lookup):
     """
     # Find the NEAREST M5 line AT OR BEFORE T:
     # iterate REVERSE chronological and stop at first ts <= m15_ts.
-    # (This avoids using an ancient January price for all bars.)
     start_price = None
     for ts, price in reversed(m5_lookup):
         if ts <= m15_ts:
             start_price = price
             break
     if start_price is None:
-        print(f'DEBUG: No M5 found for M15 {m15_ts}, returning NEUTRAL')
-    if start_price is None:
-        # No M5 before this M15 — treat as NEUTRAL (cannot evaluate)
-        print(f'DEBUG: No M5 for {m15_ts}')
         return "NEUTRAL", "NEUTRAL"
 
-    # Walk forward, up to N bars
-    touched_up = False
-    touched_down = False
+    # BUG 1 FIX: compute end_ts = T + 120 minutes (N M15 bars)
+    m15_dt = _parse_ts(m15_ts)
+    end_ts_dt = m15_dt + datetime.timedelta(minutes=120)  # N=8 M15 bars
+    end_ts_str = end_ts_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+    # BUG 2 FIX: first-touch — return immediately on the first barrier touched
+    first_touch = "NEUTRAL"
     for ts, price in m5_lookup:
         if ts < m15_ts:
             continue
-        if touched_up and touched_down:
+        if ts > end_ts_str:
             break
-        if (price >= start_price + X) or (price <= start_price - X):
-            # Check for ambiguous double-cross within same bar
-            up_cross = price >= start_price + X
-            down_cross = price <= start_price - X
-            if up_cross and down_cross:
-                return "AMBIGUOUS", "UP|DOWN"
-            if up_cross:
-                touched_up = True
-            if down_cross:
-                touched_down = True
+        up   = price >= start_price + X
+        down = price <= start_price - X
+        if up and down:
+            return "AMBIGUOUS", "UP|DOWN"
+        if up:
+            first_touch = "UP"
+            break
+        if down:
+            first_touch = "DOWN"
+            break
 
-    # Determine outcome based on label
+    # Score based on label and first_touch
     if label == "FLY_UP":
-        if touched_up:
-            return "WIN", "UP"
-        if touched_down:
-            return "LOSS", "DOWN"
+        if first_touch == "UP":   return "WIN", "UP"
+        if first_touch == "DOWN": return "LOSS", "DOWN"
         return "NEUTRAL", "NEUTRAL"
     elif label == "FLY_DOWN":
-        if touched_down:
-            return "WIN", "DOWN"
-        if touched_up:
-            return "LOSS", "UP"
+        if first_touch == "DOWN": return "WIN", "DOWN"
+        if first_touch == "UP":  return "LOSS", "UP"
         return "NEUTRAL", "NEUTRAL"
     elif label == "SIDEWAYS":
-        # WIN if NEITHER touched, LOSS if either touched
-        if not touched_up and not touched_down:
+        # WIN if neither touched, else LOSS
+        if first_touch == "NEUTRAL":
             return "WIN", "NEUTRAL"
-        return "LOSS", "UP|DOWN"
+        return "LOSS", first_touch
     else:
-        # SHRINK / SQZ / UNLABELED — just report the split, no win/loss
-        return "NEUTRAL", "NEUTRAL"
+        # SHRINK / SQZ / UNLABELED — just report the split
+        return "NEUTRAL", first_touch
 
 def main():
     m15_data, m5_data = parse_log()
