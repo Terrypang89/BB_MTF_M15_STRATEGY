@@ -156,6 +156,7 @@ def simulate(m15_data: List[Dict], m5_data: List[Dict]) -> List[Dict]:
     position = "FLAT"  # Current position
     entry_price = None
     entry_bar_index = None  # Track the bar where we entered
+    bars_in_trade = 0  # Count bars held while in position
 
     for m15_idx, m15 in enumerate(m15_data):
         # Get nearest M5 price at or before this M15 bar
@@ -170,6 +171,8 @@ def simulate(m15_data: List[Dict], m5_data: List[Dict]) -> List[Dict]:
             if position != "FLAT":
                 pnl = _compute_pnl(position, entry_price, m5_price)
                 exit_bar_index = m15_idx
+                bars_held = bars_in_trade
+                assert bars_held >= 1, f"bars_held must be >= 1: {bars_held}"
                 trades.append({
                     "ts": m15["ts_str"],
                     "entry_ts": m15_data[entry_bar_index]["ts_str"],
@@ -184,7 +187,7 @@ def simulate(m15_data: List[Dict], m5_data: List[Dict]) -> List[Dict]:
                 })
             entry_price = None
             position = "FLAT"
-            entry_bar_index = None
+            bars_in_trade = 0
 
         if new_position != position:
             # Position changed — this is an ENTRY
@@ -192,18 +195,26 @@ def simulate(m15_data: List[Dict], m5_data: List[Dict]) -> List[Dict]:
                 entry_price = m5_price
                 position = "LONG"
                 entry_bar_index = m15_idx
+                bars_in_trade = 0
             elif position == "FLAT" and new_position == "SHORT":
                 entry_price = m5_price
                 position = "SHORT"
                 entry_bar_index = m15_idx
+                bars_in_trade = 0
             elif position != "FLAT" and new_position == "FLAT":
                 # This shouldn't happen after we already exited; but handle it
                 entry_price = None
                 position = "FLAT"
 
+        # Increment bars held while in position
+        if position != "FLAT":
+            bars_in_trade += 1
+
     # Forced close at end of data
     if position != "FLAT" and entry_price is not None:
         exit_bar_index = len(m15_data) - 1
+        bars_held = bars_in_trade
+        assert bars_held >= 1, f"bars_held must be >= 1: {bars_held}"
         pnl = _compute_pnl(position, entry_price, m5_data[-1]["price"])
         trades.append({
             "ts": m5_data[-1]["ts_str"],
@@ -317,18 +328,24 @@ def generate_report(trades: List[Dict]) -> str:
 
 
 def _avg_bars_held(trades: List[Dict]) -> float:
-    """Estimate average bars held (simplified)."""
+    """Compute average bars held from stored counters."""
     if not trades:
         return 0.0
-    total = sum((t["exit_px"] - t["entry_px"]) / 50 for t in trades)  # rough proxy
+    total = sum(t["exit_bar_index"] - t["entry_bar_index"] for t in trades)
     return total / len(trades)
 
 
 def _median_bars_held(trades: List[Dict]) -> int:
-    """Estimate median bars held."""
+    """Compute median bars held from actual counts."""
     if not trades:
         return 0
-    return len(trades) // 2
+    bars_list = [t["exit_bar_index"] - t["entry_bar_index"] for t in trades]
+    bars_list.sort()
+    n = len(bars_list)
+    if n % 2 == 1:
+        return bars_list[n // 2]
+    else:
+        return (bars_list[n // 2 - 1] + bars_list[n // 2]) // 2
 
 
 def main():
