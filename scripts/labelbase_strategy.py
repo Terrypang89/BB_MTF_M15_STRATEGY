@@ -124,18 +124,19 @@ def evaluate_bar(m15: Dict, m5_price: Optional[float], position: Optional[str]) 
     dm = m15["dm"]
     dbw = m15["dbw"]
 
-    # Exit conditions (priority 1-4)
-    if dm >= 3:
-        return "FLAT", EXIT_REASON_NAMES["SIDEWAYS"]
-    if ws in {512, 522} and dbw < 0 and (m15.get("dbw_prev", 0) < 0):
-        return "FLAT", EXIT_REASON_NAMES["FLY_PSHRINK"]
-    if ws in {513, 523} and dm in {2, 4}:
-        return "FLAT", EXIT_REASON_NAMES["SHRINK"]
-    if (400 <= ws <= 499) or dm == 3:
-        return "FLAT", EXIT_REASON_NAMES["SQZ"]
+    # Exit conditions (priority 1-4) — only when we have an active position
+    if position != "FLAT":
+        if dm >= 3:
+            return "FLAT", EXIT_REASON_NAMES["SIDEWAYS"]
+        if ws in {512, 522} and dbw < 0 and (m15.get("dbw_prev", 0) < 0):
+            return "FLAT", EXIT_REASON_NAMES["FLY_PSHRINK"]
+        if ws in {513, 523} and dm in {2, 4}:
+            return "FLAT", EXIT_REASON_NAMES["SHRINK"]
+        if (400 <= ws <= 499) or dm == 3:
+            return "FLAT", EXIT_REASON_NAMES["SQZ"]
 
-    # Entry conditions (priority 5-6) — only apply if position is FLAT
-    if position == "FLAT":
+    # Entry conditions (priority 5-6) — only apply when flat and no entry pending
+    if position == "FLAT" and m15.get("entry_pending") != True:
         if ws in {511, 512} and dm in {1, 5}:
             return "LONG", None
         if ws in {521, 522} and dm in {2, 4}:
@@ -148,13 +149,15 @@ def evaluate_bar(m15: Dict, m5_price: Optional[float], position: Optional[str]) 
 def simulate(m15_data: List[Dict], m5_data: List[Dict]) -> List[Dict]:
     """
     Run the strategy over the data. Returns a list of trade records.
-    Each record has: ts, entry_price, exit_reason, exit_price, pnl, cum_pnl, direction.
+    Each record has: ts, entry_price, exit_reason, exit_price, pnl, cum_pnl, direction,
+    entry_bar_index, exit_bar_index (for bars_held calculation).
     """
     trades = []
     position = "FLAT"  # Current position
     entry_price = None
+    entry_bar_index = None  # Track the bar where we entered
 
-    for m15 in m15_data:
+    for m15_idx, m15 in enumerate(m15_data):
         # Get nearest M5 price at or before this M15 bar
         m5_price = get_nearest_m5_at_or_before(m5_data, m15["ts"])
         if m5_price is None:
@@ -166,27 +169,33 @@ def simulate(m15_data: List[Dict], m5_data: List[Dict]) -> List[Dict]:
             # EXIT ALL — close any existing position
             if position != "FLAT":
                 pnl = _compute_pnl(position, entry_price, m5_price)
+                exit_bar_index = m15_idx
                 trades.append({
                     "ts": m15["ts_str"],
-                    "entry_ts": entry_price_dt_str(entry_price),
+                    "entry_ts": m15_data[entry_bar_index]["ts_str"],
                     "dir": position,
                     "entry_px": entry_price,
                     "exit_reason": exit_reason,
                     "exit_px": m5_price,
                     "pnl": pnl,
                     "cum_pnl": sum(t["pnl"] for t in trades),
+                    "entry_bar_index": entry_bar_index,
+                    "exit_bar_index": exit_bar_index,
                 })
             entry_price = None
             position = "FLAT"
+            entry_bar_index = None
 
         if new_position != position:
             # Position changed — this is an ENTRY
             if position == "FLAT" and new_position == "LONG":
                 entry_price = m5_price
                 position = "LONG"
+                entry_bar_index = m15_idx
             elif position == "FLAT" and new_position == "SHORT":
                 entry_price = m5_price
                 position = "SHORT"
+                entry_bar_index = m15_idx
             elif position != "FLAT" and new_position == "FLAT":
                 # This shouldn't happen after we already exited; but handle it
                 entry_price = None
@@ -194,16 +203,19 @@ def simulate(m15_data: List[Dict], m5_data: List[Dict]) -> List[Dict]:
 
     # Forced close at end of data
     if position != "FLAT" and entry_price is not None:
+        exit_bar_index = len(m15_data) - 1
         pnl = _compute_pnl(position, entry_price, m5_data[-1]["price"])
         trades.append({
             "ts": m5_data[-1]["ts_str"],
-            "entry_ts": entry_price_dt_str(entry_price),
+            "entry_ts": m15_data[entry_bar_index]["ts_str"],
             "dir": position,
             "entry_px": entry_price,
             "exit_reason": EXIT_REASON_NAMES["REVERSAL"],
             "exit_px": m5_data[-1]["price"],
             "pnl": pnl,
             "cum_pnl": sum(t["pnl"] for t in trades),
+            "entry_bar_index": entry_bar_index,
+            "exit_bar_index": exit_bar_index,
         })
 
     return trades
@@ -227,9 +239,10 @@ def entry_price_dt_str(price: float) -> str:
 
 
 def _bars_held(t: Dict) -> int:
-    """Estimate bars held between entry and exit (simplified)."""
-    # Approximation: just count based on pnl and price movement
-    return max(1, abs(int((t["exit_px"] - t["entry_px"]) / 50)))
+    """Compute bars held using stored entry_bar_index and exit_bar_index."""
+    # assert t.get("entry_bar_index") is not None, "Missing entry_bar_index"
+    # assert t.get("exit_bar_index") is not None, "Missing exit_bar_index"
+    return max(1, t["exit_bar_index"] - t["entry_bar_index"])
 
 
 def generate_report(trades: List[Dict]) -> str:
