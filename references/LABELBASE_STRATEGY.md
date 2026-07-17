@@ -5,7 +5,7 @@ M5 lines parsed: 22821
 
 ## Provenance
 `python scripts/labelbase_strategy.py` / input log / generated UTC
-NO X barrier, NO N horizon — entry and exit are both label-driven; P&L is gross on close_M5, 1 unit, no costs.
+NO X barrier, NO N horizon ï¿½ entry and exit are both label-driven; P&L is gross on close_M5, 1 unit, no costs.
 
 ## Summary
 - **Total trades**: 1175
@@ -29,7 +29,8 @@ NO X barrier, NO N horizon — entry and exit are both label-driven; P&L is gross 
 - **SQZ**: 6 trades, $+82.49 P&L
 
 ## Trade Ledger
-
+| # | entry dt | dir | entry px | exit dt | exit reason | exit px | P&L | Cum P&L |
+|---|----------|-----|----------|---------|-------------|---------|------|---------|
 | 2026.01.02 04:00:02 | 2026.01.02 01:45:02 | LONG | 4345.50 | 2026.01.02 04:00:02 | FLY_PSHRINK | 4348.07 | +2.57 | +2.57 |
 | 2026.01.02 04:30:02 | 2026.01.02 04:15:02 | LONG | 4347.16 | 2026.01.02 04:30:02 | FLY_PSHRINK | 4347.73 | +0.57 | +3.14 |
 | 2026.01.02 05:00:02 | 2026.01.02 04:45:02 | LONG | 4351.49 | 2026.01.02 05:00:02 | FLY_PSHRINK | 4362.88 | +11.39 | +14.53 |
