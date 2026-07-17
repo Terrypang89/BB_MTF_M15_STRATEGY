@@ -239,11 +239,12 @@ def generate_report(trades: List[Dict]) -> str:
     short_count = sum(1 for t in trades if t["dir"] == "SHORT")
     forced_close_count = sum(1 for t in trades if t["exit_reason"] == "REVERSAL")
 
-    wins = sum(t["pnl"] for t in trades if t["pnl"] > 0)
-    losses = sum(t["pnl"] for t in trades if t["pnl"] < 0)
-    gross_profit = wins
-    gross_loss = abs(losses)
-    pnl_freq = gross_profit / total_trades if total_trades else 0
+    win_count = sum(1 for t in trades if t["pnl"] > 0)
+    loss_count = sum(1 for t in trades if t["pnl"] < 0)
+    gross_profit = sum(t["pnl"] for t in trades if t["pnl"] > 0)
+    gross_loss = abs(sum(t["pnl"] for t in trades if t["pnl"] < 0))
+    win_rate = win_count / total_trades if total_trades else 0.0
+    pnl_freq = gross_profit / (gross_profit + gross_loss) if (gross_profit + gross_loss) else 0.0
 
     avg_bars = _avg_bars_held(trades)
     # For bars held, we need to estimate from timestamps — simplified
@@ -280,9 +281,10 @@ def generate_report(trades: List[Dict]) -> str:
         "## Summary\n"
         f"- **Total trades**: {total_trades}\n"
         f"- **LONG**: {long_count} | **SHORT**: {short_count} | **Forced-close (reversal)**: {forced_close_count}\n"
-        f"- **Win rate**: {pnl_freq:.1%}\n"
-        f"- **Gross profit**: ${gross_profit:.2f}\n"
-        f"- **Gross loss**: ${gross_loss:.2f}\n"
+        f"- **Win count**: {win_count} / {total_trades} = {win_rate:.1%}\n"
+        f"- **Gross profit**: ${gross_profit:+.2f}\n"
+        f"- **Gross loss**: ${gross_loss:-.2f}\n"
+        f"- **PF (profit/loss frequency)**: {pnl_freq:.1%}\n"
         f"- **Total P&L**: **${cum_pnl:+.2f}**\n\n"
 
         "## Trade Statistics\n"

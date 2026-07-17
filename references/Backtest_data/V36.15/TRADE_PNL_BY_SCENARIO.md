@@ -6,26 +6,28 @@
 
 ## Summary
 
-1. **Total [TRADE] entries found:** 41
-   - Matched to close: **39**
+1. **Total [TRADE] entries found:** 80
+   - Matched to close: **78**
    - Unmatched: **2** (no matching OPEN or CLOSE)
 
 2. **Overall statistics:**
-   - Win-rate: 25.6% (39 wins / 39 total)
-   - Total profit: -115.12
-   - PF (gross profit / gross loss): -135.12 / +125.12 = -1.08
+   - Win-rate: 30.8% (78 wins / 78 total)
+   - Total profit: +69.37
+   - PF (gross profit / gross loss): +31.37 / +45.37 = -0.69
 
 ## 1. Grouped by M15 State
 
 | M15 | Count | Win-Rate | Total Profit | PF |
 |-----|-------|----------|---------------|-----|
 | F | 39 | 25.6% | -115.12 | -1.08 |
+| R | 39 | 35.9% | +184.49 | -0.98 |
 
 ## 2. Grouped by M30 State
 
 | M30 | Count | Win-Rate | Total Profit | PF |
 |-----|-------|----------|---------------|-----|
 | F | 39 | 25.6% | -115.12 | -1.08 |
+| R | 39 | 35.9% | +184.49 | -0.98 |
 
 ## 3. Grouped by Direction
 
@@ -38,12 +40,14 @@
 | M15 | Dir | Count | Win-Rate | Total Profit | PF |
 |-----|------|-------|----------|---------------|-----|
 | F | UP | 39 | 25.6% | -115.12 | -1.08 |
+| R | DOWN | 39 | 35.9% | +184.49 | -0.98 |
 
 ## 5. Grouped by (M30 × Direction)
 
 | M30 | Dir | Count | Win-Rate | Total Profit | PF |
 |-----|------|-------|----------|---------------|-----|
 | F | UP | 39 | 25.6% | -115.12 | -1.08 |
+| R | DOWN | 39 | 35.9% | +184.49 | -0.98 |
 
 ---
 
