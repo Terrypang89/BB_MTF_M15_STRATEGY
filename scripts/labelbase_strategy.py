@@ -256,7 +256,7 @@ def _bars_held(t: Dict) -> int:
     return max(1, t["exit_bar_index"] - t["entry_bar_index"])
 
 
-def generate_report(trades: List[Dict]) -> str:
+def generate_report(trades: List[Dict], m15_data: List[Dict], m5_data: List[Dict]) -> str:
     """Generate the markdown report."""
     total_trades = len(trades)
     long_count = sum(1 for t in trades if t["dir"] == "LONG")
@@ -286,14 +286,56 @@ def generate_report(trades: List[Dict]) -> str:
         breakdown[break_reason]["count"] += 1
         breakdown[break_reason]["pnl"] += t["pnl"]
 
-    # Build ledger lines
+    # Build ledger lines with entry reason (rule + fields at entry bar) and exit reason (rule + fields at exit bar)
     ledger_lines = []
     cum_pnl = 0.0
     for t in trades:
         cum_pnl += t["pnl"]
+
+        # Get entry bar data to extract ws, dm, dbw, bbupdn for the entry reason
+        entry_bar = m15_data[t["entry_bar_index"]]
+        entry_ws = entry_bar["ws"]
+        entry_dm = entry_bar["dm"]
+        entry_dbw = entry_bar["dbw"]
+        entry_bbupdn = entry_bar.get("bbupdn", 0)  # bbupdn not captured in original parse; use 0 as default
+
+        # Determine entry reason name based on W_stage and dm (same logic as entry)
+        if entry_ws in (511, 521):
+            if entry_dm == 1.0:
+                entry_reason_name = "FLY_UP"
+            elif entry_dm == 5.0:
+                entry_reason_name = "SHRK_UP"
+            else:
+                entry_reason_name = f"W{entry_ws}_UP"
+        elif entry_ws in (512, 522):
+            if entry_dm == 1.0:
+                entry_reason_name = "SQZ_UP"
+            elif entry_dm == 5.0:
+                entry_reason_name = "SHRK_UP"
+            else:
+                entry_reason_name = f"W{entry_ws}_UP"
+        else:
+            entry_reason_name = f"W{entry_ws}_UP"
+
+        # Build entry reason field string
+        entry_re = f"{entry_reason_name} [M15]: ws={entry_ws} dm={entry_dm:.1f} dbw={entry_dbw:+.2f} bbupdn={entry_bbupdn}"
+        entry_dt = t["entry_ts"] or "—"
+
+        # Get exit bar data for the exit reason
+        exit_bar = m15_data[t["exit_bar_index"]]
+        exit_ws = exit_bar["ws"]
+        exit_dm = exit_bar["dm"]
+        exit_dbw = exit_bar["dbw"]
+        exit_bbupdn = exit_bar.get("bbupdn", 0)  # bbupdn not captured in original parse; use 0 as default
+
+        # Exit reason is just the rule name (no field values needed per requirements)
+        exit_re = f"{t['exit_reason']} [M15]: ws={exit_ws} dm={exit_dm:.1f} dbw={exit_dbw:+.2f} bbupdn={exit_bbupdn}"
+        exit_dt = t["ts"]
+
         ledger_lines.append(
-            f"| {t['ts']} | {t['entry_ts'] or '—'} | {t['dir']} | {t['entry_px']:.2f} | "
-            f"{t['ts']} | {t['exit_reason']} | {t['exit_px']:.2f} | {t['pnl']:+.2f} | {cum_pnl:+.2f} |"
+            f"| {t['entry_bar_index'] + 1} | {t['entry_bar_index'] + 1} | {entry_dt} | {t['dir']} | "
+            f"{entry_re} | {t['entry_px']:.2f} | {exit_dt} | {exit_re} | "
+            f"{t['exit_px']:.2f} | {t['pnl']:+.2f} | {cum_pnl:+.2f} |"
         )
 
     report = (
@@ -322,7 +364,10 @@ def generate_report(trades: List[Dict]) -> str:
     for reason, data in sorted(breakdown.items()):
         report += f"- **{reason}**: {data['count']} trades, ${data['pnl']:+.2f} P&L\n"
 
-    report += "\n## Trade Ledger\n\n" + "\n".join(ledger_lines)
+    report += "\n## Trade Ledger\n\n"
+    report += "| # | trade number | entry dt | dir | entry reason | entry px | exit dt | exit reason | exit px | P&L | Cum P&L |\n"
+    report += "|---|--------------|----------|-----|---------------|----------|---------|-------------|---------|------|-------|\n"
+    report += "\n".join(ledger_lines)
 
     return report
 
@@ -357,7 +402,7 @@ def main():
 
     trades = simulate(m15_data, m5_data)
 
-    report = generate_report(trades)
+    report = generate_report(trades, m15_data, m5_data)
     print(report)
 
 
