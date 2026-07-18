@@ -14,21 +14,20 @@ from typing import Dict, List, Tuple, Optional
 
 LOG_PATH = Path(r"references/Backtest_data/V36.15/20260712_clean.log")
 
-# Tags we ALLOW: M15 and M5
-TAG_ALLOW = {"[M15]", "[M5]"}
+# Tags we ALLOW: all timeframe tags
+TAG_ALLOW = {"[M5]", "[M15]", "[M30]", "[H1]", "[H4]", "[D1]", "[W1]"}
 
-# Tags we NEVER parse
+# Tags we NEVER parse (informational, not data)
 TAG_IGNORE = {"[TRADE]", "[TRADEINFO]", "[ORDERINFO]", "[DUALTF]",
-              "[ATRSL1buf]", "[NEW_ORDER_OPEN]", "[NEW_ORDER_CLOSE]",
-              "[BBTFImpact]"}
+              "[ATRSL1buf]", "[NEW_ORDER_OPEN]", "[NEW_ORDER_CLOSE]"}
 
-# Regex for M15 line: W_stage, diffMid_Trend, diffBBW — capture cur and prev1 from each list
+# Regex for M15 line: W_stage, diffMid_Trend, BBUpDn — capture cur from each list
 M15_LINE_RE = re.compile(
     r"^(\d{4}\.\d{2}\.\d{2}[-\s]\d{2}:\d{2}:\d{2})"
     r".*\[M15\]"
     r",.*W_stage_M15:\s*\(([^)]*)\)\[\s*([0-9]+)"
     r".*diffMid_Trend_M15:\s*\[\s*([-]?[\d.]+)"
-    r".*diffBBW_M15:\s*\[\s*([-]?[\d.]+),\s*([-]?[\d.]+)"
+    r",.*BBUpDn_M15:\s*\[\s*([0-9\-]+)"
 )
 
 # Regex for M5 line: close_M5 is a list; we take the first (cur = price)
@@ -59,7 +58,7 @@ def parse_log() -> Tuple[List, List]:
 
             m = M15_LINE_RE.search(raw)
             if m:
-                ts, ws_stage_str, ws_cur, dm_cur, dbw_cur, dbw_prev1 = m.groups()
+                ts, ws_stage_str, ws_cur, dm_cur, bbupdn_cur = m.groups()
                 ts_dt = _parse_ts(ts)
                 # For empty warmup (), ws_stage_str is empty and ws_cur is "0"
                 ws_num = int(ws_cur) if ws_cur else 0
@@ -68,8 +67,8 @@ def parse_log() -> Tuple[List, List]:
                     "ts_str": ts,
                     "ws": ws_num,  # W_stage cur (e.g., 511, 522)
                     "dm": float(dm_cur),  # diffMid_Trend cur
-                    "dbw": float(dbw_cur),  # diffBBW cur
-                    "dbw_prev": float(dbw_prev1),  # diffBBW prev1 (for FLY_PSHRINK rule)
+                    "dbw": 0.0,  # diffBBW not captured in this format — use 0
+                    "bbupdn": int(bbupdn_cur) if bbupdn_cur else 0,  # BBUpDn cur
                 })
 
             m = M5_LINE_RE.search(raw)
@@ -461,6 +460,9 @@ def _median_bars_held(trades: List[Dict]) -> int:
 
 def main():
     m15_data, m5_data = parse_log()
+
+    # Filter to only M15 bars (ws >= 500) — other timeframes (M30, H1, etc.) are excluded
+    m15_data = [b for b in m15_data if b["ws"] >= 500]
 
     print(f"M15 lines parsed: {len(m15_data)} (date range: {m15_data[0]['ts_str'][:10]} to {m15_data[-1]['ts_str'][:10]})")
     print(f"M5 lines parsed: {len(m5_data)}")
