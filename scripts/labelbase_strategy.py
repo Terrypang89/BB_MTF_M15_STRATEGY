@@ -364,6 +364,72 @@ def generate_report(trades: List[Dict], m15_data: List[Dict], m5_data: List[Dict
     for reason, data in sorted(breakdown.items()):
         report += f"- **{reason}**: {data['count']} trades, ${data['pnl']:+.2f} P&L\n"
 
+    # --- Uncovered bars calculation (using evaluate_bar like the simulation) ---
+    # A bar is "matched" if evaluate_bar triggers an entry or exit.
+    # We must track running state (position) like simulate() does to avoid
+    # counting consecutive identical bars multiple times.
+    sim_position = "FLAT"
+    matched_ts_set = set()
+    for bar in m15_data:
+        price = get_nearest_m5_at_or_before(m5_data, bar["ts"])
+        new_pos, exit_reason = evaluate_bar(bar, price, sim_position)
+
+        # Matched if we got an entry (new_pos != "FLAT") or an exit reason
+        if new_pos != sim_position or exit_reason is not None:
+            matched_ts_set.add(bar["ts_str"])
+            sim_position = new_pos
+
+    covered_count = len(matched_ts_set)
+    uncovered_count = len(m15_data) - covered_count
+    uncovered_pct = (uncovered_count / len(m15_data) * 100) if m15_data else 0.0
+
+    # Group uncovered bars by (ws, dm) combo — skip any that would be entries/exits
+    uncovered_by_combo: Dict[Tuple[int, float], List[Dict]] = {}
+    for bar in m15_data:
+        if bar["ts_str"] not in matched_ts_set:
+            combo = (bar["ws"], bar["dm"])
+            if combo not in uncovered_by_combo:
+                uncovered_by_combo[combo] = []
+            uncovered_by_combo[combo].append(bar)
+
+    # Build summary rows for the uncovered table
+    combo_summary = []
+    for (ws, dm), bars in sorted(uncovered_by_combo.items(), key=lambda x: len(x[1]), reverse=True):
+        n = len(bars)
+        combo_summary.append({"ws": ws, "dm": dm, "n": n})
+
+    report = (
+        "# Label-Based Strategy P&L Report\n\n"
+        "## Provenance\n"
+        f"`python scripts/labelbase_strategy.py` / input log / generated UTC\n"
+        "NO X barrier, NO N horizon — entry and exit are both label-driven; P&L is gross on close_M5, 1 unit, no costs.\n\n"
+
+        "## Summary\n"
+        f"- **Total trades**: {total_trades}\n"
+        f"- **LONG**: {long_count} | **SHORT**: {short_count} | **Forced-close (reversal)**: {forced_close_count}\n"
+        f"- **Win count**: {win_count} / {total_trades} = {win_rate:.1%}\n"
+        f"- **Gross profit**: ${gross_profit:+.2f}\n"
+        f"- **Gross loss**: ${gross_loss:-.2f}\n"
+        f"- **PF (profit/loss frequency)**: {pnl_freq:.1%}\n"
+        f"- **Total P&L**: **${cum_pnl:+.2f}**\n\n"
+
+        "## Trade Statistics\n"
+        f"- Average bars held: {avg_bars:.1f}\n"
+        f"- Median bars held: {median_bars}\n"
+        f"- Trades held < 2 M15 bars: {short_2_bars}\n\n"
+
+        "## Exit Reasons\n"
+    )
+
+    for reason, data in sorted(breakdown.items()):
+        report += f"- **{reason}**: {data['count']} trades, ${data['pnl']:+.2f} P&L\n"
+
+    report += f"\n## Uncovered Bars — matched no rule ({uncovered_count} bars, {uncovered_pct:.1f}%)\n\n"
+    if combo_summary:
+        report += "### Summary by W_stage / diffMid_Trend\n\n"
+        for cs in combo_summary:
+            report += f"- **{cs['ws']} / {cs['dm']:.1f}**: {cs['n']} bars\n"
+
     report += "\n## Trade Ledger\n\n"
     report += "| # | trade number | entry dt | dir | entry reason | entry px | exit dt | exit reason | exit px | P&L | Cum P&L |\n"
     report += "|---|--------------|----------|-----|---------------|----------|---------|-------------|---------|------|-------|\n"
