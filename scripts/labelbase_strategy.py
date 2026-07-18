@@ -461,9 +461,7 @@ def _median_bars_held(trades: List[Dict]) -> int:
 def main():
     m15_data, m5_data = parse_log()
 
-    # Filter to only M15 bars (ws >= 500) — other timeframes (M30, H1, etc.) are excluded
-    m15_data = [b for b in m15_data if b["ws"] >= 500]
-
+ 
     print(f"M15 lines parsed: {len(m15_data)} (date range: {m15_data[0]['ts_str'][:10]} to {m15_data[-1]['ts_str'][:10]})")
     print(f"M5 lines parsed: {len(m5_data)}")
     print()
