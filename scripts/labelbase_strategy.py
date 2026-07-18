@@ -21,9 +21,12 @@ TAG_ALLOW = {"[M5]", "[M15]", "[M30]", "[H1]", "[H4]", "[D1]", "[W1]"}
 TAG_IGNORE = {"[TRADE]", "[TRADEINFO]", "[ORDERINFO]", "[DUALTF]",
               "[ATRSL1buf]", "[NEW_ORDER_OPEN]", "[NEW_ORDER_CLOSE]"}
 
-# Regex for M15 line: capture W_stage(cur), diffMid_Trend(cur), BBUpDn(cur), diffBBW(cur,prev1)
+# Regex for M15 line: ts, stage_str, ws_cur, dm_cur, dbw_cur, dbw_prev1, bbupdn_cur (last optional)
 M15_LINE_RE = re.compile(
-    r".*?\[M15\].*, .*W_stage_M15:\s*\(([^)]*)\)\[\s*(\d+),\s*(\d+),\s*(\d+)\], .*diffMid_Trend_M15:\s*\[\s*([-]?[\d.]+).*BBUpDn_M15:\s*\[\s*([0-9\-]+).*diffBBW_M15:\s*\[\s*([0-9\.]+),\s*([0-9\.]+)"
+    r"^(\d{4}\.\d{2}\.\d{2}[-\s]\d{2}:\d{2}:\d{2})"
+    r".*W_stage_M15:\s*\(([^)]*)\)\[\s*([0-9]+),\s*([0-9]+),\s*([0-9]+)], .*diffMid_Trend_M15:\s*\[\s*([-]?[\d.]+)"
+    r".*?diffBBW_M15:\s*\[\s*([-]?[\d.]+),\s*([-]?[\d.]+)"
+    r"(?:.*BBUpDn_M15:\s*\[\s*([-]?[0-9]+))?"
 )
 
 # Regex for M5 line: close_M5 is a list; we take the first (cur = price)
@@ -54,8 +57,8 @@ def parse_log() -> Tuple[List, List]:
 
             m = M15_LINE_RE.search(raw)
             if m:
-                ws_stage_str, ws_cur, ws_prev1, ws_prev2, dm_cur, bbupdn_cur, dbw_cur, dbw_prev1 = m.groups()
-                ts_dt = _parse_ts(raw[:19])  # Extract from raw before [M15]
+                ts, ws_stage_str, ws_cur, ws_prev1, ws_prev2, dm_cur, dbw_cur, dbw_prev1, bbupdn_cur = m.groups()
+                ts_dt = _parse_ts(ts)  # ts is now group 1
                 ts_str = raw[:20].strip()  # Store timestamp string for sorting
                 ws_num = int(ws_cur) if ws_cur else 0
                 m15_data.append({
