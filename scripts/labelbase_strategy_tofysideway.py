@@ -175,6 +175,12 @@ def evaluate_bar(m15: Dict, m5_price: Optional[float], position: Optional[str]) 
     return position, None
 
 
+def _format_ledger_row(t, cum_pnl):
+    """Format one trade dict into an 8-column ledger row."""
+    entry_ts = t["entry_ts"] if t["entry_ts"] else ""
+    return f"| {t['ts']} | {entry_ts} | {t['dir']} | {t['entry_px']:.2f} | "            f"{t['ts']} | {t['exit_reason']} | {t['exit_px']:.2f} | {t['pnl']:+.2f} | {cum_pnl:+.2f} |"
+
+
 def simulate(m15_data: List[Dict], m5_data: List[Dict]) -> List[Dict]:
     """
     Run the strategy over the data. Returns a list of trade records.
