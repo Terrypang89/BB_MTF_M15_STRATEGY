@@ -1,6 +1,6 @@
 #property copyright "Copyright 2025, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "37.01                         "
+#property version   "37.04                         "
 
 #ifdef __MQL4__
 #else
@@ -9,10 +9,11 @@
 #include <TofyIncludeSimple.mqh>
 #include <TofyTrade6.mqh>
 #include <TofySideway.mqh>
+#include <TofyTouch.mqh>
 #endif
 
 input string             Basic_Settings           = "---------------------------------------------";
-input string             ORDERS_COMMENT           = "V37.03";
+input string             ORDERS_COMMENT           = "V37.04";
 input int                MAGIC_NUMBER             = 898989;
 input enum_mode          MODE                     = 2;
 input ENUM_TIMEFRAMES    Indicator_TIMEFRAME      = PERIOD_CURRENT;
@@ -128,10 +129,9 @@ bool CLOSE_BUY=false,CLOSE_SELL=false,CLOSE_ALL=false;
 double BUY_PROFIT=0,SELL_PROFIT=0,BUY_LOTS=0,SELL_LOTS=0;
 int OPEN_BUY_TICKET_NUM= 0, OPEN_SELL_TICKET_NUM=0;
 double TICKVALUE=0;
-int PREV_BUYS=0,PREV_SELLS=0;
 bool DEINIT = false;
 
-int BUYS=0, SELLS=0, BUYLIMITS=0, SELLLIMITS=0, BUYSTOPS=0, SELLSTOPS=0;
+int BUYS=0, SELLS=0, BUYLIMITS=0, SELLLIMITS=0, BUYSTOPS=0, SELLSTOPS=0, PREV_BUYS=0,PREV_SELLS=0;
 
 double LAST_BID=0, LAST_LOT=0;
 int WIN_TYPE=0,WIN_TICKET=0, LOSS_TYPE=0,LOSS_TICKET=0;
@@ -143,26 +143,23 @@ double TOTAL_PROFIT=0.0, TOTAL_SWAP = 0.0;
 double BUY_PRICE=0.0,SELL_PRICE=0.0;
 int INP_TIME=TIMER_SEC;
 
-ENUM_Trade_Act Trade_act = 0;
+ENUM_Trade_Act Trade_act;
 
-datetime lastTFBarTime[TF_ANUM+1], M15BarTime, M15BarTime_2;
-datetime TIME_CURRENT=TimeCurrent();
+datetime lastTFBarTime[TF_ANUM+1], lastplotTFBarTime[TF_ANUM+1], currentTFBarTime[TF_ANUM+1], M15BarTime, TIME_CURRENT=TimeCurrent();
 MqlDateTime timeStruct;
 
-double close_prices[];
-double high_prices[];
-double low_prices[];
+double close_prices[], high_prices[], low_prices[];
 
-static datetime TIMER;
+// static datetime TIMER;
 bool IsNewBar = false;
 bool debug_info = Debug_mode;
 int ATRSLBUF_count;
 int print_init = 1;
 string midline_Cluster_log = "";
 
-string         tradeInfo;
-double         tradeLots;
-double         tradeSL;
+string tradeInfo;
+double tradeLots, tradeSL;
+double LOT;   // declare variable
 
 ENUM_TIMEFRAMES timeframe_list[TF_ANUM+1] = {BB_Ind_TIMEFRAME_0, BB_Ind_TIMEFRAME_1, BB_Ind_TIMEFRAME_2, BB_Ind_TIMEFRAME_3, BB_Ind_TIMEFRAME_4, BB_Ind_TIMEFRAME_5, BB_Ind_TIMEFRAME_6, BB_Ind_TIMEFRAME_7};
 color color_list[TF_ANUM+1] = {BBColor_0, BBColor_1, BBColor_2, BBColor_3, BBColor_4, BBColor_5, BBColor_6, BBColor_7};
@@ -171,7 +168,7 @@ int OnInit()
 {  
   // OnInit:
    //Stats_Init();
-   datetime TIME_CURRENT=TimeCurrent(); 
+   TIME_CURRENT=TimeCurrent(); 
    if(print_init){
       Print("Symbol name of the current chart=",_Symbol);
       Print("PERIOD_CURRENT of the current chart=",PERIOD_CURRENT);
@@ -183,9 +180,9 @@ int OnInit()
       INP_TIME=60;
    
    M15BarTime = 0;
-   M15BarTime_2 = 0;
    ArrayFill(currentTFBarTime,0,TF_ANUM,0);
    ArrayFill(lastTFBarTime,0,TF_ANUM,0);
+   ArrayFill(lastplotTFBarTime,0,TF_ANUM,0);
    BBTFImpact_init(BBTFImpact);
    ATRSLBUF_init(ATRSL1BUF);
    TOTAL_PROFIT=0.0;
@@ -319,7 +316,6 @@ void OnTick()
     // get prevtime 
     datetime TIME_PREV1 = iTime(_Symbol,_Period,1);
     datetime TIME_PREV2 = iTime(_Symbol,_Period,2);
-    string orderinfo = "";
 
    // set new bar detection 
    if(WORKING_HOURS(START_TIME,END_TIME)==true && IsNewBar)
@@ -327,28 +323,17 @@ void OnTick()
       CopyClose(_Symbol, Indicator_TIMEFRAME, 0, 5, close_prices);
       CopyHigh(_Symbol, Indicator_TIMEFRAME, 0, 5 , high_prices);
       CopyLow(_Symbol, Indicator_TIMEFRAME, 0, 5, low_prices);
-      if(MODE < 3)
-      {
-         
-         orderinfo += ", BUY_PROFIT:" + BUY_PROFIT;
-         orderinfo += ", BUY_LOTS:" + BUY_LOTS;
-         orderinfo += ", BUY_TICKET_NUM:" + OPEN_BUY_TICKET_NUM;
-         orderinfo += ", BUYS:" + BUYS;
-         orderinfo += ", SELL_PROFIT:" + SELL_PROFIT;
-         orderinfo += ", SELL_LOTS:" + SELL_LOTS;
-         orderinfo += ", SELL_TICKET_NUM:" + OPEN_SELL_TICKET_NUM;
-         orderinfo += ", SELLS:" + SELLS;
-         orderinfo += ", TOTALORDERS:" + OrdersTotal();
-         
-      }
+      print_orderinfo(debug_info, MODE, BUY_PROFIT, BUY_LOTS, OPEN_BUY_TICKET_NUM, BUYS, SELL_PROFIT, SELL_LOTS, OPEN_SELL_TICKET_NUM, SELLS)
       // get the lot from LOT_CALCULATE(0.0, -1, 1000, 0.01)
-      double LOT = LOT_CALCULATE(RISK_PER_TRADE,STOPLOSS,FROM_BALANCE,VOLUME);
+      LOT = LOT_CALCULATE(RISK_PER_TRADE, STOPLOSS, FROM_BALANCE, VOLUME);
+
       if(LOT == -1)
       {
-            Print(__FUNCTION__, " ", __LINE__, " ERROR: ", GetLastError());
-            Sleep(1000);
-            return;
+         Print(__FUNCTION__, " ", __LINE__, " ERROR: ", GetLastError());
+         Sleep(1000);
+         return;
       }
+
       string STRATEGY_6_info = "";
       string TRADE_comment = "";
       string Trade_info = "";
@@ -387,124 +372,6 @@ void OnTick()
                   Sleep(1000);
                   return;
                }
-               print_BBdata(BB_datas[r], BBTFImpact, stage_debug_log, midtrend_debug_log, debug_info);
-               if(Show_plot && r >= 0)
-               {
-                  if(BB_datas[r].BBW_stage[LA] >= 400 && BB_datas[r].BBW_stage[LA] < 500)
-                  {
-                     comb_stage_log = arraynum_2_string(r) + "-" + stage_debug_log + "-" + "SQZ";
-                     if(BB_datas[r].BBW_updated_stage[LA] >= 1000)
-                        comb_stage_log += "-@@@";
-                  }
-                  else if(BB_datas[r].BBW_stage[LA] >= 500)
-                  {
-                     comb_stage_log = arraynum_2_string(r) + "-fly++";
-                     if(BB_datas[r].BBW_stage[LA] == 512 || BB_datas[r].BBW_stage[LA] == 522)
-                     {
-                        if(BB_datas[r].BB_diffBBW[LA] > 0)
-                        {
-                           comb_stage_log = arraynum_2_string(r) +  "-fly+-";
-                        }
-                        else if(BB_datas[r].BB_diffBBW[LA] < 0)
-                        {
-                           comb_stage_log = arraynum_2_string(r) + "-fly-+";
-                        }
-                     }
-                     else if(BB_datas[r].BBW_stage[LA] == 513 || BB_datas[r].BBW_stage[LA] == 523)
-                     {
-                        comb_stage_log = arraynum_2_string(r) + "-fly--";
-                     }
-                  }
-                  else if(BB_datas[r].BBW_stage[LA] >= 300 && BB_datas[r].BBW_stage[LA] < 400)
-                  {
-                     comb_stage_log = arraynum_2_string(r) + "-SW";
-                  }
-                  else if(BB_datas[r].BBW_stage[LA] >= 200 && BB_datas[r].BBW_stage[LA] < 300)
-                  {
-                     comb_stage_log = arraynum_2_string(r) + "-STR";
-                  }
-
-                  if(comb_stage_log != "")
-                  {
-                     Text_angle = 90;
-                     DRAW_LABEL(comb_stage_log, TIME_CURRENT, BB_datas[r].BB0Up[LA_1], BB_datas[r].BBcolor, BB_datas[r].BBFontSize, BB_datas[r].BBArrowWidth, Text_angle, ANCHOR_LEFT, BB_datas[r]);
-                  }
-                  comb_stage_log = "";
-                  if(BB_datas[r].BB_diffMid_Trend[LA] >= 3 )
-                  {
-                     comb_stage_log = BB_datas[r].BB_diffMid_Trend[LA];
-                     M15_MidTrend_log = BB_datas[r].BB_diffMid_Trend[LA];
-                     Text_angle = 0;
-                  }
-                  if(BB_datas[r].BB_trend[LA] == 7)
-                  {
-                     comb_stage_log += "-REVUP";
-                     M15_MidTrend_log += "-REVUP";
-                     Text_angle = 90;
-                  }
-                  else if(BB_datas[r].BB_trend[LA] == 8)
-                  {
-                     comb_stage_log += "-REVDN";
-                     M15_MidTrend_log += "-REVDN";
-                     Text_angle = 90;
-                  }
-                  if(comb_stage_log != "" && r != 1)
-                  {
-                     Text_angle = 270;
-                     Text_loc = BB_datas[r].BBMidLV[LA_1] - 2 ;
-                     DRAW_LABEL(comb_stage_log, TIME_CURRENT, Text_loc, BB_datas[r].BBcolor, BB_datas[r].BBFontSize, BB_datas[r].BBArrowWidth, Text_angle, ANCHOR_UPPER, BB_datas[r]);
-                     // DRAW_LABEL("-" + midline_Cluster_log + "--" + BBTFImpact.sideway_selected[0], TIME_CURRENT, Text_loc, BB_datas[1].BBcolor, 9, 2, Text_angle, ANCHOR_UPPER, BB_datas[1]);
-                  }
-                  comb_stage_log = "";
-                  if( BB_datas[r].BBline_seq_touch[LA] == 9 || BB_datas[r].BBline_seq_touch[LA] == 19)
-                  {
-                     comb_stage_log += BB_datas[r].BBline_seq_touch[LA];
-                     if(BB_datas[r].BBline_seq_touch[LA] > 10) Text_angle = 0;
-                     else Text_angle = 180;
-                     Text_loc = high_prices[LA];
-                  }
-                  else if(BB_datas[r].BBline_seq_touch[LA] == 8 || BB_datas[r].BBline_seq_touch[LA] == 18)
-                  {
-                     
-                     // comb_stage_log += "T";
-                     comb_stage_log += BB_datas[r].BBline_seq_touch[LA];
-                     if(BB_datas[r].BBline_seq_touch[LA] > 10) Text_angle = 0;
-                     else Text_angle = 180;
-                     Text_loc = low_prices[LA];
-                  }
-                  else if(BB_datas[r].BBline_seq_touch[LA] == 7 || BB_datas[r].BBline_seq_touch[LA] == 17)
-                  {
-                     // comb_stage_log += "T";
-                     comb_stage_log += BB_datas[r].BBline_seq_touch[LA];
-                     if(BB_datas[r].BBline_seq_touch[LA] > 10)
-                     {
-                        Text_angle = 180;
-                     }
-                     else 
-                     {
-                        Text_angle = 0;
-                     }
-                     Text_loc = high_prices[LA];
-                  }
-                  else if(BB_datas[r].BBline_seq_touch[LA] == 6 || BB_datas[r].BBline_seq_touch[LA] == 16)
-                  {
-                     // comb_stage_log += "T";
-                     comb_stage_log += BB_datas[r].BBline_seq_touch[LA];
-                     if(BB_datas[r].BBline_seq_touch[LA] > 10)
-                     {
-                        Text_angle = 180;
-                     }
-                     else 
-                     {
-                        Text_angle = 0;
-                     }
-                     Text_loc = low_prices[LA];
-                  }
-                  if(comb_stage_log != "")
-                  {
-                     DRAW_LABEL(comb_stage_log, TIME_CURRENT, Text_loc, BB_datas[r].BBcolor, BB_datas[r].BBFontSize, BB_datas[r].BBArrowWidth, 0, ANCHOR_LEFT, BB_datas[r]);
-                  }
-               }
             }
          }
       }
@@ -527,44 +394,14 @@ void OnTick()
             Sleep(1000);
             return;
          }
-         
-         if(Show_plot)
-         {
-            // OBJECT_ATRSLBUFLINE("ATRSLBUF" + " " + "atrsl_slmid" + "_" + (string)ATRSLBUF_count,atrsl_slmid[3],"atrsl_slmid",Yellow,3, TIME_PREV1, TIME_PREV2, atrsl_slmid[2], atrsl_slmid[3]);
-            if(ATRSL1BUF.ATRLV[LA_1]!= 0 && ATRSL1BUF.ATRLV[LA_2]!= 0)
-               OBJECT_ATRSLBUFLINE("ATRSLBUF" + " " + "atrsl_lv" + "_" + (string)ATRSLBUF_count,ATRSL1BUF.ATRLV[LA_1],"atrsl_lv",Yellow,5, TIME_PREV1, TIME_PREV2, ATRSL1BUF.ATRLV[LA_2], ATRSL1BUF.ATRLV[LA_1]);
-            if(ATRSL1BUF.ATRSLUpper[LA_1]!=0 && ATRSL1BUF.ATRSLUpper[LA_2]!=0)
-               OBJECT_ATRSLBUFLINE("ATRSLBUF" + " " + "atrsl_slup" + "_" + (string)ATRSLBUF_count,ATRSL1BUF.ATRSLUpper[LA_1],"atrsl_slup",IndSidecolor,3, TIME_PREV1, TIME_PREV2, ATRSL1BUF.ATRSLUpper[LA_2], ATRSL1BUF.ATRSLUpper[LA_1]);
-            if(ATRSL1BUF.ATRSLLower[LA_1]!=0 && ATRSL1BUF.ATRSLLower[LA_2]!=0)
-               OBJECT_ATRSLBUFLINE("ATRSLBUF" + " " + "atrsl_sldn" + "_" + (string)ATRSLBUF_count,ATRSL1BUF.ATRSLLower[LA_1],"atrsl_sldn",IndSidecolor,3, TIME_PREV1, TIME_PREV2, ATRSL1BUF.ATRSLLower[LA_2], ATRSL1BUF.ATRSLLower[LA_1]);
-            ATRSLBUF_count+=1;
-         }
       }
 
       // trade in M15
       if(M15BarTime != currentTFBarTime[1])
       {
-         M15BarTime = currentTFBarTime[1];
+         int r = 1;
+         M15BarTime = currentTFBarTime[r];
          BBDatas_Midline_Sideway(BBTFImpact, BB_datas);
-        
-         if(Show_plot)
-         {
-            Text_angle = 270;
-            Text_loc = BB_datas[1].BBMidLV[LA_1] - 2 ;
-            midline_Cluster_log = IntegerToString(BBTFImpact.sideway_val[4]) + IntegerToString(BBTFImpact.sideway_val[3]) + IntegerToString(BBTFImpact.sideway_val[2]) + IntegerToString(BBTFImpact.sideway_val[1]) + IntegerToString(BBTFImpact.sideway_val[0]);
-            STRATEGY_6_info += "Sideway_val:[" + midline_Cluster_log;
-
-            if(BBTFImpact.sideway_selected[0] > 0)
-            {
-               STRATEGY_6_info += "-S_" + BBTFImpact.sideway_selected[0];
-               DRAW_LABEL(M15_MidTrend_log + "-" + midline_Cluster_log + "--" + BBTFImpact.sideway_selected[0], TIME_CURRENT, Text_loc, BB_datas[1].BBcolor, 9, 2, Text_angle, ANCHOR_UPPER, BB_datas[1]);
-            }
-            else
-            {
-               DRAW_LABEL(M15_MidTrend_log, TIME_CURRENT, Text_loc, BB_datas[1].BBcolor, 9, 2, Text_angle, ANCHOR_UPPER, BB_datas[1]);
-            }
-            if(STRATEGY_6_info != "") STRATEGY_6_info +=  "] ";
-         }
 
          if(ATRSL1BUF.ATRLV[LA] != 0.0 && ATRSL1BUF.ATRLV[LA_1] != 0.0)
          {
@@ -716,22 +553,167 @@ void OnTick()
                   }
                }
             }
-            // perform  draw labels
-            if(TRADE_comment != "")
-            {
-               DRAW_LABEL(TRADE_comment, TIME_CURRENT, close_prices[LA_1], LightCyan, 9, 2, 0, ANCHOR_LEFT, BB_datas[TF2arraynum(_Period)]);
-            }
-
-         }
-         else {
-            STRATEGY_6_info += ", no ind!!";
          }
       }
-      if(debug_info) print_BBTFImpact(BBTFImpact, STRATEGY_6_info, close_prices, high_prices, low_prices);
-      if(STRATEGY_6_info != "" && debug_info) Print("[BBTFImpact] " + STRATEGY_6_info);
+
+      // perform draw label and print
+      for (int r = 0; r < TF_ANUM; r++)
+      {
+         if(currentTFBarTime[r] != lastplotTFBarTime[r])
+         {
+            lastplotTFBarTime[r] = currentTFBarTime[r];
+            print_BBdata(BB_datas[r], BBTFImpact, stage_debug_log, midtrend_debug_log, debug_info);
+            if(Show_plot && r >= 0)
+            {
+               if(BB_datas[r].BBW_stage[LA] >= 400 && BB_datas[r].BBW_stage[LA] < 500)
+               {
+                  comb_stage_log = arraynum_2_string(r) + "-" + stage_debug_log + "-" + "SQZ";
+                  if(BB_datas[r].BBW_updated_stage[LA] >= 1000)
+                     comb_stage_log += "-@@@";
+               }
+               else if(BB_datas[r].BBW_stage[LA] >= 500)
+               {
+                  comb_stage_log = arraynum_2_string(r) + "-fly++";
+                  if(BB_datas[r].BBW_stage[LA] == 512 || BB_datas[r].BBW_stage[LA] == 522)
+                  {
+                     if(BB_datas[r].BB_diffBBW[LA] > 0)
+                     {
+                        comb_stage_log = arraynum_2_string(r) +  "-fly+-";
+                     }
+                     else if(BB_datas[r].BB_diffBBW[LA] < 0)
+                     {
+                        comb_stage_log = arraynum_2_string(r) + "-fly-+";
+                     }
+                  }
+                  else if(BB_datas[r].BBW_stage[LA] == 513 || BB_datas[r].BBW_stage[LA] == 523)
+                  {
+                     comb_stage_log = arraynum_2_string(r) + "-fly--";
+                  }
+               }
+               else if(BB_datas[r].BBW_stage[LA] >= 300 && BB_datas[r].BBW_stage[LA] < 400)
+               {
+                  comb_stage_log = arraynum_2_string(r) + "-SW";
+               }
+               else if(BB_datas[r].BBW_stage[LA] >= 200 && BB_datas[r].BBW_stage[LA] < 300)
+               {
+                  comb_stage_log = arraynum_2_string(r) + "-STR";
+               }
+
+               if(comb_stage_log != "")
+               {
+                  Text_angle = 90;
+                  DRAW_LABEL(comb_stage_log, TIME_CURRENT, BB_datas[r].BB0Up[LA_1], BB_datas[r].BBcolor, BB_datas[r].BBFontSize, BB_datas[r].BBArrowWidth, Text_angle, ANCHOR_LEFT, BB_datas[r]);
+               }
+               comb_stage_log = "";
+               if(BB_datas[r].BB_diffMid_Trend[LA] >= 3 )
+               {
+                  comb_stage_log = BB_datas[r].BB_diffMid_Trend[LA];
+                  // if(r == 1) M15_MidTrend_log = BB_datas[r].BB_diffMid_Trend[LA];
+                  if(r == 1)
+                  {
+                     if(BBTFImpact.sideway_selected[0] > 0)
+                     {
+                        comb_stage_log += IntegerToString(BBTFImpact.sideway_val[4]) + IntegerToString(BBTFImpact.sideway_val[3]) + IntegerToString(BBTFImpact.sideway_val[2]) + IntegerToString(BBTFImpact.sideway_val[1]) + IntegerToString(BBTFImpact.sideway_val[0]);
+                        comb_stage_log += "-S_" + BBTFImpact.sideway_selected[0];
+                     }
+                  }
+                  // Text_angle = 0;
+               }
+               if(BB_datas[r].BB_trend[LA] == 7)
+               {
+                  comb_stage_log += "-REVUP";
+                  if(r == 1) M15_MidTrend_log += "-REVUP";
+                  // Text_angle = 90;
+               }
+               else if(BB_datas[r].BB_trend[LA] == 8)
+               {
+                  comb_stage_log += "-REVDN";
+                  if(r == 1) M15_MidTrend_log += "-REVDN";
+                  // Text_angle = 90;
+               }
+               if(comb_stage_log != "")
+               {
+                  Text_angle = 270;
+                  Text_loc = BB_datas[r].BBMidLV[LA_1] - 2 ;
+                  DRAW_LABEL(comb_stage_log, TIME_CURRENT, Text_loc, BB_datas[r].BBcolor, BB_datas[r].BBFontSize, BB_datas[r].BBArrowWidth, Text_angle, ANCHOR_UPPER, BB_datas[r]);
+                  // DRAW_LABEL("-" + midline_Cluster_log + "--" + BBTFImpact.sideway_selected[0], TIME_CURRENT, Text_loc, BB_datas[1].BBcolor, 9, 2, Text_angle, ANCHOR_UPPER, BB_datas[1]);
+               }
+
+               // draw BBline_seq_touch
+               comb_stage_log = "";
+               if( BB_datas[r].BBline_seq_touch[LA] == 9 || BB_datas[r].BBline_seq_touch[LA] == 19)
+               {
+                  comb_stage_log += BB_datas[r].BBline_seq_touch[LA];
+                  if(BB_datas[r].BBline_seq_touch[LA] > 10) Text_angle = 0;
+                  else Text_angle = 180;
+                  Text_loc = high_prices[LA];
+               }
+               else if(BB_datas[r].BBline_seq_touch[LA] == 8 || BB_datas[r].BBline_seq_touch[LA] == 18)
+               {
+                  comb_stage_log += CircledNum((int)BB_datas[r].BBline_seq_touch[LA]);   // NEW: circled
+                  if(BB_datas[r].BBline_seq_touch[LA] > 10) Text_angle = 0;
+                  else Text_angle = 180;
+                  Text_loc = low_prices[LA];
+               }
+               else if(BB_datas[r].BBline_seq_touch[LA] == 7 || BB_datas[r].BBline_seq_touch[LA] == 17)
+               {
+                  comb_stage_log += CircledNum((int)BB_datas[r].BBline_seq_touch[LA]);   // NEW: circled
+                  if(BB_datas[r].BBline_seq_touch[LA] > 10)
+                  {
+                     Text_angle = 180;
+                  }
+                  else 
+                  {
+                     Text_angle = 0;
+                  }
+                  Text_loc = high_prices[LA];
+               }
+               else if(BB_datas[r].BBline_seq_touch[LA] == 6 || BB_datas[r].BBline_seq_touch[LA] == 16)
+               {
+                  comb_stage_log += CircledNum((int)BB_datas[r].BBline_seq_touch[LA]);   // NEW: circled
+                  if(BB_datas[r].BBline_seq_touch[LA] > 10)
+                  {
+                     Text_angle = 180;
+                  }
+                  else 
+                  {
+                     Text_angle = 0;
+                  }
+                  Text_loc = low_prices[LA];
+               }
+               if(comb_stage_log != "" && r >= 1)
+               {
+                  DRAW_LABEL(comb_stage_log, TIME_CURRENT, Text_loc, BB_datas[r].BBcolor, BB_datas[r].BBFontSize, BB_datas[r].BBArrowWidth, 0, ANCHOR_LEFT, BB_datas[r]);
+               }
+            }
+         
+            if(Show_plot && r == 0)
+            {
+               // OBJECT_ATRSLBUFLINE("ATRSLBUF" + " " + "atrsl_slmid" + "_" + (string)ATRSLBUF_count,atrsl_slmid[3],"atrsl_slmid",Yellow,3, TIME_PREV1, TIME_PREV2, atrsl_slmid[2], atrsl_slmid[3]);
+               if(ATRSL1BUF.ATRLV[LA_1]!= 0 && ATRSL1BUF.ATRLV[LA_2]!= 0)
+                  OBJECT_ATRSLBUFLINE("ATRSLBUF" + " " + "atrsl_lv" + "_" + (string)ATRSLBUF_count,ATRSL1BUF.ATRLV[LA_1],"atrsl_lv",Yellow,5, TIME_PREV1, TIME_PREV2, ATRSL1BUF.ATRLV[LA_2], ATRSL1BUF.ATRLV[LA_1]);
+               if(ATRSL1BUF.ATRSLUpper[LA_1]!=0 && ATRSL1BUF.ATRSLUpper[LA_2]!=0)
+                  OBJECT_ATRSLBUFLINE("ATRSLBUF" + " " + "atrsl_slup" + "_" + (string)ATRSLBUF_count,ATRSL1BUF.ATRSLUpper[LA_1],"atrsl_slup",IndSidecolor,3, TIME_PREV1, TIME_PREV2, ATRSL1BUF.ATRSLUpper[LA_2], ATRSL1BUF.ATRSLUpper[LA_1]);
+               if(ATRSL1BUF.ATRSLLower[LA_1]!=0 && ATRSL1BUF.ATRSLLower[LA_2]!=0)
+                  OBJECT_ATRSLBUFLINE("ATRSLBUF" + " " + "atrsl_sldn" + "_" + (string)ATRSLBUF_count,ATRSL1BUF.ATRSLLower[LA_1],"atrsl_sldn",IndSidecolor,3, TIME_PREV1, TIME_PREV2, ATRSL1BUF.ATRSLLower[LA_2], ATRSL1BUF.ATRSLLower[LA_1]);
+               ATRSLBUF_count+=1;
+            }
+
+            if(Show_plot && r==1)
+            {
+               // perform  draw labels
+               if(TRADE_comment != "")
+               {
+                  DRAW_LABEL(TRADE_comment, TIME_CURRENT, close_prices[LA_1], LightCyan, 9, 2, 0, ANCHOR_LEFT, BB_datas[TF2arraynum(_Period)]);
+               }
+            }
+         }
+      }
+            
+      print_BBTFImpact(debug_info, BBTFImpact, close_prices, high_prices, low_prices);
       if(tradeInfo != "" && debug_info) Print("[TRADEINFO] " + tradeInfo);
       if(ATRSL1BUF.log != "" && debug_info) print_inner_1bufATRSL(ATRSL1BUF);
-      if(orderinfo != "" && debug_info) Print("[ORDERINFO]" + orderinfo);
+      // if(orderinfo != "" && debug_info) Print("[ORDERINFO]" + orderinfo);
    }
    DEINIT=false;
    PREV_BUYS=BUYS;
@@ -1296,7 +1278,6 @@ void print_inner_1bufATRSL(ATRSLBUF_struct &ATRSL1BUF)
    Print("[ATRSL1buf]" + ATRSL1BUF.log);
 }
 
-
 void print_BBdata(BB_MTF_Data_struct &BB_data, BB_MTF_Impact_struct &BBTFImpact, string &stage_debug_log, string &midtrend_debug_log, bool &debug_info)
 {
    string BB_strategy_info = "";
@@ -1384,8 +1365,9 @@ void print_BBdata(BB_MTF_Data_struct &BB_data, BB_MTF_Impact_struct &BBTFImpact,
    if(BB_strategy_info != "" && debug_info) Print(BB_strategy_info);
 }
 
-void print_BBTFImpact(BB_MTF_Impact_struct &BBTFImpact, string &STRATEGY_info, double &close_price[], double &high_price[], double &low_price[])
+void print_BBTFImpact(bool debug_info, BB_MTF_Impact_struct &BBTFImpact, double &close_price[], double &high_price[], double &low_price[])
 {
+   string STRATEGY_info = "";
    string BB_HTF_Drive_LTF_Sideway_info = "";
    string BB_LTF_Drive_HTF_Fly_info = "";
    string BB_Midline_cross_info = "";
@@ -1400,44 +1382,6 @@ void print_BBTFImpact(BB_MTF_Impact_struct &BBTFImpact, string &STRATEGY_info, d
    // string Price_Act_info = "";
    string BB_midline_Cluster_info = "";
    int TFnum = TF2arraynum(_Period);
-
-   if( ArraySize(BBTFImpact.BB_HTF_Drive_LTF_Sideway) > 0)
-   {
-      for(int j=TFnum; j<ArraySize(BBTFImpact.BB_HTF_Drive_LTF_Sideway); j++)
-      {
-         if(BBTFImpact.BB_HTF_Drive_LTF_Sideway[j])
-         {
-            if(BB_HTF_Drive_LTF_Sideway_info != "")
-            {
-               BB_HTF_Drive_LTF_Sideway_info += ", ";
-            }
-            BB_HTF_Drive_LTF_Sideway_info += arraynum_2_string(j) + "_" + BBTFImpact.BB_HTF_Drive_LTF_Sideway[j];
-         }
-      }
-      if(BB_HTF_Drive_LTF_Sideway_info != "")
-      {
-         STRATEGY_info += "HTF_Drive_LTF_Sideway:[" + BB_HTF_Drive_LTF_Sideway_info + "], ";
-      }
-   }
-
-   if( ArraySize(BBTFImpact.BB_LTF_Drive_HTF_Fly) > 0)
-   {
-      for(int j=TFnum; j<ArraySize(BBTFImpact.BB_LTF_Drive_HTF_Fly); j++)
-      {
-         if(BBTFImpact.BB_LTF_Drive_HTF_Fly[j])
-         {
-            if(BB_LTF_Drive_HTF_Fly_info != "")
-            {
-               BB_LTF_Drive_HTF_Fly_info += ", ";
-            }
-             BB_LTF_Drive_HTF_Fly_info += arraynum_2_string(j) + "_" + BBTFImpact.BB_LTF_Drive_HTF_Fly[j];
-         }
-      }
-      if(BB_LTF_Drive_HTF_Fly_info != "")
-      {
-         STRATEGY_info += "LTF_Drive_HTF_Fly:[" + BB_LTF_Drive_HTF_Fly_info + "], ";
-      }
-   }
 
    if(BBTFImpact.BB_midline_Cluster[0][LA] != 0)
    {
@@ -1514,4 +1458,71 @@ void print_BBTFImpact(BB_MTF_Impact_struct &BBTFImpact, string &STRATEGY_info, d
          STRATEGY_info += "Midline_cross:[" + BB_Midline_cross_info + "]";
       }
    }
+
+   if( ArraySize(BBTFImpact.BB_HTF_Drive_LTF_Sideway) > 0)
+   {
+      for(int j=TFnum; j<ArraySize(BBTFImpact.BB_HTF_Drive_LTF_Sideway); j++)
+      {
+         if(BBTFImpact.BB_HTF_Drive_LTF_Sideway[j])
+         {
+            if(BB_HTF_Drive_LTF_Sideway_info != "")
+            {
+               BB_HTF_Drive_LTF_Sideway_info += ", ";
+            }
+            BB_HTF_Drive_LTF_Sideway_info += arraynum_2_string(j) + "_" + BBTFImpact.BB_HTF_Drive_LTF_Sideway[j];
+         }
+      }
+      if(BB_HTF_Drive_LTF_Sideway_info != "")
+      {
+         STRATEGY_info += "HTF_Drive_LTF_Sideway:[" + BB_HTF_Drive_LTF_Sideway_info + "], ";
+      }
+   }
+
+   if( ArraySize(BBTFImpact.BB_LTF_Drive_HTF_Fly) > 0)
+   {
+      for(int j=TFnum; j<ArraySize(BBTFImpact.BB_LTF_Drive_HTF_Fly); j++)
+      {
+         if(BBTFImpact.BB_LTF_Drive_HTF_Fly[j])
+         {
+            if(BB_LTF_Drive_HTF_Fly_info != "")
+            {
+               BB_LTF_Drive_HTF_Fly_info += ", ";
+            }
+             BB_LTF_Drive_HTF_Fly_info += arraynum_2_string(j) + "_" + BBTFImpact.BB_LTF_Drive_HTF_Fly[j];
+         }
+      }
+      if(BB_LTF_Drive_HTF_Fly_info != "")
+      {
+         STRATEGY_info += "LTF_Drive_HTF_Fly:[" + BB_LTF_Drive_HTF_Fly_info + "], ";
+      }
+   }
+   if( debug_info) Print("[BBTFImpact] " + STRATEGY_info);
+}
+
+void print_orderinfo(bool debug_info, enum_mode MODE, double BUY_PROFIT, double BUY_LOTS, int OPEN_BUY_TICKET_NUM, int BUYS, double SELL_PROFIT, double SELL_LOTS, int OPEN_SELL_TICKET_NUM, int SELLS)
+{
+   string orderinfo = "";
+   if(MODE < 3)
+   {
+      orderinfo += ", BUY_PROFIT:" + BUY_PROFIT;
+      orderinfo += ", BUY_LOTS:" + BUY_LOTS;
+      orderinfo += ", BUY_TICKET_NUM:" + OPEN_BUY_TICKET_NUM;
+      orderinfo += ", BUYS:" + BUYS;
+      orderinfo += ", SELL_PROFIT:" + SELL_PROFIT;
+      orderinfo += ", SELL_LOTS:" + SELL_LOTS;
+      orderinfo += ", SELL_TICKET_NUM:" + OPEN_SELL_TICKET_NUM;
+      orderinfo += ", SELLS:" + SELLS;
+      orderinfo += ", TOTALORDERS:" + OrdersTotal();
+   }
+   if(debug_info) Print("[ORDERINFO]" + orderinfo);
+}
+
+// Add this helper function (near DRAW_LABEL, ~line 943):
+string CircledNum(int n)
+{
+   // 0-20  -> U+24EA, U+2460..U+2473 ;  21-30 -> U+3251..U+325A
+   if(n == 0)              return ShortToString(0x24EA);
+   if(n >= 1  && n <= 20)  return ShortToString((ushort)(0x2460 + (n - 1)));
+   if(n >= 21 && n <= 30)  return ShortToString((ushort)(0x3251 + (n - 21)));
+   return IntegerToString(n);   // fallback for out-of-range
 }
