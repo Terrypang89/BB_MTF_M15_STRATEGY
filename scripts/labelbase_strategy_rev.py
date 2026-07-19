@@ -299,8 +299,8 @@ def generate_report(trades: List[Dict]) -> str:
     for t in trades:
         cum_pnl += t["pnl"]
         ledger_lines.append(
-            f"| {t['ts']} | {t['entry_ts'] or '—'} | {t['dir']} | {t['entry_px']:.2f} | "
-            f"{t['ts']} | {t['exit_reason']} | {t['exit_px']:.2f} | {t['pnl']:+.2f} | {cum_pnl:+.2f} |"
+            f"| {t['entry_ts'] or '—'} | {t['dir']} | {t['entry_px']:.2f} | "
+            f"{t['ts']} | {t['exit_reason']} | {t['exit_px']:.2f} | {t['pnl']:+.2f} | {cum_pnl:+.2f}"
         )
 
     report = (
@@ -329,7 +329,9 @@ def generate_report(trades: List[Dict]) -> str:
     for reason, data in sorted(breakdown.items()):
         report += f"- **{reason}**: {data['count']} trades, ${data['pnl']:+.2f} P&L\n"
 
-    report += "\n## Trade Ledger\n\n" + "\n".join(ledger_lines)
+    report += "\n## Trade Ledger\n"
+    report += "  | entry dt | dir | entry px | exit dt | exit reason | exit px | P&L | Cum P&L |\n"
+    report += "  |---|---|---|---|---|---|---|---|\n" + "\n".join(ledger_lines) + "\n"
 
     return report
 
