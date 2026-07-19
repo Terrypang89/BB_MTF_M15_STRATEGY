@@ -9,7 +9,7 @@ NO X barrier, NO N horizon — entry and exit are both label-driven; P&L is gross 
 
 ## Summary
 - **Total trades**: 1207
-- **LONG**: 632 | **SHORT**: 575 | **Forced-close (reversal)**: 0
+- **LONG**: 632 | **SHORT**: 575 | **Forced-close (reversal)**: 34
 - **Win count**: 539 / 1207 = 44.7%
 - **Gross profit**: $+6545.78
 - **Gross loss**: $6022.58
