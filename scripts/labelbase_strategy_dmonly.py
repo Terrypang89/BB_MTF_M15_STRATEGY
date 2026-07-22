@@ -14,8 +14,8 @@ from typing import Dict, List, Tuple, Optional
 
 LOG_PATH = Path(r"references/Backtest_data/V36.15/20260712_clean.log")
 
-# Tags we ALLOW: M15, M5, and BBTFImpact (for sideway flag)
-TAG_ALLOW = {"[M15]", "[M5]", "[BBTFImpact]"}
+# Tags we ALLOW: M15, M5, D1, and BBTFImpact (for sideway flag)
+TAG_ALLOW = {"[M15]", "[M5]", "[D1]", "[BBTFImpact]"}
 
 # Tags we NEVER parse (BBTFImpact now allowed in TAG_ALLOW)
 TAG_IGNORE = {"[TRADE]", "[TRADEINFO]", "[ORDERINFO]", "[DUALTF]",
@@ -42,16 +42,24 @@ BBTFIMPACT_LINE_RE = re.compile(
     r"^(\d{4}\.\d{2}\.\d{2}[-\s]\d{2}:\d{2}:\d{2}).*Sideway_val:\s*\[\s*([0-9]+)(?:-S_([0-9]+))?"
 )
 
+# Regex for D1 line: timestamp, diffMid_Trend_D1 (first = current value)
+# Format: ...[D1], first_stage_D1:[...], W_stage_D1:()[...], diffMid_Trend_D1:[cur, prev1, prev2], ...
+# We only care about the FIRST value (current) of diffMid_Trend_D1
+D1_LINE_RE = re.compile(
+    r"^(\d{4}\.\d{2}\.\d{2}[-\s]\d{2}:\d{2}:\d{2}).*diffMid_Trend_D1:\s*\[\s*([-]?[\d.]+)"
+)
+
 
 def _parse_ts(ts: str) -> datetime:
     """Convert dot-separated timestamp to datetime for arithmetic."""
     return datetime.strptime(ts.replace(".", "-"), "%Y-%m-%d %H:%M:%S")
 
 
-def parse_log() -> Tuple[List, List]:
-    """Parse the log file. Returns (m15_data, m5_data)."""
+def parse_log() -> Tuple[List, List, List]:
+    """Parse the log file. Returns (m15_data, m5_data, d1_data)."""
     m15_data = []
     m5_data = []
+    d1_data = []
 
     # First pass: collect BBTFImpact data by minute
     sideway_by_minute = {}
@@ -89,6 +97,17 @@ def parse_log() -> Tuple[List, List]:
                     "price": float(price),
                 })
 
+            # Also parse D1 lines (same timestamp as M15 bar)
+            d = D1_LINE_RE.search(raw)
+            if d:
+                ts, dm_d1_cur = d.groups()
+                ts_dt = _parse_ts(ts)
+                d1_data.append({
+                    "ts": ts_dt,
+                    "ts_str": ts,
+                    "dm": float(dm_d1_cur),  # diffMid_Trend_D1 current value
+                })
+
             # Also parse BBTFImpact lines (same minute as M15 bar)
             b = BBTFIMPACT_LINE_RE.search(raw)
             if b:
@@ -101,8 +120,10 @@ def parse_log() -> Tuple[List, List]:
                 if sideway_sub is not None:
                     sideway_by_minute[ts_minute] = sideway_sub
 
-    # Sort both by timestamp
+    # Sort all by timestamp
     m15_data.sort(key=lambda x: x["ts"])
+    d1_data.sort(key=lambda x: x["ts"])
+    m5_data.sort(key=lambda x: _parse_ts(x["ts_str"]))
 
     # Fill in sideway flags by matching on minute
     for entry in m15_data:
@@ -110,9 +131,7 @@ def parse_log() -> Tuple[List, List]:
         flag = sideway_by_minute.get(ts_minute)
         entry["sideway_flag"] = flag
 
-    m5_data.sort(key=lambda x: _parse_ts(x["ts_str"]))
-
-    return m15_data, m5_data
+    return m15_data, m5_data, d1_data
 
 
 def get_nearest_m5_at_or_before(m5_list: List[Dict], target_dt: datetime) -> Optional[float]:
@@ -177,20 +196,35 @@ def _format_ledger_row(t, cum_pnl):
     return f"| {t['ts']} | {entry_ts} | {t['dir']} | {t['entry_px']:.2f} | "            f"{t['ts']} | {t['exit_reason']} | {t['exit_px']:.2f} | {t['pnl']:+.2f} | {cum_pnl:+.2f} |"
 
 
-def simulate(m15_data: List[Dict], m5_data: List[Dict]) -> List[Dict]:
+def simulate(m15_data: List[Dict], m5_data: List[Dict], d1_data: List[Dict]) -> Tuple[List[Dict], Dict]:
     """
-    Run the strategy over the data. Returns a list of trade records.
-    Each record has: ts, entry_price, exit_reason, exit_price, pnl, cum_pnl, direction,
-    entry_bar_index, exit_bar_index (for bars_held calculation).
+    Run the strategy over the data. Returns (trades, d1_regime_timeline).
+    Each trade record has: ts, entry_ts, dir, entry_px, exit_reason, exit_px, pnl, cum_pnl,
+    entry_bar_index, exit_bar_index, and now also "entry_d1_regime".
     """
+    # Build D1 regime timeline — map from timestamp to regime name
+    # dm == 1 -> D1_UP, dm == 2 -> D1_DOWN, dm >= 3 -> D1_SIDEWAYS, dm == 0 -> D1_WARMUP
+    d1_regime_timeline: Dict[datetime, str] = {}
+    for d in d1_data:
+        # A D1 regime starts at d["ts"] and continues until the next D1 line
+        dm = d["dm"]
+        if dm == 1:
+            regime = "D1_UP"
+        elif dm == 2:
+            regime = "D1_DOWN"
+        elif dm >= 3:
+            regime = "D1_SIDEWAYS"
+        else:  # dm == 0
+            regime = "D1_WARMUP"
+        d1_regime_timeline[d["ts"]] = regime
+
     trades = []
-    position = "FLAT"  # Current position
+    position = "FLAT"
     entry_price = None
-    entry_bar_index = None  # Track the bar where we entered
-    bars_in_trade = 0  # Count bars held while in position
+    entry_bar_index = None
+    bars_in_trade = 0
 
     for m15_idx, m15 in enumerate(m15_data):
-        # Get nearest M5 price at or before this M15 bar
         m5_price = get_nearest_m5_at_or_before(m5_data, m15["ts"])
         if m5_price is None:
             continue
@@ -198,12 +232,25 @@ def simulate(m15_data: List[Dict], m5_data: List[Dict]) -> List[Dict]:
         new_position, exit_reason = evaluate_bar(m15, m5_price, position)
 
         if exit_reason:
-            # EXIT ALL — close any existing position
             if position != "FLAT":
                 pnl = _compute_pnl(position, entry_price, m5_price)
                 exit_bar_index = m15_idx
                 bars_held = bars_in_trade
                 assert bars_held >= 1, f"bars_held must be >= 1: {bars_held}"
+                # Determine D1 regime at entry time — forward-fill from last D1 line
+                entry_ts_dt = m15_data[entry_bar_index]["ts"]
+                # Find latest D1 timestamp <= entry_ts_dt
+                matching_dts = None
+                for dts, _ in d1_regime_timeline.items():
+                    if dts <= entry_ts_dt:
+                        matching_dts = dts
+                    else:
+                        break
+                if matching_dts is not None:
+                    entry_regime = d1_regime_timeline[matching_dts]
+                else:
+                    # No D1 line before this — use the first one (which is WARMUP)
+                    entry_regime = d1_regime_timeline[next(iter(d1_regime_timeline))]
                 trades.append({
                     "ts": m15["ts_str"],
                     "entry_ts": m15_data[entry_bar_index]["ts_str"],
@@ -215,13 +262,13 @@ def simulate(m15_data: List[Dict], m5_data: List[Dict]) -> List[Dict]:
                     "cum_pnl": sum(t["pnl"] for t in trades),
                     "entry_bar_index": entry_bar_index,
                     "exit_bar_index": exit_bar_index,
+                    "entry_d1_regime": entry_regime,
                 })
             entry_price = None
             position = "FLAT"
             bars_in_trade = 0
 
         if new_position != position:
-            # Position changed — this is an ENTRY
             if position == "FLAT" and new_position == "LONG":
                 entry_price = m5_price
                 position = "LONG"
@@ -233,11 +280,9 @@ def simulate(m15_data: List[Dict], m5_data: List[Dict]) -> List[Dict]:
                 entry_bar_index = m15_idx
                 bars_in_trade = 0
             elif position != "FLAT" and new_position == "FLAT":
-                # This shouldn't happen after we already exited; but handle it
                 entry_price = None
                 position = "FLAT"
 
-        # Increment bars held while in position
         if position != "FLAT":
             bars_in_trade += 1
 
@@ -247,6 +292,19 @@ def simulate(m15_data: List[Dict], m5_data: List[Dict]) -> List[Dict]:
         bars_held = bars_in_trade
         assert bars_held >= 1, f"bars_held must be >= 1: {bars_held}"
         pnl = _compute_pnl(position, entry_price, m5_data[-1]["price"])
+        entry_ts_dt = m15_data[entry_bar_index]["ts"]
+        # Forward-fill: find latest D1 timestamp <= entry_ts_dt
+        matching_dts = None
+        for dts, _ in d1_regime_timeline.items():
+            if dts <= entry_ts_dt:
+                matching_dts = dts
+            else:
+                break
+        if matching_dts is not None:
+            entry_regime = d1_regime_timeline[matching_dts]
+        else:
+            # No D1 line before this — use the first one (which is WARMUP)
+            entry_regime = d1_regime_timeline[next(iter(d1_regime_timeline))]
         trades.append({
             "ts": m5_data[-1]["ts_str"],
             "entry_ts": m15_data[entry_bar_index]["ts_str"],
@@ -258,9 +316,10 @@ def simulate(m15_data: List[Dict], m5_data: List[Dict]) -> List[Dict]:
             "cum_pnl": sum(t["pnl"] for t in trades),
             "entry_bar_index": entry_bar_index,
             "exit_bar_index": exit_bar_index,
+            "entry_d1_regime": entry_regime,
         })
 
-    return trades
+    return trades, d1_regime_timeline
 
 
 def _compute_pnl(position: str, entry: float, exit_: float) -> float:
@@ -380,15 +439,83 @@ def _median_bars_held(trades: List[Dict]) -> int:
 
 
 def main():
-    m15_data, m5_data = parse_log()
+    m15_data, m5_data, d1_data = parse_log()
 
     print(f"M15 lines parsed: {len(m15_data)} (date range: {m15_data[0]['ts_str'][:10]} to {m15_data[-1]['ts_str'][:10]})")
     print(f"M5 lines parsed: {len(m5_data)}")
+    print(f"D1 lines parsed: {len(d1_data)} (date range: {d1_data[0]['ts_str'][:10]} to {d1_data[-1]['ts_str'][:10]})")
     print()
 
-    trades = simulate(m15_data, m5_data)
+    trades, d1_regime_timeline = simulate(m15_data, m5_data, d1_data)
 
+    # Build regime counts and per-regime P&L stats
+    regime_counts: Dict[str, int] = {"D1_UP": 0, "D1_DOWN": 0, "D1_SIDEWAYS": 0, "D1_WARMUP": 0}
+    regime_trades: Dict[str, List[Dict]] = {r: [] for r in regime_counts.keys()}
+
+    for t in trades:
+        regime = t.get("entry_d1_regime", "D1_WARMUP")
+        regime_counts[regime] += 1
+        regime_trades[regime].append(t)
+
+    # Compute per-regime stats — initialize with defaults for empty regimes
+    regime_stats: Dict[str, Dict] = {
+        r: {"trades": 0, "wins": 0, "losses": 0, "win_rate": 0.0, "gross_profit": 0.0, "gross_loss": 0.0, "total_pnl": 0.0, "avg_bars_held": 0.0}
+        for r in regime_counts
+    }
+    for r in regime_counts:
+        trds = regime_trades[r]
+        if trds:
+            wins = sum(1 for t in trds if t["pnl"] > 0)
+            losses = len(trds) - wins
+            gross_p = sum(t["pnl"] for t in trds if t["pnl"] > 0)
+            gross_l = abs(sum(t["pnl"] for t in trds if t["pnl"] < 0))
+            avg_bars = sum(t.get("bars_held", 1) for t in trds) / len(trds)
+            regime_stats[r] = {
+                "trades": len(trds),
+                "wins": wins,
+                "losses": losses,
+                "win_rate": wins / len(trds),
+                "gross_profit": gross_p,
+                "gross_loss": gross_l,
+                "total_pnl": gross_p - gross_l,
+                "avg_bars_held": avg_bars,
+            }
+
+    # Generate the report — append D1 Regime section after Trade Ledger
     report = generate_report(trades)
+
+    # Build the new section
+    lines = [
+        "\n## P&L by D1 Regime\n",
+        "| D1 Regime | trades | win rate | gross profit | gross loss | total P&L | avg bars held |\n",
+        "|---|---|---|---|---|---|---|\n",
+    ]
+
+    # Order: UP, DOWN, SIDEWAYS, WARMUP, then TOTAL
+    ordered = ["D1_UP", "D1_DOWN", "D1_SIDEWAYS", "D1_WARMUP"]
+    for r in ordered:
+        s = regime_stats.get(r, {})
+        lines.append(
+            f"| {r} | {s['trades']} | {s['win_rate']:.1%} | ${s['gross_profit']:+.2f} | ${s['gross_loss']:+.2f} | ${s['total_pnl']:+.2f} | {s['avg_bars_held']:.1f} |\n"
+        )
+
+    # TOTAL row
+    total_trades = len(trades)
+    total_wins = sum(s["wins"] for s in regime_stats.values())
+    total_gross_p = sum(s["gross_profit"] for s in regime_stats.values())
+    total_gross_l = sum(s["gross_loss"] for s in regime_stats.values())
+    total_pnl = sum(s["total_pnl"] for s in regime_stats.values())
+    lines.append(f"| TOTAL | {total_trades} | — | ${total_gross_p:+.2f} | ${total_gross_l:+.2f} | ${total_pnl:+.2f} | — |\n")
+
+    d1_bar_counts = regime_counts
+    largest_regime = max(regime_stats.items(), key=lambda x: abs(x[1]["total_pnl"])) if regime_stats else ("D1_WARMUP", {})
+    pct_of_total = (largest_regime[1]["total_pnl"] / total_pnl * 100) if total_pnl and largest_regime[1] else 0.0
+
+    lines.append(f"D1 bars: {d1_bar_counts['D1_UP']} UP | {d1_bar_counts['D1_DOWN']} DOWN | {d1_bar_counts['D1_SIDEWAYS']} SIDEWAYS | {d1_bar_counts['D1_WARMUP']} WARMUP\n")
+    lines.append(f"Largest regime P&L: {largest_regime[0]} = ${largest_regime[1]['total_pnl']:+.2f} ({pct_of_total:.1f}% of total)\n")
+
+    report = report.rstrip("\n") + "\n" + "".join(lines)
+
     print(report)
 
 

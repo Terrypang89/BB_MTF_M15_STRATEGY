@@ -1,5 +1,6 @@
 M15 lines parsed: 7610 (date range: 2026.01.02 to 2026.04.29)
 M5 lines parsed: 22821
+D1 lines parsed: 83 (date range: 2026.01.02 to 2026.04.29)
 
 # Label-Based Strategy P&L Report
 
@@ -1149,3 +1150,15 @@ NO X barrier, NO N horizon — entry and exit are both label-driven; P&L is gross 
 | 2026.04.29 22:45:02 | 2026.04.29 22:30:02 | LONG | 4542.89 | 2026.04.29 22:45:02 | SIDEWAYS | 4539.59 | -3.30 | +971.19 |
 | 2026.04.29 23:30:02 | 2026.04.29 23:00:02 | LONG | 4546.94 | 2026.04.29 23:30:02 | REVERSAL_DN | 4543.36 | -3.58 | +967.61 |
 | 2026.04.29 23:55:01 | 2026.04.29 23:45:02 | SHORT | 4543.74 | 2026.04.29 23:55:01 | FORCED_CLOSE (end of data) | 4542.42 | +1.32 | +968.93 |
+
+## P&L by D1 Regime
+| D1 Regime | trades | win rate | gross profit | gross loss | total P&L | avg bars held |
+|---|---|---|---|---|---|---|
+| D1_UP | 645 | 44.5% | $+3839.86 | $+3200.54 | $+639.32 | 1.0 |
+| D1_DOWN | 257 | 38.1% | $+1828.23 | $+1676.95 | $+151.28 | 1.0 |
+| D1_SIDEWAYS | 201 | 39.3% | $+922.89 | $+905.44 | $+17.45 | 1.0 |
+| D1_WARMUP | 17 | 64.7% | $+196.47 | $+35.59 | $+160.88 | 1.0 |
+| TOTAL | 1120 | — | $+6787.45 | $+5818.52 | $+968.93 | — |
+D1 bars: 645 UP | 257 DOWN | 201 SIDEWAYS | 17 WARMUP
+Largest regime P&L: D1_UP = $+639.32 (66.0% of total)
+
