@@ -346,7 +346,7 @@ def _bars_held(t: Dict) -> int:
     return max(1, t["exit_bar_index"] - t["entry_bar_index"])
 
 
-def generate_report(trades: List[Dict]) -> str:
+def generate_report(trades: List[Dict], churn_data: Optional[Dict] = None) -> str:
     """Generate the markdown report."""
     total_trades = len(trades)
     long_count = sum(1 for t in trades if t["dir"] == "LONG")
@@ -364,17 +364,6 @@ def generate_report(trades: List[Dict]) -> str:
     # For bars held, we need to estimate from timestamps — simplified
     median_bars = _median_bars_held(trades)
     short_2_bars = sum(1 for t in trades if _bars_held(t) < 2)
-
-    # Breakdown by exit reason
-    breakdown = {}
-    for reason in EXIT_REASON_NAMES.values():
-        breakdown[reason] = {"count": 0, "pnl": 0.0}
-    for t in trades:
-        break_reason = t["exit_reason"]
-        if break_reason not in breakdown:
-            breakdown[break_reason] = {"count": 0, "pnl": 0.0}
-        breakdown[break_reason]["count"] += 1
-        breakdown[break_reason]["pnl"] += t["pnl"]
 
     # Build ledger lines
     ledger_lines = []
@@ -409,10 +398,25 @@ def generate_report(trades: List[Dict]) -> str:
         "## Exit Reasons\n"
     )
 
+    # Breakdown by exit reason
+    breakdown = {}
+    for reason in EXIT_REASON_NAMES.values():
+        breakdown[reason] = {"count": 0, "pnl": 0.0}
+    for t in trades:
+        break_reason = t["exit_reason"]
+        if break_reason not in breakdown:
+            breakdown[break_reason] = {"count": 0, "pnl": 0.0}
+        breakdown[break_reason]["count"] += 1
+        breakdown[break_reason]["pnl"] += t["pnl"]
+
     for reason, data in sorted(breakdown.items()):
         report += f"- **{reason}**: {data['count']} trades, ${data['pnl']:+.2f} P&L\n"
 
     report += "\n## Trade Ledger\n\n" + "\n".join(ledger_lines)
+
+    # Append churn analysis if provided
+    if churn_data:
+        report += "\n\n" + _churn_analysis_markdown(churn_data)
 
     return report
 
@@ -438,6 +442,167 @@ def _median_bars_held(trades: List[Dict]) -> int:
         return (bars_list[n // 2 - 1] + bars_list[n // 2]) // 2
 
 
+def churn_analysis(trades: List[Dict], m15_data: List[Dict]) -> Dict:
+    """
+    Compute churn metrics for DMONLY report.
+    Returns a dict with keys: 'reentry_by_side', 'short_hold_buckets', 'exit_pnl'
+    """
+    # Build a timeline of M15 bars (ts_str -> ts_dt) for re-entry measurements
+    m15_ts_to_idx = {t["ts_str"]: i for i, t in enumerate(m15_data)}
+
+    # Get all exit timestamps and next entry timestamps from SIDEWAYS exits
+    sideways_exit_times: List[datetime] = []
+    next_entry_times: List[datetime] = []
+
+    for t in trades:
+        if t["exit_reason"] == "SIDEWAYS":
+            sideways_exit_times.append(_parse_ts(t["ts"]))
+        elif t["dir"] != "FLAT" and t["entry_ts"]:
+            # This is an entry (not forced close)
+            next_entry_times.append(_parse_ts(t["entry_ts"]))
+
+    # Compute re-entry delays in M15 bars
+    reentry_counts: Dict[str, int] = {"1": 0, "2": 0, "3-5": 0, "6+": 0}
+    reentry_pnl_1bar: float = 0.0
+    reentry_pnl_3plus: float = 0.0
+
+    for exit_dt in sideways_exit_times:
+        # Find next entry after this exit
+        matching_idx = None
+        for e in next_entry_times:
+            if e > exit_dt:
+                matching_idx = e
+                break
+        if matching_idx is None:
+            continue
+
+        delay_bars = 0
+        for i in range(1, len(m15_data)):
+            bar_ts = m15_data[i]["ts_str"]
+            if _parse_ts(bar_ts) > exit_dt:
+                delay_bars = i - m15_ts_to_idx[bar_ts]
+                break
+
+        key = "1" if delay_bars == 1 else ("2" if delay_bars == 2 else ("3-5" if 3 <= delay_bars <= 5 else "6+"))
+        reentry_counts[key] += 1
+
+    # Compute P&L for trades that entered within 1 bar of a SIDEWAYS exit
+    # Need to match each sideways exit with its corresponding entry
+    for exit_dt in sideways_exit_times:
+        # Find the matching entry (same delay logic)
+        matching_idx = None
+        for e in next_entry_times:
+            if e > exit_dt:
+                matching_idx = e
+                break
+        if matching_idx is None:
+            continue
+
+        delay_bars = 0
+        for i in range(1, len(m15_data)):
+            bar_ts = m15_data[i]["ts_str"]
+            if _parse_ts(bar_ts) > exit_dt:
+                delay_bars = i - m15_ts_to_idx[bar_ts]
+                break
+
+        # Find the trade that entered at matching_idx
+        for t in trades:
+            if t["entry_bar_index"] == matching_idx and t["exit_reason"] != "SIDEWAYS":
+                if delay_bars == 1:
+                    reentry_pnl_1bar += t["pnl"]
+                elif delay_bars >= 3:
+                    reentry_pnl_3plus += t["pnl"]
+                break
+
+    # B: Short-hold buckets by bars_held
+    short_hold_buckets: Dict[str, Dict] = {
+        "1": {"count": 0, "wins": 0, "pnl": 0.0},
+        "2": {"count": 0, "wins": 0, "pnl": 0.0},
+        "3-5": {"count": 0, "wins": 0, "pnl": 0.0},
+        "6+": {"count": 0, "wins": 0, "pnl": 0.0},
+    }
+
+    for t in trades:
+        bars_held = _bars_held(t)
+        bucket = "1" if bars_held == 1 else ("2" if bars_held == 2 else ("3-5" if 3 <= bars_held <= 5 else "6+"))
+        short_hold_buckets[bucket]["count"] += 1
+        short_hold_buckets[bucket]["pnl"] += t["pnl"]
+        if t["pnl"] > 0:
+            short_hold_buckets[bucket]["wins"] += 1
+
+    # C: Exit reason breakdown (same as in generate_report)
+    exit_pnl = {}
+    for reason in EXIT_REASON_NAMES.values():
+        exit_pnl[reason] = {"count": 0, "wins": 0, "gross_profit": 0.0, "gross_loss": 0.0, "pnl": 0.0}
+    for t in trades:
+        reason = t["exit_reason"]
+        if reason not in exit_pnl:
+            # Handle any other reasons that might appear
+            exit_pnl[reason] = {"count": 0, "wins": 0, "gross_profit": 0.0, "gross_loss": 0.0, "pnl": 0.0}
+        exit_pnl[reason]["count"] += 1
+        if t["pnl"] > 0:
+            exit_pnl[reason]["wins"] += 1
+            exit_pnl[reason]["gross_profit"] += t["pnl"]
+        else:
+            exit_pnl[reason]["gross_loss"] += abs(t["pnl"])
+        exit_pnl[reason]["pnl"] += t["pnl"]
+
+    return {
+        "reentry_by_side": reentry_counts,
+        "reentry_pnl_1bar": reentry_pnl_1bar,
+        "reentry_pnl_3plus": reentry_pnl_3plus,
+        "short_hold_buckets": short_hold_buckets,
+        "exit_pnl": exit_pnl,
+    }
+
+
+def _churn_analysis_markdown(data: Dict) -> str:
+    """Render churn analysis as markdown tables."""
+    lines = []
+
+    # Main section header
+    lines.append("## Churn Analysis\n")
+
+    # A: Re-entry after SIDEWAYS exits
+    lines.append("| Delay (M15 bars) | count |")
+    lines.append("|---|---|")
+    for key, cnt in data["reentry_by_side"].items():
+        lines.append(f"| {key} | {cnt} |")
+
+    lines.append("")
+    lines.append("P&L of trades opened after SIDEWAYS exit:\n")
+    pnl_1 = data["reentry_pnl_1bar"]
+    pnl_3plus = data["reentry_pnl_3plus"]
+    total_reentry = pnl_1 + pnl_3plus
+    lines.append(f"- Within 1 bar: ${pnl_1:+.2f}")
+    lines.append(f"- 3+ bars later: ${pnl_3plus:+.2f}")
+    if total_reentry != 0:
+        pct = pnl_3plus / abs(total_reentry) * 100
+        lines.append(f"  (3+ bars accounts for {pct:.1f}% of total re-entry P&L)")
+
+    # B: Short-hold buckets
+    lines.append("\n\n### Short-Hold Trades (by bars held)\n")
+    lines.append("| Bars Held | trades | win rate | total P&L | P&L per trade |")
+    lines.append("|---|---|---|---|---|")
+    for bucket in ["1", "2", "3-5", "6+"]:
+        s = data["short_hold_buckets"][bucket]
+        pct = s["wins"] / s["count"] if s["count"] else 0.0
+        per_trade = s["pnl"] / s["count"] if s["count"] else 0.0
+        lines.append(f"| {bucket} | {s['count']} | {pct:.1%} | ${s['pnl']:+.2f} | ${per_trade:+.2f} |")
+
+    # C: Exit reason breakdown
+    lines.append("\n\n### P&L by Exit Reason\n")
+    lines.append("| Exit Reason | trades | win rate | gross profit | gross loss | total P&L |")
+    lines.append("|---|---|---|---|---|---|")
+    for reason in sorted(data["exit_pnl"].keys()):
+        e = data["exit_pnl"][reason]
+        pct = e["wins"] / e["count"] if e["count"] else 0.0
+        per_trade = e["pnl"] / e["count"] if e["count"] else 0.0
+        lines.append(f"| {reason} | {e['count']} | {pct:.1%} | ${e['gross_profit']:+.2f} | ${e['gross_loss']:+.2f} | ${e['pnl']:+.2f} |")
+
+    return "\n".join(lines)
+
+
 def main():
     m15_data, m5_data, d1_data = parse_log()
 
@@ -447,6 +612,9 @@ def main():
     print()
 
     trades, d1_regime_timeline = simulate(m15_data, m5_data, d1_data)
+
+    # Compute churn analysis
+    churn_data = churn_analysis(trades, m15_data)
 
     # Build regime counts and per-regime P&L stats
     regime_counts: Dict[str, int] = {"D1_UP": 0, "D1_DOWN": 0, "D1_SIDEWAYS": 0, "D1_WARMUP": 0}
@@ -481,8 +649,8 @@ def main():
                 "avg_bars_held": avg_bars,
             }
 
-    # Generate the report — append D1 Regime section after Trade Ledger
-    report = generate_report(trades)
+    # Generate the report with churn analysis
+    report = generate_report(trades, churn_data)
 
     # Build the new section
     lines = [

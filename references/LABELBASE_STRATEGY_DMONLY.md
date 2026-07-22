@@ -1151,6 +1151,40 @@ NO X barrier, NO N horizon — entry and exit are both label-driven; P&L is gross 
 | 2026.04.29 23:30:02 | 2026.04.29 23:00:02 | LONG | 4546.94 | 2026.04.29 23:30:02 | REVERSAL_DN | 4543.36 | -3.58 | +967.61 |
 | 2026.04.29 23:55:01 | 2026.04.29 23:45:02 | SHORT | 4543.74 | 2026.04.29 23:55:01 | FORCED_CLOSE (end of data) | 4542.42 | +1.32 | +968.93 |
 
+## Churn Analysis
+
+| Delay (M15 bars) | count |
+|---|---|
+| 1 | 0 |
+| 2 | 0 |
+| 3-5 | 0 |
+| 6+ | 913 |
+
+P&L of trades opened after SIDEWAYS exit:
+
+- Within 1 bar: $+0.00
+- 3+ bars later: $+0.00
+
+
+### Short-Hold Trades (by bars held)
+
+| Bars Held | trades | win rate | total P&L | P&L per trade |
+|---|---|---|---|---|
+| 1 | 599 | 40.9% | $-822.55 | $-1.37 |
+| 2 | 114 | 32.5% | $-588.22 | $-5.16 |
+| 3-5 | 131 | 26.0% | $-847.37 | $-6.47 |
+| 6+ | 276 | 57.6% | $+3227.07 | $+11.69 |
+
+
+### P&L by Exit Reason
+
+| Exit Reason | trades | win rate | gross profit | gross loss | total P&L |
+|---|---|---|---|---|---|
+| FORCED_CLOSE (end of data) | 1 | 100.0% | $+1.32 | $+0.00 | $+1.32 |
+| REVERSAL_DN | 98 | 26.5% | $+722.18 | $+1571.85 | $-849.67 |
+| REVERSAL_UP | 108 | 31.5% | $+1598.78 | $+1252.35 | $+346.43 |
+| SIDEWAYS | 913 | 45.3% | $+4465.17 | $+2994.32 | $+1470.85 |
+
 ## P&L by D1 Regime
 | D1 Regime | trades | win rate | gross profit | gross loss | total P&L | avg bars held |
 |---|---|---|---|---|---|---|
