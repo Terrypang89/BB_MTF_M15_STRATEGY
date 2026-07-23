@@ -1,19 +1,19 @@
 #property copyright "Copyright 2025, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "37.04                         "
+#property version   "37.01                         "
 
 #ifdef __MQL4__
 #else
 #include <mql4compat.mqh>  // mql4compat_fix4.mqh
 #include <MT4Orders.mqh>   // MT4Orders_fix.mqh
 #include <TofyIncludeSimple.mqh>
-#include <TofyTrade6.mqh>
+#include <TofyTrade_DMonly.mqh>
 #include <TofySideway.mqh>
 #include <TofyTouch.mqh>
 #endif
 
 input string             Basic_Settings           = "---------------------------------------------";
-input string             ORDERS_COMMENT           = "V37.04";
+input string             ORDERS_COMMENT           = "V37.03";
 input int                MAGIC_NUMBER             = 898989;
 input enum_mode          MODE                     = 2;
 input ENUM_TIMEFRAMES    Indicator_TIMEFRAME      = PERIOD_CURRENT;
@@ -323,7 +323,7 @@ void OnTick()
       CopyClose(_Symbol, Indicator_TIMEFRAME, 0, 5, close_prices);
       CopyHigh(_Symbol, Indicator_TIMEFRAME, 0, 5 , high_prices);
       CopyLow(_Symbol, Indicator_TIMEFRAME, 0, 5, low_prices);
-      print_orderinfo(debug_info, MODE, BUY_PROFIT, BUY_LOTS, OPEN_BUY_TICKET_NUM, BUYS, SELL_PROFIT, SELL_LOTS, OPEN_SELL_TICKET_NUM, SELLS)
+      print_orderinfo(debug_info, MODE, BUY_PROFIT, BUY_LOTS, OPEN_BUY_TICKET_NUM, BUYS, SELL_PROFIT, SELL_LOTS, OPEN_SELL_TICKET_NUM, SELLS);
       // get the lot from LOT_CALCULATE(0.0, -1, 1000, 0.01)
       LOT = LOT_CALCULATE(RISK_PER_TRADE, STOPLOSS, FROM_BALANCE, VOLUME);
 
@@ -613,6 +613,7 @@ void OnTick()
                   {
                      if(BBTFImpact.sideway_selected[0] > 0)
                      {
+                        comb_stage_log += "-";
                         comb_stage_log += IntegerToString(BBTFImpact.sideway_val[4]) + IntegerToString(BBTFImpact.sideway_val[3]) + IntegerToString(BBTFImpact.sideway_val[2]) + IntegerToString(BBTFImpact.sideway_val[1]) + IntegerToString(BBTFImpact.sideway_val[0]);
                         comb_stage_log += "-S_" + BBTFImpact.sideway_selected[0];
                      }
