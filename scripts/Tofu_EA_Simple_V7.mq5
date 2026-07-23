@@ -562,7 +562,7 @@ void OnTick()
          if(currentTFBarTime[r] != lastplotTFBarTime[r])
          {
             lastplotTFBarTime[r] = currentTFBarTime[r];
-            print_BBdata(BB_datas[r], BBTFImpact, stage_debug_log, midtrend_debug_log, debug_info);
+            print_BBdata(BB_datas[r], BBTFImpact, stage_debug_log, midtrend_debug_log, debug_info, r);
             if(Show_plot && r >= 0)
             {
                if(BB_datas[r].BBW_stage[LA] >= 400 && BB_datas[r].BBW_stage[LA] < 500)
@@ -1279,84 +1279,84 @@ void print_inner_1bufATRSL(ATRSLBUF_struct &ATRSL1BUF)
    Print("[ATRSL1buf]" + ATRSL1BUF.log);
 }
 
-void print_BBdata(BB_MTF_Data_struct &BB_data, BB_MTF_Impact_struct &BBTFImpact, string &stage_debug_log, string &midtrend_debug_log, bool &debug_info)
+void print_BBdata(BB_MTF_Data_struct &BB_data, BB_MTF_Impact_struct &BBTFImpact, string &stage_debug_log, string &midtrend_debug_log, bool &debug_info, int arraynum)
 {
    string BB_strategy_info = "";
    string str_stage = "";
    update_stages2_TFImpact(BBTFImpact, BB_data, str_stage);
-   if(debug_info && BBTFImpact.array_num >= 0)
+   if(debug_info && arraynum >= 0)
    {
       if(stage_debug_log != "") BB_strategy_info += "(" + stage_debug_log + ")";
       if(midtrend_debug_log != "") BB_strategy_info += "(" + midtrend_debug_log + ")";
-      BB_strategy_info += "[" + arraynum_2_string(BBTFImpact.array_num) + "]";
-      if(BB_data.first_stage == true) BB_strategy_info += ", first_stage_" + arraynum_2_string(BBTFImpact.array_num) + ":[1]";
+      BB_strategy_info += "[" + arraynum_2_string(arraynum) + "]";
+      if(BB_data.first_stage == true) BB_strategy_info += ", first_stage_" + arraynum_2_string(arraynum) + ":[1]";
 
-      BB_strategy_info += ", W_stage_" + arraynum_2_string(BBTFImpact.array_num) + ":(" + str_stage + ")[" + BB_data.BBW_stage[LA] + ", ";
+      BB_strategy_info += ", W_stage_" + arraynum_2_string(arraynum) + ":(" + str_stage + ")[" + BB_data.BBW_stage[LA] + ", ";
       BB_strategy_info += BB_data.BBW_stage[LA_1] + ", ";
       BB_strategy_info += BB_data.BBW_stage[LA_2];
       BB_strategy_info += "], ";
 
-      BB_strategy_info += "diffMid_Trend_" + arraynum_2_string(BBTFImpact.array_num) + ":[" + NormalizeDouble(BB_data.BB_diffMid_Trend[LA], Digits)  + ", ";
+      BB_strategy_info += "diffMid_Trend_" + arraynum_2_string(arraynum) + ":[" + NormalizeDouble(BB_data.BB_diffMid_Trend[LA], Digits)  + ", ";
       BB_strategy_info += NormalizeDouble(BB_data.BB_diffMid_Trend[LA_1], Digits)  + ", ";
       BB_strategy_info += NormalizeDouble(BB_data.BB_diffMid_Trend[LA_2], Digits);
       BB_strategy_info += "], ";
       
-      BB_strategy_info += "BBUpDn_" + arraynum_2_string(BBTFImpact.array_num) + ":[" + BB_data.BBUpDn_state[LA] + ", ";
+      BB_strategy_info += "BBUpDn_" + arraynum_2_string(arraynum) + ":[" + BB_data.BBUpDn_state[LA] + ", ";
       BB_strategy_info += BB_data.BBUpDn_state[LA_1] + ", ";
       BB_strategy_info += BB_data.BBUpDn_state[LA_2];
       BB_strategy_info += "], ";
 
-      BB_strategy_info += "trend_" + arraynum_2_string(BBTFImpact.array_num) + ":[" + BB_data.BB_trend[LA] + ", ";
+      BB_strategy_info += "trend_" + arraynum_2_string(arraynum) + ":[" + BB_data.BB_trend[LA] + ", ";
       BB_strategy_info += BB_data.BB_trend[LA_1] + ", ";
       BB_strategy_info += BB_data.BB_trend[LA_2] + ", ";
       BB_strategy_info += "], ";
 
-      BB_strategy_info += "prev_trend_" + arraynum_2_string(BBTFImpact.array_num) + ":" + BB_data.prev_BB_trend;
+      BB_strategy_info += "prev_trend_" + arraynum_2_string(arraynum) + ":" + BB_data.prev_BB_trend;
       BB_strategy_info += ", ";
 
-      BB_strategy_info += "diffMid_"+ arraynum_2_string(BBTFImpact.array_num) +":[" + NormalizeDouble(BB_data.BB_diffMid[LA], Digits) + ", ";
+      BB_strategy_info += "diffMid_"+ arraynum_2_string(arraynum) +":[" + NormalizeDouble(BB_data.BB_diffMid[LA], Digits) + ", ";
       BB_strategy_info += NormalizeDouble(BB_data.BB_diffMid[LA_1], Digits) + ", ";
       BB_strategy_info += NormalizeDouble(BB_data.BB_diffMid[LA_2], Digits);
       BB_strategy_info += "], ";
 
-      BB_strategy_info += "diffBBW_"+ arraynum_2_string(BBTFImpact.array_num) +":[" + NormalizeDouble(BB_data.BB_diffBBW[LA], Digits) + ", ";
+      BB_strategy_info += "diffBBW_"+ arraynum_2_string(arraynum) +":[" + NormalizeDouble(BB_data.BB_diffBBW[LA], Digits) + ", ";
       BB_strategy_info += NormalizeDouble(BB_data.BB_diffBBW[LA_1], Digits) + ", ";
       BB_strategy_info += NormalizeDouble(BB_data.BB_diffBBW[LA_2], Digits);
       BB_strategy_info += "], ";
 
-      BB_strategy_info += "WLV_"+ arraynum_2_string(BBTFImpact.array_num) +":[" + NormalizeDouble(BB_data.BBWLV[LA], Digits) + ",";
+      BB_strategy_info += "WLV_"+ arraynum_2_string(arraynum) +":[" + NormalizeDouble(BB_data.BBWLV[LA], Digits) + ",";
       BB_strategy_info += NormalizeDouble(BB_data.BBWLV[LA_1], Digits) + ", ";
       BB_strategy_info += NormalizeDouble(BB_data.BBWLV[LA_2], Digits);
       BB_strategy_info += "], ";
 
-      BB_strategy_info += "MidLV_"+ arraynum_2_string(BBTFImpact.array_num) +":[" + NormalizeDouble(BB_data.BBMidLV[LA], Digits) + ", ";
+      BB_strategy_info += "MidLV_"+ arraynum_2_string(arraynum) +":[" + NormalizeDouble(BB_data.BBMidLV[LA], Digits) + ", ";
       BB_strategy_info += NormalizeDouble(BB_data.BBMidLV[LA_1], Digits) + ", ";
       BB_strategy_info += NormalizeDouble(BB_data.BBMidLV[LA_2], Digits);
       BB_strategy_info += "], ";
 
-      BB_strategy_info += "UppLV_" + arraynum_2_string(BBTFImpact.array_num) +":[" + NormalizeDouble(BB_data.BBUppLV[LA], Digits) + ", ";
+      BB_strategy_info += "UppLV_" + arraynum_2_string(arraynum) +":[" + NormalizeDouble(BB_data.BBUppLV[LA], Digits) + ", ";
       BB_strategy_info += NormalizeDouble(BB_data.BBUppLV[LA_1], Digits) + ", ";
       BB_strategy_info += NormalizeDouble(BB_data.BBUppLV[LA_2], Digits);
       BB_strategy_info += "], ";
 
-      BB_strategy_info += "LowLV_" + arraynum_2_string(BBTFImpact.array_num) +":[" + NormalizeDouble(BB_data.BBLowLV[LA], Digits) + ", ";
+      BB_strategy_info += "LowLV_" + arraynum_2_string(arraynum) +":[" + NormalizeDouble(BB_data.BBLowLV[LA], Digits) + ", ";
       BB_strategy_info += NormalizeDouble(BB_data.BBLowLV[LA_1], Digits) + ", ";
       BB_strategy_info += NormalizeDouble(BB_data.BBLowLV[LA_2], Digits);
       BB_strategy_info += "], ";
 
-      if(arraynum_2_string(BBTFImpact.array_num) == "M5" || arraynum_2_string(BBTFImpact.array_num) == "M15")
+      if(arraynum_2_string(arraynum) == "M5" || arraynum_2_string(arraynum) == "M15")
       {
-         BB_strategy_info += "close_" + arraynum_2_string(BBTFImpact.array_num)+":[" + NormalizeDouble(close_prices[LA], Digits) + ", ";
+         BB_strategy_info += "close_" + arraynum_2_string(arraynum)+":[" + NormalizeDouble(close_prices[LA], Digits) + ", ";
          BB_strategy_info += NormalizeDouble(close_prices[LA_1], Digits) + ", ";
          BB_strategy_info += NormalizeDouble(close_prices[LA_2], Digits);
          BB_strategy_info += "], ";
 
-         BB_strategy_info += "high_" + arraynum_2_string(BBTFImpact.array_num)+":[" + NormalizeDouble(high_prices[LA], Digits) + ", ";
+         BB_strategy_info += "high_" + arraynum_2_string(arraynum)+":[" + NormalizeDouble(high_prices[LA], Digits) + ", ";
          BB_strategy_info += NormalizeDouble(high_prices[LA_1], Digits) + ", ";
          BB_strategy_info += NormalizeDouble(high_prices[LA_2], Digits);
          BB_strategy_info += "], ";
 
-         BB_strategy_info += "low_" + arraynum_2_string(BBTFImpact.array_num)+":[" + NormalizeDouble(low_prices[LA], Digits) + ", ";
+         BB_strategy_info += "low_" + arraynum_2_string(arraynum)+":[" + NormalizeDouble(low_prices[LA], Digits) + ", ";
          BB_strategy_info += NormalizeDouble(low_prices[LA_1], Digits) + ", ";
          BB_strategy_info += NormalizeDouble(low_prices[LA_2], Digits);
          BB_strategy_info += "], ";
