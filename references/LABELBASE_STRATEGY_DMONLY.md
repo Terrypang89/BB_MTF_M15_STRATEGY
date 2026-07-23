@@ -6,7 +6,7 @@ D1 lines parsed: 83 (date range: 2026.01.02 to 2026.04.29)
 
 ## Provenance
 `python scripts/labelbase_strategy.py` / input log / generated UTC
-NO X barrier, NO N horizon — entry and exit are both label-driven; P&L is gross on close_M5, 1 unit, no costs.
+NO X barrier, NO N horizon ï¿½ entry and exit are both label-driven; P&L is gross on close_M5, 1 unit, no costs.
 
 ## Summary
 - **Total trades**: 1120
@@ -29,7 +29,8 @@ NO X barrier, NO N horizon — entry and exit are both label-driven; P&L is gross 
 - **SIDEWAYS**: 913 trades, $+1470.85 P&L
 
 ## Trade Ledger
-
+| # exit dt | entry dt | dir | entry px | exit dt | exit reason | exit px | P&L | Cum P&L |
+|---|---|---|---|---|---|---|---|---|
 | 2026.01.02 09:15:02 | 2026.01.02 01:45:02 | LONG | 4345.50 | 2026.01.02 09:15:02 | SIDEWAYS | 4377.36 | +31.86 | +31.86 |
 | 2026.01.02 09:45:02 | 2026.01.02 09:30:02 | LONG | 4373.84 | 2026.01.02 09:45:02 | SIDEWAYS | 4375.84 | +2.00 | +33.86 |
 | 2026.01.02 12:00:02 | 2026.01.02 10:00:02 | LONG | 4382.63 | 2026.01.02 12:00:02 | SIDEWAYS | 4385.52 | +2.89 | +36.75 |
@@ -1192,7 +1193,7 @@ P&L of trades opened after SIDEWAYS exit:
 | D1_DOWN | 257 | 38.1% | $+1828.23 | $+1676.95 | $+151.28 | 1.0 |
 | D1_SIDEWAYS | 201 | 39.3% | $+922.89 | $+905.44 | $+17.45 | 1.0 |
 | D1_WARMUP | 17 | 64.7% | $+196.47 | $+35.59 | $+160.88 | 1.0 |
-| TOTAL | 1120 | — | $+6787.45 | $+5818.52 | $+968.93 | — |
+| TOTAL | 1120 | ï¿½ | $+6787.45 | $+5818.52 | $+968.93 | ï¿½ |
 D1 bars: 645 UP | 257 DOWN | 201 SIDEWAYS | 17 WARMUP
 Largest regime P&L: D1_UP = $+639.32 (66.0% of total)
 
