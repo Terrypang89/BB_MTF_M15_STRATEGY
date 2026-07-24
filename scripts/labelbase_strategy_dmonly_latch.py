@@ -163,12 +163,20 @@ def evaluate_bar(m15: Dict, m5_price: Optional[float], position: Optional[str]) 
     dm = m15["dm"]
 
     # LATCHED-SIDEWAY state machine — update latch first, before any entry checks:
-    #   - If latched and dm >= 3 (SIDEWAYS regime) -> unlatch
-    #   - Else if not latched and flag present -> consume flag once and latch
-    if _latched and dm >= 3:
+    #   - If latched and dm is a trend direction (1 or 2) -> release latch
+    #     (dm=0 warmup keeps latch; dm>=3 sideways keeps latch until trend)
+    #   - Else if not latched:
+    #       * dm >= 3 (SIDEWAYS regime) -> latch (already latched, but signal may be present)
+    #       * flag present AND we haven't yet latched -> latch (signal detected)
+    if _latched and dm < 3:
         _latched = False
-    elif not _latched and m15.get("sideway_flag") is not None:
-        _latched = True
+    elif not _latched:
+        if dm >= 3:
+            # SIDEWAYS regime — latch stays engaged
+            _latched = True
+        elif m15.get("sideway_flag") is not None:
+            # First detection of sideways signal
+            _latched = True
 
     # If currently latched, close any position and block entries — return early
     if _latched:
