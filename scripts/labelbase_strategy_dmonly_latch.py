@@ -162,21 +162,20 @@ def evaluate_bar(m15: Dict, m5_price: Optional[float], position: Optional[str]) 
     global _latched
     dm = m15["dm"]
 
-    # LATCHED-SIDEWAY state machine:
-    #   if latched and dm < 3 -> unlatch first
-    #   then: if not latched and sideway_flag present -> latch = True
-    if _latched and dm < 3:  # dm is 0,1,2 — unlatch when trend is neutral
+    # LATCHED-SIDEWAY state machine — update latch first, before any entry checks:
+    #   - If latched and dm >= 3 (SIDEWAYS regime) -> unlatch
+    #   - Else if not latched and flag present -> consume flag once and latch
+    if _latched and dm >= 3:
         _latched = False
     elif not _latched and m15.get("sideway_flag") is not None:
         _latched = True
 
-    # If currently latched, close any position and block entries
+    # If currently latched, close any position and block entries — return early
     if _latched:
         if position != "FLAT":
             return "FLAT", EXIT_REASON_NAMES["SIDEWAYS"]
         else:
-            # Still flat but latched — do nothing (block entry)
-            return "FLAT", None
+            return "FLAT", None  # block entry
 
     # Not latched — use original DMONLY logic
     if position != "FLAT":
@@ -292,8 +291,10 @@ def simulate(m15_data: List[Dict], m5_data: List[Dict], d1_data: List[Dict]) -> 
         if position != "FLAT":
             bars_in_trade += 1
 
-        # Count latched bars (only when latch is active)
-        if _latched:
+        # Count latched bars — only count if we were already latched at START of bar
+        # (don't count the transition bar itself)
+        was_latched_before = _latched
+        if was_latched_before:
             latched_bars_count += 1
 
     # Forced close at end of data
@@ -392,8 +393,8 @@ def churn_analysis(trades: List[Dict]) -> Dict:
     }
 
 
-def generate_report(trades: List[Dict], latched_count: int, d1_regime_timeline: Dict,
-                    short_hold_buckets: Dict, exit_pnl: Dict) -> str:
+def generate_report(trades: List[Dict], latched_bars_count: int, unlatched_bars_count: int,
+                    d1_regime_timeline: Dict, short_hold_buckets: Dict, exit_pnl: Dict) -> str:
     """Generate the markdown report for LATCHED-SIDEWAY."""
     total_trades = len(trades)
     long_count = sum(1 for t in trades if t["dir"] == "LONG")
@@ -434,8 +435,8 @@ def generate_report(trades: List[Dict], latched_count: int, d1_regime_timeline: 
         f"- **Total P&L**: **${cum_pnl:+.2f}**\n\n"
 
         "## Latch Statistics\n"
-        f"- **Latched bars**: {latched_count}\n"
-        f"- **Unlatched bars**: {total_trades - latched_count}\n"
+        f"- **Latched bars**: {latched_bars_count}\n"
+        f"- **Unlatched bars**: {unlatched_bars_count}\n"
     )
 
     report += (
@@ -499,19 +500,19 @@ def main():
     print(f"D1 lines parsed: {len(d1_data)} (date range: {d1_data[0]['ts_str'][:10]} to {d1_data[-1]['ts_str'][:10]})")
     print()
 
-    trades, latched_count, d1_regime_timeline = simulate(m15_data, m5_data, d1_data)
+    trades, latched_bars_count, d1_regime_timeline = simulate(m15_data, m5_data, d1_data)
 
     # Compute churn analysis (same buckets as DMONLY for comparison)
     churn_data = churn_analysis(trades)
-    unlatched_bars_count = len(m15_data) - latched_count
+    unlatched_bars_count = len(m15_data) - latched_bars_count
     churn_data["unlatched_bars_count"] = unlatched_bars_count
 
     print(f"Trade count: {len(trades)} (expected 1120 / +$968.93)")
-    print(f"Latched bars: {latched_count}, Unlatched bars: {unlatched_bars_count}")
+    print(f"Latched bars: {latched_bars_count}, Unlatched bars: {unlatched_bars_count}")
     print()
 
-    report = generate_report(trades, latched_count, d1_regime_timeline,
-                             churn_data["short_hold_buckets"], churn_data["exit_pnl"])
+    report = generate_report(trades, latched_bars_count, unlatched_bars_count,
+                             d1_regime_timeline, churn_data["short_hold_buckets"], churn_data["exit_pnl"])
     print(report)
 
 
