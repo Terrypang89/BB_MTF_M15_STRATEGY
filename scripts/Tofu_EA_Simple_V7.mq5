@@ -1,6 +1,6 @@
 #property copyright "Copyright 2025, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "37.01                         "
+#property version   "37.04                         "
 
 #ifdef __MQL4__
 #else
@@ -10,10 +10,11 @@
 #include <TofyTrade_DMonly.mqh>
 #include <TofySideway.mqh>
 #include <TofyTouch.mqh>
+#include <TofyVerifySideway.mqh>
 #endif
 
 input string             Basic_Settings           = "---------------------------------------------";
-input string             ORDERS_COMMENT           = "V37.03";
+input string             ORDERS_COMMENT           = "V37.04";
 input int                MAGIC_NUMBER             = 898989;
 input enum_mode          MODE                     = 2;
 input ENUM_TIMEFRAMES    Indicator_TIMEFRAME      = PERIOD_CURRENT;
@@ -247,6 +248,7 @@ void OnDeinit(const int reason)
    DEINIT=true;
    DEINIT_ATRSLBUFLINE();
    ObjectsDeleteAll(0, IndicatorName + "-STAGE-");
+   VS_PrintSummary();
    Print("Deinit from reason:", reason);
   }
 
@@ -402,6 +404,10 @@ void OnTick()
          int r = 1;
          M15BarTime = currentTFBarTime[r];
          BBDatas_Midline_Sideway(BBTFImpact, BB_datas);
+
+         VS_OnNewM15Bar(iTime(_Symbol, PERIOD_M15, 0),
+               (int)BBTFImpact.sideway_selected[0],
+               BB_datas[1].BBMidLV[LA]);     // <-- your actual midline field name
 
          if(ATRSL1BUF.ATRLV[LA] != 0.0 && ATRSL1BUF.ATRLV[LA_1] != 0.0)
          {
