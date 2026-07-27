@@ -1,160 +1,258 @@
 # TofyVerifySideway — how it works
 
-Companion doc for `TofyVerifySideway.mqh`.
+Companion doc for `TofyVerifySideway.mqh` **v2**.
+
+> **v1 is superseded.** The original version used a *first-touch barrier* (does price
+> reach `start+$10` or `start-$10` first?). That measures **direction**, not range, and
+> it misclassified visually-sideways bars. It has been replaced by a three-way
+> classification. See §3.
 
 ---
 
 ## 1. What this is — and what it is NOT
 
-**It is NOT a sideway detector.** It does not decide anything, does not trade, and must
-never be read by trade logic.
+**It is NOT a sideway detector.** It decides nothing, trades nothing, and must never be
+read by trade logic.
 
-**It is a scorer for the detector you already have.** `TofySideway.mqh` produces
-`sideway_selected` (the `S_n` value). This tool asks one question about it:
+**It scores the detector you already have.** `TofySideway.mqh` produces `sideway_selected`
+(the `S_n` value). This tool asks one question about it:
 
-> When TofySideway said "sideway", did price actually go nowhere?
-
-That is the whole purpose. It measures the *outcome* of each bar so you can see, on the
-chart and in the log, whether the flag was right or wrong.
+> When TofySideway said "sideway", what did price actually do?
 
 ---
 
-## 2. X and N — the definition of "went nowhere"
+## 2. The three-way classification
 
-You cannot score "sideway" without first defining it in measurable terms. Two numbers do that:
+Over the next **N M15 bars** from each bar's `close_M5`:
 
-| param | value | what it answers |
+```
+net    = |end_close - start_close|          how far it ended from where it began
+range  = max(close) - min(close)            how far it swung
+path   = sum |bar-to-bar close change|      total distance travelled
+ER     = net / path                         0 = thrashed, 1 = straight line
+```
+
+| class | condition | meaning |
 |---|---|---|
-| **X** | `10.0` | How far must price move to count as *a move*? Without X, a $0.30 wiggle would count as "price went up", and every bar would look like it moved. |
-| **N** | `8` M15 bars (120 min) | *By when*? Without a horizon there is no moment at which the bar is judged. |
+| **TREND** | `net >= X` | price went somewhere |
+| **CHOPPY** | `net < X` **and** `range >= R` | thrashed and came back — **this is what churns you** |
+| **QUIET** | `net < X` **and** `range < R` | barely moved — harmless |
 
-Together they form a **first-touch barrier**. From the bar's start price, walk forward
-through M5 closes for 120 minutes:
+Defaults: `X = 10.0`, `R = 15.0`, `N = 4` (60 min).
 
-| what happens first | outcome |
+**Why net displacement instead of first-touch** — verified counter-examples:
+
+| bar | net | range | first-touch said | truth |
+|---|---|---|---|---|
+| 2026.02.10 07:25 | **+2.75** | 20.75 | UP | sideways |
+| 2026.02.10 13:25 | **-7.51** | 30.04 | DN | sideways |
+| 2026.02.11 08:25 | -2.24 | 12.16 | NEU | sideways |
+
+First-touch got two of three wrong: price tagged the $10 barrier on its first swing and
+came straight back. It is retained only for **directional** tests like
+`label_base_rate.py`.
+
+**Why N = 4 (60 min):** the losing trades in DMONLY were held 1-5 bars = 15-75 minutes.
+The window is matched to the horizon where the money is lost, not chosen for the best score.
+
+### Why QUIET and CHOPPY must be separated
+
+Both end near the start, so net displacement alone lumps them together. They are not the
+same risk:
+
+| | price moves | your exposure |
+|---|---|---|
+| **QUIET** | little | few signals, small losses, boring |
+| **CHOPPY** | a lot | many signals, all reversed — **death by churn** |
+
+`range` is what splits them. `ER` confirms the split.
+
+---
+
+## 3. Lookahead constraint
+
+> **Bar T's class is not knowable until T + N*15 minutes.**
+
+The tool resolves and draws **bar T-N**, using only price that has already happened.
+
+- Labels trail the current bar by N bars. That is correct, not lag.
+- The last N bars of a run carry no label.
+- **Nothing here may feed trade logic.** It knows the future by construction.
+
+---
+
+## 4. MEASURED RESULTS
+
+All measurements on `references/Backtest_data/V36.15/20260712_clean.log`, 7,593-7,605
+usable M15 bars.
+
+### 4.1 Three-way classification — what TofySideway actually catches (N=4, 60 min)
+
+| class | all bars | % | TofySideway flags | % of flags | **lift** | mean ER |
+|---|---|---|---|---|---|---|
+| **QUIET** | 2,877 | 37.8% | 906 | **53.8%** | **+16.0** | 0.185 |
+| **CHOPPY** | 1,187 | 15.6% | 182 | **10.8%** | **-4.8** | **0.114** |
+| **TREND** | 3,541 | 46.6% | 595 | 35.4% | -11.2 | 0.429 |
+
+*(7,605 bars total; 1,683 flagged)*
+
+**The core finding: TofySideway is a QUIET detector.** It finds quiet periods strongly
+(+16.0), correctly avoids trends (-11.2), and **under-flags choppy bars (-4.8)** — a
+choppy bar is *less* likely to be flagged than a randomly chosen bar.
+
+Chop is 15.6% of bars (~1,187) and is the condition that whipsaws the strategy in and
+out. The exit rule meant to protect you fires least often exactly there.
+
+### 4.2 ER separates the three classes cleanly
+
+| class | mean ER |
 |---|---|
-| price reaches `start + 10.0` | **UP** |
-| price reaches `start - 10.0` | **DN** |
-| neither, for the whole 120 min | **NEU** |
+| CHOPPY | **0.114** |
+| QUIET | 0.185 |
+| TREND | 0.429 |
 
-**`NEU` is the operational definition of sideways.** Price stayed inside a $20 band for
-two hours — it went nowhere. That is what the S_ flag claims will happen.
+ER is the single cleanest number for chop.
 
-X and N are **pre-registered** — they are the same values used by
-`scripts/label_base_rate.py`, so every measurement in this project is comparable. Do not
-tune them. If a signal only looks good at one specific X/N, that is curve-fitting, not
-an edge.
+### 4.3 ER decile table — ER vs sideways rate
 
-### Why label on M15 but measure price on M5
+| ER decile | ER range | n | sideways% | mean range |
+|---|---|---|---|---|
+| 1 | 0.000-0.033 | 760 | **99.3%** | 25.1 |
+| 2 | 0.033-0.064 | 760 | 94.9% | 26.4 |
+| 3 | 0.064-0.098 | 760 | 82.0% | 27.1 |
+| 4 | 0.098-0.132 | 760 | 57.6% | 30.7 |
+| 5 | 0.132-0.171 | 760 | 40.0% | 30.7 |
+| 6 | 0.171-0.214 | 760 | 24.1% | 33.8 |
+| 7 | 0.214-0.264 | 760 | 12.1% | 35.0 |
+| 8 | 0.264-0.325 | 760 | 3.7% | 39.8 |
+| 9 | 0.326-0.416 | 760 | 0.3% | 50.4 |
+| 10 | 0.416-0.929 | 761 | **0.0%** | 62.2 |
 
-The flag lives on M15. Price comes from `close_M5` because that is the only field
-carrying **real traded price** — `MidLV/UppLV/LowLV` are moving averages, and measuring
-against a moving average would measure the average's lag, not the market. The *window*
-is still M15-sized (8 M15 bars); M5 just gives a finer tape so an intrabar $10 touch is
-not missed.
+Working bands: **ER < 0.10 → sideways ~92%** · **0.10-0.17 → ambiguous** · **> 0.26 → trending ~99%**.
+
+Caveat: ER and net displacement share a numerator, so part of this monotonicity is
+definitional. The independent evidence is the **range** column — 25.1 at decile 1 vs
+62.2 at decile 10.
+
+### 4.4 sideways% — parameter sweep (robustness)
+
+Gap = TofySideway sideways% minus baseline sideways%.
+
+| gap | N=2 (30m) | N=4 (60m) | N=8 (120m) | N=12 (180m) | N=16 (240m) |
+|---|---|---|---|---|---|
+| **X=$3** | +7.4 | +5.4 | +3.3 | +2.5 | +2.0 |
+| **X=$5** | +11.3 | +8.8 | +6.0 | +3.5 | +2.9 |
+| **X=$10** | **+12.2** | +11.2 | +7.2 | +6.5 | +5.5 |
+| **X=$15** | +8.7 | +10.1 | +9.1 | +7.0 | +5.9 |
+| **X=$20** | +6.6 | +8.2 | +8.3 | +7.7 | +5.6 |
+
+**25 of 25 cells positive.** No parameter choice flips the conclusion — TofySideway's
+edge is robust, not a lucky cell. The edge is **strongest at short horizons** (+12.2 at
+30 min, decaying to +5.5 at 240 min), i.e. it detects a condition lasting ~30-60 minutes.
+
+Do **not** read X=$10/N=2 as "the best setting" — picking the max of 25 cells is
+selection bias. The finding is that the effect is present everywhere.
+
+### 4.5 ER by window — ER does NOT separate the groups
+
+| N (min) | baseline ER | TofySideway ER | gap | relative |
+|---|---|---|---|---|
+| 2 (30) | 0.409 | 0.405 | -0.004 | -0.9% |
+| 4 (60) | 0.288 | 0.285 | -0.003 | -1.0% |
+| 8 (120) | 0.202 | 0.205 | +0.003 | +1.5% |
+| 12 (180) | 0.167 | 0.172 | +0.005 | +3.1% |
+| 16 (240) | 0.148 | 0.152 | +0.004 | +3.0% |
+
+**sideways% separates the groups by 17-21%. ER separates them by 1-3%.**
+
+This is not a failure of ER — §4.2 shows ER discriminates strongly across *price
+behaviour*. It means **TofySideway does not separate on chop**, only on quiet.
+
+### 4.6 Nothing currently logged predicts chop
+
+Every M15 field scored against forward ER (baseline 0.202), spread across value buckets:
+
+| field | spread | verdict |
+|---|---|---|
+| diffBBW | 0.007 | no signal |
+| diffMid | 0.013 | no signal |
+| BBW (WLV) | 0.014 | no signal |
+| **midline_Cluster** | **0.015** | **no signal** |
+| bandwidth | 0.021 | no signal |
+| W_stage | per-value 0.194-0.219 | no signal |
+| diffMid_Trend | per-value 0.197-0.205 | no signal |
+| BBUpDn | per-value 0.197-0.208 | no signal |
+
+**No field carries chop-predictive information.** Note `midline_Cluster` in particular —
+tuning its thresholds would optimise a field that does not discriminate.
 
 ---
 
-## 3. The lookahead constraint (why labels appear 8 bars late)
+## 5. Chart labels
 
-> **Bar T's outcome is not knowable until T + 120 minutes.**
-
-This is not a limitation to work around — it is the nature of the measurement. The tool
-therefore resolves and draws **bar T−8**, using only price that has already happened.
-
-Consequences:
-
-- Labels trail the current bar by 8 M15 bars. That is correct, not lag.
-- The last 8 bars of any run will have no label.
-- **Nothing here may ever feed trade logic.** It knows the future by construction; wiring
-  it into a decision would be lookahead bias and would make every later backtest fake.
-
----
-
-## 4. Chart labels
-
-One label per resolved M15 bar, drawn **rotated 90°, anchored on the M15 BB midline**.
-
-Text is `<flag>-<outcome>`:
+One label per resolved M15 bar, rotated 90°, anchored on the M15 BB midline.
+Text is `<flag>-<class> <ER>`, e.g. `S13-QUIET 0.18` or `.-CHOP 0.09`.
 
 | label | colour | meaning |
 |---|---|---|
-| `S13-NEU` | 🟢 lime | flag fired, price went flat — **CORRECT** |
-| `S13-UP` / `S13-DN` | 🔴 red | flag fired, price ran — **FALSE SIDEWAY** |
-| `.-NEU` | 🟠 orange | no flag, price went flat — **MISSED SIDEWAY** |
-| `.-UP` / `.-DN` | ⚪ grey | no flag, price moved — correct |
+| `S13-QUIET` | 🟢 lime | flagged, quiet — **correct** |
+| `S13-CHOP` | 🟡 yellow | flagged, choppy — also fine |
+| `S13-TREND` | 🔴 red | flagged, but price trended — **false positive** |
+| `.-CHOP` | 🟣 **magenta** | **missed chop — churned with no warning** |
+| `.-QUIET` | 🟠 orange | missed quiet — mild |
+| `.-TREND` | ⚪ grey | correctly not flagged |
 
-`S13` = the S_ sub-type that fired. `.` = no flag.
+**Hunt for magenta.** Given the -4.8 CHOPPY lift, expect it to be common, and to cluster
+in the whipsaw regions where short trades pile up.
 
-**Reading the chart:** red = false positives, orange = misses. If the chart is mostly
-lime and grey, the detector works. If reds cluster in choppy regions, you have found the
-failure visually.
-
-Display settings at the top of the `.mqh`: `VS_FontSize` (11), `VS_Angle` (90.0),
-`VS_DrawLabels`.
+Settings: `VS_FontSize` (11), `VS_Angle` (90.0), `VS_DrawLabels`.
 
 ---
 
-## 5. Log format
+## 6. Log format
 
 ### Per-bar line
 
 ```
-[VERIFY_SIDEWAY] bar:[2026.01.05 22:00] S_:[22] outcome:[NEU] start_px:[4443.06] mid_M15:[4443.44] X:[10.0] N:[8]
+[VERIFY_SIDEWAY] bar:[2026.01.05 22:00] S_:[22] class:[CHOPPY] net:[4.20] range:[22.10] ER:[0.087] start_px:[4443.06] mid_M15:[4443.44] X:[10.0] R:[15.0] N:[4]
 ```
 
 | field | meaning |
 |---|---|
-| `bar` | the M15 bar being scored (**not** the current bar — it is 8 bars back) |
-| `S_` | sub-type that fired. **`0` = no flag.** Non-zero = flagged |
-| `outcome` | `UP` / `DN` / `NEU` from the barrier |
-| `start_px` | `close_M5` at/before the bar — the barrier origin |
-| `mid_M15` | M15 BB midline, where the label is drawn |
-| `X`, `N` | barrier parameters, echoed for provenance |
+| `bar` | the M15 bar being scored (**N bars behind** the current bar) |
+| `S_` | sub-type that fired. **`0` = no flag** |
+| `class` | QUIET / CHOPPY / TREND |
+| `net` | `\|end - start\|` — the verdict input |
+| `range` | `max - min` — what splits QUIET from CHOPPY |
+| `ER` | efficiency ratio |
+| `X`,`R`,`N` | parameters, echoed for provenance |
 
-**`S_:[0]` is how you tell `.-NEU` from `S22-NEU`.** Zero means no flag.
+`S_:[0]` distinguishes `.-CHOP` from `S22-CHOP`.
 
-### Summary lines (from `VS_PrintSummary()` in `OnDeinit`)
+### Summary (`VS_PrintSummary()` in `OnDeinit`)
 
 ```
-[VERIFY_SIDEWAY_SUMMARY] X:[10.0] N:[8]
-[VERIFY_SIDEWAY_SUMMARY] GROUP_A_flag   n:[...] UP:[...] DN:[...] NEU:[...] NEU_pct:[...]
-[VERIFY_SIDEWAY_SUMMARY] GROUP_B_noflag n:[...] UP:[...] DN:[...] NEU:[...] NEU_pct:[...]
-[VERIFY_SIDEWAY_SUMMARY] VERDICT A_minus_B:[...]
+[VERIFY_SIDEWAY_SUMMARY] X:[10.0] R:[15.0] N:[4] bars:[...] flagged:[...]
+[VERIFY_SIDEWAY_SUMMARY] QUIET  baseline:[..%] flagged:[..%] lift:[..] mean_ER:[..]
+[VERIFY_SIDEWAY_SUMMARY] CHOPPY baseline:[..%] flagged:[..%] lift:[..] mean_ER:[..]
+[VERIFY_SIDEWAY_SUMMARY] TREND  baseline:[..%] flagged:[..%] lift:[..] mean_ER:[..]
 ```
 
-### Counting straight from the log
+### Counting from the log
 
 ```bash
-# NEUTRAL% per sub-type — the most useful single view
-grep "\[VERIFY_SIDEWAY\]" log | grep -oE "S_:\[[0-9]+\] outcome:\[[A-Z]+\]" | sort | uniq -c | sort -rn
+# class distribution
+grep "\[VERIFY_SIDEWAY\]" log | grep -oE "class:\[[A-Z]+\]" | sort | uniq -c
 
-# GROUP A (flagged) vs GROUP B (unflagged), NEU counts
-grep "\[VERIFY_SIDEWAY\]" log | grep -v "S_:\[0\]" | grep -c "outcome:\[NEU\]"
-grep "\[VERIFY_SIDEWAY\]" log | grep    "S_:\[0\]" | grep -c "outcome:\[NEU\]"
+# missed chop — the costly bars
+grep "\[VERIFY_SIDEWAY\]" log | grep "S_:\[0\]" | grep -c "class:\[CHOPPY\]"
+
+# flagged chop
+grep "\[VERIFY_SIDEWAY\]" log | grep -v "S_:\[0\]" | grep -c "class:\[CHOPPY\]"
+
+# per sub-type outcome
+grep "\[VERIFY_SIDEWAY\]" log | grep -oE "S_:\[[0-9]+\] class:\[[A-Z]+\]" | sort | uniq -c | sort -rn
 ```
-
----
-
-## 6. How to read the result — the actual test
-
-Split every bar into two groups and compare **NEUTRAL rate**:
-
-- **GROUP A** — S_ flag present
-- **GROUP B** — no flag
-
-| result | conclusion |
-|---|---|
-| `A_NEU% >> B_NEU%` | the flag genuinely predicts flat price — **detector works** |
-| `A_NEU% ≈ B_NEU%` | the flag carries **no information** about sideways price |
-
-**The comparison is relative, not absolute.** NEUTRAL is rare in gold — from the
-base-rate test, ~13% of bars were NEUTRAL overall. So do not expect Group A at 60%. If
-Group A is 25% and Group B is 10%, the detector is working well. If both sit near 12%,
-it is not.
-
-The per-sub-type breakdown matters too: some sub-types may work while others do not.
-Treat any sub-type with n < 50 as low confidence.
 
 ---
 
@@ -164,56 +262,47 @@ Treat any sub-type with n < 50 as low confidence.
 classDiagram
     class TofyVerifySideway {
         +double VS_X = 10.0
-        +int VS_N = 8
-        +bool VS_DrawLabels
-        +bool VS_WriteLog
+        +double VS_R = 15.0
+        +int VS_N = 4
         +int VS_FontSize
         +double VS_Angle
         -datetime vs_time[VS_MAX]
         -int vs_sub[VS_MAX]
         -double vs_mid[VS_MAX]
-        -int vs_count
-        -int vs_A_up
-        -int vs_A_dn
-        -int vs_A_neu
-        -int vs_B_up
-        -int vs_B_dn
-        -int vs_B_neu
+        -int vs_all[3]
+        -int vs_flg[3]
+        -double vs_er_all[3]
         +VS_OnNewM15Bar(t_bar, sideway_sub, mid_lv_M15) void
         +VS_PrintSummary() void
-        -VS_Resolve(t0, start_px, outcome) bool
-        -VS_DrawLabel(t0, mid_px, sub, outcome) void
+        -VS_Resolve(t0, start_px, net, rng, er, cls) bool
+        -VS_DrawLabel(t0, mid_px, sub, cls, er) void
     }
 
     class EA_Tofu_V7 {
         +OnTick()
         +OnDeinit()
     }
-
     class TofySideway_mqh {
         +sideway_selected[0]
     }
-
     class MT5_Timeseries {
         +iBarShift(M5, t)
         +iClose(M5, shift)
-        +iTime(M5, shift)
     }
-
-    class ChartObjects {
+    class ChartAndLog {
         +OBJ_TEXT labels
+        +VERIFY_SIDEWAY lines
     }
 
-    EA_Tofu_V7 --> TofyVerifySideway : VS_OnNewM15Bar(...) once per M15 bar
     TofySideway_mqh --> EA_Tofu_V7 : sideway_selected
+    EA_Tofu_V7 --> TofyVerifySideway : VS_OnNewM15Bar once per M15 bar
     TofyVerifySideway --> MT5_Timeseries : reads PAST M5 closes only
-    TofyVerifySideway --> ChartObjects : draws label for bar T-8
-    TofyVerifySideway ..> EA_Tofu_V7 : NEVER returns anything to trade logic
+    TofyVerifySideway --> ChartAndLog : label + log for bar T-N
+    TofyVerifySideway ..> EA_Tofu_V7 : NEVER returns to trade logic
 ```
 
-**Note the last relationship.** Data flows *into* this module and out to the chart and
-log. Nothing flows back into the strategy. That one-way arrow is what keeps it free of
-lookahead bias.
+The last relationship is the safety property: data flows in, and out to chart and log.
+Nothing flows back into the strategy.
 
 ---
 
@@ -233,63 +322,59 @@ sequenceDiagram
 
     TS->>EA: sideway_selected[0]  (0 = none, else S_n)
     EA->>VS: VS_OnNewM15Bar(T, sub, mid_M15)
-
     VS->>HIST: push (T, sub, mid)
-    Note over VS,HIST: bar T cannot be scored yet —<br/>its 120-min window is still in the future
+    Note over VS,HIST: bar T cannot be scored yet —<br/>its N-bar window is still in the future
 
     VS->>VS: idx = vs_count - 1 - N
-    alt idx < 0  (fewer than 8 bars seen)
+    alt idx < 0 (fewer than N bars seen)
         VS-->>EA: return, nothing to resolve
-    else bar T-8 window has now closed
-        VS->>HIST: read (t0, sub0, mid0) at idx
+    else bar T-N window has now closed
+        VS->>HIST: read (t0, sub0, mid0)
         VS->>M5: iBarShift(M5, t0) then iClose -> start_px
-        loop forward M5 bars, t0 .. t0+120min
+        loop N*3 forward M5 bars
             VS->>M5: iClose(shift)
-            alt price >= start_px + X
-                M5-->>VS: outcome = UP
-            else price <= start_px - X
-                M5-->>VS: outcome = DN
-            else window expired
-                M5-->>VS: outcome = NEU
-            end
+            Note over VS: track hi, lo, path, last close
         end
-        VS->>VS: tally into GROUP A (sub>0) or GROUP B (sub==0)
+        VS->>VS: net, range, ER
+        alt net >= X
+            VS->>VS: class = TREND
+        else range >= R
+            VS->>VS: class = CHOPPY
+        else
+            VS->>VS: class = QUIET
+        end
+        VS->>VS: tally into vs_all[class] and vs_flg[class] if sub>0
         VS->>OUT: draw label at (t0, mid0), rotated 90 deg
-        VS->>OUT: [VERIFY_SIDEWAY] bar:[t0] S_:[sub0] outcome:[...] ...
+        VS->>OUT: [VERIFY_SIDEWAY] bar:[t0] class:[...] net ER range ...
     end
 
-    Note over EA,OUT: at OnDeinit -> VS_PrintSummary()<br/>GROUP A NEU% vs GROUP B NEU% = the verdict
+    Note over EA,OUT: OnDeinit -> VS_PrintSummary()<br/>lift per class = the verdict
 ```
 
 ---
 
-## 9. Barrier resolution logic
+## 9. Classification logic
 
 ```mermaid
 flowchart TD
-    A["bar t0, start_px = close_M5 at/before t0"] --> B["t_end = t0 + N*15min"]
-    B --> C{"next M5 bar<br/>exists?"}
-    C -->|no| D["cannot resolve yet<br/>retry on a later call"]
-    C -->|yes| E{"ts > t_end ?"}
-    E -->|yes| F["outcome = NEU<br/>price went nowhere"]
-    E -->|no| G{"px >= start_px + X ?"}
-    G -->|yes| H["outcome = UP"]
-    G -->|no| I{"px <= start_px - X ?"}
-    I -->|yes| J["outcome = DN"]
-    I -->|no| C
+    A["bar t0, start_px = close_M5 at/before t0"] --> B{"N*3 forward<br/>M5 bars available?"}
+    B -->|no| C["cannot resolve yet<br/>retry on a later call"]
+    B -->|yes| D["walk forward, track hi lo path last"]
+    D --> E["net = abs(last - start)<br/>range = hi - lo<br/>ER = net / path"]
+    E --> F{"net >= X ?"}
+    F -->|yes| G["TREND"]
+    F -->|no| H{"range >= R ?"}
+    H -->|yes| I["CHOPPY"]
+    H -->|no| J["QUIET"]
 
-    F --> K["tally + draw + log"]
-    H --> K
+    G --> K["tally + draw + log"]
+    I --> K
     J --> K
 
-    style F fill:#d5e8d4,stroke:#82b366
-    style H fill:#f8cecc,stroke:#b85450
-    style J fill:#f8cecc,stroke:#b85450
+    style J fill:#d5e8d4,stroke:#82b366
+    style I fill:#e1d5e7,stroke:#9673a6
+    style G fill:#f8cecc,stroke:#b85450
 ```
-
-**First touch wins.** If price would cross both barriers inside the window, only the
-first one counts — that is what makes the measurement a fair 1:1 test rather than a
-"did it ever touch" test.
 
 ---
 
@@ -308,15 +393,37 @@ VS_PrintSummary();
 ```
 
 `BB_datas[1]` is M15 (index 1). The midline field name is inferred from the log's
-`MidLV_M15`; if it does not compile, substitute the real struct field.
+`MidLV_M15`; substitute the real struct field if it does not compile.
 
 ---
 
 ## 11. Cross-check
 
-`scripts/verify_sideway_flag.py` performs the identical measurement offline on the
-backtest log, with the same X and N.
+The live run should reproduce the offline measurement in §4.1:
 
-**The two must agree.** If `VS_PrintSummary()` and the Python report give materially
-different NEUTRAL percentages, one implementation is wrong — and finding that out is
-worth more than either number on its own.
+| class | expected lift |
+|---|---|
+| QUIET | ~+16.0 |
+| CHOPPY | ~-4.8 |
+| TREND | ~-11.2 |
+
+If `VS_PrintSummary()` matches, the MQL5 and Python implementations agree and both are
+trustworthy. If they diverge materially, one is wrong — and finding that out is worth
+more than either number alone.
+
+---
+
+## 12. Open problem
+
+**Chop is 15.6% of bars, it is what churns the strategy, and nothing detects it.**
+
+- TofySideway under-flags it (-4.8 lift)
+- No logged field predicts it (§4.6, all spreads under 0.021)
+
+Two directions:
+
+1. **Find a chop-predictive input** — something not derived from Bollinger geometry:
+   realised volatility over a lookback, tick density, session/time-of-day.
+2. **Handle it structurally instead of predicting it** — a minimum-hold rule or a
+   post-exit cooldown suppresses short churn trades without needing to see chop coming.
+   This works even though nothing predicts chop, which is why it may be the better route.
