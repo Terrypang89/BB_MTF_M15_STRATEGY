@@ -123,6 +123,7 @@ lookahead — reading a bar that had not closed yet.
 
 ---
 
+<<<<<<< HEAD
 ## 5. How "sideways" is measured — CORRECTED
 
 > **Superseded method:** an earlier version of this document used a *first-touch
@@ -178,6 +179,44 @@ The **divergence signal itself** uses only current-bar data (M15 direction vs M3
 direction, both known now), so it could be built into the EA if it tested well. Only the
 **scoring** needs future bars, and that stays offline. Never let the scoring enter trade
 logic.
+=======
+## 5. X and N — yes, both are used, unchanged
+
+Same pre-registered barrier as every other measurement in this project:
+
+| param | value | role |
+|---|---|---|
+| **X** | `10.0` | how far price must move to count as *a move* |
+| **N** | `8` M15 bars (120 min) | *by when* the bar is judged |
+
+For each M15 bar: take `close_M5` at/before it as the start price, then walk forward
+through M5 closes for 120 minutes.
+
+| first thing that happens | outcome |
+|---|---|
+| price reaches `start + 10.0` | **UP** |
+| price reaches `start - 10.0` | **DN** |
+| neither within 120 min | **NEU** |
+
+**`NEU` is the operational definition of "went sideways."** Price stayed inside a $20
+band for two hours.
+
+**Why these exact values:** they are identical to `label_base_rate.py` and
+`TofyVerifySideway.mqh`, so this result is directly comparable to
+FLY_UP 50.5% / FLY_DOWN 47.4% and to the TofySideway `S_` flag score. Changing X or N
+would break that comparability and would be tuning, not measuring.
+
+### Live-computability — an important property
+
+The **divergence signal itself uses only current-bar data** (M15 direction now vs M30
+direction now). Nothing about it needs the future. So if it tests well, it can be built
+into the EA directly.
+
+Only the **scoring** (the barrier outcome) needs future bars — and that stays offline,
+in this script, purely to grade the signal. It must never enter the EA.
+
+---
+>>>>>>> 1235d8b4f8df90d7c896d7c1162228fff8193091
 
 ## 6. The groups being compared
 
@@ -229,8 +268,12 @@ favourable.
 
 ### Calibration
 
+<<<<<<< HEAD
 Under net displacement the baseline is 41.4% of all bars (the ~13% figure was the old
 first-touch NEUTRAL rate and no longer applies). So do not
+=======
+NEUTRAL is uncommon in gold — around 13% of all bars in the base-rate test. So do not
+>>>>>>> 1235d8b4f8df90d7c896d7c1162228fff8193091
 expect 60%. The comparison is **relative**: baseline 13% vs divergence 25% would be a
 strong result. Both near 13% means no signal.
 
@@ -243,8 +286,13 @@ Treat any group with n < 100 as low confidence.
 ```mermaid
 classDiagram
     class verify_tf_divergence {
+<<<<<<< HEAD
         +float SIDEWAYS_NET = 10.0
         +int WINDOW = 24 M5 bars (120 min)
+=======
+        +float X = 10.0
+        +int N = 8
+>>>>>>> 1235d8b4f8df90d7c896d7c1162228fff8193091
         +parse_log(path) dict
         +DIV pairs: M5-M15, M15-M30, M15-H1
         +direction(dm) str
@@ -369,10 +417,17 @@ flowchart TD
 
     O --> Q["resolve barrier X=10, N=8"]
     P --> Q
+<<<<<<< HEAD
     Q --> R{"net = abs(end - start)"}
     R -->|"net < 10"| U["SIDEWAYS"]
     R -->|"net >= 10"| S["DIRECTIONAL"]
     R --> T["also record ER and range"]
+=======
+    Q --> R{"first touch?"}
+    R -->|"start + 10"| S["UP"]
+    R -->|"start - 10"| T["DN"]
+    R -->|"neither in 120min"| U["NEU = went sideways"]
+>>>>>>> 1235d8b4f8df90d7c896d7c1162228fff8193091
 
     S --> V["tally into EVERY group this bar belongs to"]
     T --> V
@@ -404,6 +459,7 @@ means you would be exiting live trends early.
 
 So this one test answers both questions — whether divergence detects sideways, and
 whether acting on it earlier is help or harm.
+<<<<<<< HEAD
 
 ---
 
@@ -487,3 +543,5 @@ value buckets:
 
 **Nothing currently logged predicts chop.** Note `midline_Cluster` in particular — tuning
 its threshold would be optimising a field that does not discriminate.
+=======
+>>>>>>> 1235d8b4f8df90d7c896d7c1162228fff8193091
