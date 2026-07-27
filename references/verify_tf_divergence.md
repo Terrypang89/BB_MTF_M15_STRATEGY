@@ -123,63 +123,6 @@ lookahead — reading a bar that had not closed yet.
 
 ---
 
-<<<<<<< HEAD
-## 5. How "sideways" is measured — CORRECTED
-
-> **Superseded method:** an earlier version of this document used a *first-touch
-> barrier* (does price hit `start+$10` or `start-$10` first?). **That method is wrong for
-> sideways** and has been replaced. It measures DIRECTION, not range: a market swinging
-> +/-15 trips a $10 barrier on its first swing and gets labelled directional even when it
-> ends where it started.
->
-> Verified counter-examples from the log:
->
-> | bar | net move | range | first-touch said | truth |
-> |---|---|---|---|---|
-> | 2026.02.10 07:25 | **+2.75** | 20.75 | UP | sideways |
-> | 2026.02.10 13:25 | **-7.51** | 30.04 | DN | sideways |
-> | 2026.02.11 08:25 | -2.24 | 12.16 | NEU | sideways |
->
-> First-touch got two of three wrong. It is retained ONLY for directional tests such as
-> `label_base_rate.py`.
-
-### The measures now used
-
-For each M15 bar: `start_px` = `close_M5` at/before the bar, then look at the next
-120 minutes (24 M5 bars).
-
-| measure | formula | role |
-|---|---|---|
-| **net displacement** | `abs(end_px - start_px)` | **the verdict**: sideways if `< 10.0` |
-| **efficiency ratio (ER)** | `abs(end-start) / sum(abs(bar-to-bar moves))` | descriptor, reported not thresholded |
-| **range** | `max(window) - min(window)` | how violent the period was |
-
-`end_px` is the close of the 24th bar — not the first barrier touch.
-
-**Why ER is not thresholded:** choosing a cutoff from this dataset would be
-curve-fitting. It is reported per group so the *comparison between groups* carries the
-signal.
-
-**ER interpretation** (from the measured decile table):
-
-| ER | sideways rate | reading |
-|---|---|---|
-| < 0.10 | 82-99% | choppy / going nowhere |
-| 0.10-0.17 | 40-58% | ambiguous |
-| > 0.26 | 0-4% | trending |
-
-### Baseline calibration
-
-Under net displacement, **41.4%** of all bars are sideways (not the ~13% quoted for
-first-touch NEUTRAL). Any group must be compared against 41.4%, not against 13%.
-
-### Live-computability
-
-The **divergence signal itself** uses only current-bar data (M15 direction vs M30
-direction, both known now), so it could be built into the EA if it tested well. Only the
-**scoring** needs future bars, and that stays offline. Never let the scoring enter trade
-logic.
-=======
 ## 5. X and N — yes, both are used, unchanged
 
 Same pre-registered barrier as every other measurement in this project:
@@ -216,7 +159,6 @@ Only the **scoring** (the barrier outcome) needs future bars — and that stays 
 in this script, purely to grade the signal. It must never enter the EA.
 
 ---
->>>>>>> 1235d8b4f8df90d7c896d7c1162228fff8193091
 
 ## 6. The groups being compared
 
@@ -268,12 +210,7 @@ favourable.
 
 ### Calibration
 
-<<<<<<< HEAD
-Under net displacement the baseline is 41.4% of all bars (the ~13% figure was the old
-first-touch NEUTRAL rate and no longer applies). So do not
-=======
 NEUTRAL is uncommon in gold — around 13% of all bars in the base-rate test. So do not
->>>>>>> 1235d8b4f8df90d7c896d7c1162228fff8193091
 expect 60%. The comparison is **relative**: baseline 13% vs divergence 25% would be a
 strong result. Both near 13% means no signal.
 
@@ -286,13 +223,8 @@ Treat any group with n < 100 as low confidence.
 ```mermaid
 classDiagram
     class verify_tf_divergence {
-<<<<<<< HEAD
-        +float SIDEWAYS_NET = 10.0
-        +int WINDOW = 24 M5 bars (120 min)
-=======
         +float X = 10.0
         +int N = 8
->>>>>>> 1235d8b4f8df90d7c896d7c1162228fff8193091
         +parse_log(path) dict
         +DIV pairs: M5-M15, M15-M30, M15-H1
         +direction(dm) str
@@ -417,17 +349,10 @@ flowchart TD
 
     O --> Q["resolve barrier X=10, N=8"]
     P --> Q
-<<<<<<< HEAD
-    Q --> R{"net = abs(end - start)"}
-    R -->|"net < 10"| U["SIDEWAYS"]
-    R -->|"net >= 10"| S["DIRECTIONAL"]
-    R --> T["also record ER and range"]
-=======
     Q --> R{"first touch?"}
     R -->|"start + 10"| S["UP"]
     R -->|"start - 10"| T["DN"]
     R -->|"neither in 120min"| U["NEU = went sideways"]
->>>>>>> 1235d8b4f8df90d7c896d7c1162228fff8193091
 
     S --> V["tally into EVERY group this bar belongs to"]
     T --> V
@@ -437,6 +362,8 @@ flowchart TD
     style S fill:#f8cecc,stroke:#b85450
     style T fill:#f8cecc,stroke:#b85450
 ```
+
+---
 
 ## 11. What a result means for the build
 
@@ -459,7 +386,6 @@ means you would be exiting live trends early.
 
 So this one test answers both questions — whether divergence detects sideways, and
 whether acting on it earlier is help or harm.
-<<<<<<< HEAD
 
 ---
 
@@ -543,5 +469,3 @@ value buckets:
 
 **Nothing currently logged predicts chop.** Note `midline_Cluster` in particular — tuning
 its threshold would be optimising a field that does not discriminate.
-=======
->>>>>>> 1235d8b4f8df90d7c896d7c1162228fff8193091
