@@ -116,6 +116,8 @@ input color              BBColor_4                = Yellow;
 input color              BBColor_5                = Magenta;
 input color              BBColor_6                = LightCyan;
 input color              BBColor_7                = MistyRose;
+input string             Display_Settings         = "---------------------------------------------";
+input bool               Cluster_Label_Ena        = true;
 
 // #define TF_ANUM 7 // timeframe array number, 0,1,2,3,4,5,6,7
 // #define LA 4 // latest array number
@@ -166,10 +168,11 @@ ENUM_TIMEFRAMES timeframe_list[TF_ANUM+1] = {BB_Ind_TIMEFRAME_0, BB_Ind_TIMEFRAM
 color color_list[TF_ANUM+1] = {BBColor_0, BBColor_1, BBColor_2, BBColor_3, BBColor_4, BBColor_5, BBColor_6, BBColor_7};
 //| Expert initialization function
 int OnInit()
-{  
+{
   // OnInit:
+   DC_Draw = Cluster_Label_Ena;      // TofySideway.mqh cluster-label display toggle
    //Stats_Init();
-   TIME_CURRENT=TimeCurrent(); 
+   TIME_CURRENT=TimeCurrent();
    if(print_init){
       Print("Symbol name of the current chart=",_Symbol);
       Print("PERIOD_CURRENT of the current chart=",PERIOD_CURRENT);
