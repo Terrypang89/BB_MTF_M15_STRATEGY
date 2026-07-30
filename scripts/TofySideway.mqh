@@ -3,8 +3,20 @@
 
 #include <TofyIncludeSimple.mqh>
 
-void BBDatas_Midline_Cluster(BB_MTF_Impact_struct &BBTFImpact, BB_MTF_Data_struct &BB_datas[]) 
-{   
+//+------------------------------------------------------------------+
+//| Midline-cluster distance thresholds (price units).                |
+//| BB_midline_Cluster[0] = |M15 mid - M5  mid|                       |
+//| BB_midline_Cluster[1] = |M15 mid - M30 mid|                       |
+//| BB_midline_Cluster[2] = |M15 mid - H1  mid|                       |
+//+------------------------------------------------------------------+
+const double CLUS_VTIGHT = 3.0;    // was 3   (S_51)
+const double CLUS_TIGHT  = 6.0;    // was 6   (S_11/12/13, S_21..24, S_41)
+const double CLUS_MED    = 10.0;   // was 10  (S_11/12/13, S_31/32, S_41)
+const double CLUS_LOOSE  = 15.0;   // was 15  (S_31/32)
+//+------------------------------------------------------------------+
+
+void BBDatas_Midline_Cluster(BB_MTF_Impact_struct &BBTFImpact, BB_MTF_Data_struct &BB_datas[])
+{
    double tempval[3], maxMid[3], minMid[3];
    
    double m5Mid = BB_datas[0].BBMidLV[LA];
@@ -64,8 +76,8 @@ void BBDatas_Midline_Sideway(BB_MTF_Impact_struct &BBTFImpact, BB_MTF_Data_struc
 
   
    // when M5 + M15 cluster and M15 + M30 cluster or when M5 + M15 cluster and M15 + H1 cluster
-   if((BBTFImpact.BB_midline_Cluster[0][LA] <= 6 && BBTFImpact.BB_midline_Cluster[1][LA] <= 10) || \
-      (BBTFImpact.BB_midline_Cluster[0][LA] <= 6 && BBTFImpact.BB_midline_Cluster[2][LA] <= 10))
+   if((BBTFImpact.BB_midline_Cluster[0][LA] <= CLUS_TIGHT && BBTFImpact.BB_midline_Cluster[1][LA] <= CLUS_MED) || \
+      (BBTFImpact.BB_midline_Cluster[0][LA] <= CLUS_TIGHT && BBTFImpact.BB_midline_Cluster[2][LA] <= CLUS_MED))
    {
       // M5 fly_shrink or above & M15 diffmid_trend sideway or stage sideway 
       if(BBTFImpact.sideway_val[0] >= 1 && BBTFImpact.sideway_val[1] >= 4 && (BBTFImpact.sideway_val[3] >= 2 || BBTFImpact.sideway_val[2] >= 4))
@@ -82,7 +94,7 @@ void BBDatas_Midline_Sideway(BB_MTF_Impact_struct &BBTFImpact, BB_MTF_Data_struc
       }
    }
    // M15 + M5 cluster only
-   if(BBTFImpact.sideway_selected[0] == 0 && (BBTFImpact.BB_midline_Cluster[0][LA] <= 6 && BBTFImpact.BB_midline_Cluster[0][LA_1] <= 6))
+   if(BBTFImpact.sideway_selected[0] == 0 && (BBTFImpact.BB_midline_Cluster[0][LA] <= CLUS_TIGHT && BBTFImpact.BB_midline_Cluster[0][LA_1] <= CLUS_TIGHT))
    {
       // M5 diffmid_trend sideway, M5 BBW_stage sideway
       if(BBTFImpact.sideway_val[0] >= 6)
@@ -106,7 +118,7 @@ void BBDatas_Midline_Sideway(BB_MTF_Impact_struct &BBTFImpact, BB_MTF_Data_struc
    }
 
    //  M5 + M15 cluster, M15 + M30 cluster
-   if(BBTFImpact.sideway_selected[0] == 0 && (BBTFImpact.BB_midline_Cluster[0][LA] <= 10 && BBTFImpact.BB_midline_Cluster[1][LA] <= 15))
+   if(BBTFImpact.sideway_selected[0] == 0 && (BBTFImpact.BB_midline_Cluster[0][LA] <= CLUS_MED && BBTFImpact.BB_midline_Cluster[1][LA] <= CLUS_LOOSE))
    {
       // M5 diffmid_trend sideway,  
       // during M30 && H1 fly, M5 start fly_shrink
@@ -120,7 +132,7 @@ void BBDatas_Midline_Sideway(BB_MTF_Impact_struct &BBTFImpact, BB_MTF_Data_struc
       }
    }
    // check if prev is sideway and M30 or H1 still sideway
-   if(BBTFImpact.sideway_selected[0] == 0 && BBTFImpact.sideway_selected[1] != 0 && BBTFImpact.BB_midline_Cluster[0][LA] <= 6 && BBTFImpact.BB_midline_Cluster[1][LA] <= 6 && BBTFImpact.BB_midline_Cluster[2][LA] <= 10)
+   if(BBTFImpact.sideway_selected[0] == 0 && BBTFImpact.sideway_selected[1] != 0 && BBTFImpact.BB_midline_Cluster[0][LA] <= CLUS_TIGHT && BBTFImpact.BB_midline_Cluster[1][LA] <= CLUS_TIGHT && BBTFImpact.BB_midline_Cluster[2][LA] <= CLUS_MED)
    {
       // M30 stage sideway or diffmidtrend sideway / H1 stage sideway or diffmidtrend sideway & H4 stage sideway or diffmidtrend sideway
       if((BBTFImpact.sideway_val[0] >= 1 || BBTFImpact.sideway_val[1] >= 1) && (BBTFImpact.sideway_val[2] >= 2) && (BBTFImpact.sideway_val[3] >= 2) && (BBTFImpact.sideway_val[4] >= 2))
@@ -129,7 +141,7 @@ void BBDatas_Midline_Sideway(BB_MTF_Impact_struct &BBTFImpact, BB_MTF_Data_struc
       }
    }
    // if prev is sideway, 
-   if(BBTFImpact.sideway_selected[0] == 0 && BBTFImpact.sideway_selected[1] != 0 && (BBTFImpact.BB_midline_Cluster[0][LA] <= 3 || BBTFImpact.BB_midline_Cluster[1][LA] <= 3) && \
+   if(BBTFImpact.sideway_selected[0] == 0 && BBTFImpact.sideway_selected[1] != 0 && (BBTFImpact.BB_midline_Cluster[0][LA] <= CLUS_VTIGHT || BBTFImpact.BB_midline_Cluster[1][LA] <= CLUS_VTIGHT) && \
       (BBTFImpact.BB_midline_Cluster[0][LA] < BBTFImpact.BB_midline_Cluster[0][LA_1] || BBTFImpact.BB_midline_Cluster[1][LA] < BBTFImpact.BB_midline_Cluster[1][LA_1]))
    {
       if(BBTFImpact.sideway_val[1] >= 6)
