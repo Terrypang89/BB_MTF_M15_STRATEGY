@@ -118,6 +118,8 @@ input color              BBColor_6                = LightCyan;
 input color              BBColor_7                = MistyRose;
 input string             Display_Settings         = "---------------------------------------------";
 input bool               Cluster_Label_Ena        = true;
+input bool               Verify_Label_Ena         = true;
+input bool               Verify_Log_Ena           = true;
 
 // #define TF_ANUM 7 // timeframe array number, 0,1,2,3,4,5,6,7
 // #define LA 4 // latest array number
@@ -171,6 +173,8 @@ int OnInit()
 {
   // OnInit:
    DC_Draw = Cluster_Label_Ena;      // TofySideway.mqh cluster-label display toggle
+   VS_DrawLabels = Verify_Label_Ena;  // TofyVerifySideway.mqh chart labels
+   VS_WriteLog   = Verify_Log_Ena;    // TofyVerifySideway.mqh [VERIFY_SIDEWAY] log lines
    //Stats_Init();
    TIME_CURRENT=TimeCurrent();
    if(print_init){
