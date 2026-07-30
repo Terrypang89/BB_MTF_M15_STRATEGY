@@ -15,6 +15,13 @@ const double CLUS_MED    = 10.0;   // was 10  (S_11/12/13, S_31/32, S_41)
 const double CLUS_LOOSE  = 15.0;   // was 15  (S_31/32)
 //+------------------------------------------------------------------+
 
+//--- cluster label display (diagnostic only; safe to read - no lookahead)
+bool   DC_Draw     = true;
+int    DC_FontSize = 9;
+double DC_Angle    = 90.0;   // 0.0 for horizontal
+int    DC_Digits   = 1;
+//+------------------------------------------------------------------+
+
 void BBDatas_Midline_Cluster(BB_MTF_Impact_struct &BBTFImpact, BB_MTF_Data_struct &BB_datas[])
 {
    double tempval[3], maxMid[3], minMid[3];
@@ -47,6 +54,51 @@ void BBDatas_Midline_Cluster(BB_MTF_Impact_struct &BBTFImpact, BB_MTF_Data_struc
          BBTFImpact.BB_midline_Cluster[i][LA] = tempval[i];
       }
    }
+}
+
+//+------------------------------------------------------------------+
+//| Draw the three midline-cluster distances on the M15 midline.      |
+//|   c 3.2|10.8|15.5   =  M15-M5 | M15-M30 | M15-H1                  |
+//| Smaller = midlines bunched = timeframes agree.                    |
+//| Colour = which gate tier Cluster[0] falls into (it appears in 6  |
+//| of the 13 threshold tests below).                                 |
+//| NO LOOKAHEAD - current-bar values only.                           |
+//+------------------------------------------------------------------+
+void DC_DrawClusterLabel(BB_MTF_Impact_struct &BBTFImpact,
+                         BB_MTF_Data_struct &BB_datas[])
+{
+   if(!DC_Draw) return;
+
+   double mid_M15 = BB_datas[1].BBMidLV[LA];      // index 1 = M15
+   if(mid_M15 <= 0.0) return;
+
+   datetime t_bar = iTime(_Symbol, PERIOD_M15, 0);
+   if(t_bar <= 0) return;
+
+   string name = "DC_" + IntegerToString((int)t_bar);
+   if(ObjectFind(0, name) >= 0) return;              // already drawn this bar
+
+   double c0 = BBTFImpact.BB_midline_Cluster[0][LA];
+   double c1 = BBTFImpact.BB_midline_Cluster[1][LA];
+   double c2 = BBTFImpact.BB_midline_Cluster[2][LA];
+
+   string txt = "c " + DoubleToString(c0, DC_Digits)
+              + "|"  + DoubleToString(c1, DC_Digits)
+              + "|"  + DoubleToString(c2, DC_Digits);
+
+   color col;
+   if(c0 <= CLUS_VTIGHT)     col = clrLime;      // very tight
+   else if(c0 <= CLUS_TIGHT) col = clrAqua;      // tight
+   else if(c0 <= CLUS_MED)   col = clrYellow;    // medium
+   else                      col = clrGray;      // no [0] gate passes
+
+   if(!ObjectCreate(0, name, OBJ_TEXT, 0, t_bar, mid_M15)) return;
+   ObjectSetString (0, name, OBJPROP_TEXT,     txt);
+   ObjectSetInteger(0, name, OBJPROP_COLOR,    col);
+   ObjectSetInteger(0, name, OBJPROP_FONTSIZE, DC_FontSize);
+   ObjectSetDouble (0, name, OBJPROP_ANGLE,    DC_Angle);
+   ObjectSetInteger(0, name, OBJPROP_ANCHOR,   ANCHOR_LOWER);
+   ObjectSetInteger(0, name, OBJPROP_BACK,     false);
 }
 
 void BBDatas_Midline_Sideway(BB_MTF_Impact_struct &BBTFImpact, BB_MTF_Data_struct &BB_datas[])
@@ -149,4 +201,5 @@ void BBDatas_Midline_Sideway(BB_MTF_Impact_struct &BBTFImpact, BB_MTF_Data_struc
          BBTFImpact.sideway_selected[0] = 51;
       }
    }
+   DC_DrawClusterLabel(BBTFImpact, BB_datas);
 }
