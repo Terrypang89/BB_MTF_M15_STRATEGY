@@ -35,7 +35,7 @@ int    VS_N          = 8;      // M15 bars ahead = 120 minutes
 bool   VS_DrawLabels = true;
 bool   VS_WriteLog   = true;   // emit a [VERIFY_SIDEWAY] line per resolved bar
 int    VS_FontSize   = 11;     // bigger than the default 8
-int    VS_Angle      = 90;     // rotate label vertical
+double VS_Angle      = 90.0;   // rotate label vertical
 
 //--- rolling history so we can resolve bar T-N
 #define VS_MAX 8192
@@ -100,7 +100,7 @@ void VS_DrawLabel(datetime t0, double mid_px, int sub, string outcome)
    ObjectSetString (0, name, OBJPROP_TEXT,     txt);
    ObjectSetInteger(0, name, OBJPROP_COLOR,    col);
    ObjectSetInteger(0, name, OBJPROP_FONTSIZE, VS_FontSize);
-   ObjectSetInteger(0, name, OBJPROP_ANGLE,    VS_Angle);      // vertical
+   ObjectSetDouble (0, name, OBJPROP_ANGLE,    VS_Angle);      // vertical
    ObjectSetInteger(0, name, OBJPROP_ANCHOR,   ANCHOR_LOWER);  // sits on the midline
    ObjectSetInteger(0, name, OBJPROP_BACK,     false);
 }
