@@ -95,7 +95,7 @@ void DC_DrawClusterLabel(BB_MTF_Impact_struct &BBTFImpact,
    if(!ObjectCreate(0, name, OBJ_TEXT, 0, t_bar, mid_M15)) return;
    ObjectSetString (0, name, OBJPROP_TEXT,     txt);
    ObjectSetInteger(0, name, OBJPROP_COLOR,    col);
-   ObjectSetDouble (0, name, OBJPROP_FONTSIZE, DC_FontSize);
+   ObjectSetInteger(0, name, OBJPROP_FONTSIZE, DC_FontSize);
    ObjectSetDouble (0, name, OBJPROP_ANGLE,    DC_Angle);
    ObjectSetInteger(0, name, OBJPROP_ANCHOR,   ANCHOR_LOWER);
    ObjectSetInteger(0, name, OBJPROP_BACK,     false);
