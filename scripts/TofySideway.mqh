@@ -42,7 +42,10 @@ void BBDatas_Midline_Cluster(BB_MTF_Impact_struct &BBTFImpact, BB_MTF_Data_struc
    maxMid[2] = MathMax(m15Mid, h1Mid);
    minMid[2] = MathMin(m15Mid, h1Mid);
 
-   for(int i = 0; i < 3; i++)
+   maxMid[3] = MathMax(m30Mid, h1Mid);
+   minMid[3] = MathMin(m30Mid, h1Mid);
+
+   for(int i = 0; i < 4; i++)
    {
       tempval[i] = (maxMid[i] - minMid[i]);
       if(tempval[i] != BBTFImpact.BB_midline_Cluster[i][LA])
