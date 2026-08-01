@@ -41,10 +41,16 @@
 //--- ladder settings
 bool   SL_Draw      = true;     // draw the ladder label
 bool   SL_WriteLog  = true;     // emit [LADDER] log lines
-int    SL_FontSize  = 9;
+int    SL_FontSize  = 10;
 double SL_Angle     = 90.0;     // OBJPROP_ANGLE is a DOUBLE property
 double CL_NEAR      = 10.0;     // the "< 10" cluster gate
 bool   SL_UseH1     = false;    // measured to DEGRADE the ladder; off by default
+double SL_diffmid_m15 = 3;
+double SL_diffmid_m30 = 1.5;
+
+
+//--- add near the other settings
+bool SL_ShowFails = true;    // draw gray L0-A/L0-B labels for undetected bars
 
 //--- ladder state history: [LA]=current, ages toward [LA_4]
 int SL_state[5];
@@ -81,20 +87,31 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    double c2  = BBTFImpact.BB_midline_Cluster[2][LA];
    double c2a = BBTFImpact.BB_midline_Cluster[2][LA_1];
    double c2b = BBTFImpact.BB_midline_Cluster[2][LA_2];
+   double c3  = BBTFImpact.BB_midline_Cluster[3][LA];
+   double c3a = BBTFImpact.BB_midline_Cluster[3][LA_1];
+   double c3b = BBTFImpact.BB_midline_Cluster[3][LA_2];
+
+   double dm1  = MathAbs(BB_datas[1].BB_diffMid[LA]);
+   double dm1a = MathAbs(BB_datas[1].BB_diffMid[LA_1]);
+   double dm1b = MathAbs(BB_datas[1].BB_diffMid[LA_2]);
+   double dm2  = MathAbs(BB_datas[2].BB_diffMid[LA]);
+   double dm2a = MathAbs(BB_datas[2].BB_diffMid[LA_1]);
+   double dm2b = MathAbs(BB_datas[2].BB_diffMid[LA_2]);
+   double dm3  = MathAbs(BB_datas[3].BB_diffMid[LA]);
+   double dm3a = MathAbs(BB_datas[3].BB_diffMid[LA_1]);
+   double dm3b = MathAbs(BB_datas[3].BB_diffMid[LA_2]);
 
    //--- M15 block -> state 1
    bool A15 = ((c0 < c0a && c0a < c0b) || (c0 < CL_NEAR && c0a < CL_NEAR));
    bool B15 = ( SL_StageOK((int)BB_datas[1].BBW_stage[LA])
-             || (BB_datas[1].BB_diffMid[LA] < BB_datas[1].BB_diffMid[LA_1]
-              && BB_datas[1].BB_diffMid[LA_1] < BB_datas[1].BB_diffMid[LA_2]) );
+             || ((dm1 < dm1a && dm1a < dm1b) || (dm1 < SL_diffmid_m15 && dm1a < SL_diffmid_m15)));
    if(A15 && B15) SL_state[LA] = 1;
 
    //--- M30 block -> state 2 (needs previous bar == 1)
    bool A30 = ((c1 < c1a && c1a < c1b) || (c1 < CL_NEAR && c1a < CL_NEAR));
    bool B30 = ( SL_StageOK((int)BB_datas[2].BBW_stage[LA])
-             || (BB_datas[2].BB_diffMid[LA] < BB_datas[2].BB_diffMid[LA_1]
-              && BB_datas[2].BB_diffMid[LA_1] < BB_datas[2].BB_diffMid[LA_2]) );
-   if(prev == 1 && A30 && B30) SL_state[LA] = 2;
+             || ((dm2 < dm2a && dm2a < dm2b) || (dm2 < SL_diffmid_m30 && dm2a < SL_diffmid_m30)));
+   if(prev >= 1 && A30 && B30) SL_state[LA] = 2;
 
    //--- H1 block -> state 3 (needs previous bar == 2). OFF by default.
    bool A1H = false, B1H = false, C1H = false;
@@ -103,17 +120,20 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       A1H = ( SL_StageOK((int)BB_datas[3].BBW_stage[LA])
            || (BB_datas[3].BB_diffBBW[LA] < BB_datas[3].BB_diffBBW[LA_1]
             && BB_datas[3].BB_diffBBW[LA_1] < BB_datas[3].BB_diffBBW[LA_2]) );
-      B1H = (c2 < c2a && c2a < c2b);
+      B1H = (c2 < c2a && c2a < c2b) || (c3 < c3a && c3a < c3b);
       C1H = (c1 < CL_NEAR && c1a < CL_NEAR);
-      if(prev == 2 && A1H && B1H && C1H) SL_state[LA] = 3;
+      // if(prev == 2 && A1H && B1H && C1H) SL_state[LA] = 3;
+      if(prev >= 1 && A1H && B1H && C1H) SL_state[LA] = 3;
    }
 
    //--- why did it fail? (for the label and log)
    string why = "";
    if(SL_state[LA] == 0)
    {
-      if(!A15) why += "A";      // cluster gate failed
-      if(!B15) why += "B";      // stage / diffMid gate failed
+      if(!A15) why += "A15-";      // cluster gate failed
+      if(!B15) why += "B15-";      // stage / diffMid gate failed
+      if(!A30) why += "A30-";      // cluster gate failed
+      if(!B30) why += "B30-";      // stage / diffMid gate failed
       if(why == "") why = "P";  // blocks passed but prev level not met
    }
 
@@ -122,14 +142,16 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    {
       double mid = BB_datas[1].BBMidLV[LA];
       datetime t = iTime(_Symbol, PERIOD_M15, 0);
-      if(mid > 0.0 && t > 0)
+
+      // skip state-0 bars only when SL_ShowFails is off
+      if(mid > 0.0 && t > 0 && (SL_state[LA] > 0 || SL_ShowFails))
       {
-         string name = "SL_" + IntegerToString((int)t);
+         string txt = "L" + IntegerToString(SL_state[LA]);
+         if(SL_state[LA] == 0) txt += "-" + why;
+
+         string name = txt + "_" + IntegerToString((int)t);   // ID only, not the text
          if(ObjectFind(0, name) < 0)
          {
-            string txt = "L" + IntegerToString(SL_state[LA]);
-            if(SL_state[LA] == 0) txt += "-" + why;
-
             color col;
             if(SL_state[LA] == 3)      col = clrAqua;
             else if(SL_state[LA] == 2) col = clrLime;

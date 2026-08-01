@@ -1405,7 +1405,7 @@ void print_BBTFImpact(bool debug_info, BB_MTF_Impact_struct &BBTFImpact, double 
 
    if(BBTFImpact.BB_midline_Cluster[0][LA] != 0)
    {
-      BB_midline_Cluster_info += NormalizeDouble(BBTFImpact.BB_midline_Cluster[0][LA], 2) + ", " + NormalizeDouble(BBTFImpact.BB_midline_Cluster[1][LA], 2) + ", " + NormalizeDouble(BBTFImpact.BB_midline_Cluster[2][LA], 2);
+      BB_midline_Cluster_info += NormalizeDouble(BBTFImpact.BB_midline_Cluster[0][LA], 2) + ", " + NormalizeDouble(BBTFImpact.BB_midline_Cluster[1][LA], 2) + ", " + NormalizeDouble(BBTFImpact.BB_midline_Cluster[2][LA], 2) + ", " + NormalizeDouble(BBTFImpact.BB_midline_Cluster[3][LA], 2);
       
       if(BB_midline_Cluster_info != "")
       {

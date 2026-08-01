@@ -24,7 +24,7 @@ int    DC_Digits   = 1;
 
 void BBDatas_Midline_Cluster(BB_MTF_Impact_struct &BBTFImpact, BB_MTF_Data_struct &BB_datas[])
 {
-   double tempval[3], maxMid[3], minMid[3];
+   double tempval[4], maxMid[4], minMid[4];
    
    double m5Mid = BB_datas[0].BBMidLV[LA];
    double m15Mid = BB_datas[1].BBMidLV[LA];
