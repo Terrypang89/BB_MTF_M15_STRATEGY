@@ -11,6 +11,7 @@
 #include <TofySideway.mqh>
 #include <TofyTouch.mqh>
 #include <TofyVerifySideway.mqh>
+#include <TofySidewayLadder.mqh>
 #endif
 
 input string             Basic_Settings           = "---------------------------------------------";
@@ -120,6 +121,8 @@ input string             Display_Settings         = "---------------------------
 input bool               Cluster_Label_Ena        = true;
 input bool               Verify_Label_Ena         = true;
 input bool               Verify_Log_Ena           = true;
+input bool               Ladder_Label_Ena         = true;
+input bool               Ladder_Log_Ena           = false;
 
 // #define TF_ANUM 7 // timeframe array number, 0,1,2,3,4,5,6,7
 // #define LA 4 // latest array number
@@ -175,6 +178,8 @@ int OnInit()
    DC_Draw = Cluster_Label_Ena;      // TofySideway.mqh cluster-label display toggle
    VS_DrawLabels = Verify_Label_Ena;  // TofyVerifySideway.mqh chart labels
    VS_WriteLog   = Verify_Log_Ena;    // TofyVerifySideway.mqh [VERIFY_SIDEWAY] log lines
+   SL_Draw       = Ladder_Label_Ena;  // TofySidewayLadder.mqh chart labels
+   SL_WriteLog   = Ladder_Log_Ena;    // TofySidewayLadder.mqh [LADDER] log lines
    //Stats_Init();
    TIME_CURRENT=TimeCurrent();
    if(print_init){
@@ -411,6 +416,7 @@ void OnTick()
          int r = 1;
          M15BarTime = currentTFBarTime[r];
          BBDatas_Midline_Sideway(BBTFImpact, BB_datas);
+         SL_Update(BBTFImpact, BB_datas);
 
          VS_OnNewM15Bar(iTime(_Symbol, PERIOD_M15, 0),
                (int)BBTFImpact.sideway_selected[LA],
