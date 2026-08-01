@@ -75,22 +75,24 @@ void DC_DrawClusterLabel(BB_MTF_Impact_struct &BBTFImpact,
    datetime t_bar = iTime(_Symbol, PERIOD_M15, 0);
    if(t_bar <= 0) return;
 
-   string name = "DC_" + IntegerToString((int)t_bar);
-   if(ObjectFind(0, name) >= 0) return;              // already drawn this bar
-
+   // keep the DOUBLES for the gate comparison
    double c0 = BBTFImpact.BB_midline_Cluster[0][LA];
    double c1 = BBTFImpact.BB_midline_Cluster[1][LA];
    double c2 = BBTFImpact.BB_midline_Cluster[2][LA];
 
-   string txt = "c " + DoubleToString(c0, DC_Digits)
-              + "|"  + DoubleToString(c1, DC_Digits)
-              + "|"  + DoubleToString(c2, DC_Digits);
+   // truncate ONLY for display
+   string txt = IntegerToString((int)c0)
+              + "-" + IntegerToString((int)c1)
+              + "-" + IntegerToString((int)c2);
+
+   string name = txt + "_" + IntegerToString((int)t_bar);   // timestamp only = one per bar
+   if(ObjectFind(0, name) >= 0) return;
 
    color col;
-   if(c0 <= CLUS_VTIGHT)     col = clrLime;      // very tight
-   else if(c0 <= CLUS_TIGHT) col = clrAqua;      // tight
-   else if(c0 <= CLUS_MED)   col = clrYellow;    // medium
-   else                      col = clrGray;      // no [0] gate passes
+   if(c0 <= CLUS_VTIGHT)     col = clrLime;      // compares the DOUBLE
+   else if(c0 <= CLUS_TIGHT) col = clrAqua;
+   else if(c0 <= CLUS_MED)   col = clrYellow;
+   else                      col = clrGray;
 
    if(!ObjectCreate(0, name, OBJ_TEXT, 0, t_bar, mid_M15)) return;
    ObjectSetString (0, name, OBJPROP_TEXT,     txt);
@@ -104,11 +106,11 @@ void DC_DrawClusterLabel(BB_MTF_Impact_struct &BBTFImpact,
 void BBDatas_Midline_Sideway(BB_MTF_Impact_struct &BBTFImpact, BB_MTF_Data_struct &BB_datas[])
 {
 
-   BBTFImpact.sideway_selected[4] = BBTFImpact.sideway_selected[3];
-   BBTFImpact.sideway_selected[3] = BBTFImpact.sideway_selected[2];
-   BBTFImpact.sideway_selected[2] = BBTFImpact.sideway_selected[1];
-   BBTFImpact.sideway_selected[1] = BBTFImpact.sideway_selected[0];
-   BBTFImpact.sideway_selected[0] = 0;
+   BBTFImpact.sideway_selected[LA_4] = BBTFImpact.sideway_selected[LA_3];
+   BBTFImpact.sideway_selected[LA_3] = BBTFImpact.sideway_selected[LA_2];
+   BBTFImpact.sideway_selected[LA_2] = BBTFImpact.sideway_selected[LA_1];
+   BBTFImpact.sideway_selected[LA_1] = BBTFImpact.sideway_selected[LA];
+   BBTFImpact.sideway_selected[LA] = 0;
    for(int i=4; i>= 0; i--)
    {
       BBTFImpact.sideway_val[i] = 0; 
@@ -134,71 +136,71 @@ void BBDatas_Midline_Sideway(BB_MTF_Impact_struct &BBTFImpact, BB_MTF_Data_struc
       // M5 fly_shrink or above & M15 diffmid_trend sideway or stage sideway 
       if(BBTFImpact.sideway_val[0] >= 1 && BBTFImpact.sideway_val[1] >= 4 && (BBTFImpact.sideway_val[3] >= 2 || BBTFImpact.sideway_val[2] >= 4))
       {
-         BBTFImpact.sideway_selected[0] = 11;
+         BBTFImpact.sideway_selected[LA] = 11;
       }
       else if(BBTFImpact.sideway_val[0] >= 4 && BBTFImpact.sideway_val[1] >= 1 && (BBTFImpact.sideway_val[3] >= 2 || BBTFImpact.sideway_val[2] >= 4))
       {
-         BBTFImpact.sideway_selected[0] = 12;
+         BBTFImpact.sideway_selected[LA] = 12;
       }
       else if(BBTFImpact.sideway_val[0] >= 4 && BBTFImpact.sideway_val[1] >= 2)
       {
-         BBTFImpact.sideway_selected[0] = 13;
+         BBTFImpact.sideway_selected[LA] = 13;
       }
    }
    // M15 + M5 cluster only
-   if(BBTFImpact.sideway_selected[0] == 0 && (BBTFImpact.BB_midline_Cluster[0][LA] <= CLUS_TIGHT && BBTFImpact.BB_midline_Cluster[0][LA_1] <= CLUS_TIGHT))
+   if(BBTFImpact.sideway_selected[LA] == 0 && (BBTFImpact.BB_midline_Cluster[0][LA] <= CLUS_TIGHT && BBTFImpact.BB_midline_Cluster[0][LA_1] <= CLUS_TIGHT))
    {
       // M5 diffmid_trend sideway, M5 BBW_stage sideway
       if(BBTFImpact.sideway_val[0] >= 6)
       {
-         BBTFImpact.sideway_selected[0] = 21;
+         BBTFImpact.sideway_selected[LA] = 21;
       }
       // M5 diffmid_trend sideway & M15 BBW_stage sideway or diffmid_trend sideway
       else if(BBTFImpact.sideway_val[0] >= 4 && BBTFImpact.sideway_val[1] >= 2)
       {
-         BBTFImpact.sideway_selected[0] = 22;
+         BBTFImpact.sideway_selected[LA] = 22;
       }
       else if(BBTFImpact.sideway_val[1] >= 2 && BBTFImpact.sideway_val[3] >= 5)
       {
-         BBTFImpact.sideway_selected[0] = 23;
+         BBTFImpact.sideway_selected[LA] = 23;
       }
       // 
       else if(BBTFImpact.sideway_val[0] >= 5 && BBTFImpact.sideway_val[1] >= 1)
       {
-         BBTFImpact.sideway_selected[0] = 24;
+         BBTFImpact.sideway_selected[LA] = 24;
       }
    }
 
    //  M5 + M15 cluster, M15 + M30 cluster
-   if(BBTFImpact.sideway_selected[0] == 0 && (BBTFImpact.BB_midline_Cluster[0][LA] <= CLUS_MED && BBTFImpact.BB_midline_Cluster[1][LA] <= CLUS_LOOSE))
+   if(BBTFImpact.sideway_selected[LA] == 0 && (BBTFImpact.BB_midline_Cluster[0][LA] <= CLUS_MED && BBTFImpact.BB_midline_Cluster[1][LA] <= CLUS_LOOSE))
    {
       // M5 diffmid_trend sideway,  
       // during M30 && H1 fly, M5 start fly_shrink
       if(BBTFImpact.sideway_val[0] >= 4 && BBTFImpact.sideway_val[1] >= 2)
       {
-         BBTFImpact.sideway_selected[0] = 31;
+         BBTFImpact.sideway_selected[LA] = 31;
       }
       else if(BBTFImpact.sideway_val[1] >= 2 && BBTFImpact.sideway_val[3] >= 5)
       {
-         BBTFImpact.sideway_selected[0] = 32;
+         BBTFImpact.sideway_selected[LA] = 32;
       }
    }
    // check if prev is sideway and M30 or H1 still sideway
-   if(BBTFImpact.sideway_selected[0] == 0 && BBTFImpact.sideway_selected[1] != 0 && BBTFImpact.BB_midline_Cluster[0][LA] <= CLUS_TIGHT && BBTFImpact.BB_midline_Cluster[1][LA] <= CLUS_TIGHT && BBTFImpact.BB_midline_Cluster[2][LA] <= CLUS_MED)
+   if(BBTFImpact.sideway_selected[LA] == 0 && BBTFImpact.sideway_selected[1] != 0 && BBTFImpact.BB_midline_Cluster[0][LA] <= CLUS_TIGHT && BBTFImpact.BB_midline_Cluster[1][LA] <= CLUS_TIGHT && BBTFImpact.BB_midline_Cluster[2][LA] <= CLUS_MED)
    {
       // M30 stage sideway or diffmidtrend sideway / H1 stage sideway or diffmidtrend sideway & H4 stage sideway or diffmidtrend sideway
       if((BBTFImpact.sideway_val[0] >= 1 || BBTFImpact.sideway_val[1] >= 1) && (BBTFImpact.sideway_val[2] >= 2) && (BBTFImpact.sideway_val[3] >= 2) && (BBTFImpact.sideway_val[4] >= 2))
       {
-         BBTFImpact.sideway_selected[0] = 41;
+         BBTFImpact.sideway_selected[LA] = 41;
       }
    }
    // if prev is sideway, 
-   if(BBTFImpact.sideway_selected[0] == 0 && BBTFImpact.sideway_selected[1] != 0 && (BBTFImpact.BB_midline_Cluster[0][LA] <= CLUS_VTIGHT || BBTFImpact.BB_midline_Cluster[1][LA] <= CLUS_VTIGHT) && \
+   if(BBTFImpact.sideway_selected[LA] == 0 && BBTFImpact.sideway_selected[1] != 0 && (BBTFImpact.BB_midline_Cluster[0][LA] <= CLUS_VTIGHT || BBTFImpact.BB_midline_Cluster[1][LA] <= CLUS_VTIGHT) && \
       (BBTFImpact.BB_midline_Cluster[0][LA] < BBTFImpact.BB_midline_Cluster[0][LA_1] || BBTFImpact.BB_midline_Cluster[1][LA] < BBTFImpact.BB_midline_Cluster[1][LA_1]))
    {
       if(BBTFImpact.sideway_val[1] >= 6)
       {
-         BBTFImpact.sideway_selected[0] = 51;
+         BBTFImpact.sideway_selected[LA] = 51;
       }
    }
    DC_DrawClusterLabel(BBTFImpact, BB_datas);

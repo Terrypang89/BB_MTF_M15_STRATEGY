@@ -624,11 +624,11 @@ void OnTick()
                   // if(r == 1) M15_MidTrend_log = BB_datas[r].BB_diffMid_Trend[LA];
                   if(r == 1)
                   {
-                     if(BBTFImpact.sideway_selected[0] > 0)
+                     if(BBTFImpact.sideway_selected[LA] > 0)
                      {
                         comb_stage_log += "-";
                         comb_stage_log += IntegerToString(BBTFImpact.sideway_val[4]) + IntegerToString(BBTFImpact.sideway_val[3]) + IntegerToString(BBTFImpact.sideway_val[2]) + IntegerToString(BBTFImpact.sideway_val[1]) + IntegerToString(BBTFImpact.sideway_val[0]);
-                        comb_stage_log += "-S_" + BBTFImpact.sideway_selected[0];
+                        comb_stage_log += "-S_" + BBTFImpact.sideway_selected[LA];
                      }
                   }
                   // Text_angle = 0;
