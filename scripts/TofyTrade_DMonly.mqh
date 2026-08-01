@@ -10,7 +10,7 @@
 //|                                                                  |
 //| RULES (exactly the Python DMONLY):                               |
 //|   dm = BB_datas[1].BB_diffMid_Trend[LA]   (M15 diffMid_Trend cur)|
-//|   1. SIDEWAYS exit : BBTFImpact.sideway_selected[0] > 0 -> act=7 |
+//|   1. SIDEWAYS exit : BBTFImpact.sideway_selected[LA] > 0 -> act=7 |
 //|   2. REVERSAL      : LONG & dm in {2,4} -> act=7 (close, no       |
 //|                      re-entry this bar)                          |
 //|                      SHORT & dm in {1,5} -> act=7                |
@@ -62,7 +62,7 @@ void Trade_Strategy(
 
    //--- The ONLY inputs DMONLY uses ---------------------------------
    double dm      = BB_datas[1].BB_diffMid_Trend[LA];      // index 1 = M15, cur
-   int    sideway = (int)BBTFImpact.sideway_selected[0];   // >0 = TofySideway S_ flag
+   int    sideway = (int)BBTFImpact.sideway_selected[LA];  // >0 = TofySideway S_ flag (LA = current)
 
    bool dm_up   = (dm == 1.0 || dm == 5.0);   // buy / reversal-up direction
    bool dm_down = (dm == 2.0 || dm == 4.0);   // sell / reversal-dn direction

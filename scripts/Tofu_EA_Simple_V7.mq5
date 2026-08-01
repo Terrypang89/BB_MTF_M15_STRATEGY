@@ -413,7 +413,7 @@ void OnTick()
          BBDatas_Midline_Sideway(BBTFImpact, BB_datas);
 
          VS_OnNewM15Bar(iTime(_Symbol, PERIOD_M15, 0),
-               (int)BBTFImpact.sideway_selected[0],
+               (int)BBTFImpact.sideway_selected[LA],
                BB_datas[1].BBMidLV[LA]);     // <-- your actual midline field name
 
          if(ATRSL1BUF.ATRLV[LA] != 0.0 && ATRSL1BUF.ATRLV[LA_1] != 0.0)

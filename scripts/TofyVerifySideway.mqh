@@ -108,7 +108,7 @@ void VS_DrawLabel(datetime t0, double mid_px, int sub, string outcome)
 //+------------------------------------------------------------------+
 //| Call ONCE per new M15 bar.                                       |
 //|   t_bar        = iTime(_Symbol, PERIOD_M15, 0)                   |
-//|   sideway_sub  = (int)BBTFImpact.sideway_selected[0]  (0 = none) |
+//|   sideway_sub  = (int)BBTFImpact.sideway_selected[LA]  (0 = none) |
 //|   mid_lv_M15   = the M15 BB midline value at this bar            |
 //|                  (whatever your struct calls it, e.g.            |
 //|                   BB_datas[1].BB_MidLV[LA])                      |
