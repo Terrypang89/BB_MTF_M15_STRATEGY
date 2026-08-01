@@ -43,12 +43,22 @@ bool   SL_Draw      = true;     // draw the ladder label
 bool   SL_WriteLog  = true;     // emit [LADDER] log lines
 int    SL_FontSize  = 10;
 double SL_Angle     = 90.0;     // OBJPROP_ANGLE is a DOUBLE property
-double CL_NEAR      = 10.5;     // cluster gate. 10.0 rejected clus1=10.1 by 0.1;
-                                // 10.5 costs +93 bars (+1pp) and takes the
-                                // 2026.02.03 window from 32% to 54% coverage.
+double CL_NEAR      = 10.5;     // 10.0 rejected clus1 = 10.1 by 0.1 and broke
+                                // the ladder chain. 10.5 costs +89 bars and takes
+                                // the 2026.02.03 window from 16/50 to 27/50.
 bool   SL_UseH1     = false;    // measured to DEGRADE the ladder; off by default
 double SL_diffmid_m15 = 3;
 double SL_diffmid_m30 = 1.5;
+
+//--- A close outside the M15 band means the range has broken, so the sideway
+//--- state is cancelled. MEASURED (with CL_NEAR 10.5):
+//---   no cancel   n=3756 (49% of bars) lift +8.4
+//---   M30 cancel  n=3145 (41% of bars) lift +9.8
+//---   M15 cancel  n=2891 (38% of bars) lift +12.1   <- used here
+//--- Sequential variants were worse: M15-then-M30 +9.2, M15-AND-M30 +10.0.
+//--- M15 bands are tighter: they break earlier and re-contain earlier, which
+//--- tracks price better than the lagging M30 band.
+bool   SL_BreakoutCancel = true;
 
 //--- diffBBW branch on the M30 block (M15 branch is inert: B15 already
 //--- saturates via the |diffMid| gate, measured +2 bars out of 7600).
@@ -139,6 +149,15 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
 
    if(prev >= 1 && A30 && B30) SL_state[LA] = 2;
 
+   //--- BREAKOUT CANCELS the sideway state (M15 band, index 1)
+   bool brk = false;
+   if(SL_BreakoutCancel)
+   {
+      double close_now = iClose(_Symbol, PERIOD_M5, 0);
+      brk = (close_now > BB_datas[1].BBUppLV[LA] || close_now < BB_datas[1].BBLowLV[LA]);
+      if(brk) SL_state[LA] = 0;
+   }
+
    //--- H1 block -> state 3 (needs previous bar == 2). OFF by default.
    bool A1H = false, B1H = false, C1H = false;
    if(SL_UseH1)
@@ -154,12 +173,15 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
 
    //--- why did it fail? (for the label and log)
    //--- report the gate that blocked the level ACTUALLY reached.
-   //--- state 0 can only be caused by A15/B15, so A30/B30 are not the reason there.
    string why = "";
    if(SL_state[LA] == 0)
    {
-      if(!A15) why += "A15";       // M15 cluster gate failed
-      if(!B15) why += "B15";       // M15 stage / diffMid gate failed
+      if(brk) why = "brk";              // cancelled by M15 breakout
+      else
+      {
+         if(!A15) why += "A15";
+         if(!B15) why += "B15";
+      }
    }
    else if(SL_state[LA] == 1)
    {
@@ -184,7 +206,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
          if(bbw_saved) txt += "*";          // only qualified because of diffBBW
          if(why != "") txt += "-" + why;
 
-         string name = txt + "_" + IntegerToString((int)t);   // ID only - one label per bar
+         string name = "SL_" + IntegerToString((int)t);   // ID only, one label per bar
          if(ObjectFind(0, name) < 0)
          {
             color col;
@@ -213,7 +235,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
             "] prev:[", prev,
             "] why:[", why,
             "] A15:[", A15, "] B15:[", B15,
-            "] A30:[", A30, "] B30:[", B30,
+            "] A30:[", A30, "] B30:[", B30, "] brk:[", brk,
             "] bbw30:[", bbw30, "] bbw_saved:[", bbw_saved,
             "] c0:[", DoubleToString(c0,1),
             "] c1:[", DoubleToString(c1,1),
