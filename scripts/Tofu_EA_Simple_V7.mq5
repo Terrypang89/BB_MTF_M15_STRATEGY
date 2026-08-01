@@ -119,6 +119,7 @@ input color              BBColor_6                = LightCyan;
 input color              BBColor_7                = MistyRose;
 input string             Display_Settings         = "---------------------------------------------";
 input bool               Cluster_Label_Ena        = true;
+input int               Ladder_DiffBBW_Mode        = 0;    // 0=off  1=contracting  2=falling
 input bool               Verify_Label_Ena         = true;
 input bool               Verify_Log_Ena           = true;
 input bool               Ladder_Label_Ena         = true;
@@ -180,6 +181,7 @@ int OnInit()
    VS_WriteLog   = Verify_Log_Ena;    // TofyVerifySideway.mqh [VERIFY_SIDEWAY] log lines
    SL_Draw       = Ladder_Label_Ena;  // TofySidewayLadder.mqh chart labels
    SL_WriteLog   = Ladder_Log_Ena;    // TofySidewayLadder.mqh [LADDER] log lines
+   SL_DiffBBWMode = Ladder_DiffBBW_Mode;    // in OnInit
    //Stats_Init();
    TIME_CURRENT=TimeCurrent();
    if(print_init){

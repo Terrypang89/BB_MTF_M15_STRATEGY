@@ -43,11 +43,24 @@ bool   SL_Draw      = true;     // draw the ladder label
 bool   SL_WriteLog  = true;     // emit [LADDER] log lines
 int    SL_FontSize  = 10;
 double SL_Angle     = 90.0;     // OBJPROP_ANGLE is a DOUBLE property
-double CL_NEAR      = 10.0;     // the "< 10" cluster gate
+double CL_NEAR      = 10.5;     // cluster gate. 10.0 rejected clus1=10.1 by 0.1;
+                                // 10.5 costs +93 bars (+1pp) and takes the
+                                // 2026.02.03 window from 32% to 54% coverage.
 bool   SL_UseH1     = false;    // measured to DEGRADE the ladder; off by default
 double SL_diffmid_m15 = 3;
 double SL_diffmid_m30 = 1.5;
 
+//--- diffBBW branch on the M30 block (M15 branch is inert: B15 already
+//--- saturates via the |diffMid| gate, measured +2 bars out of 7600).
+//---   0 = off        n=3756 (49% of bars)  lift +8.4  window 27/50
+//---   1 = dbbw < thr n=4100 (54% of bars)  lift +7.3  window 33/50
+//---   2 = dbbw falling 3 bars   n=3928 (52%)  lift +7.9  window 30/50
+//--- Threshold value barely matters: <0 <1 <2 <5 all give the same result.
+//--- 622 bars rescued, 10 inside the target window vs ~4 expected by chance
+//--- (2.5x enrichment) - but the other 612 land elsewhere and the net new
+//--- bars are 34.3% QUIET, BELOW the 37.8% baseline.
+int    SL_DiffBBWMode  = 0;     // 0=off  1=threshold  2=falling
+double SL_diffbbw_m30  = 1.0;
 
 //--- add near the other settings
 bool SL_ShowFails = true;    // draw gray L0-A/L0-B labels for undetected bars
@@ -111,6 +124,19 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    bool A30 = ((c1 < c1a && c1a < c1b) || (c1 < CL_NEAR && c1a < CL_NEAR));
    bool B30 = ( SL_StageOK((int)BB_datas[2].BBW_stage[LA])
              || ((dm2 < dm2a && dm2a < dm2b) || (dm2 < SL_diffmid_m30 && dm2a < SL_diffmid_m30)));
+
+   //--- optional diffBBW branch on M30, tracked so the label can mark it
+   bool bbw30 = false;
+   if(SL_DiffBBWMode == 1)
+      bbw30 = (BB_datas[2].BB_diffBBW[LA]   < SL_diffbbw_m30
+            && BB_datas[2].BB_diffBBW[LA_1] < SL_diffbbw_m30);
+   else if(SL_DiffBBWMode == 2)
+      bbw30 = (BB_datas[2].BB_diffBBW[LA]   < BB_datas[2].BB_diffBBW[LA_1]
+            && BB_datas[2].BB_diffBBW[LA_1] < BB_datas[2].BB_diffBBW[LA_2]);
+
+   bool bbw_saved = (!B30 && bbw30);   // diffBBW alone rescued the M30 block
+   B30 = B30 || bbw30;
+
    if(prev >= 1 && A30 && B30) SL_state[LA] = 2;
 
    //--- H1 block -> state 3 (needs previous bar == 2). OFF by default.
@@ -127,14 +153,22 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    }
 
    //--- why did it fail? (for the label and log)
+   //--- report the gate that blocked the level ACTUALLY reached.
+   //--- state 0 can only be caused by A15/B15, so A30/B30 are not the reason there.
    string why = "";
    if(SL_state[LA] == 0)
    {
-      if(!A15) why += "A15-";      // cluster gate failed
-      if(!B15) why += "B15-";      // stage / diffMid gate failed
-      if(!A30) why += "A30-";      // cluster gate failed
-      if(!B30) why += "B30-";      // stage / diffMid gate failed
-      if(why == "") why = "P";  // blocks passed but prev level not met
+      if(!A15) why += "A15";       // M15 cluster gate failed
+      if(!B15) why += "B15";       // M15 stage / diffMid gate failed
+   }
+   else if(SL_state[LA] == 1)
+   {
+      if(prev < 1) why = "prev";   // chain not established yet
+      else
+      {
+         if(!A30) why += "A30";    // M30 cluster gate failed
+         if(!B30) why += "B30";    // M30 stage / diffMid gate failed
+      }
    }
 
    //--- draw
@@ -147,9 +181,10 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       if(mid > 0.0 && t > 0 && (SL_state[LA] > 0 || SL_ShowFails))
       {
          string txt = "L" + IntegerToString(SL_state[LA]);
-         if(SL_state[LA] == 0) txt += "-" + why;
+         if(bbw_saved) txt += "*";          // only qualified because of diffBBW
+         if(why != "") txt += "-" + why;
 
-         string name = txt + "_" + IntegerToString((int)t);   // ID only, not the text
+         string name = txt + "_" + IntegerToString((int)t);   // ID only - one label per bar
          if(ObjectFind(0, name) < 0)
          {
             color col;
@@ -179,6 +214,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
             "] why:[", why,
             "] A15:[", A15, "] B15:[", B15,
             "] A30:[", A30, "] B30:[", B30,
+            "] bbw30:[", bbw30, "] bbw_saved:[", bbw_saved,
             "] c0:[", DoubleToString(c0,1),
             "] c1:[", DoubleToString(c1,1),
             "] c2:[", DoubleToString(c2,1),
