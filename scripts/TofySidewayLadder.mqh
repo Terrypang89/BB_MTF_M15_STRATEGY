@@ -58,7 +58,16 @@ double SL_diffmid_m30 = 1.5;
 //--- Sequential variants were worse: M15-then-M30 +9.2, M15-AND-M30 +10.0.
 //--- M15 bands are tighter: they break earlier and re-contain earlier, which
 //--- tracks price better than the lagging M30 band.
-bool   SL_BreakoutCancel = true;
+//--- Breakout cancel mode. A close outside the M15 band means the range broke.
+//--- MEASURED (CL_NEAR 10.5, baseline QUIET 37.8%):
+//---   0 off                n=3756 (49%) lift  +8.4  window 27/50  flips   0
+//---   1 brk               n=2891 (38%) lift +12.1  window 21/50  flips 887  <- default
+//---   2 brk 2 bars        n=3423 (45%) lift  +9.5  window 22/50  flips 406
+//---   3 brk AND !B15      n=3657 (48%) lift  +9.4  window 21/50  flips 172
+//--- Mode 1 is the most precise but flickers (flag toggles on ~12% of bars).
+//--- Modes 2 and 3 are steadier and cost ~2.7 lift points. Flicker is cosmetic while
+//--- this module drives nothing; it would matter if it ever drove an exit.
+int    SL_BreakoutMode = 1;
 
 //--- diffBBW branch on the M30 block (M15 branch is inert: B15 already
 //--- saturates via the |diffMid| gate, measured +2 bars out of 7600).
@@ -151,10 +160,20 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
 
    //--- BREAKOUT CANCELS the sideway state (M15 band, index 1)
    bool brk = false;
-   if(SL_BreakoutCancel)
+   if(SL_BreakoutMode > 0)
    {
-      double close_now = iClose(_Symbol, PERIOD_M5, 0);
-      brk = (close_now > BB_datas[1].BBUppLV[LA] || close_now < BB_datas[1].BBLowLV[LA]);
+      double close_now  = iClose(_Symbol, PERIOD_M5, 0);
+      double close_prev = iClose(_Symbol, PERIOD_M5, 3);   // 3 M5 bars = 1 M15 bar back
+
+      bool raw  = (close_now  > BB_datas[1].BBUppLV[LA]
+                || close_now  < BB_datas[1].BBLowLV[LA]);
+      bool raw1 = (close_prev > BB_datas[1].BBUppLV[LA_1]
+                || close_prev < BB_datas[1].BBLowLV[LA_1]);
+
+      if(SL_BreakoutMode == 1)      brk = raw;
+      else if(SL_BreakoutMode == 2) brk = (raw && raw1);
+      else if(SL_BreakoutMode == 3) brk = (raw && !B15);
+
       if(brk) SL_state[LA] = 0;
    }
 
@@ -235,7 +254,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
             "] prev:[", prev,
             "] why:[", why,
             "] A15:[", A15, "] B15:[", B15,
-            "] A30:[", A30, "] B30:[", B30, "] brk:[", brk,
+            "] A30:[", A30, "] B30:[", B30, "] brkmode:[", SL_BreakoutMode, "] brk:[", brk,
             "] bbw30:[", bbw30, "] bbw_saved:[", bbw_saved,
             "] c0:[", DoubleToString(c0,1),
             "] c1:[", DoubleToString(c1,1),
