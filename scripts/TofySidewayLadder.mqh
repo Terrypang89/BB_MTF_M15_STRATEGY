@@ -1,3 +1,6 @@
+#property copyright "Copyright 2026, terrypang."
+#property link      "https://www.mql5.com/en/users/terrypang/"
+#property version   "38.10"
 //+------------------------------------------------------------------+
 //| TofySidewayLadder.mqh   -- DIAGNOSTIC ONLY                        |
 //|                                                                  |
@@ -67,7 +70,7 @@ double SL_diffmid_m30 = 1.5;
 //--- Mode 1 is the most precise but flickers (flag toggles on ~12% of bars).
 //--- Modes 2 and 3 are steadier and cost ~2.7 lift points. Flicker is cosmetic while
 //--- this module drives nothing; it would matter if it ever drove an exit.
-int    SL_BreakoutMode = 1;
+int    SL_BreakoutMode = 3;
 
 //--- diffBBW branch on the M30 block (M15 branch is inert: B15 already
 //--- saturates via the |diffMid| gate, measured +2 bars out of 7600).
@@ -78,7 +81,7 @@ int    SL_BreakoutMode = 1;
 //--- 622 bars rescued, 10 inside the target window vs ~4 expected by chance
 //--- (2.5x enrichment) - but the other 612 land elsewhere and the net new
 //--- bars are 34.3% QUIET, BELOW the 37.8% baseline.
-int    SL_DiffBBWMode  = 0;     // 0=off  1=threshold  2=falling
+int    SL_DiffBBWMode  = 1;     // 0=off  1=threshold  2=falling
 double SL_diffbbw_m30  = 1.0;
 
 //--- add near the other settings
@@ -225,7 +228,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
          if(bbw_saved) txt += "*";          // only qualified because of diffBBW
          if(why != "") txt += "-" + why;
 
-         string name = "SL_" + IntegerToString((int)t);   // ID only, one label per bar
+         string name = txt + "_" + IntegerToString((int)t);   // ID only, one label per bar
          if(ObjectFind(0, name) < 0)
          {
             color col;
