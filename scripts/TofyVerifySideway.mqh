@@ -28,7 +28,7 @@
 //| lookahead bias and would make every later backtest fake.         |
 //| #############################################                    |
 //+------------------------------------------------------------------+
-
+#define HAS_TofyVerifySideway
 //--- barrier parameters (keep identical to the Python test)
 double VS_X          = 10.0;   // price offset that counts as "a move"
 int    VS_N          = 8;      // M15 bars ahead = 120 minutes
@@ -108,11 +108,12 @@ void VS_DrawLabel(datetime t0, double mid_px, int sub, string outcome)
 //+------------------------------------------------------------------+
 //| Call ONCE per new M15 bar.                                       |
 //|   t_bar        = iTime(_Symbol, PERIOD_M15, 0)                   |
-//|   sideway_sub  = (int)BBTFImpact.sideway_selected[LA]  (0 = none) |
+//|   sideway_sub  = (int)BBTFImpact.sideway_selected[0]  (0 = none) |
 //|   mid_lv_M15   = the M15 BB midline value at this bar            |
 //|                  (whatever your struct calls it, e.g.            |
 //|                   BB_datas[1].BB_MidLV[LA])                      |
 //+------------------------------------------------------------------+
+#ifdef HAS_TofyVerifySideway
 void VS_OnNewM15Bar(datetime t_bar, int sideway_sub, double mid_lv_M15)
 {
    if(vs_count < VS_MAX)
@@ -158,13 +159,14 @@ void VS_OnNewM15Bar(datetime t_bar, int sideway_sub, double mid_lv_M15)
             "] N:[", VS_N, "]");
    }
 }
-
+#endif
 //+------------------------------------------------------------------+
 //| Call from OnDeinit for the verdict.                              |
 //| THE TEST: A_NEU% must be MATERIALLY HIGHER than B_NEU%.          |
 //| If they are about equal, the S_ flag carries no information      |
 //| about whether price is about to go sideways.                     |
 //+------------------------------------------------------------------+
+#ifdef HAS_TofyVerifySideway
 void VS_PrintSummary()
 {
    int nA = vs_A_up + vs_A_dn + vs_A_neu;
@@ -180,3 +182,4 @@ void VS_PrintSummary()
    Print("[VERIFY_SIDEWAY_SUMMARY] VERDICT A_minus_B:[", DoubleToString(pA - pB, 1),
          "] (large positive = flag works ; near zero = flag carries no sideway info)");
 }
+#endif

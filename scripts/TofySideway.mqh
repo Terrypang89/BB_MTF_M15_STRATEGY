@@ -2,6 +2,7 @@
 #property link      "https://www.mql5.com/en/users/terrypang/"
 
 #include <TofyIncludeSimple.mqh>
+#define HAS_TOFYSIDEWAY
 
 //+------------------------------------------------------------------+
 //| Midline-cluster distance thresholds (price units).                |

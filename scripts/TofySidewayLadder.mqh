@@ -1,6 +1,8 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "38.12"
+#property version   "38.13"
+
+#define HAS_TOFYSIDEWAY_LADDER
 //+------------------------------------------------------------------+
 //| TofySidewayLadder.mqh   -- DIAGNOSTIC ONLY                        |
 //|                                                                  |

@@ -7,11 +7,11 @@
 #include <mql4compat.mqh>  // mql4compat_fix4.mqh
 #include <MT4Orders.mqh>   // MT4Orders_fix.mqh
 #include <TofyIncludeSimple.mqh>
-#include <TofyTrade_DMonly.mqh>
 #include <TofySideway.mqh>
-#include <TofyTouch.mqh>
-#include <TofyVerifySideway.mqh>
+// #include <TofyTouch.mqh>
+// #include <TofyVerifySideway.mqh>
 #include <TofySidewayLadder.mqh>
+// #include <TofyTrade_DMonly.mqh>
 #endif
 
 input string             Basic_Settings           = "---------------------------------------------";
@@ -119,7 +119,7 @@ input color              BBColor_6                = LightCyan;
 input color              BBColor_7                = MistyRose;
 input string             Display_Settings         = "---------------------------------------------";
 input bool               Cluster_Label_Ena        = true;
-input int               Ladder_DiffBBW_Mode        = 0;    // 0=off  1=contracting  2=falling
+input int                Ladder_DiffBBW_Mode        = 0;    // 0=off  1=contracting  2=falling
 input bool               Verify_Label_Ena         = true;
 input bool               Verify_Log_Ena           = true;
 input bool               Ladder_Label_Ena         = true;
@@ -176,12 +176,18 @@ color color_list[TF_ANUM+1] = {BBColor_0, BBColor_1, BBColor_2, BBColor_3, BBCol
 int OnInit()
 {
   // OnInit:
+#ifdef HAS_TOFYSIDEWAY
    DC_Draw = Cluster_Label_Ena;      // TofySideway.mqh cluster-label display toggle
+#endif
+#ifdef HAS_TofyVerifySideway
    VS_DrawLabels = Verify_Label_Ena;  // TofyVerifySideway.mqh chart labels
    VS_WriteLog   = Verify_Log_Ena;    // TofyVerifySideway.mqh [VERIFY_SIDEWAY] log lines
+#endif
+#ifdef HAS_TOFYSIDEWAY_LADDER
    SL_Draw       = Ladder_Label_Ena;  // TofySidewayLadder.mqh chart labels
    SL_WriteLog   = Ladder_Log_Ena;    // TofySidewayLadder.mqh [LADDER] log lines
-   SL_DiffBBWMode = Ladder_DiffBBW_Mode;    // in OnInit
+#endif
+   // SL_DiffBBWMode = Ladder_DiffBBW_Mode;    // in OnInit
    //Stats_Init();
    TIME_CURRENT=TimeCurrent();
    if(print_init){
@@ -262,7 +268,9 @@ void OnDeinit(const int reason)
    DEINIT=true;
    DEINIT_ATRSLBUFLINE();
    ObjectsDeleteAll(0, IndicatorName + "-STAGE-");
+#ifdef HAS_TofyVerifySideway
    VS_PrintSummary();
+#endif
    Print("Deinit from reason:", reason);
   }
 
@@ -392,6 +400,7 @@ void OnTick()
          }
       }
 
+#ifdef HAS_TOFYTOUCH
       BBDatas_Cross_BBLines(BBTFImpact, BB_datas, close_prices, high_prices, low_prices);
       // verify termination of fly by checking distance of fly_BBTarget BBUp/ BBDn 
       // check if close price has crossedup BBUp or crosseddn BBDn 
@@ -400,9 +409,10 @@ void OnTick()
       BBDatas_Sequence_Cross_BBLines(BBTFImpact, BB_datas, close_prices, high_prices, low_prices);
 
       BBDatas_Sequence_Touch_BBLines(BBTFImpact, BB_datas, TIME_CURRENT);
-
+#endif
+#ifdef HAS_TOFYSIDEWAY
       BBDatas_Midline_Cluster(BBTFImpact, BB_datas);
-
+#endif
       if(InpInnerATRSLEna)
       {
          if(get_inner_1bufATRSL(InpATRCoeff, InpTrailEna, InpATREna, InpTEMAEna, ATRSL1BUF, handle_iTEMA, handle_iATR) < 0){
@@ -417,18 +427,23 @@ void OnTick()
       {
          int r = 1;
          M15BarTime = currentTFBarTime[r];
+#ifdef HAS_TOFYSIDEWAY
          BBDatas_Midline_Sideway(BBTFImpact, BB_datas);
+#endif
+#ifdef HAS_TOFYSIDEWAY_LADDER
          SL_Update(BBTFImpact, BB_datas);
-
+#endif
+#ifdef HAS_TofyVerifySideway
          VS_OnNewM15Bar(iTime(_Symbol, PERIOD_M15, 0),
                (int)BBTFImpact.sideway_selected[LA],
                BB_datas[1].BBMidLV[LA]);     // <-- your actual midline field name
-
+#endif
          if(ATRSL1BUF.ATRLV[LA] != 0.0 && ATRSL1BUF.ATRLV[LA_1] != 0.0)
          {
             Trade_act = 0;
             if(Enable_CloseTradeByInd && MODE < 3)
             {
+#ifdef HAS_TOFYTRADE_DMONLY
                Trade_Strategy(
                   BB_datas,       // your multi-TF BB array
                   ATRSL1BUF,     // ATRSL struct populated each tick
@@ -442,6 +457,7 @@ void OnTick()
                   close_prices,
                   0.01            // your base lot size
                );
+#endif
                // perform real trade
                if(Trade_act != 0)
                {
