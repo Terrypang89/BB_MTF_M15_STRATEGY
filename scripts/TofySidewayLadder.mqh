@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "38.10"
+#property version   "38.12"
 //+------------------------------------------------------------------+
 //| TofySidewayLadder.mqh   -- DIAGNOSTIC ONLY                        |
 //|                                                                  |
@@ -91,6 +91,7 @@ int    SL_BreakoutMode = 1;
 
 //--- W30 dbbw < 1 fires +4.4 and is now part of the level-2 evidence gate.
 //--- Threshold value barely matters: <0 <1 <2 <5 all give the same result.
+double SL_diffbbw_m15 = 1.0;
 double SL_diffbbw_m30 = 1.0;    // W30 threshold
 
 //--- add near the other settings
@@ -149,27 +150,35 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    bool A15 = ((c0 < c0a && c0a < c0b) || (c0 < CL_NEAR && c0a < CL_NEAR));  // +4.5
    bool S15 = SL_StageOK((int)BB_datas[1].BBW_stage[LA]);                    // +3.3
    bool C15 = (dm1 < SL_diffmid_m15 && dm1a < SL_diffmid_m15);               // +5.3
+   bool D15 = (dm1 < dm1a && dm1a < dm1b);                                   // no use
+   bool W15 = (BB_datas[1].BB_diffBBW[LA]   < SL_diffbbw_m15
+            && BB_datas[1].BB_diffBBW[LA_1] < SL_diffbbw_m15);  
 
    bool lvl1 = false;
    if(SL_L1Mode == 0)      lvl1 = (A15 && (S15 || C15));
-   else if(SL_L1Mode == 1) lvl1 = (A15 && C15);
+   else if(SL_L1Mode == 1) lvl1 = (A15 && C15);                              // current use
    else if(SL_L1Mode == 2) lvl1 = (A15 && S15);
    else if(SL_L1Mode == 3) lvl1 = (A15 && S15 && C15);
+   else if(SL_L1Mode == 4) lvl1 = (A15 && (S15 || C15) && (D15 || C15));
+   else if(SL_L1Mode == 5) lvl1 = (A15 && (S15 || W15) && (D15 || C15));
+
    if(lvl1) SL_state[LA] = 1;
 
    //--- LEVEL 2 predicates, named individually
    bool A30 = ((c1 < c1a && c1a < c1b) || (c1 < CL_NEAR && c1a < CL_NEAR));  // +5.4
    bool S30 = SL_StageOK((int)BB_datas[2].BBW_stage[LA]);                    // +4.1
    bool C30 = (dm2 < SL_diffmid_m30 && dm2a < SL_diffmid_m30);               // +10.9
+   bool D30 = (dm2 < dm2a && dm2a < dm2b);                                   // no use
    bool W30 = (BB_datas[2].BB_diffBBW[LA]   < SL_diffbbw_m30
             && BB_datas[2].BB_diffBBW[LA_1] < SL_diffbbw_m30);               // +4.4
 
    bool ev30 = false;
-   if(SL_L2Mode == 0)      ev30 = (S30 || C30 || W30);
+   if(SL_L2Mode == 0)      ev30 = (S30 || C30 || W30);                       // current use 
    else if(SL_L2Mode == 1) ev30 = (S30 || C30);
    else if(SL_L2Mode == 2) ev30 = C30;
+   else if(SL_L2Mode == 3) ev30 = (A30 && (S30 || C30));
 
-    if(prev >= 1 && A30 && ev30) SL_state[LA] = 2;
+   if(prev >= 1 && A30 && ev30) SL_state[LA] = 2;
 
    //--- BREAKOUT CANCELS the sideway state (M15 band, index 1)
    bool brk = false;
@@ -185,10 +194,14 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
 
       if(SL_BreakoutMode == 1)      brk = raw;
       else if(SL_BreakoutMode == 2) brk = (raw && raw1);
-      else if(SL_BreakoutMode == 3) brk = (raw && !C15);
+      else if(SL_BreakoutMode == 3) brk = (raw && !C15);                   // current use
+      else if(SL_BreakoutMode == 4) brk = (raw && !C15 && !W15);
 
       if(brk) SL_state[LA] = 0;
    }
+
+   // extra adding to test
+   // if(prev >= 1 && W15 && SL_state[LA] == 0) SL_state[LA] = 1;
 
    //--- H1 block -> state 3 (needs previous bar == 2). OFF by default.
    bool A1H = false, B1H = false, C1H = false;
@@ -231,7 +244,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
          string txt = "L" + IntegerToString(SL_state[LA]);
          if(why != "") txt += "-" + why;
 
-         string name = "SL_" + IntegerToString((int)t);   // ID only, one label per bar
+         string name = txt + "_" + IntegerToString((int)t);   // ID only, one label per bar
          if(ObjectFind(0, name) < 0)
          {
             color col;
