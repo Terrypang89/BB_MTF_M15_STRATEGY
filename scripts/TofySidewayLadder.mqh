@@ -53,6 +53,23 @@ bool   SL_UseH1     = false;    // measured to DEGRADE the ladder; off by defaul
 double SL_diffmid_m15 = 3;
 double SL_diffmid_m30 = 1.5;
 
+//--- LEVEL 1 evidence gate. Measured (L2Mode 0, BreakoutMode 1):
+//---   0  A15 && (S15 || C15)   n=3158 (42%) lift +11.2  window 25/50  enrich 1.20x
+//---   1  A15 && C15            n=3139 (41%) lift +11.5  window 25/50  enrich 1.21x  <- default
+//---   2  A15 && S15            n=2353 (31%) lift +13.4  window 21/50  enrich 1.36x
+//---   3  A15 && S15 && C15     n=2334 (31%) lift +13.8  window 21/50  enrich 1.37x
+//--- Mode 1 beats mode 0 on lift AND enrichment at identical window coverage, and
+//--- removes a false positive at 2026.02.04 05:15-05:30 where S15 was true while
+//--- price ran 23-30 points.
+int    SL_L1Mode = 1;
+
+//--- LEVEL 2 evidence gate (always ANDed with prev >= 1 and A30):
+//---   0  S30 || C30 || W30     n=3139 (41%) lift +11.5  window 25/50  <- default
+//---   1  S30 || C30            n=2701 (35%) lift +13.3  window 19/50
+//---   2  C30 only              n=2384 (31%) lift +14.7  window 11/50
+//--- Higher modes are more precise but cover the target range worse.
+int    SL_L2Mode = 0;
+
 //--- A close outside the M15 band means the range has broken, so the sideway
 //--- state is cancelled. MEASURED (with CL_NEAR 10.5):
 //---   no cancel   n=3756 (49% of bars) lift +8.4
@@ -70,19 +87,11 @@ double SL_diffmid_m30 = 1.5;
 //--- Mode 1 is the most precise but flickers (flag toggles on ~12% of bars).
 //--- Modes 2 and 3 are steadier and cost ~2.7 lift points. Flicker is cosmetic while
 //--- this module drives nothing; it would matter if it ever drove an exit.
-int    SL_BreakoutMode = 3;
+int    SL_BreakoutMode = 1;
 
-//--- diffBBW branch on the M30 block (M15 branch is inert: B15 already
-//--- saturates via the |diffMid| gate, measured +2 bars out of 7600).
-//---   0 = off        n=3756 (49% of bars)  lift +8.4  window 27/50
-//---   1 = dbbw < thr n=4100 (54% of bars)  lift +7.3  window 33/50
-//---   2 = dbbw falling 3 bars   n=3928 (52%)  lift +7.9  window 30/50
+//--- W30 dbbw < 1 fires +4.4 and is now part of the level-2 evidence gate.
 //--- Threshold value barely matters: <0 <1 <2 <5 all give the same result.
-//--- 622 bars rescued, 10 inside the target window vs ~4 expected by chance
-//--- (2.5x enrichment) - but the other 612 land elsewhere and the net new
-//--- bars are 34.3% QUIET, BELOW the 37.8% baseline.
-int    SL_DiffBBWMode  = 1;     // 0=off  1=threshold  2=falling
-double SL_diffbbw_m30  = 1.0;
+double SL_diffbbw_m30 = 1.0;    // W30 threshold
 
 //--- add near the other settings
 bool SL_ShowFails = true;    // draw gray L0-A/L0-B labels for undetected bars
@@ -136,30 +145,31 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    double dm3a = MathAbs(BB_datas[3].BB_diffMid[LA_1]);
    double dm3b = MathAbs(BB_datas[3].BB_diffMid[LA_2]);
 
-   //--- M15 block -> state 1
-   bool A15 = ((c0 < c0a && c0a < c0b) || (c0 < CL_NEAR && c0a < CL_NEAR));
-   bool B15 = ( SL_StageOK((int)BB_datas[1].BBW_stage[LA])
-             || ((dm1 < dm1a && dm1a < dm1b) || (dm1 < SL_diffmid_m15 && dm1a < SL_diffmid_m15)));
-   if(A15 && B15) SL_state[LA] = 1;
+   //--- LEVEL 1 predicates, named individually (lift measured alone)
+   bool A15 = ((c0 < c0a && c0a < c0b) || (c0 < CL_NEAR && c0a < CL_NEAR));  // +4.5
+   bool S15 = SL_StageOK((int)BB_datas[1].BBW_stage[LA]);                    // +3.3
+   bool C15 = (dm1 < SL_diffmid_m15 && dm1a < SL_diffmid_m15);               // +5.3
 
-   //--- M30 block -> state 2 (needs previous bar == 1)
-   bool A30 = ((c1 < c1a && c1a < c1b) || (c1 < CL_NEAR && c1a < CL_NEAR));
-   bool B30 = ( SL_StageOK((int)BB_datas[2].BBW_stage[LA])
-             || ((dm2 < dm2a && dm2a < dm2b) || (dm2 < SL_diffmid_m30 && dm2a < SL_diffmid_m30)));
+   bool lvl1 = false;
+   if(SL_L1Mode == 0)      lvl1 = (A15 && (S15 || C15));
+   else if(SL_L1Mode == 1) lvl1 = (A15 && C15);
+   else if(SL_L1Mode == 2) lvl1 = (A15 && S15);
+   else if(SL_L1Mode == 3) lvl1 = (A15 && S15 && C15);
+   if(lvl1) SL_state[LA] = 1;
 
-   //--- optional diffBBW branch on M30, tracked so the label can mark it
-   bool bbw30 = false;
-   if(SL_DiffBBWMode == 1)
-      bbw30 = (BB_datas[2].BB_diffBBW[LA]   < SL_diffbbw_m30
-            && BB_datas[2].BB_diffBBW[LA_1] < SL_diffbbw_m30);
-   else if(SL_DiffBBWMode == 2)
-      bbw30 = (BB_datas[2].BB_diffBBW[LA]   < BB_datas[2].BB_diffBBW[LA_1]
-            && BB_datas[2].BB_diffBBW[LA_1] < BB_datas[2].BB_diffBBW[LA_2]);
+   //--- LEVEL 2 predicates, named individually
+   bool A30 = ((c1 < c1a && c1a < c1b) || (c1 < CL_NEAR && c1a < CL_NEAR));  // +5.4
+   bool S30 = SL_StageOK((int)BB_datas[2].BBW_stage[LA]);                    // +4.1
+   bool C30 = (dm2 < SL_diffmid_m30 && dm2a < SL_diffmid_m30);               // +10.9
+   bool W30 = (BB_datas[2].BB_diffBBW[LA]   < SL_diffbbw_m30
+            && BB_datas[2].BB_diffBBW[LA_1] < SL_diffbbw_m30);               // +4.4
 
-   bool bbw_saved = (!B30 && bbw30);   // diffBBW alone rescued the M30 block
-   B30 = B30 || bbw30;
+   bool ev30 = false;
+   if(SL_L2Mode == 0)      ev30 = (S30 || C30 || W30);
+   else if(SL_L2Mode == 1) ev30 = (S30 || C30);
+   else if(SL_L2Mode == 2) ev30 = C30;
 
-   if(prev >= 1 && A30 && B30) SL_state[LA] = 2;
+    if(prev >= 1 && A30 && ev30) SL_state[LA] = 2;
 
    //--- BREAKOUT CANCELS the sideway state (M15 band, index 1)
    bool brk = false;
@@ -175,7 +185,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
 
       if(SL_BreakoutMode == 1)      brk = raw;
       else if(SL_BreakoutMode == 2) brk = (raw && raw1);
-      else if(SL_BreakoutMode == 3) brk = (raw && !B15);
+      else if(SL_BreakoutMode == 3) brk = (raw && !C15);
 
       if(brk) SL_state[LA] = 0;
    }
@@ -198,21 +208,15 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    string why = "";
    if(SL_state[LA] == 0)
    {
-      if(brk) why = "brk";              // cancelled by M15 breakout
-      else
-      {
-         if(!A15) why += "A15";
-         if(!B15) why += "B15";
-      }
+      if(brk)       why = "brk";
+      else if(!A15) why = "A15";
+      else          why = "ev15";
    }
    else if(SL_state[LA] == 1)
    {
-      if(prev < 1) why = "prev";   // chain not established yet
-      else
-      {
-         if(!A30) why += "A30";    // M30 cluster gate failed
-         if(!B30) why += "B30";    // M30 stage / diffMid gate failed
-      }
+      if(prev < 1)  why = "prev";
+      else if(!A30) why = "A30";
+      else          why = "ev30";
    }
 
    //--- draw
@@ -225,7 +229,6 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       if(mid > 0.0 && t > 0 && (SL_state[LA] > 0 || SL_ShowFails))
       {
          string txt = "L" + IntegerToString(SL_state[LA]);
-         if(bbw_saved) txt += "*";          // only qualified because of diffBBW
          if(why != "") txt += "-" + why;
 
          string name = "SL_" + IntegerToString((int)t);   // ID only, one label per bar
@@ -256,9 +259,10 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       Print("[LADDER] state:[", SL_state[LA],
             "] prev:[", prev,
             "] why:[", why,
-            "] A15:[", A15, "] B15:[", B15,
-            "] A30:[", A30, "] B30:[", B30, "] brkmode:[", SL_BreakoutMode, "] brk:[", brk,
-            "] bbw30:[", bbw30, "] bbw_saved:[", bbw_saved,
+            "] L1m:[", SL_L1Mode, "] L2m:[", SL_L2Mode,
+            "] A15:[", A15, "] S15:[", S15, "] C15:[", C15,
+            "] A30:[", A30, "] S30:[", S30, "] C30:[", C30, "] W30:[", W30,
+            "] brkmode:[", SL_BreakoutMode, "] brk:[", brk,
             "] c0:[", DoubleToString(c0,1),
             "] c1:[", DoubleToString(c1,1),
             "] c2:[", DoubleToString(c2,1),
