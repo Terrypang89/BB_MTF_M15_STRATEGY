@@ -51,6 +51,39 @@ double SL_Angle     = 90.0;     // OBJPROP_ANGLE is a DOUBLE property
 double CL_NEAR      = 10.5;     // 10.0 rejected clus1 = 10.1 by 0.1 and broke
                                 // the ladder chain. 10.5 costs +89 bars and takes
                                 // the 2026.02.03 window from 16/50 to 27/50.
+//+------------------------------------------------------------------+
+//| TRADE STRATEGY (optional)                                        |
+//|                                                                  |
+//| Trade_Strategy_Ladder() below is DMONLY with one substitution:    |
+//| the sideways exit fires on the LADDER (SL_state[LA] >= 2) instead |
+//| of the TofySideway S_ flag. Everything else - entries, reversals, |
+//| priority order, the once-per-bar guard - is identical to          |
+//| TofyTrade_DMonly.mqh.                                             |
+//|                                                                   |
+//| SL_UseTradeStrategy = false  -> the function returns HOLD         |
+//|                                 immediately and changes nothing.  |
+//| SL_UseTradeStrategy = true   -> the ladder drives the exits.      |
+//|                                                                   |
+//| MEASURED against references/SIDEWAY_LABELS_FEB.md (858 of 1830    |
+//| February bars labelled sideway):                                  |
+//|   TofySideway S_   precision 82.4%  recall 33.2%  fires 346       |
+//|   ladder state>=2  precision 70.4%  recall 60.3%  fires 734       |
+//| The ladder fires roughly TWICE as often. The DMONLY churn         |
+//| analysis found 844 trades held 1-5 bars lost -$2,258 while 276    |
+//| held 6+ bars made +$3,227 - so more exits means shorter holds,    |
+//| which has been the LOSING direction. Whether the ladder's better  |
+//| recall outweighs that is exactly what this is here to measure.    |
+//| It has NOT been measured yet.                                     |
+//+------------------------------------------------------------------+
+bool   SL_UseTradeStrategy = false;   // off by default - changes nothing until enabled
+
+//--- which signal drives the sideways exit when the above is true
+//---   0 = ladder only          SL_state[LA] >= 2
+//---   1 = TofySideway only     sideway_selected[LA] > 0   (= plain DMONLY)
+//---   2 = BOTH must agree      fewest exits, longest holds
+//---   3 = EITHER fires         most exits
+int    SL_ExitMode = 0;
+
 bool   SL_UseH1     = false;    // measured to DEGRADE the ladder; off by default
 double SL_diffmid_m15 = 3;
 double SL_diffmid_m30 = 1.5;
@@ -284,4 +317,126 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
             "] ws15:[", (int)BB_datas[1].BBW_stage[LA],
             "] ws30:[", (int)BB_datas[2].BBW_stage[LA], "]");
    }
+}
+
+
+//+------------------------------------------------------------------+
+//| Trade_Strategy_Ladder                                            |
+//|                                                                  |
+//| SAME SIGNATURE as TofyTrade6 / TofyTrade_DMonly Trade_Strategy,  |
+//| but a DIFFERENT NAME so both can be included without colliding.  |
+//| Dispatch from the EA:                                            |
+//|                                                                  |
+//|     if(SL_UseTradeStrategy)                                      |
+//|        Trade_Strategy_Ladder( ...same args... );                 |
+//|     else                                                         |
+//|        Trade_Strategy( ...same args... );                        |
+//|                                                                  |
+//| REQUIREMENT: SL_Update() must already have run for this bar, or  |
+//| SL_state[LA] is stale. In Tofu_EA_Simple_V7 SL_Update is called  |
+//| inside the M15 gate before the Trade_Strategy dispatch.          |
+//+------------------------------------------------------------------+
+void Trade_Strategy_Ladder(
+   BB_MTF_Data_struct      &BB_datas[],
+   ATRSLBUF_struct         &ATRSL1BUF,
+   BB_MTF_Impact_struct    &BBTFImpact,
+   ENUM_Trade_Act          &Trade_act,   // OUT: 0=hold 1=BUY 2=SELL 7=exit_all
+   string                  &Trade_info,
+   double                  &Trade_lots,
+   double                  &Trade_sl,
+   int                      BUYS,
+   int                      SELLS,
+   double                  &close_prices[],
+   double                   baseLot = 0.01
+)
+{
+   //--- Defaults: HOLD, no stop, base lot
+   Trade_act = 0; Trade_info = ""; Trade_lots = baseLot; Trade_sl = 0.0;
+
+   //--- master switch: do nothing at all unless explicitly enabled
+   if(!SL_UseTradeStrategy) return;
+
+   //--- Once-per-bar guard
+   static datetime sl_lastBar = 0;
+   datetime cur = iTime(_Symbol, PERIOD_M5, 0);
+   if(cur == sl_lastBar) { Trade_info = ""; return; }
+   sl_lastBar = cur;
+
+   //--- inputs
+   double dm      = BB_datas[1].BB_diffMid_Trend[LA];      // index 1 = M15, current
+   int    sflag   = (int)BBTFImpact.sideway_selected[LA];  // TofySideway S_ (LA = current)
+   int    ladder  = SL_state[LA];                          // ladder state for this bar
+
+   bool sw_flag   = (sflag  > 0);
+   bool sw_ladder = (ladder >= 2);
+
+   bool sw = false;
+   if(SL_ExitMode == 0)      sw = sw_ladder;
+   else if(SL_ExitMode == 1) sw = sw_flag;
+   else if(SL_ExitMode == 2) sw = (sw_flag && sw_ladder);
+   else if(SL_ExitMode == 3) sw = (sw_flag || sw_ladder);
+
+   bool dm_up   = (dm == 1.0 || dm == 5.0);
+   bool dm_down = (dm == 2.0 || dm == 4.0);
+
+   bool inLong  = (BUYS  > 0);
+   bool inShort = (SELLS > 0);
+   bool flat    = (!inLong && !inShort);
+
+   Trade_info = "[LADTRADE] dm:" + DoubleToString(dm,1)
+              + " LAD:"   + IntegerToString(ladder)
+              + " S_:"    + IntegerToString(sflag)
+              + " XM:"    + IntegerToString(SL_ExitMode)
+              + " BUYS:"  + IntegerToString(BUYS)
+              + " SELLS:" + IntegerToString(SELLS);
+
+   //================================================================
+   // PRIORITY 1 - SIDEWAYS EXIT. Close all. Exit beats entry.
+   //================================================================
+   if(sw)
+   {
+      if(!flat)
+      {
+         Trade_act = 7;                       // exit_all
+         Trade_info += " [LAD]SIDEWAYS_EXIT";
+      }
+      return;   // sideway bar: never enter
+   }
+
+   //================================================================
+   // PRIORITY 2 - REVERSAL (opposite dm closes; NO same-bar re-entry)
+   //================================================================
+   if(inLong && dm_down)
+   {
+      Trade_act = 7;
+      Trade_info += " [LAD]REVERSAL_DN";
+      return;
+   }
+   if(inShort && dm_up)
+   {
+      Trade_act = 7;
+      Trade_info += " [LAD]REVERSAL_UP";
+      return;
+   }
+
+   //================================================================
+   // PRIORITY 3 - ENTRY (only when flat)
+   //================================================================
+   if(flat)
+   {
+      if(dm_up)
+      {
+         Trade_act = 1;                        // BUY
+         Trade_info += " [LAD]ENTRY_BUY";
+      }
+      else if(dm_down)
+      {
+         Trade_act = 2;                        // SELL
+         Trade_info += " [LAD]ENTRY_SELL";
+      }
+      // dm == 3 (sideways family) or dm == 0 (warmup) -> stay flat
+   }
+   // In a position, same-direction dm, no sideway -> HOLD (act stays 0),
+   // so the trade rides until a reversal or a sideway exit closes it.
+   // This is what let DMONLY hold winners into trends.
 }

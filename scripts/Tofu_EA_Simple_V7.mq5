@@ -443,7 +443,7 @@ void OnTick()
             Trade_act = 0;
             if(Enable_CloseTradeByInd && MODE < 3)
             {
-#ifdef HAS_TOFYTRADE_DMONLY
+#ifdef HAS_TOFYSIDEWAY_LADDER
                Trade_Strategy(
                   BB_datas,       // your multi-TF BB array
                   ATRSL1BUF,     // ATRSL struct populated each tick
