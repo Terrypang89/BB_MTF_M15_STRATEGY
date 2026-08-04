@@ -1,462 +1,469 @@
 # TofySidewayLadder — design, measurements, and open questions
 
-Companion doc for `scripts/TofySidewayLadder.mqh`.
+Companion doc for `scripts/TofySidewayLadder.mqh` and `scripts/ladder_ranges.py`.
 
 **Status: diagnostic only.** The module computes a sideway "ladder" state and draws a
 label per M15 bar. It does **not** trade and does **not** write `sideway_selected`, so
-the existing detector and DMONLY are unaffected. Everything below is measurement, not
-a recommendation to deploy.
+the existing detector and DMONLY are unaffected.
+
+> **Major update:** scoring now runs against **hand-labelled February ranges**
+> (`references/SIDEWAY_LABELS_FEB.md`, 27 ranges / 1,830 bars) rather than the earlier
+> QUIET proxy. The two targets **disagree** on some settings, and the labels are the
+> better target — see §9. Conclusions drawn from the proxy alone are marked as superseded.
 
 ---
 
 ## 1. What problem this is trying to solve
 
-A specific 13-hour range on the chart — **2026.02.03 12:40 → 2026.02.04 02:05** — that
-should be flagged as sideway so the strategy exits and stays out.
-
-Measured properties of that window:
+The existing `TofySideway` detector misses most rangebound periods. The original example
+was **2026.02.03 12:40 → 02.04 02:05** (50 M15 bars):
 
 | | value |
 |---|---|
-| M15 bars | 50 |
 | start → end | 4916.88 → 4957.30 (**net 40.42**) |
 | high / low | 4993.42 / 4881.51 (**range 111.91**) |
-| path travelled | **1,163.18** |
+| path travelled | 1,163.18 |
 | **efficiency ratio** | **0.035** |
 
-Price walked 1,163 points to finish 40 from where it started. ER 0.035 puts this in the
-bottom decile of the whole dataset — **this is chop, not quiet.**
-
-**The current detector covers 6 of 50 bars (12%):**
-
-```
-.....X...XX......XX..............................X
-```
-
-It catches a couple of bars at the start, one at the end, and misses the entire
-10-hour middle.
+Price walked 1,163 points to finish 40 from where it started — bottom decile of the
+dataset. **This is chop, not quiet.** The current detector covered 6 of 50 bars (12%).
 
 ---
 
 ## 2. Why the existing detector misses it
 
-From the classification work (see `TofyVerifySideway.md`), TofySideway is a **quiet**
-detector, not a **chop** detector:
+`TofySideway` is a **quiet** detector, not a **chop** detector:
 
 | class | definition | baseline | TofySideway flags | lift |
 |---|---|---|---|---|
 | QUIET | net < 10 and range < 15 | 37.8% | 53.8% | **+16.0** |
-| CHOPPY | net < 10 and range >= 15 | 15.6% | 10.8% | **-4.8** |
-| TREND | net >= 10 | 46.6% | 35.4% | -11.2 |
-
-It finds quiet strongly, avoids trends correctly, and **under-flags chop**.
+| CHOPPY | net < 10 and range ≥ 15 | 15.6% | 10.8% | **−4.8** |
+| TREND | net ≥ 10 | 46.6% | 35.4% | −11.2 |
 
 The mechanism is the midline-cluster gate. In a *quiet* market the M5/M15/M30 midlines
 converge, so `cluster < 10` passes. In a *choppy* range price swings ±50 points, which
-keeps the midlines apart — the very condition the detector uses as evidence of sideways
-is destroyed by the kind of sideways being looked for.
+keeps the midlines apart — **the condition used as evidence of sideways is destroyed by
+the kind of sideways being looked for.**
+
+This tension recurs throughout everything below and is never fully resolved.
 
 ---
 
 ## 3. The ladder design
 
-Sequential escalation. Each level requires the **previous bar** to have reached the level
-below (or higher, after the `prev >= 1` fix — see §5).
+Sequential escalation. `＜` means "less than".
+`clus0` = |M15−M5 mid|, `clus1` = |M15−M30 mid|, `clus2` = |M15−H1 mid|.
+`LA` = current bar, `LA_1` = one back, `LA_2` = two back.
+
+### Predicates (each scored alone in §4)
+
+| name | condition |
+|---|---|
+| **A15** | `(clus0[LA] ＜ clus0[LA_1] ＜ clus0[LA_2])` OR `(clus0[LA] ＜ CL_NEAR AND clus0[LA_1] ＜ CL_NEAR)` |
+| **S15** | `stage[1][LA]` is 512, 523, or 400-499 |
+| **C15** | `\|dm1[LA]\| ＜ 3` AND `\|dm1[LA_1]\| ＜ 3` |
+| **W15** | `dbbw1[LA] ＜ 1` AND `dbbw1[LA_1] ＜ 1` |
+| **A30** | same shape as A15, on `clus1` |
+| **S30** | `stage[2][LA]` is 512, 523, or 400-499 |
+| **C30** | `\|dm2[LA]\| ＜ 1.5` AND `\|dm2[LA_1]\| ＜ 1.5` |
+| **W30** | `dbbw2[LA] ＜ 1` AND `dbbw2[LA_1] ＜ 1` |
+| ~~B15~~ | ~~`dm1[LA] ＜ dm1[LA_1] ＜ dm1[LA_2]`~~ **REMOVED** |
+| ~~B30~~ | ~~same on dm2~~ **REMOVED** |
+
+### Level gates (selectable)
 
 ```
-state 1  M15 block
-state 2  M30 block   (needs prev >= 1)
-state 3  H1  block   (needs prev >= 1)   [disabled by default]
+SL_L1Mode   0  A15 && (S15 || C15)
+            1  A15 && C15                <- default
+            2  A15 && S15
+            3  A15 && S15 && C15
+
+SL_L2Mode   0  S30 || C30 || W30         <- default
+            1  S30 || C30
+            2  C30
+
+state 1 = lvl1
+state 2 = prev >= 1  AND  A30  AND  ev30
 ```
 
-### Conditions, split out
+### Breakout cancel
 
-`＜` means "less than". `clus0` = |M15 mid − M5 mid|, `clus1` = |M15 mid − M30 mid|,
-`clus2` = |M15 mid − H1 mid|. `LA` = current bar, `LA_1` = one bar ago, `LA_2` = two ago.
-
-**LEVEL 1 — M15 → state 1**
-
-| | condition |
-|---|---|
-| A1 | `clus0[LA] ＜ clus0[LA_1]` AND `clus0[LA_1] ＜ clus0[LA_2]` (shrinking 2 bars) |
-| A2 | `clus0[LA] ＜ CL_NEAR` AND `clus0[LA_1] ＜ CL_NEAR` (already close) |
-| **A15** | **A1 OR A2** |
-| B1 | `stage[1][LA]` is 512, 523, or 400-499 |
-| B2 | `dmid[1][LA] ＜ dmid[1][LA_1] ＜ dmid[1][LA_2]` |
-| **B15** | **B1 OR B2** |
-| → | `state = 1` when **A15 AND B15** |
-
-**LEVEL 2 — M30 → state 2** (requires `prev >= 1`)
-
-| | condition |
-|---|---|
-| A1 | `clus1[LA] ＜ clus1[LA_1] ＜ clus1[LA_2]` |
-| A2 | `clus1[LA] ＜ CL_NEAR` AND `clus1[LA_1] ＜ CL_NEAR` |
-| **A30** | **A1 OR A2** |
-| B1 | `stage[2][LA]` is 512, 523, or 400-499 |
-| B2 | `dmid[2][LA] ＜ dmid[2][LA_1] ＜ dmid[2][LA_2]` |
-| **B30** | **B1 OR B2** |
-| → | `state = 2` when **A30 AND B30** |
-
-**LEVEL 3 — H1 → state 3** (requires `prev >= 1`) — **disabled, `SL_UseH1 = false`**
-
-| | condition |
-|---|---|
-| A1 | `stage[3][LA]` is 512, 523, or 400-499 |
-| A2 | `dbbw[3][LA] ＜ dbbw[3][LA_1] ＜ dbbw[3][LA_2]` |
-| **A1H** | **A1 OR A2** |
-| **B1H** | `clus2[LA] ＜ clus2[LA_1] ＜ clus2[LA_2]` |
-| **C1H** | `clus1[LA] ＜ CL_NEAR` AND `clus1[LA_1] ＜ CL_NEAR` |
-| → | `state = 3` when **A1H AND B1H AND C1H** |
-
-**BREAKOUT** (specified, not implemented in the module)
-
-| | condition |
-|---|---|
-| BUY | `close[LA]` above `UppLV[2]` at LA_1, LA_2 and LA_3, AND `close[LA_1]` above the same three |
-| SELL | mirror against `LowLV[2]` |
+```
+SL_BreakoutMode  0  off
+                 1  raw                    close outside the M15 band
+                 2  raw && raw1            breakout persisted 2 bars
+                 3  raw && !C15
+                 4  raw && !C15 && !W15    IDENTICAL to 3 in practice
+```
 
 ---
 
-## 4. Measured — the original ladder (`prev == 1`)
+## 4. Each predicate scored alone
 
-Scored against the QUIET class over 7,607 M15 bars. Baseline QUIET = 37.8%.
+7,603 M15 bars, QUIET baseline 37.8%. "window" = the 50-bar Feb 3-4 range.
 
-| state | meaning | n | % of bars | QUIET% | lift |
-|---|---|---|---|---|---|
-| 0 | none | 3,526 | 46.4% | 32.0% | −5.8 |
-| 1 | M15 sideway | 2,904 | 38.2% | 41.4% | +3.6 |
-| **2** | **M30 confirmed** | **948** | **12.5%** | **48.0%** | **+10.2** |
-| 3 | H1 confirmed | 229 | 3.0% | 41.0% | **+3.2** |
-
-**The escalation works up to state 2** — 32.0 → 41.4 → 48.0 is a clean monotonic climb.
-Each confirmation genuinely improves the signal.
-
-**Then state 3 collapses.** H1 confirmation makes it *worse* than the state it escalated
-from, while cutting the sample from 948 to 229.
-
-### The H1 block has now failed twice
-
-| test | result |
-|---|---|
-| flat version, H1 conditions alone | +3.4 |
-| as ladder step 3 | +3.2 |
-
-Two independent constructions, both near noise. `SL_UseH1` defaults to **false**.
-
-### The flat (non-sequential) variants, for comparison
-
-| rule | n | QUIET% | lift |
-|---|---|---|---|
-| ALL THREE (M15 & M30 & H1) | 407 | 43.5% | +5.6 |
-| **M15 & M30** | 1,672 | 48.6% | **+10.7** |
-| M15 only | 3,784 | 43.0% | +5.2 |
-| M30 only | 3,040 | 45.6% | +7.7 |
-| H1 only | 1,205 | 41.2% | +3.4 |
-| ANY of three | 5,393 | 42.2% | +4.4 |
-| **current TofySideway** | 1,681 | 53.9% | **+16.1** |
-
-### Overlap with the existing detector
-
-| bucket | n | QUIET% | lift |
-|---|---|---|---|
-| **BOTH agree** | 789 | 56.3% | **+18.4** |
-| **ladder only** (S_ missed) | 883 | 41.7% | **+3.8** |
-| **S_ only** (ladder missed) | 892 | 51.8% | **+14.0** |
-| neither | 5,039 | 31.8% | −6.0 |
-
-**As a replacement the ladder is a bad trade** — it would add 883 near-baseline bars
-while discarding 892 good ones. **As a confirmation tier it is valuable**: where both
-agree the lift is +18.4, better than either alone.
-
----
-
-## 5. The `prev >= 1` fix — a genuine improvement
-
-Changing the M30 gate from `prev == 1` to `prev >= 1` lets a state **persist** instead of
-requiring fresh re-escalation every bar.
-
-With `prev == 1`, once a bar reached state 2 the next bar had `prev == 2` and could never
-re-qualify, so the state kept collapsing back down. That is why state 2 only held 948
-bars.
-
-| variant | state≥2 n | QUIET% | lift | Feb3-4 window |
+| predicate | fires on | lift | window | enrichment |
 |---|---|---|---|---|
-| `prev == 1` | 1,019 | 46.4% | +8.6 | 6/50 (12%) |
-| **`prev >= 1`** | **2,648** | **46.8%** | **+9.0** | **14/50 (28%)** |
+| A15 cluster | 76% | +4.5 | 35/50 | 0.93× |
+| S15 stage | 47% | +3.3 | 26/50 | 1.12× |
+| **B15 dm falling** | 25% | **+2.3** | 7/50 | **0.56×** ← removed |
+| C15 \|dm\| ＜ 3 | 82% | +5.3 | 44/50 | 1.07× |
+| W15 dbbw ＜ 1 | 52% | +4.8 | 30/50 | 1.15× |
+| A30 cluster | 62% | +5.4 | 33/50 | 1.07× |
+| S30 stage | 49% | +4.1 | 34/50 | **1.40×** |
+| **B30 dm falling** | 25% | **+1.2** | 17/50 | 1.37× ← removed |
+| **C30 \|dm\| ＜ 1.5** | 41% | **+10.9** | 11/50 | 0.54× |
+| W30 dbbw ＜ 1 | 49% | +4.4 | 31/50 | 1.26× |
 
-**2.6× more state-2 bars AND slightly better lift.** That combination is unusual — more
-coverage normally costs quality. It held here because the change fixed a structural flaw
-rather than loosening a threshold. Window coverage more than doubled.
+**Three structural facts:**
+
+1. **`C30` alone scores +10.9** — more than the entire original ladder. Most of the
+   module's value comes from one condition: *is the M30 midline barely moving?*
+2. **`B15` and `B30` are dead.** +2.3 and +1.2, and B15 fires *less* inside the target
+   range than chance. Removing both changed lift by +0.1.
+3. **The M15 side is saturated.** A15 fires on 76%, C15 on 82%. Any additional OR-branch
+   on level 1 cannot bite — confirmed three separate times (B15, a diffBBW branch, and
+   W15, which changed **2 bars out of 7,603**).
 
 ---
 
-## 6. The `diffMid` threshold — measured, rejected
+## 5. Fixes that worked
 
-Proposal: add `dmid[LA] ＜ SL_diffmid AND dmid[LA_1] ＜ SL_diffmid` as a third OR-branch
-in block B.
+### `prev >= 1` instead of `prev == 1`
 
-### Distribution first
+Under `prev == 1`, a bar already at level 2 could never re-qualify, so the state
+collapsed every bar.
 
-| | p25 | p50 | p75 | \|abs\| p50 | negative |
-|---|---|---|---|---|---|
-| diffMid_M15 | −0.94 | 0.12 | 1.26 | 1.09 | 47% |
-| diffMid_M30 | −1.29 | 0.18 | 1.89 | 1.58 | 47% |
+| | state≥2 n | lift | window |
+|---|---|---|---|
+| `prev == 1` | 1,019 | +8.6 | 6/50 |
+| **`prev >= 1`** | **2,648** | **+9.0** | **14/50** |
 
-**`diffMid` is signed and negative 47% of the time.** So `dmid ＜ 1.0` is true for *every
-falling midline*, including one dropping at −18. It measures "midline is falling", not
-"midline is flat". If kept, it needs `MathAbs()`.
+2.6× coverage *and* slightly better lift — unusual, because it fixed a structural flaw
+rather than loosening a threshold.
 
-### Results (all with `prev >= 1`)
+### `CL_NEAR` 10.0 → 10.5
 
-| M15 thr | M30 thr | mode | state≥2 n | QUIET% | lift | Feb3-4 |
+A bar at `clus1 = 10.1` was rejected by 0.1 and broke the ladder chain behind it.
+
+| CL_NEAR | state≥2 n | lift | window |
+|---|---|---|---|
+| 10.0 | 3,667 | +8.4 | 16/50 |
+| **10.5** | **3,756** | +8.4 | **27/50** |
+| 15.0 | 3,268 | +8.4 | 29/50 |
+| 40.0 | 4,223 | +4.8 | 29/50 |
+
++89 bars for +11 window bars. Coverage plateaus at 15 — past that the cluster gate is no
+longer the binding constraint.
+
+### Removing B15 / B30
+
+Free: lift +11.2 → +11.5, identical window coverage.
+
+---
+
+## 6. Things measured and rejected
+
+| change | result |
+|---|---|
+| **H1 level (state 3)** | +3.2 as ladder step 3, +3.4 standalone. Cuts sample 948 → 229. **`SL_UseH1 = false`** |
+| **`diffMid` threshold branch** | adds up to 1,400 detections, costs lift in every variant, **window coverage does not move at all** |
+| **`diffBBW` on M15** | changed 2 bars out of 7,603 — B15 is saturated |
+| **`W15` added to level 1** | changed 4 bars — same reason |
+| **ladder as a replacement for TofySideway** | would add 883 near-baseline bars while discarding 892 good ones |
+
+### Why the diffMid branch could not help
+
+`diffMid` sits in **block B**. The undetected bars in the target window failed **block A**
+— the cluster gate (`clus0` at 13-23 against a threshold of 10). Since the rule is
+`A && B`, loosening B changes nothing when A is already false. **The wrong condition was
+being relaxed.**
+
+### `diffMid` is signed
+
+47% of values are negative. `dm ＜ 1.0` is true for *every falling midline*, including one
+dropping at −18. It measures "midline is falling", not "midline is flat". Use `MathAbs`.
+
+---
+
+## 7. The February labels — ground truth
+
+`references/SIDEWAY_LABELS_FEB.md`: **27 hand-labelled ranges, 1,830 M15 bars,
+858 labelled sideway (46.9%).** A random detector firing at any rate scores 46.9%
+precision.
+
+This replaces the 50-bar window as the scoring target. The window was too small to
+distinguish enrichment 1.21× from 1.37×.
+
+### Protocol (must be followed or the numbers mean nothing)
+
+1. Label a month by eye, **without** looking at detector output.
+2. Tune against those labels.
+3. Label a **second** month **before** running the tuned detector on it.
+4. Run once. That is the number that counts.
+
+**February is now the tuning set.** Any change made to improve February numbers makes
+February in-sample. March, labelled blind, is the test.
+
+### Edge tolerance
+
+Hand labels are not bar-precise. Two treatments, ±6 bars:
+
+- **(a) widened** — extend each range ±6 bars. Treats uncertain edges as definitely sideway.
+- **(b) edges excluded** — drop the ±6 bars around each boundary from scoring. Treats them
+  as "don't know". **This is the honest reading** and is preferred.
+
+Note (b) excludes **641 of 1,830 bars (35%)** — the ranges are short enough that edges are
+a large fraction of the data.
+
+---
+
+## 8. Scored against the February labels
+
+`L1=1, L2=0` throughout unless stated.
+
+| detector | fires | precision | recall | F1 (strict) | F1 (widened) | F1 (edges excl) |
 |---|---|---|---|---|---|---|
-| — | — | — | 2,648 | 46.8% | **+9.0** | 14/50 (28%) |
-| 1.0 | — | signed | 2,826 | 46.0% | +8.2 | 14/50 (28%) |
-| 1.0 | 1.5 | signed | 4,008 | 45.3% | **+7.5** | 14/50 (28%) |
-| 1.0 | 1.5 | abs | 3,640 | 46.7% | +8.9 | 14/50 (28%) |
-| 2.0 | 3.0 | abs | 4,245 | 45.1% | +7.3 | 16/50 (32%) |
+| **TofySideway S_** | 346 | **82.4%** | **33.2%** | 47.3 | 40.5 | 49.0 |
+| ladder brk=0 | 947 | 63.1% | 69.7% | 66.3 | **72.0** | 71.4 |
+| ladder brk=1 | 734 | 70.4% | 60.3% | **64.9** | **62.6** | **67.0** |
+| **ladder brk=2** | 857 | 67.7% | 67.6% | **67.6** | 69.8 | **72.1** |
+| ladder brk=3 | 927 | 64.1% | 69.2% | 66.6 | 71.4 | 71.4 |
+| **ladder brk=4** | 927 | 64.1% | 69.2% | 66.6 | 71.4 | 71.4 |
 
-**Verdict: drop it.** It adds up to 1,400 detections, costs lift in every variant, and
-**window coverage does not move at all**.
+**Findings:**
 
-### Why it cannot help the target window
+**TofySideway is high-precision, low-recall: ~83% / ~34%.** When it fires you can trust
+it; it catches only a third of the ranges. The ladder is balanced (~70% / ~68%). They are
+**complementary, not competing** — consistent with the earlier +18.4 lift where both agree.
 
-`diffMid` sits in **block B**. The undetected bars in the window fail **block A** — the
-cluster gate:
+**Breakout modes 0, 2, 3, 4 are within ~1.5 F1 of each other.** Only mode 1 is clearly
+worse on the labels. An earlier "mode 2 wins" call was overconfident on a margin that
+small.
 
-| bar | clus0 | failed |
+**Mode 4 is byte-identical to mode 3** — same fires (927/927/570), same precision, same
+recall, same 7 cancels, in all three treatments. The `!W15` term never changes an outcome.
+If you want mode 4's behaviour, mode 3 gives it with one fewer term.
+
+---
+
+## 9. The proxy and the labels DISAGREE
+
+| setting | QUIET-proxy lift | label F1 (strict) |
 |---|---|---|
-| 19:15 | 15.8 | A |
-| 19:30 | 17.6 | A |
-| 21:45 | 19.0 | A |
-| 22:00 | 22.6 | A |
-| 23:45 | 13.9 | A |
-| 01:00 | 14.7 | A |
+| breakout cancel ON (mode 1) | **+11.5** (best) | 64.9 (worst) |
+| breakout cancel OFF | +7.8 (worst) | 66.3 |
 
-Since the rule is `A15 && B15`, loosening B changes nothing when A is already false.
-**The wrong condition was being relaxed.**
+Exactly opposite. The reason: **the labels include bars where price briefly pokes outside
+the M15 band.** The QUIET test scores those as TREND (net ≥ 10 over the next hour) and
+penalises flagging them; the labels treat them as still inside the range.
 
----
+**The labels are the better target** — they encode what the detector is actually wanted
+for. `net < 10 && range < 15` was a guess at that.
 
-## 7. `CL_NEAR` sweep — the lever that does reach the window
-
-All with `prev >= 1`, no diffMid gate. Baseline QUIET 37.8%, CHOPPY 15.6%.
-
-| CL_NEAR | state≥2 n | % of all bars | QUIET% | lift | CHOPPY% | Feb3-4 window |
-|---|---|---|---|---|---|---|
-| 5 | 1,710 | 22% | 47.0% | +9.2 | 12.3% | 4/50 (8%) |
-| 10 | 2,648 | 35% | 46.8% | +9.0 | 12.8% | 14/50 (28%) |
-| **15** | **3,268** | **43%** | 46.3% | **+8.4** | 12.8% | **29/50 (58%)** |
-| 20 | 3,589 | 47% | 45.0% | +7.2 | 12.7% | 29/50 (58%) |
-| 25 | 3,841 | 50% | 44.1% | +6.3 | 13.1% | 29/50 (58%) |
-| 30 | 3,976 | 52% | 43.6% | +5.8 | 13.3% | 29/50 (58%) |
-| 40 | 4,223 | 56% | 42.6% | +4.8 | 13.9% | 29/50 (58%) |
-
-**10 → 15 doubles window coverage (28% → 58%) for almost no lift cost (+9.0 → +8.4).**
-
-**Past 15, coverage plateaus at 58%** while lift keeps bleeding. CL_NEAR = 40 adds 955
-detections and zero extra window coverage.
-
-That plateau makes 15 a **principled** choice rather than a fitted one: it is the point
-where the cluster gate stops being the binding constraint. The remaining 21 undetected
-bars fail **block B** (`stage = 513`, which the rule rejects while accepting 523), and no
-cluster threshold can reach them.
-
-### Cautions
-
-- **43% of all bars would be state ≥ 2.** Driving an exit rule from that means exiting on
-  nearly half of all bars, versus 22% for the current detector. The churn analysis
-  (844 short trades, −$2,258) says more exits means shorter holds, which has been the
-  losing direction.
-- **Per-bar quality remains below the incumbent** — +8.4 versus +16.1.
+Conclusions in §4-§6 that rest on the proxy alone should be re-checked against labels
+before being acted on.
 
 ---
 
-## 8. Known asymmetry in the stage test
+## 10. The fragmentation problem
 
-`SL_StageOK` accepts **512, 523, 400-499** but rejects **513**. Both 513 and 523 are
-shrink states. Five undetected bars in the target window (12:45, 13:00, 13:45, 14:15,
-20:00) have `stage = 513` and fail block B for that reason alone.
+`scripts/ladder_ranges.py` collapses `state >= 2` bars into ranges and compares them to
+the labels.
 
-Untested. Adding 513 is a one-token change and would be worth measuring before any
-threshold work.
+| setting | ranges | bars | precision | recall | F1 |
+|---|---|---|---|---|---|
+| A `L1=1 L2=0 brk=0` | 48 | 947 | 63.1% | 69.7% | 66.3 |
+| B `L1=1 L2=0 brk=2` | 57 | 857 | 67.7% | 67.6% | 67.6 |
+| C `L1=1 L2=0 brk=4` | 48 | 927 | 64.1% | 69.2% | 66.6 |
+| D `L1=0 L2=0 brk=2` | 59 | 869 | 67.3% | 68.2% | 67.7 |
+| E `L1=3 L2=1 brk=2` | 45 | 626 | 67.6% | 49.3% | 57.0 |
+
+**You labelled 27 ranges. The detector produces 45-59.** It cuts single ranges into pieces:
+
+```
+| 2 | 2026.02.03 14:45 | 2026.02.03 15:30 |  4 | 4/4 |
+| 3 | 2026.02.03 16:45 | 2026.02.03 17:00 |  2 | 2/2 |
+| 4 | 2026.02.03 17:45 | 2026.02.03 18:30 |  4 | 4/4 |
+| 5 | 2026.02.03 20:45 | 2026.02.04 02:15 | 19 | 18/19 |
+```
+
+Four detections inside one 13:30→02:00 label, each with near-perfect overlap. **The
+detector sees the range; it keeps dropping out and re-entering.** That is why recall sits
+near 68% despite the pieces being accurate.
+
+`--gap N` bridges dropouts, `--min-bars N` drops fragments. Worth testing `--gap 3`.
 
 ---
 
-## 9. Design (UML)
+## 11. Metric definitions
+
+For every M15 bar, look forward 12 M5 bars (60 min) from that bar's `close_M5`:
+
+```
+net   = |close[last] − close[first]|
+range = max(closes) − min(closes)
+
+TREND   if net >= 10
+CHOPPY  if net < 10  AND  range >= 15
+QUIET   if net < 10  AND  range <  15
+```
+
+| metric | formula |
+|---|---|
+| n | count of bars where `state >= 2` |
+| %bars | `n / total_bars` |
+| baseline | `QUIET_all / total_bars` = 2,877 / 7,603 = 37.8% |
+| lift | `(QUIET_flagged / n) − baseline` |
+| enrichment | `(window_hits / n) ÷ (window_bars / total_bars)` — **1.0× = chance** |
+| precision | `flagged ∩ labelled / flagged` |
+| recall | `flagged ∩ labelled / labelled` |
+| F1 | `2·P·R / (P+R)` |
+
+### Worked example — `L1=1, L2=0, brk=1`
+
+```
+T (scored bars)              = 7,603
+QUIET bars overall           = 2,877
+baseline    = 2877 / 7603    = 37.8%
+
+n (state ≥ 2)                = 3,139
+  of which QUIET             = 1,548
+flagged QUIET% = 1548 / 3139 = 49.3%
+LIFT        = 49.3 − 37.8    = +11.5
+
+share of flags in window     = 25 / 3139   = 0.0080
+share of all bars in window  = 50 / 7603   = 0.0066
+ENRICHMENT                   = 0.0080 / 0.0066 = 1.21×
+```
+
+### What none of these measure
+
+**Profitability.** Lift and F1 measure agreement with a definition or a label set. A
+detector with perfect F1 could still lose money if the bars it flags are not the ones
+where exiting beats holding. That question needs the ladder wired into a strategy and
+compared against the DMONLY +$968 baseline — **still untested.**
+
+---
+
+## 12. Design (UML)
 
 ```mermaid
 classDiagram
     class TofySidewayLadder {
-        +bool SL_Draw
-        +bool SL_ShowFails
-        +bool SL_WriteLog
+        +int SL_L1Mode = 1
+        +int SL_L2Mode = 0
+        +int SL_BreakoutMode
         +bool SL_UseH1 = false
-        +double CL_NEAR = 10.0
-        +int SL_FontSize
-        +double SL_Angle
+        +double CL_NEAR = 10.5
+        +double SL_diffmid_m15 = 3.0
+        +double SL_diffmid_m30 = 1.5
         -int SL_state[5]
         +SL_Update(BBTFImpact, BB_datas) void
         -SL_StageOK(stage) bool
     }
-
-    class Inputs {
-        +BB_midline_Cluster[0..2][LA..LA_2]
-        +BBW_stage[1..3][LA]
-        +BB_diffMid[1..2][LA..LA_2]
-        +BB_diffBBW[3][LA..LA_2]
+    class Predicates {
+        +A15 S15 C15 W15
+        +A30 S30 C30 W30
+        NOTE B15 and B30 removed - measured dead
     }
-
-    class ChartAndLog {
-        +OBJ_TEXT ladder labels
-        +LADDER log lines
-    }
-
     class ExistingDetector {
         +sideway_selected[LA]
-        NOTE lift +16.1 on 1681 bars
+        NOTE precision 82.4 pct recall 33.2 pct
+    }
+    class GroundTruth {
+        +SIDEWAY_LABELS_FEB.md
+        +27 ranges 858 bars
     }
 
-    Inputs --> TofySidewayLadder : read once per M15 bar
-    TofySidewayLadder --> ChartAndLog : label + log
+    Predicates --> TofySidewayLadder : evaluated per M15 bar
+    TofySidewayLadder --> ChartAndLog : labels + LADDER lines
     TofySidewayLadder ..> ExistingDetector : NEVER writes it
+    GroundTruth --> TofySidewayLadder : scoring target
     ExistingDetector --> DMONLY : unchanged exit trigger
 ```
 
-The dotted relationship is the safety property: the ladder is read-only with respect to
-`sideway_selected`, so a mistake in it cannot silently degrade a measured strategy.
-
 ---
 
-## 10. State machine
+## 13. State machine
 
 ```mermaid
 stateDiagram-v2
     [*] --> S0
     S0 : state 0 - not sideway
-    S1 : state 1 - M15 sideway
-    S2 : state 2 - M30 confirmed
-    S3 : state 3 - H1 confirmed (disabled)
+    S1 : state 1 - M15 settled
+    S2 : state 2 - M30 confirms
+    S3 : state 3 - H1 (disabled)
 
-    S0 --> S1 : A15 AND B15
-    S1 --> S2 : prev>=1 AND A30 AND B30
-    S2 --> S2 : prev>=1 AND A30 AND B30 (persists)
-    S2 --> S3 : SL_UseH1 AND A1H AND B1H AND C1H
-    S1 --> S0 : conditions fail
-    S2 --> S0 : conditions fail
-    S3 --> S0 : conditions fail
+    S0 --> S1 : lvl1 gate
+    S1 --> S2 : prev>=1 AND A30 AND ev30
+    S2 --> S2 : persists (prev>=1)
+    S2 --> S0 : breakout cancel
+    S1 --> S0 : gate fails
+    S2 --> S3 : SL_UseH1 (off)
 
     note right of S2
-        lift +9.0
         the useful level
     end note
     note right of S3
-        lift +3.2 - degrades
-        disabled by default
+        +3.2 vs +10.2 - disabled
     end note
 ```
 
-The `S2 --> S2` self-transition is what the `prev >= 1` fix enabled. Under `prev == 1`
-that edge did not exist and the state collapsed every bar.
+The `S2 --> S2` self-transition is what `prev >= 1` enabled. Under `prev == 1` that edge
+did not exist.
 
 ---
 
-## 11. Sequence — one M15 bar
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant EA as Tofu_EA_Simple_V7
-    participant CL as BBDatas_Midline_Cluster
-    participant SW as BBDatas_Midline_Sideway
-    participant SL as SL_Update
-    participant OUT as chart + log
-
-    Note over EA: new M15 bar
-
-    EA->>CL: update BB_midline_Cluster[0..2]
-    EA->>SW: update sideway_selected[LA]
-    Note over SW: existing detector, untouched
-
-    EA->>SL: SL_Update(BBTFImpact, BB_datas)
-
-    SL->>SL: shift SL_state, prev = SL_state[LA_1]
-
-    SL->>SL: A15 = cluster shrinking OR close
-    SL->>SL: B15 = stage OK OR diffMid shrinking
-    alt A15 AND B15
-        SL->>SL: state = 1
-    end
-
-    alt prev >= 1
-        SL->>SL: A30, B30
-        alt A30 AND B30
-            SL->>SL: state = 2
-        end
-    end
-
-    alt SL_UseH1 AND prev >= 1
-        SL->>SL: A1H, B1H, C1H
-        alt all three
-            SL->>SL: state = 3
-        end
-    end
-
-    SL->>OUT: label L0-A / L0-B / L1 / L2 on the M15 midline
-    SL->>OUT: LADDER log line with every input
-
-    Note over SL,OUT: nothing is returned to the EA -<br/>the ladder drives no decision
-```
-
----
-
-## 12. Chart labels
+## 14. Chart labels
 
 | label | colour | meaning |
 |---|---|---|
-| `L2` | 🟢 lime | state 2 — M30 confirmed, the useful level |
-| `L1` | 🟡 yellow | state 1 — M15 only |
-| `L0-A` | ⚪ gray | failed the **cluster** gate |
-| `L0-B` | ⚪ gray | failed the **stage / diffMid** gate |
-| `L0-AB` | ⚪ gray | both failed |
-| `L0-P` | ⚪ gray | blocks passed but the previous level was not met |
+| `L2` | 🟢 lime | M30 confirmed |
+| `L1` | 🟡 yellow | M15 only |
+| `L0-brk` | ⚪ gray | cancelled by breakout |
+| `L0-A15` | ⚪ gray | cluster gate failed |
+| `L0-ev15` | ⚪ gray | level-1 evidence gate failed |
+| `L1-prev` | 🟡 yellow | chain not running yet |
+| `L1-A30` / `L1-ev30` | 🟡 yellow | level-2 gate failed |
 
-`SL_ShowFails = false` hides the gray L0 labels for a clean view. Keep it **true** while
-diagnosing — the L0-A / L0-B split is what identifies which gate rejected each bar.
+`SL_ShowFails = false` hides the gray labels. Keep it **true** while diagnosing.
 
 ---
 
-## 13. Where this stands
+## 15. Where this stands
 
-**Confirmed improvements**
+**Confirmed**
 
 | change | effect |
 |---|---|
-| `prev >= 1` | 2.6× coverage, lift slightly up. Keep. |
-| `SL_UseH1 = false` | H1 measured +3.2 vs +10.2 for state 2. Keep off. |
+| `prev >= 1` | 2.6× coverage, lift up. Keep. |
+| `CL_NEAR = 10.5` | +89 bars, window 16/50 → 27/50. Keep. |
+| remove B15 / B30 | free: +0.3 lift, same coverage. Keep. |
+| `SL_UseH1 = false` | H1 measured +3.2 vs +10.2. Keep off. |
 
 **Rejected**
 
-| change | reason |
-|---|---|
-| `diffMid` threshold | no window gain, lift down, wrong block |
-| ladder as a replacement for TofySideway | loses 892 good bars to gain 883 weak ones |
+diffMid threshold branch · diffBBW on M15 · W15 on level 1 · ladder as a replacement for
+TofySideway · breakout mode 4 as distinct from mode 3
 
 **Open**
 
 | question | status |
 |---|---|
-| `CL_NEAR = 15` | doubles window coverage for little lift cost; plateau makes 15 principled. Untested in a strategy. |
-| accepting `stage = 513` | one-token change, five window bars, unmeasured |
-| ladder as a **confirmation tier** on TofySideway | +18.4 where both agree — the strongest number seen, untested in a strategy |
-| breakout rule | entirely unmeasured |
+| fragmentation — 27 labels vs 45-59 detected ranges | `--gap` untested |
+| ladder as a **confirmation tier** on TofySideway | +18.4 where both agree — strongest number seen, untested in a strategy |
+| **does better detection improve P&L?** | **untested** — the one that matters |
+| does anything here survive March? | untested; labels not yet made |
 
-**The honest summary:** the ladder is a better *chop* detector than TofySideway and a
-worse *sideway* detector overall. It reaches 58% of the target range where the incumbent
-reaches 12%, but at 43% of all bars and roughly half the per-bar precision.
+**Honest summary.** The ladder is a balanced detector (~70% precision, ~68% recall against
+your labels) where TofySideway is precise but narrow (~83% / ~34%). It covers the choppy
+ranges the incumbent misses, at the cost of firing 2-3× as often.
 
-Whether that trade is worth making depends on what it drives, and that has not been
-tested. The next step is not another threshold — it is running DMONLY with a fixed
-configuration and comparing against the +$968 baseline, once, with the parameters
-pre-registered.
+Every gain came from **fixing something wrong** — `prev >= 1`, the 0.1 threshold
+rejection, removing dead predicates. Every attempt to gain by **loosening a threshold**
+cost precision without improving coverage of the target.
+
+None of this has been shown to improve trading. That test — DMONLY with the ladder as its
+exit, once, against +$968 — remains the outstanding item, and no amount of detector
+tuning substitutes for it.
