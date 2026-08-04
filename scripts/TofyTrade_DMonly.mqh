@@ -10,7 +10,7 @@
 //|                                                                  |
 //| RULES (exactly the Python DMONLY):                               |
 //|   dm = BB_datas[1].BB_diffMid_Trend[LA]   (M15 diffMid_Trend cur)|
-//|   1. SIDEWAYS exit : BBTFImpact.sideway_selected[0] > 0 -> act=7 |
+//|   1. SIDEWAYS exit : BBTFImpact.sideway_selected[LA] > 0 -> act=7 |
 //|   2. REVERSAL      : LONG & dm in {2,4} -> act=7 (close, no       |
 //|                      re-entry this bar)                          |
 //|                      SHORT & dm in {1,5} -> act=7                |
@@ -52,6 +52,17 @@ void Trade_Strategy(
    double                   baseLot = 0.01
 )
 {
+   //--- Which sideway signal drives the exit.
+   //--- Measured against references/SIDEWAY_LABELS_FEB.md (858 of 1830 Feb bars labelled):
+   //---   TofySideway S_   precision 82.4%  recall 33.2%   fires 346
+   //---   ladder state>=2  precision 70.4%  recall 60.3%   fires 734
+   //---   0 = S_ flag only        <- BASELINE, must reproduce 1120 trades / +$968.93
+   //---   1 = ladder only
+   //---   2 = BOTH must agree     (highest precision, fewest exits)
+   //---   3 = EITHER fires        (highest recall, most exits)
+   //--- Mode 0 is the default. Change it only for a measurement run.
+   int DM_ExitMode = 0;
+
    //--- Defaults: HOLD, no stop, base lot (identical to TofyTrade6)
    Trade_act = 0; Trade_info = ""; Trade_lots = baseLot; Trade_sl = 0.0;
 
@@ -63,7 +74,7 @@ void Trade_Strategy(
 
    //--- The ONLY inputs DMONLY uses ---------------------------------
    double dm      = BB_datas[1].BB_diffMid_Trend[LA];      // index 1 = M15, cur
-   int    sideway = (int)BBTFImpact.sideway_selected[0];   // >0 = TofySideway S_ flag
+   int    sideway = (int)BBTFImpact.sideway_selected[LA];  // >0 = TofySideway S_ flag (LA = current)
 
    bool dm_up   = (dm == 1.0 || dm == 5.0);   // buy / reversal-up direction
    bool dm_down = (dm == 2.0 || dm == 4.0);   // sell / reversal-dn direction
@@ -74,22 +85,34 @@ void Trade_Strategy(
 
    Trade_info = "[DMONLY] dm:" + DoubleToString(dm,1)
               + " S_:" + IntegerToString(sideway)
+              + " XM:" + IntegerToString(DM_ExitMode)
+              + " LAD:" + IntegerToString(SL_state[LA])
               + " BUYS:" + IntegerToString(BUYS)
               + " SELLS:" + IntegerToString(SELLS);
 
    //================================================================
-   // PRIORITY 1 — SIDEWAYS EXIT (TofySideway S_ flag). Close all.
-   //   Exit beats entry (matches Python: sideway checked first).
+   // PRIORITY 1 — SIDEWAYS EXIT (mode-selectable). Close all.
    //================================================================
-   if(sideway > 0)
+   bool sw_flag   = (sideway > 0);
+   bool sw_ladder = (SL_state[LA] >= 2);
+   bool sw = false;
+   if(DM_ExitMode == 0)      sw = sw_flag;
+   else if(DM_ExitMode == 1) sw = sw_ladder;
+   else if(DM_ExitMode == 2) sw = (sw_flag && sw_ladder);
+   else if(DM_ExitMode == 3) sw = (sw_flag || sw_ladder);
+
+   if(sw)
    {
       if(!flat)
       {
-         Trade_act = 7;                       // exit_all
-         Trade_info += " [DM]SIDEWAYS_EXIT";
+         Trade_act = 7;
+         string reason = "SIDEWAYS";
+         if(sw_ladder && !sw_flag) reason = "LADDER";
+         else if(!sw_ladder && sw_flag) reason = "S_";
+         Trade_info += " [DM]" + reason + "_EXIT";
          SigEvtDM("EXIT", Trade_info);
       }
-      return;   // sideway bar: never enter
+      return;
    }
 
    //================================================================
