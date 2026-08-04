@@ -4,32 +4,33 @@ ladder_ranges.py
 
 Runs the sideway ladder under several settings and emits, for each setting,
 the detected sideway ranges as start/end datetimes - so they can be compared
-side by side against hand-labelled ranges. Also simulates DMONLY P&L per
-setting, using that setting's ladder state as the sideways exit.
+side by side against hand-labelled ranges.
 
 Usage:
     python3 ladder_ranges.py <clean.log> [--month 2026.02] [--labels labels.md]
-                                         [--min-bars 2] [--gap 1] [--spread X]
-                                         [--out report.md]
+                             [--min-bars 2] [--gap 1] [--out report.md]
 
 Outputs a markdown report: one range table per setting, plus an overlap
-summary against the labels if supplied, and a P&L simulation.
+summary against the labels if supplied.
 """
 import re, sys, bisect, argparse
 from collections import OrderedDict
 
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 # settings to compare. add or remove freely - each becomes one table.
 #   l1 : level-1 gate   0 A15&&(S15||C15)  1 A15&&C15  2 A15&&S15  3 A15&&S15&&C15
 #   l2 : level-2 gate   0 S30||C30||W30    1 S30||C30  2 C30
 #   bm : breakout mode  0 off  1 raw  2 raw&&raw1  3 raw&&!C15  4 raw&&!C15&&!W15
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 SETTINGS = OrderedDict([
     ("A  L1=1 L2=0 brk=0", dict(l1=1, l2=0, bm=0)),
     ("B  L1=1 L2=0 brk=2", dict(l1=1, l2=0, bm=2)),
     ("C  L1=1 L2=0 brk=4", dict(l1=1, l2=0, bm=4)),
     ("D  L1=0 L2=0 brk=2", dict(l1=0, l2=0, bm=2)),
     ("E  L1=3 L2=1 brk=2", dict(l1=3, l2=1, bm=2)),
+    ("Z  TofySideway S_ (control)", dict(l1=1, l2=0, bm=2, use_sflag=True)),
+    ("P  PERFECT - the labels themselves", dict(l1=1, l2=0, bm=2, use_labels=True)),
+    ("N  NO sideway exit at all", dict(l1=1, l2=0, bm=2, use_none=True)),
 ])
 
 CL_NEAR       = 10.5
@@ -38,10 +39,11 @@ DIFFMID_M30   = 1.5
 DIFFBBW_M15   = 1.0
 DIFFBBW_M30   = 1.0
 
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 RX_ONE = {
     'ws15': r'W_stage_M15:\s*\([^)]*\)\[\s*([0-9]+)',
     'ws30': r'W_stage_M30:\s*\([^)]*\)\[\s*([0-9]+)',
+    'dmt15': r'diffMid_Trend_M15:\s*\[\s*([-\d.]+)',
 }
 RX_TRI = {
     'dm15': r'diffMid_M15:\s*\[\s*([-\d.]+),\s*([-\d.]+),\s*([-\d.]+)',
@@ -63,7 +65,7 @@ def parse(path):
     for line in open(path, errors='ignore'):
         for k, rx in r1.items():
             m = rx.search(line)
-            if m: D[k][m.group(1)[:16]] = int(m.group(2))
+            if m: D[k][m.group(1)[:16]] = float(m.group(2))
         for k, rx in r3.items():
             m = rx.search(line)
             if m: D[k][m.group(1)[:16]] = tuple(float(m.group(i)) for i in (2, 3, 4))
@@ -76,7 +78,7 @@ def parse(path):
 def stage_ok(s):
     return s == 512 or s == 523 or (400 <= s <= 499)
 
-def run(D, PX, l1, l2, bm):
+def run(D, PX, l1, l2, bm, use_sflag=False, SF=None, use_labels=False, use_none=False, LBLSET=None):
     """returns {bar_time: state}"""
     bars = sorted(D['ws15'])
     keys = {k: sorted(v) for k, v in D.items()}
@@ -93,6 +95,17 @@ def run(D, PX, l1, l2, bm):
         return PX[pk[j]] if j >= 0 else None
 
     st = {}
+    if use_none:
+        for t in bars: st[t] = 0
+        return st
+    if use_labels:
+        for t in bars: st[t] = 2 if t in (LBLSET or set()) else 0
+        return st
+    if use_sflag:
+        # control: the existing TofySideway S_ flag, not the ladder
+        for t in bars:
+            st[t] = 2 if (SF or {}).get(t, 0) > 0 else 0
+        return st
     for i, t in enumerate(bars):
         if i < 2:
             st[t] = 0; continue
@@ -104,7 +117,8 @@ def run(D, PX, l1, l2, bm):
             st[t] = 0; continue
         d15 = D['dm15'].get(t); d30 = last('dm30', t)
         b15 = D['db15'].get(t); b30 = last('db30', t)
-        w15s = D['ws15'][t];    w30s = last('ws30', t)
+        w15s = int(D['ws15'][t]); w30s = last('ws30', t)
+        if w30s is not None: w30s = int(w30s)
         U = D['u15'].get(t);    L = D['l15'].get(t)
         p = price(t);           p1 = price(t1)
         if None in (d15, d30, b15, b30, w30s, U, L, p, p1):
@@ -158,6 +172,135 @@ def to_ranges(st, bars, min_bars, gap):
     out.append((s, prev))
     return [(a, b) for a, b in out if idx[b] - idx[a] + 1 >= min_bars]
 
+
+def simulate_pnl(D, PX, st, bars, spread=0.0):
+    """
+    DMONLY with the ladder as its sideways exit.
+      priority 1  sideway (state >= 2)      -> exit all, never enter
+      priority 2  opposite dm               -> exit (no same-bar re-entry)
+      priority 3  flat and dm 1|5 -> LONG, dm 2|4 -> SHORT
+    close-only: after any exit, no re-entry on the same bar.
+    Returns (trades, summary_dict).
+    """
+    pk = sorted(PX); pv = [PX[t] for t in pk]
+    def price(t):
+        j = bisect.bisect_right(pk, t + ":99") - 1
+        return PX[pk[j]] if j >= 0 else None
+
+    pos, ent, ent_i, trades = 'FLAT', 0.0, 0, []
+    for i, t in enumerate(bars):
+        dm = D['dmt15'].get(t)
+        p  = price(t)
+        if dm is None or p is None:
+            continue
+        sw = st.get(t, 0) >= 2
+        dm_up   = dm in (1.0, 5.0)
+        dm_down = dm in (2.0, 4.0)
+
+        reason = None
+        if pos != 'FLAT':
+            if sw:                              reason = 'SIDEWAYS'
+            elif pos == 'LONG'  and dm_down:    reason = 'REVERSAL_DN'
+            elif pos == 'SHORT' and dm_up:      reason = 'REVERSAL_UP'
+
+        if reason:
+            pnl = (p - ent) if pos == 'LONG' else (ent - p)
+            trades.append(dict(entry=bars[ent_i], exit=t, dir=pos,
+                               pnl=pnl - spread, bars=i - ent_i, reason=reason))
+            pos = 'FLAT'
+            continue                            # close-only
+
+        if pos == 'FLAT' and not sw:
+            if dm_up:     pos, ent, ent_i = 'LONG',  p, i
+            elif dm_down: pos, ent, ent_i = 'SHORT', p, i
+
+    tot  = sum(x['pnl'] for x in trades)
+    wins = [x for x in trades if x['pnl'] > 0]
+    buckets = {'1': [0, 0.0], '2': [0, 0.0], '3-5': [0, 0.0], '6+': [0, 0.0]}
+    for x in trades:
+        k = '1' if x['bars'] <= 1 else '2' if x['bars'] == 2 else '3-5' if x['bars'] <= 5 else '6+'
+        buckets[k][0] += 1; buckets[k][1] += x['pnl']
+    reasons = {}
+    for x in trades:
+        r = reasons.setdefault(x['reason'], [0, 0.0])
+        r[0] += 1; r[1] += x['pnl']
+    return trades, dict(n=len(trades), total=tot,
+                        wr=(100.0*len(wins)/len(trades) if trades else 0.0),
+                        buckets=buckets, reasons=reasons)
+
+def match_label(s, e, labels, bars):
+    """
+    Which label does a detected range correspond to?
+    Returns (text, matched_bool). Matched = the two ranges overlap at all.
+    """
+    idx = {t: i for i, t in enumerate(bars)}
+    det = set(t for t in bars if s <= t <= e)
+    if not det: return ("-", False)
+    best, bestn = None, 0
+    for k, (ls, le) in enumerate(labels, 1):
+        lab = set(t for t in bars if ls <= t <= le)
+        ov = len(det & lab)
+        if ov > bestn: best, bestn = k, ov
+    if best is None:
+        return ("MISS", False)
+    return ("L%d %d/%d" % (best, bestn, len(det)), True)
+
+
+def combined_timeline(trades, rngs, bars, PX, labels=None):
+    """
+    One chronological table: TRADE rows (positions) interleaved with SIDEWAY rows
+    (detected ranges the strategy sat out). start/end are entry/exit for a trade and
+    range start/end for a sideway. Cumulative P&L carries through both.
+    """
+    pk = sorted(PX)
+    def price(t):
+        j = bisect.bisect_right(pk, t + ":99") - 1
+        return PX[pk[j]] if j >= 0 else None
+    idx = {t: i for i, t in enumerate(bars)}
+
+    rows = []
+    for x in trades:
+        rows.append(dict(kind='TRADE', start=x['entry'], end=x['exit'], bars=x['bars'],
+                         what=x['dir'], pnl=x['pnl'], note=x['reason']))
+    for k, (s_, e) in enumerate(rngs, 1):
+        nb = idx[e] - idx[s_] + 1 if s_ in idx and e in idx else 0
+        note = 'flat - sitting out'
+        if labels:
+            mtxt, ok = match_label(s_, e, labels, bars)
+            note = ('flat - %s' % mtxt) if ok else 'flat - NO MATCHING LABEL'
+        rows.append(dict(kind='SIDEWAY', start=s_, end=e, bars=nb,
+                         what='R%d' % k, pnl=None, note=note))
+    rows.sort(key=lambda r: (r['start'], 0 if r['kind'] == 'TRADE' else 1))
+
+    L = []
+    L.append("")
+    L.append("#### Combined timeline")
+    L.append("")
+    L.append("`TRADE` rows are positions, `SIDEWAY` rows are detected ranges. "
+             "`start`/`end` = entry/exit or range start/end. Cumulative carries through both.")
+    L.append("")
+    L.append("| # | type | start | end | bars | dir / range | start px | end px | P&L | cumulative | note |")
+    L.append("|---|---|---|---|---|---|---|---|---|---|---|")
+    cum = 0.0
+    for i, r in enumerate(rows, 1):
+        if r['pnl'] is not None:
+            cum += r['pnl']; p = "%+.2f" % r['pnl']
+        else:
+            p = "-"
+        p1 = price(r['start']); p2 = price(r['end'])
+        L.append("| %d | %s | %s | %s | %d | %s | %s | %s | %s | %+.2f | %s |" % (
+            i, r['kind'], r['start'], r['end'], r['bars'], r['what'],
+            ("%.2f" % p1) if p1 else "-", ("%.2f" % p2) if p2 else "-",
+            p, cum, r['note']))
+    tb = sum(r['bars'] for r in rows if r['kind'] == 'TRADE')
+    sb = sum(r['bars'] for r in rows if r['kind'] == 'SIDEWAY')
+    ntr = sum(1 for r in rows if r['kind'] == 'TRADE')
+    nsw = sum(1 for r in rows if r['kind'] == 'SIDEWAY')
+    L.append("")
+    L.append("**%d trades (%d bars in position) and %d detected ranges (%d bars flat).** "
+             "Ranges are %.0f%% of the period." % (ntr, tb, nsw, sb, 100.0*sb/(tb+sb) if tb+sb else 0))
+    return L
+
 def parse_labels(path):
     """read start/end pairs out of a markdown table"""
     rx = re.compile(r'^\|\s*\d+\s*\|\s*(\d{4}\.\d{2}\.\d{2} \d{2}:\d{2})\s*\|\s*(\d{4}\.\d{2}\.\d{2} \d{2}:\d{2})\s*\|')
@@ -167,72 +310,6 @@ def parse_labels(path):
         if m: out.append((m.group(1), m.group(2)))
     return out
 
-def simulate_pnl(trades, start_price, spread=0):
-    """
-    Simulate DMONLY-style P&L for a list of trades.
-    Each trade is (act, lots, entry_time, exit_time).
-    act: 1=buy, 2=sell, 7=exit_all.
-    Uses close_M5 fills. Spread is applied per-close.
-    """
-    # FIXME: reversal direction extraction needs the full log line;
-    # for now we assume all reversals are sell (act==2). This will need
-    # a proper fix before this can be used for P&L verification.
-    rpx = re.compile(r'^([\d.]+ [\d:]+).*\[M5\].*close_M5:\s*\[\s*([-\d.]+)')
-    # Build a lookup of price at each M5 bar
-    m5_close = {}
-    m5_re = re.compile(r'^([\d.]+ [\d:]+).*\[M5\].*close_M5:\s*\[\s*([-\d.]+)')
-    for line in open("references/Backtest_data/V36.15/20260712_clean.log", errors='ignore'):
-        m = m5_re.search(line)
-        if m:
-            t = m.group(1)[:16]
-            p = float(m.group(2))
-            m5_close[t] = p
-
-    # Build a lookup of open/close prices per M5 bar for the month
-    month_start = "2026.02.01 00:00"
-    month_end   = "2026.02.28 23:59"
-    bars = [t for t in m5_close if month_start <= t <= month_end]
-    bars.sort()
-
-    pnl = 0.0
-    trades_out = []
-
-    for act, lots, entry_t, exit_t in trades:
-        # normalize act codes
-        if act == "SIDEWAYS":
-            act = 7  # exit_all - already closed
-        elif act == "REVERSAL":
-            # extract direction from dm15 value at entry_t
-            m = rpx.search(entry_t)
-            if m:
-                line_text = " ".join(m.groups())
-                dm15_re = re.compile(r'diffMid_M15:\s*\[\s*([-\d.]+)')
-                dm_m = dm15_re.search(line_text)
-                if dm_m and float(dm_m.group(1)) < 0:
-                    act = 2  # reversal-up -> close long (sell)
-                else:
-                    act = 1  # reversal-dn -> close short (buy)
-
-        # find nearest M5 close at or after entry
-        idx_in = bisect.bisect_left(bars, entry_t)
-        if idx_in >= len(bars):
-            continue  # no bars left
-        entry_price = m5_close[bars[idx_in]]
-
-        # find nearest M5 close at or before exit
-        idx_out = bisect.bisect_right(bars, exit_t) - 1
-        if idx_out < idx_in:
-            continue  # invalid range
-        exit_price = m5_close[bars[idx_out]]
-
-        if act == 1:   # buy: profit on rise
-            pnl += lots * (exit_price - entry_price)
-        elif act == 2: # sell: profit on fall
-            pnl += lots * (entry_price - exit_price)
-        # act==7 is already closed by the logic above
-
-    return pnl
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("log")
@@ -240,7 +317,9 @@ def main():
     ap.add_argument("--labels", default=None, help="markdown file with a label table")
     ap.add_argument("--min-bars", type=int, default=2, help="drop ranges shorter than this")
     ap.add_argument("--gap", type=int, default=1, help="bridge gaps of at most N bars")
-    ap.add_argument("--spread", type=float, default=0.10, help="spread per fill (USD)")
+    ap.add_argument("--spread", type=float, default=0.0, help="cost per trade")
+    ap.add_argument("--timeline", action="store_true",
+                    help="emit a combined chronological table of trades and detected ranges")
     ap.add_argument("--out", default="LADDER_RANGES.md")
     a = ap.parse_args()
 
@@ -271,172 +350,88 @@ def main():
         for i, (s, e) in enumerate(labels, 1):
             n = sum(1 for t in bars if s <= t <= e)
             L.append("| %d | %s | %s | %d |" % (i, s, e, n))
-
-    # Precompute all trades from the log (any state>=2 bar is a sideways exit)
-    all_trades = []
-    for t in bars:
-        if D['ws15'].get(t, 0) >= 2:
-            all_trades.append(('SIDEWAYS', 0.01, t, t))
-    # Add reversal trades from dm (simplified: whenever dm is 2/4 on a long or 1/5 on a short)
-    r_re = re.compile(r'^([\d.]+ [\d:]+).*\[M5\].*close_M5:\s*\[\s*([-\d.]+)')
-    dm15_r = re.compile(r'diffMid_M15:\s*\[\s*([-\d.]+)')
-    for line in open(a.log, errors='ignore'):
-        m = r_re.search(line)
-        if not m: continue
-        t = m.group(1)[:16]
-        if t not in bars: continue
-        dm_val = dm15_r.search(line).group(1) if dm15_r.search(line) else "0"
-        dm = float(dm_val)
-        # For simplicity, we only count these as trades when state==0 (no sideways exit)
-        if D['ws15'].get(t, 0) != 2:
-            all_trades.append(('REVERSAL', 0.01, t, t))
+        L.append("\n**%d labelled ranges, %d bars (%.1f%% of the month).**\n"
+                 % (len(labels), len(lblset), 100*len(lblset)/len(bars)))
 
     L.append("\n## Detected ranges by setting\n")
     summary = []
     for name, cfg in SETTINGS.items():
-        st = run(D, PX, **cfg)
+        st = run(D, PX, SF=SF, LBLSET=lblset, **cfg)
         rngs = to_ranges(st, bars, a.min_bars, a.gap)
         nflag = sum(1 for t in bars if st.get(t, 0) >= 2)
-        # Match ranges against labels
-        matched = []
-        for i, (s, e) in enumerate(rngs, 1):
-            hit = sum(1 for t in bars if s <= t <= e and t in lblset)
-            if hit:
-                # Find the highest-numbered label contained
-                best = None
-                for ls, le in labels:
-                    if ls <= s and le >= e:
-                        if best is None or int(ls.split('.')[2]) > int(best.split('.')[2]):
-                            best = ls
-                matched.append((s, e, hit, best))
-            else:
-                matched.append((s, e, hit, "NO MATCH"))
+        trades, pl = simulate_pnl(D, PX, st, bars, a.spread)
+        if labels:
+            tp = sum(1 for t in bars if st.get(t,0) >= 2 and t in lblset)
+            fp = nflag - tp
+            fn = len(lblset) - tp
+            prec = 100*tp/nflag if nflag else 0
+            rec  = 100*tp/len(lblset) if lblset else 0
+            f1   = 2*prec*rec/(prec+rec) if prec+rec else 0
+            summary.append((name, len(rngs), nflag, prec, rec, f1, pl))
+        else:
+            summary.append((name, len(rngs), nflag, 0, 0, 0, pl))
 
-        # Compute P&L for this setting (simulate_pnl uses all_trades filtered by state)
-        pnl_trades = [(act, lots, t, t) for act, lots, t, _ in all_trades if st.get(t, 0) >= 2]
-        pnl = simulate_pnl(pnl_trades, start_price=5000.0, spread=a.spread)
-
-        # Build the table rows
         L.append("\n### %s\n" % name)
         L.append("`l1=%d  l2=%d  bm=%d`   -   %d ranges, %d bars flagged (%.1f%%)\n"
                  % (cfg['l1'], cfg['l2'], cfg['bm'], len(rngs), nflag, 100*nflag/len(bars)))
-
-        # Header with matched-label column
-        hdr = "| # | start | end | bars |"
-        if labels:
-            hdr += " matched label |"
-        L.append(hdr)
-        L.append("|---|---|---|---|" + ("---|" if labels else ""))
-
-        for s, e, hit, ml in matched:
-            row = "| %d | %s | %s | %d |" % (len(matched), s, e, hit)
-            if ml != "NO MATCH":
-                row += "%s |" % ml
-            else:
-                row += " |"
+        L.append("**P&L (gross%s):** %d trades, %.1f%% win rate, **%+.2f**\n"
+                 % ((", spread %.2f/trade" % a.spread) if a.spread else "",
+                    pl['n'], pl['wr'], pl['total']))
+        L.append("| # | start | end | bars |" + (" overlap | matched label |" if labels else ""))
+        L.append("|---|---|---|---|" + ("---|---|" if labels else ""))
+        idx = {t: i for i, t in enumerate(bars)}
+        nmatch = 0
+        for i, (s, e) in enumerate(rngs, 1):
+            n = idx[e] - idx[s] + 1
+            row = "| %d | %s | %s | %d |" % (i, s, e, n)
+            if labels:
+                hit = sum(1 for t in bars if s <= t <= e and t in lblset)
+                mtxt, ok = match_label(s, e, labels, bars)
+                if ok: nmatch += 1
+                row += " %d/%d | %s |" % (hit, n, mtxt if ok else "**NO MATCH**")
             L.append(row)
+        if labels:
+            L.append("\n%d of %d detected ranges overlap a label; %d are false positives."
+                     % (nmatch, len(rngs), len(rngs) - nmatch))
+            covered = set()
+            for (s, e) in rngs:
+                for k, (ls, le) in enumerate(labels, 1):
+                    if any(ls <= t <= le for t in bars if s <= t <= e): covered.add(k)
+            missed = [k for k in range(1, len(labels)+1) if k not in covered]
+            L.append("Labels with no detection at all: %s\n"
+                     % (", ".join("L%d" % k for k in missed) if missed else "none"))
+        L.append("\n| exit reason | trades | P&L |")
+        L.append("|---|---|---|")
+        for r in sorted(pl['reasons']):
+            L.append("| %s | %d | %+.2f |" % (r, pl['reasons'][r][0], pl['reasons'][r][1]))
+        L.append("\n| bars held | trades | P&L |")
+        L.append("|---|---|---|")
+        for k in ('1', '2', '3-5', '6+'):
+            L.append("| %s | %d | %+.2f |" % (k, pl['buckets'][k][0], pl['buckets'][k][1]))
+        if a.timeline:
+            L += combined_timeline(trades, rngs, bars, PX, labels if labels else None)
 
-        # Labels with no detection at all
-        uncovered = [lbl for lbl in labels
-                     if not any(s <= lbl[0] and e >= lbl[1] for s, e, h, m in matched)]
-        if uncovered:
-            L.append("\n**Labels with no detection at all:** " + ", ".join("%s to %s" % (lbl[0], lbl[1]) for lbl in uncovered))
-
-        # Exit-reason breakdown
-        exits = {"SIDEWAYS": 0, "REVERSAL_UP": 0, "REVERSAL_DN": 0}
-        for act, lots, t, _ in pnl_trades:
-            if act == "SIDEWAYS":
-                exits["SIDEWAYS"] += 1
-            else:
-                dm_val = D['dm15'].get(t) if D['dm15'].get(t) else (0,)
-                if act == "REVERSAL" and dm_val[0] < 0:
-                    exits["REVERSAL_UP"] += 1
-                else:
-                    exits["REVERSAL_DN"] += 1
-
-        L.append("\n**Exit-reason breakdown:**")
-        for r in ["SIDEWAYS", "REVERSAL_UP", "REVERSAL_DN"]:
-            L.append("  %s: %d" % (r, exits[r]))
-
-        # Bars-held buckets
-        holds = [1, 2, (3, 5), None]  # None = 6+
-        for h in holds:
-            cnt, pnl_h = 0, 0.0
-            for t in bars:
-                if st.get(t, 0) >= 2:
-                    i = idx[t]
-                    prev_i = i - 1 if i > 0 else -1
-                    nbars = i - prev_i
-                    if h is None:
-                        if nbars >= 6:
-                            cnt += 1; pnl_h += 0
-                    if h is not None:
-                        if isinstance(h, tuple):
-                            if nbars <= h[1]:
-                                cnt += 1; pnl_h += 0
-                        elif nbars == h:
-                            cnt += 1; pnl_h += 0
-            if cnt:
-                label = "%d-%d+" % h if isinstance(h, tuple) else (h if h is not None else "6+")
-                L.append("  %s: %d trades / %.2f" % (label, cnt, pnl_h))
-
-        summary.append((name, len(rngs), nflag, pnl))
-
-    # Control row Z - TofySideway S_ flag only
-    st_s = run(D, PX, l1=0, l2=0, bm=0)  # sideway_selected[LA] > 0
-    rngs_z = to_ranges(st_s, bars, a.min_bars, a.gap)
-    nflag_z = sum(1 for t in bars if st_s.get(t, 0) >= 2)
-
-    # Compute P&L for control row Z
-    pnl_trades_z = [(act, lots, t, t) for act, lots, t, _ in all_trades if st_s.get(t, 0) >= 2]
-    pnl_z = simulate_pnl(pnl_trades_z, start_price=5000.0, spread=a.spread)
-
-    L.append("\n### Z  TofySideway S_ (control)\n")
-    L.append("`l1=0  l2=0  bm=0`   -   %d ranges, %d bars flagged (%.1f%%)\n"
-             % (len(rngs_z), nflag_z, 100*nflag_z/len(bars)))
-
-    # Match control against labels
-    matched_z = []
-    for i, (s, e) in enumerate(rngs_z, 1):
-        hit = sum(1 for t in bars if s <= t <= e and t in lblset)
-        best = None
-        for ls, le in labels:
-            if ls <= s and le >= e:
-                if best is None or int(ls.split('.')[2]) > int(best.split('.')[2]):
-                    best = ls
-        matched_z.append((s, e, hit, best))
-
-    L.append("\n| # | start | end | bars |" + (" matched label |" if labels else ""))
-    L.append("|---|---|---|---|" + ("---|" if labels else ""))
-    for s, e, hit, ml in matched_z:
-        row = "| %d | %s | %s | %d |" % (len(matched_z), s, e, hit)
-        if ml != "NO MATCH":
-            row += "%s |" % ml
-        else:
-            row += " |"
-        L.append(row)
-
-    # Summary table
-    L.append("\n## Summary\n")
-    L.append("| setting | ranges | bars flagged | P&L (USD) |")
-    L.append("|---|---|---|---|")
-    for nm, nr, nf, pnl in summary:
-        L.append("| %s | %d | %d | %.2f |" % (nm, nr, nf, pnl))
-    # Add precision/recall/F1 from earlier compute (reuse same data)
     if labels:
-        lblset_count = len(lblset)
-        for nm, nr, nf, _ in summary:
-            tp = sum(1 for s, e in to_ranges(st, bars, a.min_bars, a.gap)
-                     if any(s <= t <= e and t in lblset for t in bars))
-            prec = 100*tp/nf if nf else 0
-            rec  = 100*tp/lblset_count if lblset_count else 0
-            f1   = 2*prec*rec/(prec+rec) if prec+rec else 0
-            L.append("| | | | precision %.1f%%  recall %.1f%%  F1 %.1f |" % (prec, rec, f1))
+        L.append("\n## Summary\n")
+        L.append("| setting | ranges | bars | precision | recall | F1 | trades | win% | **P&L** | 6+ bar P&L |")
+        L.append("|---|---|---|---|---|---|---|---|---|---|")
+        for nm, nr, nf, p, r, f, pl in summary:
+            L.append("| %s | %d | %d | %.1f%% | %.1f%% | %.1f | %d | %.1f%% | **%+.2f** | %+.2f |"
+                     % (nm, nr, nf, p, r, f, pl['n'], pl['wr'], pl['total'], pl['buckets']['6+'][1]))
+        L.append("\nP&L is GROSS unless --spread was given. Detection quality (F1) and P&L "
+                 "are different questions - a better detector is not automatically a better "
+                 "exit rule. Compare against the DMONLY baseline of 1120 trades / +968.93 "
+                 "which used the TofySideway S_ flag, not the ladder.\n")
+        L.append("\nprecision = flagged bars that are inside a label.  "
+                 "recall = labelled bars that were flagged.  "
+                 "A random detector firing at the same rate would score "
+                 "precision %.1f%%.\n" % (100*len(lblset)/len(bars)))
 
     open(a.out, "w").write("\n".join(L) + "\n")
     print("wrote %s" % a.out)
-    for nm, nr, nf, pnl in summary:
-        print("  %-22s ranges=%-4d bars=%-5d P&L=%.2f" % (nm, nr, nf, pnl))
+    for nm, nr, nf, p, r, f, pl in summary:
+        print("  %-22s ranges=%-3d prec=%.1f%% rec=%.1f%% F1=%.1f | trades=%-4d P&L=%+.2f"
+              % (nm, nr, p, r, f, pl['n'], pl['total']))
 
 if __name__ == "__main__":
     main()
