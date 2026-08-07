@@ -29,6 +29,10 @@ SETTINGS = OrderedDict([
     ("D  L1=0 L2=0 brk=2", dict(l1=0, l2=0, bm=2)),
     ("E  L1=3 L2=1 brk=2", dict(l1=3, l2=1, bm=2)),
     ("Z  TofySideway S_ (control)", dict(l1=1, l2=0, bm=2, use_sflag=True)),
+])
+
+# Ceiling rows: P and N are NOT detectors; they bracket what any detector could achieve.
+CEILING_SETTINGS = OrderedDict([
     ("P  PERFECT - the labels themselves", dict(l1=1, l2=0, bm=2, use_labels=True)),
     ("N  NO sideway exit at all", dict(l1=1, l2=0, bm=2, use_none=True)),
 ])
@@ -321,6 +325,8 @@ def main():
     ap.add_argument("--timeline", action="store_true",
                     help="emit a combined chronological table of trades and detected ranges")
     ap.add_argument("--out", default="LADDER_RANGES.md")
+    ap.add_argument("--ceiling-out", default=None,
+                    help="write the label-derived ceiling (P+N) to this file instead of mixing them in")
     a = ap.parse_args()
 
     D, PX, SF = parse(a.log)
@@ -427,10 +433,43 @@ def main():
                  "A random detector firing at the same rate would score "
                  "precision %.1f%%.\n" % (100*len(lblset)/len(bars)))
 
-    open(a.out, "w").write("\n".join(L) + "\n")
-    print("wrote %s" % a.out)
-    for nm, nr, nf, p, r, f, pl in summary:
-        print("  %-22s ranges=%-3d prec=%.1f%% rec=%.1f%% F1=%.1f | trades=%-4d P&L=%+.2f"
+    if a.ceiling_out:
+        # Write only detector settings (A-E + Z) to the main report
+        open(a.out, "w").write("\n".join(L) + "\n")
+        print("wrote %s" % a.out)
+        for nm, nr, nf, p, r, f, pl in summary:
+            print("  %-22s ranges=%-3d prec=%.1f%% rec=%.1f%% F1=%.1f | trades=%-4d P&L=%+.2f" % (
+                nm, nr, p*100, r*100, f*100, pl['n'], pl['total']))
+
+        # Write ceiling rows separately
+        Lc = ["# Ceiling and floor — what perfect sideway detection is worth", ""]
+        Lc.append("Input: `%s`   bars: %d%s\n" % (a.log, len(bars), ("   month filter: %s" % a.month) if a.month else ""))
+        Lc.append("Ranges are consecutive `state >= 2` bars, gaps of <= %d bar(s) bridged, "
+                   "ranges shorter than %d bars dropped.\n" % (a.gap, a.min_bars))
+        for name, cfg in CEILING_SETTINGS.items():
+            st = run(D, PX, l1=cfg['l1'], l2=cfg['l2'], bm=cfg['bm'],
+                     use_labels=cfg.get('use_labels', False), use_none=cfg.get('use_none', False))
+            rngs = to_ranges(st, bars, a.min_bars, a.gap)
+            nflag = sum(1 for t in bars if st.get(t, 0) >= 2)
+            trades, pl = simulate_pnl(D, PX, st, bars, a.spread)
+            Lc.append("\n### %s\n" % name)
+            Lc.append("`l1=%d  l2=%d  bm=%d`   -   %d ranges, %d bars flagged (%.1f%%)\n"
+                      % (cfg['l1'], cfg['l2'], cfg['bm'], len(rngs), nflag, 100*nflag/len(bars)))
+            Lc.append("**P&L (gross%s):** %d trades, %.1f%% win rate, **%+.2f**\n"
+                      % ((", spread %.2f/trade" % a.spread) if a.spread else "", pl['n'], pl['wr'], pl['total']))
+
+        open(a.ceiling_out, "w").write("\n".join(Lc) + "\n")
+        print("wrote %s" % a.ceiling_out)
+        for nm, nr, nf, p, r, f, pl in summary:
+            print("  %-22s ranges=%-3d prec=%.1f%% rec=%.1f%% F1=%.1f | trades=%-4d P&L=%+.2f" % (
+                nm, nr, p*100, r*100, f*100, pl['n'], pl['total']))
+
+    else:
+        # Write all settings together (detector + ceiling rows)
+        open(a.out, "w").write("\n".join(L) + "\n")
+        print("wrote %s" % a.out)
+        for nm, nr, nf, p, r, f, pl in summary:
+            print("  %-22s ranges=%-3d prec=%.1f%% rec=%.1f%% F1=%.1f | trades=%-4d P&L=%+.2f"
               % (nm, nr, p, r, f, pl['n'], pl['total']))
 
 if __name__ == "__main__":
