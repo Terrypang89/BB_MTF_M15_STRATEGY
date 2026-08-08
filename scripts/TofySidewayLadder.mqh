@@ -560,6 +560,25 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
 //| SL_state[LA] is stale. In Tofu_EA_Simple_V7 SL_Update is called  |
 //| inside the M15 gate before the Trade_Strategy dispatch.          |
 //+------------------------------------------------------------------+
+//+------------------------------------------------------------------+
+//| Trade_act codes, as consumed by Tofu_EA_Simple_V7.mq5 (line 462+) |
+//|   0  no action                                                    |
+//|   1  exit_sell AND entry_buy                                      |
+//|   2  exit_buy  AND entry_sell                                     |
+//|   3  no_exit, entry_buy      <- used here for a BUY from flat      |
+//|   4  no_exit, entry_sell     <- used here for a SELL from flat     |
+//|   5  exit_buy, no entry      <- used here for REVERSAL_DN          |
+//|   6  exit_sell, no entry     <- used here for REVERSAL_UP          |
+//|   7  exit_all                <- used here for the SIDEWAYS exit    |
+//|  11  exit_sell entry_buy with ATRSL                                |
+//|  12  exit_buy  entry_sell with ATRSL                               |
+//|                                                                    |
+//| TofyTrade_DMonly.mqh uses 1/2 for entries and 7 for every exit.     |
+//| Those are EQUIVALENT here because this strategy only enters when    |
+//| flat (so the exit half of 1/2 is a no-op) and only ever holds one   |
+//| side (so exit_all and exit_<side> close the same thing). The codes  |
+//| below are the precise ones - same behaviour, self-documenting.      |
+//+------------------------------------------------------------------+
 void Trade_Strategy(
    BB_MTF_Data_struct      &BB_datas[],
    ATRSLBUF_struct         &ATRSL1BUF,
@@ -635,14 +654,14 @@ void Trade_Strategy(
    //================================================================
    if(inLong && dm_down)
    {
-      Trade_act = 7;
+      Trade_act = 5;                           // exit_buy_no_entry
       Trade_info += " [LAD]REVERSAL_DN";
       SL_TradeClose(cur, px_now, "REVERSAL_DN");
       return;
    }
    if(inShort && dm_up)
    {
-      Trade_act = 7;
+      Trade_act = 6;                           // exit_sell_no_entry
       Trade_info += " [LAD]REVERSAL_UP";
       SL_TradeClose(cur, px_now, "REVERSAL_UP");
       return;
@@ -655,13 +674,13 @@ void Trade_Strategy(
    {
       if(dm_up)
       {
-         Trade_act = 1;                        // BUY
+         Trade_act = 3;                        // no_exit_entry_buy
          Trade_info += " [LAD]ENTRY_BUY";
          SL_TradeOpen(cur, px_now, "LONG");
       }
       else if(dm_down)
       {
-         Trade_act = 2;                        // SELL
+         Trade_act = 4;                        // no_exit_entry_sell
          Trade_info += " [LAD]ENTRY_SELL";
          SL_TradeOpen(cur, px_now, "SHORT");
       }
