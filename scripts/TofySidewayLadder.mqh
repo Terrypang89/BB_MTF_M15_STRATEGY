@@ -556,6 +556,11 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
             "] ws15:[", (int)BB_datas[1].BBW_stage[LA],
             "] ws30:[", (int)BB_datas[2].BBW_stage[LA], "]");
    }
+   //--- Draw the label rectangles lazily. iBarShift returns -1 in OnInit during a
+   //--- backtest because no history is loaded yet, so all 27 ranges were skipped.
+   //--- Called here, each range appears as soon as its bars exist. The ObjectFind
+   //--- guard inside makes repeat calls a no-op.
+   if(SL_DrawUserLabels) SL_DrawUserLabelRanges();
 }
 
 
