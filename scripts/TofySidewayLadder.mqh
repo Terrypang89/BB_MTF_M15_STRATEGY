@@ -156,7 +156,7 @@ bool SL_ShowFails = true;    // draw gray L0-A/L0-B labels for undetected bars
 //| ##################################################                |
 //+------------------------------------------------------------------+
 bool   SL_DrawUserLabels = false;   // draw the labelled ranges on the chart
-color  SL_LabelColor     = clrDarkSlateGray;
+color  SL_LabelColor     = clrMagenta;   // pink
 bool   SL_LabelFill      = true;
 
 //--- Draw each trade as a segment from entry to exit, tagged with its P&L.
@@ -350,6 +350,12 @@ void SL_DrawUserLabelRanges()
       datetime t1 = StringToTime(SL_LabelStart[i]);
       datetime t2 = StringToTime(SL_LabelEnd[i]);
       if(t1 <= 0 || t2 <= 0 || t2 <= t1) continue;
+
+      //--- Wait until the range has FULLY formed. Before that iBarShift returns the
+      //--- LATEST bar for a future timestamp, so b1 == b2 == 0, the high/low scan
+      //--- covers one bar, and the rectangle is built from the wrong bars. ObjectFind
+      //--- then locks that bad geometry in permanently.
+      if(iTime(_Symbol, PERIOD_M15, 0) <= t2) continue;
 
       string name = "SLLBL_" + IntegerToString(i + 1);
       if(ObjectFind(0, name) >= 0) continue;
