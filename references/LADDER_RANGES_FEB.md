@@ -37,10 +37,10 @@ Ranges are consecutive `state >= 2` bars, gaps of <= 1 bar(s) bridged, ranges sh
 | 26 | 2026.02.25 06:15 | 2026.02.25 17:45 | 47 |
 | 27 | 2026.02.27 01:45 | 2026.02.27 15:00 | 54 |
 
-**27 labelled ranges, 858 bars (46.9% of the month).**
+**27 labelled ranges, 858 bars (46.9% of the period).**
 
 
-## Detected ranges by setting
+## Results by setting
 
 
 ### A  L1=1 L2=0 brk=0
@@ -1437,9 +1437,3 @@ Labels with no detection at all: L1, L4, L12, L25
 | D  L1=0 L2=0 brk=2 | 59 | 869 | 67.3% | 68.2% | 67.7 | 83 | 42.2% | **-213.44** | -255.51 |
 | E  L1=3 L2=1 brk=2 | 45 | 626 | 67.6% | 49.3% | 57.0 | 85 | 32.9% | **-190.19** | -108.50 |
 | Z  TofySideway S_ (control) | 63 | 346 | 82.4% | 33.2% | 47.3 | 159 | 43.4% | **-70.74** | +344.53 |
-
-P&L is GROSS unless --spread was given. Detection quality (F1) and P&L are different questions - a better detector is not automatically a better exit rule. Compare against the DMONLY baseline of 1120 trades / +968.93 which used the TofySideway S_ flag, not the ladder.
-
-
-precision = flagged bars that are inside a label.  recall = labelled bars that were flagged.  A random detector firing at the same rate would score precision 46.9%.
-
