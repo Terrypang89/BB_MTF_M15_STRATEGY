@@ -155,9 +155,22 @@ bool SL_ShowFails = true;    // draw gray L0-A/L0-B labels for undetected bars
 //| forward, and never treat +415.36 as a target - it is headroom.    |
 //| ##################################################                |
 //+------------------------------------------------------------------+
-bool   SL_DrawUserLabels = false;   // draw the ranges on the chart
+bool   SL_DrawUserLabels = false;   // draw the labelled ranges on the chart
 color  SL_LabelColor     = clrDarkSlateGray;
 bool   SL_LabelFill      = true;
+
+//--- Draw each trade as a segment from entry to exit, tagged with its P&L.
+//--- Together with the range rectangles this reproduces on the chart what the
+//--- "Combined timeline" table in SIDEWAY_LABELS_CEILING_FEB.md shows:
+//---   shaded rectangle = a sideway range, flat, sitting out
+//---   green/red segment = a position, with its P&L
+//--- Prices are the M5 close at the signal bar, the same basis the Python
+//--- simulation uses, so the on-chart P&L matches the report.
+bool   SL_DrawTrades   = false;
+color  SL_WinColor     = clrLime;
+color  SL_LossColor    = clrRed;
+int    SL_TradeWidth   = 2;
+int    SL_TradeFont    = 8;
 
 //--- Hand-labelled sideway ranges from references/SIDEWAY_LABELS_FEB.md
 //--- Extend this array when a new month is labelled. Format "YYYY.MM.DD HH:MM".
@@ -234,6 +247,67 @@ bool SL_InUserLabel(datetime t)
       if(t1 > 0 && t2 > 0 && t >= t1 && t <= t2) return true;
    }
    return false;
+}
+
+
+//+------------------------------------------------------------------+
+//| Trade overlay: one segment per position, tagged with its P&L.    |
+//| State is held here so Trade_Strategy only has to report entries  |
+//| and exits.                                                       |
+//+------------------------------------------------------------------+
+datetime sl_tr_time  = 0;      // entry bar time, 0 = flat
+double   sl_tr_price = 0.0;
+string   sl_tr_dir   = "";
+int      sl_tr_seq   = 0;
+double   sl_tr_cum   = 0.0;    // running total, mirrors the report column
+
+void SL_TradeOpen(datetime t, double px, string dir)
+{
+   sl_tr_time = t; sl_tr_price = px; sl_tr_dir = dir;
+}
+
+void SL_TradeClose(datetime t, double px, string reason)
+{
+   if(!SL_DrawTrades || sl_tr_time == 0) { sl_tr_time = 0; return; }
+
+   double pnl = (sl_tr_dir == "LONG") ? (px - sl_tr_price) : (sl_tr_price - px);
+   sl_tr_cum += pnl;
+   sl_tr_seq++;
+
+   color col = (pnl > 0.0) ? SL_WinColor : SL_LossColor;
+   string base = "SLTR_" + IntegerToString(sl_tr_seq);
+
+   //--- the segment: entry price -> exit price
+   if(ObjectCreate(0, base, OBJ_TREND, 0, sl_tr_time, sl_tr_price, t, px))
+   {
+      ObjectSetInteger(0, base, OBJPROP_COLOR,      col);
+      ObjectSetInteger(0, base, OBJPROP_WIDTH,      SL_TradeWidth);
+      ObjectSetInteger(0, base, OBJPROP_RAY_RIGHT,  false);
+      ObjectSetInteger(0, base, OBJPROP_SELECTABLE, false);
+      ObjectSetInteger(0, base, OBJPROP_BACK,       false);
+      ObjectSetString (0, base, OBJPROP_TOOLTIP,
+                       "#" + IntegerToString(sl_tr_seq) + " " + sl_tr_dir +
+                       "  " + TimeToString(sl_tr_time, TIME_DATE|TIME_MINUTES) +
+                       " -> " + TimeToString(t, TIME_DATE|TIME_MINUTES) +
+                       "  " + reason +
+                       "  P&L " + DoubleToString(pnl, 2) +
+                       "  cum " + DoubleToString(sl_tr_cum, 2));
+   }
+
+   //--- P&L tag at the exit
+   string tag = base + "_T";
+   if(ObjectCreate(0, tag, OBJ_TEXT, 0, t, px))
+   {
+      ObjectSetString (0, tag, OBJPROP_TEXT,
+                       DoubleToString(pnl, 2) + " (" + DoubleToString(sl_tr_cum, 2) + ")");
+      ObjectSetInteger(0, tag, OBJPROP_COLOR,      col);
+      ObjectSetInteger(0, tag, OBJPROP_FONTSIZE,   SL_TradeFont);
+      ObjectSetInteger(0, tag, OBJPROP_ANCHOR,
+                       (sl_tr_dir == "LONG") ? ANCHOR_LOWER : ANCHOR_UPPER);
+      ObjectSetInteger(0, tag, OBJPROP_SELECTABLE, false);
+   }
+
+   sl_tr_time = 0;
 }
 
 //+------------------------------------------------------------------+
@@ -513,6 +587,7 @@ void Trade_Strategy(
    sl_lastBar = cur;
 
    //--- inputs
+   double px_now  = iClose(_Symbol, PERIOD_M5, 0);         // same basis as the report
    double dm      = BB_datas[1].BB_diffMid_Trend[LA];      // index 1 = M15, current
    int    sflag   = (int)BBTFImpact.sideway_selected[LA];  // TofySideway S_ (LA = current)
    int    ladder  = SL_state[LA];                          // ladder state for this bar
@@ -550,6 +625,7 @@ void Trade_Strategy(
       {
          Trade_act = 7;                       // exit_all
          Trade_info += " [LAD]SIDEWAYS_EXIT";
+         SL_TradeClose(cur, px_now, "SIDEWAYS");
       }
       return;   // sideway bar: never enter
    }
@@ -561,12 +637,14 @@ void Trade_Strategy(
    {
       Trade_act = 7;
       Trade_info += " [LAD]REVERSAL_DN";
+      SL_TradeClose(cur, px_now, "REVERSAL_DN");
       return;
    }
    if(inShort && dm_up)
    {
       Trade_act = 7;
       Trade_info += " [LAD]REVERSAL_UP";
+      SL_TradeClose(cur, px_now, "REVERSAL_UP");
       return;
    }
 
@@ -579,11 +657,13 @@ void Trade_Strategy(
       {
          Trade_act = 1;                        // BUY
          Trade_info += " [LAD]ENTRY_BUY";
+         SL_TradeOpen(cur, px_now, "LONG");
       }
       else if(dm_down)
       {
          Trade_act = 2;                        // SELL
          Trade_info += " [LAD]ENTRY_SELL";
+         SL_TradeOpen(cur, px_now, "SHORT");
       }
       // dm == 3 (sideways family) or dm == 0 (warmup) -> stay flat
    }
