@@ -261,23 +261,39 @@ string   sl_tr_dir   = "";
 int      sl_tr_seq   = 0;
 double   sl_tr_cum   = 0.0;    // running total, mirrors the report column
 
-void SL_TradeOpen(datetime t, double px, string dir)
+//+------------------------------------------------------------------+
+//| SL_TrackAct - the ONLY place trades are drawn.                   |
+//|                                                                  |
+//| Driven entirely by the Trade_act the strategy just produced, so   |
+//| the chart cannot drift from what the EA actually does:            |
+//|    3, 4      open a position                                      |
+//|    5, 6, 7   close one                                            |
+//|    0         nothing                                              |
+//| Call once, immediately before returning from Trade_Strategy.      |
+//+------------------------------------------------------------------+
+void SL_TrackAct(int act, datetime t, double px)
 {
-   sl_tr_time = t; sl_tr_price = px; sl_tr_dir = dir;
-}
+   //--- OPEN
+   if(act == 3 || act == 4)
+   {
+      sl_tr_time  = t;
+      sl_tr_price = px;
+      sl_tr_dir   = (act == 3) ? "LONG" : "SHORT";
+      return;
+   }
 
-void SL_TradeClose(datetime t, double px, string reason)
-{
+   //--- CLOSE
+   if(act != 5 && act != 6 && act != 7) return;   // 0 or anything else: hold
    if(!SL_DrawTrades || sl_tr_time == 0) { sl_tr_time = 0; return; }
 
    double pnl = (sl_tr_dir == "LONG") ? (px - sl_tr_price) : (sl_tr_price - px);
    sl_tr_cum += pnl;
    sl_tr_seq++;
 
-   color col = (pnl > 0.0) ? SL_WinColor : SL_LossColor;
-   string base = "SLTR_" + IntegerToString(sl_tr_seq);
+   string reason = (act == 5) ? "REVERSAL_DN" : (act == 6) ? "REVERSAL_UP" : "SIDEWAYS";
+   color  col    = (pnl > 0.0) ? SL_WinColor : SL_LossColor;
+   string base   = "SLTR_" + IntegerToString(sl_tr_seq);
 
-   //--- the segment: entry price -> exit price
    if(ObjectCreate(0, base, OBJ_TREND, 0, sl_tr_time, sl_tr_price, t, px))
    {
       ObjectSetInteger(0, base, OBJPROP_COLOR,      col);
@@ -289,12 +305,11 @@ void SL_TradeClose(datetime t, double px, string reason)
                        "#" + IntegerToString(sl_tr_seq) + " " + sl_tr_dir +
                        "  " + TimeToString(sl_tr_time, TIME_DATE|TIME_MINUTES) +
                        " -> " + TimeToString(t, TIME_DATE|TIME_MINUTES) +
-                       "  " + reason +
+                       "  act " + IntegerToString(act) + " " + reason +
                        "  P&L " + DoubleToString(pnl, 2) +
                        "  cum " + DoubleToString(sl_tr_cum, 2));
    }
 
-   //--- P&L tag at the exit
    string tag = base + "_T";
    if(ObjectCreate(0, tag, OBJ_TEXT, 0, t, px))
    {
@@ -644,8 +659,8 @@ void Trade_Strategy(
       {
          Trade_act = 7;                       // exit_all
          Trade_info += " [LAD]SIDEWAYS_EXIT";
-         SL_TradeClose(cur, px_now, "SIDEWAYS");
       }
+      SL_TrackAct((int)Trade_act, cur, px_now);
       return;   // sideway bar: never enter
    }
 
@@ -656,14 +671,14 @@ void Trade_Strategy(
    {
       Trade_act = 5;                           // exit_buy_no_entry
       Trade_info += " [LAD]REVERSAL_DN";
-      SL_TradeClose(cur, px_now, "REVERSAL_DN");
+      SL_TrackAct((int)Trade_act, cur, px_now);
       return;
    }
    if(inShort && dm_up)
    {
       Trade_act = 6;                           // exit_sell_no_entry
       Trade_info += " [LAD]REVERSAL_UP";
-      SL_TradeClose(cur, px_now, "REVERSAL_UP");
+      SL_TrackAct((int)Trade_act, cur, px_now);
       return;
    }
 
@@ -676,16 +691,17 @@ void Trade_Strategy(
       {
          Trade_act = 3;                        // no_exit_entry_buy
          Trade_info += " [LAD]ENTRY_BUY";
-         SL_TradeOpen(cur, px_now, "LONG");
       }
       else if(dm_down)
       {
          Trade_act = 4;                        // no_exit_entry_sell
          Trade_info += " [LAD]ENTRY_SELL";
-         SL_TradeOpen(cur, px_now, "SHORT");
       }
       // dm == 3 (sideways family) or dm == 0 (warmup) -> stay flat
    }
+   //--- ONE place the chart is updated, from whatever act was decided above
+   SL_TrackAct((int)Trade_act, cur, px_now);
+
    // In a position, same-direction dm, no sideway -> HOLD (act stays 0),
    // so the trade rides until a reversal or a sideway exit closes it.
    // This is what let DMONLY hold winners into trends.
