@@ -280,6 +280,9 @@ void OnDeinit(const int reason)
 #ifdef HAS_TofyVerifySideway
    VS_PrintSummary();
 #endif
+#ifdef HAS_TOFYSIDEWAY_LADDER
+   SL_PrintSummary();
+#endif
    Print("Deinit from reason:", reason);
   }
 

@@ -261,6 +261,14 @@ string   sl_tr_dir   = "";
 int      sl_tr_seq   = 0;
 double   sl_tr_cum   = 0.0;    // running total, mirrors the report column
 
+int    sl_rect_count = 0;    // label rectangles actually drawn
+int    sl_win_count  = 0;    // closed trades with pnl > 0
+double sl_win_sum    = 0.0;
+double sl_loss_sum   = 0.0;
+int    sl_r_sideways = 0;    // closes by act 7
+int    sl_r_rev_dn   = 0;    // closes by act 5
+int    sl_r_rev_up   = 0;    // closes by act 6
+
 //+------------------------------------------------------------------+
 //| SL_TrackAct - the ONLY place trades are drawn.                   |
 //|                                                                  |
@@ -284,11 +292,15 @@ void SL_TrackAct(int act, datetime t, double px)
 
    //--- CLOSE
    if(act != 5 && act != 6 && act != 7) return;   // 0 or anything else: hold
-   if(!SL_DrawTrades || sl_tr_time == 0) { sl_tr_time = 0; return; }
-
    double pnl = (sl_tr_dir == "LONG") ? (px - sl_tr_price) : (sl_tr_price - px);
    sl_tr_cum += pnl;
+   if(pnl > 0.0) { sl_win_count++; sl_win_sum += pnl; }
+   else          { sl_loss_sum += pnl; }
+   if(act == 7)      sl_r_sideways++;
+   else if(act == 5) sl_r_rev_dn++;
+   else if(act == 6) sl_r_rev_up++;
    sl_tr_seq++;
+   if(!SL_DrawTrades || sl_tr_time == 0) { sl_tr_time = 0; return; }
 
    string reason = (act == 5) ? "REVERSAL_DN" : (act == 6) ? "REVERSAL_UP" : "SIDEWAYS";
    color  col    = (pnl > 0.0) ? SL_WinColor : SL_LossColor;
@@ -368,6 +380,7 @@ void SL_DrawUserLabelRanges()
       ObjectSetString (0, name, OBJPROP_TOOLTIP,
                        "LABEL L" + IntegerToString(i + 1) + "  " +
                        SL_LabelStart[i] + " -> " + SL_LabelEnd[i]);
+      sl_rect_count++;
    }
 }
 
@@ -710,4 +723,34 @@ void Trade_Strategy(
    // In a position, same-direction dm, no sideway -> HOLD (act stays 0),
    // so the trade rides until a reversal or a sideway exit closes it.
    // This is what let DMONLY hold winners into trends.
+}
+
+//+------------------------------------------------------------------+
+//| SL_PrintSummary - call from OnDeinit.                            |
+//| Reports what the run actually did, so a backtest can be checked  |
+//| without counting objects on the chart.                           |
+//+------------------------------------------------------------------+
+void SL_PrintSummary()
+{
+   int trades = sl_tr_seq;
+   int losses = trades - sl_win_count;
+   double wr  = (trades > 0) ? 100.0 * sl_win_count / trades : 0.0;
+   double pf  = (sl_loss_sum != 0.0) ? sl_win_sum / MathAbs(sl_loss_sum) : 0.0;
+
+   Print("[LADDER_SUMMARY] mode:[", SL_ExitMode,
+         "] L1m:[", SL_L1Mode, "] L2m:[", SL_L2Mode,
+         "] brkmode:[", SL_BreakoutMode, "]");
+   Print("[LADDER_SUMMARY] label rectangles drawn:[", sl_rect_count,
+         "] of [", SL_LABEL_COUNT, "]");
+   Print("[LADDER_SUMMARY] trades:[", trades,
+         "] wins:[", sl_win_count,
+         "] losses:[", losses,
+         "] win_rate:[", DoubleToString(wr, 1), "%]");
+   Print("[LADDER_SUMMARY] gross_pnl:[", DoubleToString(sl_tr_cum, 2),
+         "] win_sum:[", DoubleToString(sl_win_sum, 2),
+         "] loss_sum:[", DoubleToString(sl_loss_sum, 2),
+         "] profit_factor:[", DoubleToString(pf, 2), "]");
+   Print("[LADDER_SUMMARY] exits - sideways:[", sl_r_sideways,
+         "] reversal_dn:[", sl_r_rev_dn,
+         "] reversal_up:[", sl_r_rev_up, "]");
 }
