@@ -31,7 +31,12 @@ SETTINGS = OrderedDict([
     ("Z  TofySideway S_ (control)", dict(l1=1, l2=0, bm=2, use_sflag=True)),
 ])
 
-# Ceiling rows: P and N are NOT detectors; they bracket what any detector could achieve.
+# ----------------------------------------------------------------------------
+# Reference bounds. These are NOT ladder settings - they bracket what any
+# detector could achieve. P uses the hand labels directly (a hindsight ceiling);
+# N removes the sideway exit entirely (the floor). With --ceiling-out they are
+# written to their own file so they do not sit among the ladder results.
+# ----------------------------------------------------------------------------
 CEILING_SETTINGS = OrderedDict([
     ("P  PERFECT - the labels themselves", dict(l1=1, l2=0, bm=2, use_labels=True)),
     ("N  NO sideway exit at all", dict(l1=1, l2=0, bm=2, use_none=True)),
@@ -314,72 +319,44 @@ def parse_labels(path):
         if m: out.append((m.group(1), m.group(2)))
     return out
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("log")
-    ap.add_argument("--month", default=None, help="prefix filter e.g. 2026.02")
-    ap.add_argument("--labels", default=None, help="markdown file with a label table")
-    ap.add_argument("--min-bars", type=int, default=2, help="drop ranges shorter than this")
-    ap.add_argument("--gap", type=int, default=1, help="bridge gaps of at most N bars")
-    ap.add_argument("--spread", type=float, default=0.0, help="cost per trade")
-    ap.add_argument("--timeline", action="store_true",
-                    help="emit a combined chronological table of trades and detected ranges")
-    ap.add_argument("--out", default="LADDER_RANGES.md")
-    ap.add_argument("--ceiling-out", default=None,
-                    help="write the label-derived ceiling (P+N) to this file instead of mixing them in")
-    a = ap.parse_args()
-
-    D, PX, SF = parse(a.log)
-    allbars = sorted(D['ws15'])
-    bars = [t for t in allbars if (a.month is None or t.startswith(a.month))]
-    if not bars:
-        print("no bars matched --month", a.month); return
-
-    labels = parse_labels(a.labels) if a.labels else []
-    lblset = set()
-    for s, e in labels:
-        for t in bars:
-            if s <= t <= e: lblset.add(t)
-
-    L = []
-    L.append("# Ladder detected sideway ranges\n")
+def build_report(D, PX, SF, bars, labels, lblset, settings, a, title, note):
+    """Generate one markdown report for a set of settings."""
+    L = [title, ""]
     L.append("Input: `%s`   bars: %d%s\n" % (a.log, len(bars),
              ("   month filter: %s" % a.month) if a.month else ""))
     L.append("Ranges are consecutive `state >= 2` bars, gaps of <= %d bar(s) bridged, "
              "ranges shorter than %d bars dropped.\n" % (a.gap, a.min_bars))
+    if note:
+        L.append(note + "\n")
 
     if labels:
         L.append("\n## Hand-labelled ranges (target)\n")
         L.append("| # | start | end | bars |")
         L.append("|---|---|---|---|")
-        idx = {t: i for i, t in enumerate(bars)}
         for i, (s, e) in enumerate(labels, 1):
             n = sum(1 for t in bars if s <= t <= e)
             L.append("| %d | %s | %s | %d |" % (i, s, e, n))
-        L.append("\n**%d labelled ranges, %d bars (%.1f%% of the month).**\n"
+        L.append("\n**%d labelled ranges, %d bars (%.1f%% of the period).**\n"
                  % (len(labels), len(lblset), 100*len(lblset)/len(bars)))
 
-    L.append("\n## Detected ranges by setting\n")
+    L.append("\n## Results by setting\n")
     summary = []
-    for name, cfg in SETTINGS.items():
+    for name, cfg in settings.items():
         st = run(D, PX, SF=SF, LBLSET=lblset, **cfg)
         rngs = to_ranges(st, bars, a.min_bars, a.gap)
         nflag = sum(1 for t in bars if st.get(t, 0) >= 2)
         trades, pl = simulate_pnl(D, PX, st, bars, a.spread)
-        if labels:
-            tp = sum(1 for t in bars if st.get(t,0) >= 2 and t in lblset)
-            fp = nflag - tp
-            fn = len(lblset) - tp
-            prec = 100*tp/nflag if nflag else 0
-            rec  = 100*tp/len(lblset) if lblset else 0
-            f1   = 2*prec*rec/(prec+rec) if prec+rec else 0
-            summary.append((name, len(rngs), nflag, prec, rec, f1, pl))
-        else:
-            summary.append((name, len(rngs), nflag, 0, 0, 0, pl))
+        prec = rec = f1 = 0.0
+        if labels and nflag:
+            tp = sum(1 for t in bars if st.get(t, 0) >= 2 and t in lblset)
+            prec = 100.0*tp/nflag
+            rec = 100.0*tp/len(lblset) if lblset else 0.0
+            f1 = 2*prec*rec/(prec+rec) if prec+rec else 0.0
+        summary.append((name, len(rngs), nflag, prec, rec, f1, pl))
 
         L.append("\n### %s\n" % name)
         L.append("`l1=%d  l2=%d  bm=%d`   -   %d ranges, %d bars flagged (%.1f%%)\n"
-                 % (cfg['l1'], cfg['l2'], cfg['bm'], len(rngs), nflag, 100*nflag/len(bars)))
+                 % (cfg['l1'], cfg['l2'], cfg['bm'], len(rngs), nflag, 100.0*nflag/len(bars)))
         L.append("**P&L (gross%s):** %d trades, %.1f%% win rate, **%+.2f**\n"
                  % ((", spread %.2f/trade" % a.spread) if a.spread else "",
                     pl['n'], pl['wr'], pl['total']))
@@ -396,7 +373,7 @@ def main():
                 if ok: nmatch += 1
                 row += " %d/%d | %s |" % (hit, n, mtxt if ok else "**NO MATCH**")
             L.append(row)
-        if labels:
+        if labels and rngs:
             L.append("\n%d of %d detected ranges overlap a label; %d are false positives."
                      % (nmatch, len(rngs), len(rngs) - nmatch))
             covered = set()
@@ -417,60 +394,75 @@ def main():
         if a.timeline:
             L += combined_timeline(trades, rngs, bars, PX, labels if labels else None)
 
-    if labels:
-        L.append("\n## Summary\n")
-        L.append("| setting | ranges | bars | precision | recall | F1 | trades | win% | **P&L** | 6+ bar P&L |")
-        L.append("|---|---|---|---|---|---|---|---|---|---|")
-        for nm, nr, nf, p, r, f, pl in summary:
-            L.append("| %s | %d | %d | %.1f%% | %.1f%% | %.1f | %d | %.1f%% | **%+.2f** | %+.2f |"
-                     % (nm, nr, nf, p, r, f, pl['n'], pl['wr'], pl['total'], pl['buckets']['6+'][1]))
-        L.append("\nP&L is GROSS unless --spread was given. Detection quality (F1) and P&L "
-                 "are different questions - a better detector is not automatically a better "
-                 "exit rule. Compare against the DMONLY baseline of 1120 trades / +968.93 "
-                 "which used the TofySideway S_ flag, not the ladder.\n")
-        L.append("\nprecision = flagged bars that are inside a label.  "
-                 "recall = labelled bars that were flagged.  "
-                 "A random detector firing at the same rate would score "
-                 "precision %.1f%%.\n" % (100*len(lblset)/len(bars)))
+    L.append("\n## Summary\n")
+    L.append("| setting | ranges | bars | precision | recall | F1 | trades | win% | **P&L** | 6+ bar P&L |")
+    L.append("|---|---|---|---|---|---|---|---|---|---|")
+    for nm, nr, nf, p, r, f, pl in summary:
+        L.append("| %s | %d | %d | %.1f%% | %.1f%% | %.1f | %d | %.1f%% | **%+.2f** | %+.2f |"
+                 % (nm, nr, nf, p, r, f, pl['n'], pl['wr'], pl['total'], pl['buckets']['6+'][1]))
+    return L, summary
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("log")
+    ap.add_argument("--month", default=None, help="prefix filter e.g. 2026.02")
+    ap.add_argument("--labels", default=None, help="markdown file with a label table")
+    ap.add_argument("--min-bars", type=int, default=2, help="drop ranges shorter than this")
+    ap.add_argument("--gap", type=int, default=1, help="bridge gaps of at most N bars")
+    ap.add_argument("--spread", type=float, default=0.0, help="cost per trade")
+    ap.add_argument("--timeline", action="store_true",
+                    help="emit a combined chronological table of trades and detected ranges")
+    ap.add_argument("--out", default="LADDER_RANGES.md")
+    ap.add_argument("--ceiling-out", default=None,
+                    help="write the label-derived ceiling (P) and no-exit floor (N) to this "
+                         "file instead of mixing them in with the ladder settings")
+    a = ap.parse_args()
+
+    D, PX, SF = parse(a.log)
+    allbars = sorted(D['ws15'])
+    bars = [t for t in allbars if (a.month is None or t.startswith(a.month))]
+    if not bars:
+        print("no bars matched --month", a.month); return
+
+    labels = parse_labels(a.labels) if a.labels else []
+    lblset = set()
+    for s, e in labels:
+        for t in bars:
+            if s <= t <= e: lblset.add(t)
 
     if a.ceiling_out:
-        # Write only detector settings (A-E + Z) to the main report
-        open(a.out, "w").write("\n".join(L) + "\n")
-        print("wrote %s" % a.out)
-        for nm, nr, nf, p, r, f, pl in summary:
-            print("  %-22s ranges=%-3d prec=%.1f%% rec=%.1f%% F1=%.1f | trades=%-4d P&L=%+.2f" % (
-                nm, nr, p*100, r*100, f*100, pl['n'], pl['total']))
-
-        # Write ceiling rows separately
-        Lc = ["# Ceiling and floor — what perfect sideway detection is worth", ""]
-        Lc.append("Input: `%s`   bars: %d%s\n" % (a.log, len(bars), ("   month filter: %s" % a.month) if a.month else ""))
-        Lc.append("Ranges are consecutive `state >= 2` bars, gaps of <= %d bar(s) bridged, "
-                   "ranges shorter than %d bars dropped.\n" % (a.gap, a.min_bars))
-        for name, cfg in CEILING_SETTINGS.items():
-            st = run(D, PX, l1=cfg['l1'], l2=cfg['l2'], bm=cfg['bm'],
-                     use_labels=cfg.get('use_labels', False), use_none=cfg.get('use_none', False))
-            rngs = to_ranges(st, bars, a.min_bars, a.gap)
-            nflag = sum(1 for t in bars if st.get(t, 0) >= 2)
-            trades, pl = simulate_pnl(D, PX, st, bars, a.spread)
-            Lc.append("\n### %s\n" % name)
-            Lc.append("`l1=%d  l2=%d  bm=%d`   -   %d ranges, %d bars flagged (%.1f%%)\n"
-                      % (cfg['l1'], cfg['l2'], cfg['bm'], len(rngs), nflag, 100*nflag/len(bars)))
-            Lc.append("**P&L (gross%s):** %d trades, %.1f%% win rate, **%+.2f**\n"
-                      % ((", spread %.2f/trade" % a.spread) if a.spread else "", pl['n'], pl['wr'], pl['total']))
-
-        open(a.ceiling_out, "w").write("\n".join(Lc) + "\n")
-        print("wrote %s" % a.ceiling_out)
-        for nm, nr, nf, p, r, f, pl in summary:
-            print("  %-22s ranges=%-3d prec=%.1f%% rec=%.1f%% F1=%.1f | trades=%-4d P&L=%+.2f" % (
-                nm, nr, p*100, r*100, f*100, pl['n'], pl['total']))
-
+        ladder_set, ceil_set = SETTINGS, CEILING_SETTINGS
     else:
-        # Write all settings together (detector + ceiling rows)
-        open(a.out, "w").write("\n".join(L) + "\n")
-        print("wrote %s" % a.out)
-        for nm, nr, nf, p, r, f, pl in summary:
-            print("  %-22s ranges=%-3d prec=%.1f%% rec=%.1f%% F1=%.1f | trades=%-4d P&L=%+.2f"
+        ladder_set = OrderedDict(list(SETTINGS.items()) + list(CEILING_SETTINGS.items()))
+        ceil_set = None
+
+    L, summary = build_report(
+        D, PX, SF, bars, labels, lblset, ladder_set, a,
+        "# Ladder detected sideway ranges",
+        None if ceil_set else None)
+    open(a.out, "w").write("\n".join(L) + "\n")
+    print("wrote %s" % a.out)
+    for nm, nr, nf, p, r, f, pl in summary:
+        print("  %-30s ranges=%-3d prec=%.1f%% rec=%.1f%% F1=%.1f | trades=%-4d P&L=%+.2f"
               % (nm, nr, p, r, f, pl['n'], pl['total']))
+
+    if ceil_set:
+        note = ("> **These two rows are NOT detector settings.** They bracket what any\n"
+                "> detector could achieve on this period.\n"
+                ">\n"
+                "> - **P** uses the hand labels directly as the sideway signal. The labels are\n"
+                ">   hindsight, so this is a **ceiling, not a strategy** - it is not tradeable.\n"
+                "> - **N** removes the sideway exit entirely - the floor.\n"
+                ">\n"
+                "> Every real detector lands between them. See `LADDER_RANGES_FEB.md` for those.")
+        L2, sum2 = build_report(
+            D, PX, SF, bars, labels, lblset, ceil_set, a,
+            "# Ceiling and floor — what perfect sideway detection is worth", note)
+        open(a.ceiling_out, "w").write("\n".join(L2) + "\n")
+        print("wrote %s" % a.ceiling_out)
+        for nm, nr, nf, p, r, f, pl in sum2:
+            print("  %-30s ranges=%-3d prec=%.1f%% rec=%.1f%% F1=%.1f | trades=%-4d P&L=%+.2f"
+                  % (nm, nr, p, r, f, pl['n'], pl['total']))
 
 if __name__ == "__main__":
     main()
