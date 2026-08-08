@@ -54,7 +54,7 @@ double CL_NEAR      = 10.5;     // 10.0 rejected clus1 = 10.1 by 0.1 and broke
 //+------------------------------------------------------------------+
 //| TRADE STRATEGY (optional)                                        |
 //|                                                                  |
-//| Trade_Strategy_Ladder() below is DMONLY with one substitution:    |
+//| Trade_Strategy() below is DMONLY with one substitution:    |
 //| the sideways exit fires on the LADDER (SL_state[LA] >= 2) instead |
 //| of the TofySideway S_ flag. Everything else - entries, reversals, |
 //| priority order, the once-per-bar guard - is identical to          |
@@ -82,6 +82,7 @@ bool   SL_UseTradeStrategy = false;   // off by default - changes nothing until 
 //---   1 = TofySideway only     sideway_selected[LA] > 0   (= plain DMONLY)
 //---   2 = BOTH must agree      fewest exits, longest holds
 //---   3 = EITHER fires         most exits
+//---   4 = HAND LABELS          hindsight ceiling, NOT tradeable
 int    SL_ExitMode = 0;
 
 bool   SL_UseH1     = false;    // measured to DEGRADE the ladder; off by default
@@ -131,6 +132,155 @@ double SL_diffbbw_m30 = 1.0;    // W30 threshold
 
 //--- add near the other settings
 bool SL_ShowFails = true;    // draw gray L0-A/L0-B labels for undetected bars
+
+
+//+------------------------------------------------------------------+
+//| HAND-LABELLED SIDEWAY RANGES (visual overlay + optional signal)  |
+//|                                                                  |
+//| The ranges from references/SIDEWAY_LABELS_FEB.md.                |
+//|                                                                  |
+//| TWO uses, both opt-in:                                            |
+//|   SL_DrawUserLabels  - draw them as rectangles behind the candles |
+//|   SL_ExitMode == 4   - use them AS the sideway signal             |
+//|                                                                  |
+//| MEASURED (February, DMONLY entries, gross):                       |
+//|   labels as the signal   58 trades  +415.36   <- CEILING          |
+//|   best ladder setting    64 trades   -66.13                       |
+//|   TofySideway S_ flag   159 trades   -70.74                       |
+//|   no sideway exit       114 trades  -636.37   <- FLOOR            |
+//|                                                                   |
+//| ############ THE LABELS ARE HINDSIGHT ############                |
+//| SL_ExitMode 4 is NOT TRADEABLE. It knows the answer in advance.   |
+//| It exists only to measure the ceiling on a backtest. Never run it |
+//| forward, and never treat +415.36 as a target - it is headroom.    |
+//| ##################################################                |
+//+------------------------------------------------------------------+
+bool   SL_DrawUserLabels = false;   // draw the ranges on the chart
+color  SL_LabelColor     = clrDarkSlateGray;
+bool   SL_LabelFill      = true;
+
+//--- Hand-labelled sideway ranges from references/SIDEWAY_LABELS_FEB.md
+//--- Extend this array when a new month is labelled. Format "YYYY.MM.DD HH:MM".
+#define SL_LABEL_COUNT 27
+string SL_LabelStart[SL_LABEL_COUNT] = {
+   "2026.02.02 15:00",   // L1
+   "2026.02.03 13:30",   // L2
+   "2026.02.04 08:30",   // L3
+   "2026.02.05 08:30",   // L4
+   "2026.02.06 09:40",   // L5
+   "2026.02.06 20:30",   // L6
+   "2026.02.09 06:15",   // L7
+   "2026.02.10 03:45",   // L8
+   "2026.02.11 07:30",   // L9
+   "2026.02.11 20:45",   // L10
+   "2026.02.12 03:45",   // L11
+   "2026.02.12 21:45",   // L12
+   "2026.02.13 06:45",   // L13
+   "2026.02.13 23:45",   // L14
+   "2026.02.16 13:15",   // L15
+   "2026.02.17 10:45",   // L16
+   "2026.02.17 19:25",   // L17
+   "2026.02.18 08:45",   // L18
+   "2026.02.19 01:45",   // L19
+   "2026.02.19 14:45",   // L20
+   "2026.02.19 21:30",   // L21
+   "2026.02.20 12:45",   // L22
+   "2026.02.23 06:45",   // L23
+   "2026.02.24 07:00",   // L24
+   "2026.02.24 21:30",   // L25
+   "2026.02.25 06:15",   // L26
+   "2026.02.27 01:45"    // L27
+};
+string SL_LabelEnd[SL_LABEL_COUNT] = {
+   "2026.02.03 01:00",   // L1
+   "2026.02.04 02:00",   // L2
+   "2026.02.04 16:15",   // L3
+   "2026.02.05 21:15",   // L4
+   "2026.02.06 13:00",   // L5
+   "2026.02.06 23:45",   // L6
+   "2026.02.09 16:30",   // L7
+   "2026.02.11 01:15",   // L8
+   "2026.02.11 11:30",   // L9
+   "2026.02.11 23:45",   // L10
+   "2026.02.12 18:00",   // L11
+   "2026.02.13 03:00",   // L12
+   "2026.02.13 15:45",   // L13
+   "2026.02.16 04:15",   // L14
+   "2026.02.17 01:45",   // L15
+   "2026.02.17 15:30",   // L16
+   "2026.02.18 03:45",   // L17
+   "2026.02.18 14:45",   // L18
+   "2026.02.19 07:15",   // L19
+   "2026.02.19 16:45",   // L20
+   "2026.02.20 07:45",   // L21
+   "2026.02.20 14:45",   // L22
+   "2026.02.23 16:15",   // L23
+   "2026.02.24 14:15",   // L24
+   "2026.02.25 02:45",   // L25
+   "2026.02.25 17:45",   // L26
+   "2026.02.27 15:00"    // L27
+};
+
+//+------------------------------------------------------------------+
+//| Is this bar inside a hand-labelled range?                        |
+//| Used only when SL_ExitMode == 4. See the hindsight warning above.|
+//+------------------------------------------------------------------+
+bool SL_InUserLabel(datetime t)
+{
+   for(int i = 0; i < SL_LABEL_COUNT; i++)
+   {
+      datetime t1 = StringToTime(SL_LabelStart[i]);
+      datetime t2 = StringToTime(SL_LabelEnd[i]);
+      if(t1 > 0 && t2 > 0 && t >= t1 && t <= t2) return true;
+   }
+   return false;
+}
+
+//+------------------------------------------------------------------+
+//| Draw the labelled ranges. Call ONCE (OnInit, or guarded by a     |
+//| static flag) - not per bar.                                      |
+//+------------------------------------------------------------------+
+void SL_DrawUserLabelRanges()
+{
+   if(!SL_DrawUserLabels) return;
+
+   for(int i = 0; i < SL_LABEL_COUNT; i++)
+   {
+      datetime t1 = StringToTime(SL_LabelStart[i]);
+      datetime t2 = StringToTime(SL_LabelEnd[i]);
+      if(t1 <= 0 || t2 <= 0 || t2 <= t1) continue;
+
+      string name = "SLLBL_" + IntegerToString(i + 1);
+      if(ObjectFind(0, name) >= 0) continue;
+
+      int b1 = iBarShift(_Symbol, PERIOD_M15, t2, false);   // newer = smaller shift
+      int b2 = iBarShift(_Symbol, PERIOD_M15, t1, false);   // older = larger shift
+      if(b1 < 0 || b2 < 0 || b2 < b1) continue;
+
+      //--- scan bars directly. iHighest/iLowest are ambiguous here because
+      //--- mql4compat.mqh declares int-typed overloads alongside the MQL5
+      //--- built-ins, so the compiler cannot resolve the call.
+      double hi = 0.0, lo = 0.0;
+      for(int b = b1; b <= b2; b++)
+      {
+         double h = iHigh(_Symbol, PERIOD_M15, b);
+         double l = iLow (_Symbol, PERIOD_M15, b);
+         if(h <= 0.0 || l <= 0.0) continue;
+         if(hi == 0.0 || h > hi) hi = h;
+         if(lo == 0.0 || l < lo) lo = l;
+      }
+      if(hi <= 0.0 || lo <= 0.0 || hi <= lo) continue;
+
+      if(!ObjectCreate(0, name, OBJ_RECTANGLE, 0, t1, lo, t2, hi)) continue;
+      ObjectSetInteger(0, name, OBJPROP_COLOR,      SL_LabelColor);
+      ObjectSetInteger(0, name, OBJPROP_FILL,       SL_LabelFill);
+      ObjectSetInteger(0, name, OBJPROP_BACK,       true);
+      ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+      ObjectSetString (0, name, OBJPROP_TOOLTIP,
+                       "LABEL L" + IntegerToString(i + 1) + "  " +
+                       SL_LabelStart[i] + " -> " + SL_LabelEnd[i]);
+   }
+}
 
 //--- ladder state history: [LA]=current, ages toward [LA_4]
 int SL_state[5];
@@ -321,14 +471,14 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
 
 
 //+------------------------------------------------------------------+
-//| Trade_Strategy_Ladder                                            |
+//| Trade_Strategy                                            |
 //|                                                                  |
 //| SAME SIGNATURE as TofyTrade6 / TofyTrade_DMonly Trade_Strategy,  |
 //| but a DIFFERENT NAME so both can be included without colliding.  |
 //| Dispatch from the EA:                                            |
 //|                                                                  |
 //|     if(SL_UseTradeStrategy)                                      |
-//|        Trade_Strategy_Ladder( ...same args... );                 |
+//|        Trade_Strategy( ...same args... );                 |
 //|     else                                                         |
 //|        Trade_Strategy( ...same args... );                        |
 //|                                                                  |
@@ -336,7 +486,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
 //| SL_state[LA] is stale. In Tofu_EA_Simple_V7 SL_Update is called  |
 //| inside the M15 gate before the Trade_Strategy dispatch.          |
 //+------------------------------------------------------------------+
-void Trade_Strategy_Ladder(
+void Trade_Strategy(
    BB_MTF_Data_struct      &BB_datas[],
    ATRSLBUF_struct         &ATRSL1BUF,
    BB_MTF_Impact_struct    &BBTFImpact,
@@ -375,6 +525,7 @@ void Trade_Strategy_Ladder(
    else if(SL_ExitMode == 1) sw = sw_flag;
    else if(SL_ExitMode == 2) sw = (sw_flag && sw_ladder);
    else if(SL_ExitMode == 3) sw = (sw_flag || sw_ladder);
+   else if(SL_ExitMode == 4) sw = SL_InUserLabel(cur);   // HINDSIGHT - ceiling only
 
    bool dm_up   = (dm == 1.0 || dm == 5.0);
    bool dm_down = (dm == 2.0 || dm == 4.0);
