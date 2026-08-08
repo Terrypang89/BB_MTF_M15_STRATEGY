@@ -124,6 +124,9 @@ input bool               Verify_Label_Ena         = true;
 input bool               Verify_Log_Ena           = true;
 input bool               Ladder_Label_Ena         = true;
 input bool               Ladder_Log_Ena           = false;
+  input bool               Ladder_UserLabel_Ena     = false;
+  input bool               Ladder_Trade_Draw_Ena    = false;
+  input int                Ladder_Exit_Mode         = 0;
 
 // #define TF_ANUM 7 // timeframe array number, 0,1,2,3,4,5,6,7
 // #define LA 4 // latest array number
@@ -187,6 +190,10 @@ int OnInit()
    SL_Draw       = Ladder_Label_Ena;  // TofySidewayLadder.mqh chart labels
    SL_WriteLog   = Ladder_Log_Ena;    // TofySidewayLadder.mqh [LADDER] log lines
 #endif
+   SL_DrawUserLabels = Ladder_UserLabel_Ena;  // draw the SIDEWAY_LABELS_FEB ranges
+   SL_DrawTrades     = Ladder_Trade_Draw_Ena; // draw each trade as a segment + P&L
+   SL_ExitMode       = Ladder_Exit_Mode;      // 0 ladder 1 S_flag 2 both 3 either 4 labels
+   SL_DrawUserLabelRanges();                  // draws 27 rectangles; no-op when toggle is false
    // SL_DiffBBWMode = Ladder_DiffBBW_Mode;    // in OnInit
    //Stats_Init();
    TIME_CURRENT=TimeCurrent();
