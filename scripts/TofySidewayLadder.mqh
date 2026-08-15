@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "38.14"
+#property version   "38.15"
 
 #define HAS_TOFYSIDEWAY_LADDER
 //+------------------------------------------------------------------+
@@ -155,7 +155,7 @@ bool SL_ShowFails = true;    // draw gray L0-A/L0-B labels for undetected bars
 //| forward, and never treat +415.36 as a target - it is headroom.    |
 //| ##################################################                |
 //+------------------------------------------------------------------+
-bool   SL_DrawUserLabels = false;   // draw the labelled ranges on the chart
+bool   SL_DrawUserLabels = true;   // draw the labelled ranges on the chart
 color  SL_LabelColor     = clrDarkSlateGray;   // pink
 bool   SL_LabelFill      = true;
 
@@ -166,7 +166,7 @@ bool   SL_LabelFill      = true;
 //---   green/red segment = a position, with its P&L
 //--- Prices are the M5 close at the signal bar, the same basis the Python
 //--- simulation uses, so the on-chart P&L matches the report.
-bool   SL_DrawTrades   = false;
+bool   SL_DrawTrades   = true;
 color  SL_WinColor     = clrLime;
 color  SL_LossColor    = clrRed;
 int    SL_TradeWidth   = 2;
@@ -409,9 +409,18 @@ void SL_DrawUserLabelRanges()
 //|   ladder L1=1 L2=0 brk=2   857 bars, 57 ranges, 79 trades, -131  |
 //|   ladder + M30 latch       1072 bars, 60 ranges, 68 trades, +57  |
 //+------------------------------------------------------------------+
-bool   SL_DrawLadderLabels = false;      // aqua marks where the ladder says sideway
+bool   SL_DrawLadderLabels = true;      // aqua marks where the ladder says sideway
 color  SL_LadderColor     = clrAqua;
 int    SL_LadderFont      = 7;
+
+//--- Virtual trade labels. Same OpenB / CloseB / OpenS / CloseS wording the EA
+//--- writes into TRADE_comment, so the two virtual runs read like real ones.
+//---   PINK  = the USER-label run
+//---   WHITE = the ladder run
+bool   SL_DrawVirtualTrades = true;
+color  SL_UserTradeColor    = clrMagenta;   // pink  - user labels
+color  SL_LaddTradeColor    = clrWhite;     // white - ladder
+int    SL_VTradeFont        = 8;
 
 //--- virtual sim state: [0] = USER labels, [1] = ladder
 datetime sv_time[2]  = {0, 0};
@@ -457,32 +466,103 @@ void SL_VirtualStep(int which, bool sw, double dm, datetime t, double px)
    bool dm_up   = (dm == 1.0 || dm == 5.0);
    bool dm_down = (dm == 2.0 || dm == 4.0);
    bool inpos   = (sv_time[which] != 0);
+   bool inLong  = (inpos && sv_dir[which] == "LONG");
+   bool inShort = (inpos && sv_dir[which] == "SHORT");
 
-   //--- exits
-   if(inpos)
+   //--- Decide Trade_act exactly as Trade_Strategy does, so the virtual runs
+   //--- follow the same rules the real strategy would.
+   //---   7 exit_all        3 no_exit_entry_buy   4 no_exit_entry_sell
+   //---   5 exit_buy        6 exit_sell           0 hold
+   int act = 0;
+   if(sw)
    {
-      bool close_it = false;
-      if(sw) close_it = true;
-      else if(sv_dir[which] == "LONG"  && dm_down) close_it = true;
-      else if(sv_dir[which] == "SHORT" && dm_up)   close_it = true;
+      if(inpos) act = 7;                       // sideway: close everything
+   }
+   else if(inLong  && dm_down) act = 5;
+   else if(inShort && dm_up)   act = 6;
+   else if(!inpos)
+   {
+      if(dm_up)        act = 3;
+      else if(dm_down) act = 4;
+   }
+   if(act == 0) return;
 
-      if(close_it)
+   //--- Build the comment the same way the EA does for each act, so the chart
+   //--- label reads like a real trade line: CloseB, OpenS, CloseS-OpenB, ...
+   string cmt = "";
+
+   //--- closes
+   if(act == 7 || act == 5 || act == 6)
+   {
+      if(inLong  && (act == 7 || act == 5)) cmt = "CloseB";
+      if(inShort && (act == 7 || act == 6)) cmt = "CloseS";
+
+      double pnl = inLong ? (px - sv_price[which]) : (sv_price[which] - px);
+      sv_pnl[which] += pnl;
+      sv_trades[which]++;
+      if(pnl > 0.0) sv_wins[which]++;
+
+      if(SL_DrawVirtualTrades)
       {
-         double pnl = (sv_dir[which] == "LONG") ? (px - sv_price[which])
-                                                : (sv_price[which] - px);
-         sv_pnl[which] += pnl;
-         sv_trades[which]++;
-         if(pnl > 0.0) sv_wins[which]++;
-         sv_time[which] = 0;
-         return;                              // close-only: no re-entry this bar
+         color col = (which == 0) ? SL_UserTradeColor : SL_LaddTradeColor;
+         string tag = (which == 0) ? "SVU_" : "SVL_";
+         string nm  = tag + IntegerToString(sv_trades[which]) + "_C";
+         if(ObjectFind(0, nm) < 0 && ObjectCreate(0, nm, OBJ_TEXT, 0, t, px))
+         {
+            ObjectSetString (0, nm, OBJPROP_TEXT,
+                             cmt + " " + DoubleToString(pnl, 2) +
+                             " (" + DoubleToString(sv_pnl[which], 2) + ")");
+            ObjectSetInteger(0, nm, OBJPROP_COLOR,      col);
+            ObjectSetInteger(0, nm, OBJPROP_FONTSIZE,   SL_VTradeFont);
+            ObjectSetInteger(0, nm, OBJPROP_ANCHOR,
+                             inLong ? ANCHOR_UPPER : ANCHOR_LOWER);
+            ObjectSetInteger(0, nm, OBJPROP_SELECTABLE, false);
+         }
+         //--- the segment from entry to exit
+         string sn = tag + IntegerToString(sv_trades[which]) + "_L";
+         if(ObjectFind(0, sn) < 0 &&
+            ObjectCreate(0, sn, OBJ_TREND, 0, sv_time[which], sv_price[which], t, px))
+         {
+            ObjectSetInteger(0, sn, OBJPROP_COLOR,      col);
+            ObjectSetInteger(0, sn, OBJPROP_WIDTH,      1);
+            ObjectSetInteger(0, sn, OBJPROP_RAY_RIGHT,  false);
+            ObjectSetInteger(0, sn, OBJPROP_SELECTABLE, false);
+            ObjectSetString (0, sn, OBJPROP_TOOLTIP,
+                             ((which == 0) ? "USER #" : "LADDER #") +
+                             IntegerToString(sv_trades[which]) + " " + sv_dir[which] +
+                             " act:" + IntegerToString(act) +
+                             " pnl:" + DoubleToString(pnl, 2));
+         }
       }
-      return;                                 // still holding
+
+      sv_time[which] = 0;
+      return;                                  // close-only: no re-entry this bar
    }
 
-   //--- entries, only when flat and not sideway
-   if(sw) return;
-   if(dm_up)        { sv_time[which] = t; sv_price[which] = px; sv_dir[which] = "LONG";  }
-   else if(dm_down) { sv_time[which] = t; sv_price[which] = px; sv_dir[which] = "SHORT"; }
+   //--- opens
+   if(act == 3 || act == 4)
+   {
+      sv_time[which]  = t;
+      sv_price[which] = px;
+      sv_dir[which]   = (act == 3) ? "LONG" : "SHORT";
+      cmt             = (act == 3) ? "OpenB" : "OpenS";
+
+      if(SL_DrawVirtualTrades)
+      {
+         color col = (which == 0) ? SL_UserTradeColor : SL_LaddTradeColor;
+         string tag = (which == 0) ? "SVU_" : "SVL_";
+         string nm  = tag + IntegerToString(sv_trades[which] + 1) + "_O";
+         if(ObjectFind(0, nm) < 0 && ObjectCreate(0, nm, OBJ_TEXT, 0, t, px))
+         {
+            ObjectSetString (0, nm, OBJPROP_TEXT,       cmt);
+            ObjectSetInteger(0, nm, OBJPROP_COLOR,      col);
+            ObjectSetInteger(0, nm, OBJPROP_FONTSIZE,   SL_VTradeFont);
+            ObjectSetInteger(0, nm, OBJPROP_ANCHOR,
+                             (act == 3) ? ANCHOR_LOWER : ANCHOR_UPPER);
+            ObjectSetInteger(0, nm, OBJPROP_SELECTABLE, false);
+         }
+      }
+   }
 }
 
 //+------------------------------------------------------------------+
