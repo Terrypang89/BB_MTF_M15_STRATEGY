@@ -418,9 +418,12 @@ int    SL_LadderFont      = 7;
 //---   PINK  = the USER-label run
 //---   WHITE = the ladder run
 bool   SL_DrawVirtualTrades = true;
-color  SL_UserTradeColor    = clrMagenta;   // pink  - user labels
+color  SL_UserTradeColor    = clrYellow;    // yellow - user labels. NOT magenta: the
+                                                // label rectangles are magenta, so a
+                                                // magenta trade line vanishes on top of them.
 color  SL_LaddTradeColor    = clrWhite;     // white - ladder
 int    SL_VTradeFont        = 8;
+int    SL_VTradeWidth       = 3;    // virtual trade line thickness
 
 //--- virtual sim state: [0] = USER labels, [1] = ladder
 datetime sv_time[2]  = {0, 0};
@@ -524,7 +527,7 @@ void SL_VirtualStep(int which, bool sw, double dm, datetime t, double px)
             ObjectCreate(0, sn, OBJ_TREND, 0, sv_time[which], sv_price[which], t, px))
          {
             ObjectSetInteger(0, sn, OBJPROP_COLOR,      col);
-            ObjectSetInteger(0, sn, OBJPROP_WIDTH,      1);
+            ObjectSetInteger(0, sn, OBJPROP_WIDTH,      SL_VTradeWidth);
             ObjectSetInteger(0, sn, OBJPROP_RAY_RIGHT,  false);
             ObjectSetInteger(0, sn, OBJPROP_SELECTABLE, false);
             ObjectSetString (0, sn, OBJPROP_TOOLTIP,
