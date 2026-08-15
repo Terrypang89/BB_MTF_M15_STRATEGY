@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "38.13"
+#property version   "38.14"
 
 #define HAS_TOFYSIDEWAY_LADDER
 //+------------------------------------------------------------------+
@@ -75,7 +75,7 @@ double CL_NEAR      = 10.5;     // 10.0 rejected clus1 = 10.1 by 0.1 and broke
 //| recall outweighs that is exactly what this is here to measure.    |
 //| It has NOT been measured yet.                                     |
 //+------------------------------------------------------------------+
-bool   SL_UseTradeStrategy = false;   // off by default - changes nothing until enabled
+bool   SL_UseTradeStrategy = true;   // off by default - changes nothing until enabled
 
 //--- which signal drives the sideways exit when the above is true
 //---   0 = ladder only          SL_state[LA] >= 2
@@ -156,7 +156,7 @@ bool SL_ShowFails = true;    // draw gray L0-A/L0-B labels for undetected bars
 //| ##################################################                |
 //+------------------------------------------------------------------+
 bool   SL_DrawUserLabels = false;   // draw the labelled ranges on the chart
-color  SL_LabelColor     = clrMagenta;   // pink
+color  SL_LabelColor     = clrDarkSlateGray;   // pink
 bool   SL_LabelFill      = true;
 
 //--- Draw each trade as a segment from entry to exit, tagged with its P&L.
@@ -390,6 +390,44 @@ void SL_DrawUserLabelRanges()
    }
 }
 
+//+------------------------------------------------------------------+
+//| LADDER LABEL OVERLAY + DUAL VIRTUAL SIMULATION                   |
+//|                                                                  |
+//| Two independent things are drawn and scored side by side:        |
+//|   USER  - the hand labels from SIDEWAY_LABELS_FEB.md             |
+//|           pink rectangles spanning the range high/low            |
+//|   LADD  - what the ladder detects (SL_state >= 2)                |
+//|           aqua marks on top of the M15 midline                   |
+//|                                                                  |
+//| Both run a VIRTUAL DMONLY simulation in parallel - neither one   |
+//| places orders. That is what SL_ExitMode and the real             |
+//| Trade_Strategy are for. These two exist purely so one backtest    |
+//| shows how far the ladder is from the labels, in bars AND in P&L.  |
+//|                                                                  |
+//| MEASURED in Python on February (for comparison):                 |
+//|   USER labels    858 bars, 27 ranges, 58 trades, +415.36         |
+//|   ladder L1=1 L2=0 brk=2   857 bars, 57 ranges, 79 trades, -131  |
+//|   ladder + M30 latch       1072 bars, 60 ranges, 68 trades, +57  |
+//+------------------------------------------------------------------+
+bool   SL_DrawLadderLabels = false;      // aqua marks where the ladder says sideway
+color  SL_LadderColor     = clrAqua;
+int    SL_LadderFont      = 7;
+
+//--- virtual sim state: [0] = USER labels, [1] = ladder
+datetime sv_time[2]  = {0, 0};
+double   sv_price[2] = {0.0, 0.0};
+string   sv_dir[2]   = {"", ""};
+int      sv_trades[2]  = {0, 0};
+int      sv_wins[2]    = {0, 0};
+double   sv_pnl[2]     = {0.0, 0.0};
+int      sv_bars[2]    = {0, 0};        // bars flagged sideway
+int      sv_ranges[2]  = {0, 0};        // contiguous sideway blocks
+bool     sv_prev_sw[2] = {false, false};
+int      sv_agree      = 0;             // bars where both agree sideway
+int      sv_user_only  = 0;
+int      sv_ladd_only  = 0;
+int      sv_scored     = 0;
+
 //--- ladder state history: [LA]=current, ages toward [LA_4]
 int SL_state[5];
 
@@ -398,6 +436,72 @@ int SL_state[5];
 //+------------------------------------------------------------------+
 bool SL_StageOK(int st)
 {  return (st == 512 || st == 523 || (st >= 400 && st <= 499)); }
+
+//+------------------------------------------------------------------+
+//| One step of a virtual DMONLY run. Places NO orders.              |
+//|   which : 0 = USER labels, 1 = ladder                             |
+//|   sw    : is this bar sideway according to that source            |
+//| Same rules as Trade_Strategy: sideway exits all and blocks entry, |
+//| opposite dm exits, entry only when flat, close-only.              |
+//+------------------------------------------------------------------+
+void SL_VirtualStep(int which, bool sw, double dm, datetime t, double px)
+{
+   //--- range accounting
+   if(sw)
+   {
+      sv_bars[which]++;
+      if(!sv_prev_sw[which]) sv_ranges[which]++;
+   }
+   sv_prev_sw[which] = sw;
+
+   bool dm_up   = (dm == 1.0 || dm == 5.0);
+   bool dm_down = (dm == 2.0 || dm == 4.0);
+   bool inpos   = (sv_time[which] != 0);
+
+   //--- exits
+   if(inpos)
+   {
+      bool close_it = false;
+      if(sw) close_it = true;
+      else if(sv_dir[which] == "LONG"  && dm_down) close_it = true;
+      else if(sv_dir[which] == "SHORT" && dm_up)   close_it = true;
+
+      if(close_it)
+      {
+         double pnl = (sv_dir[which] == "LONG") ? (px - sv_price[which])
+                                                : (sv_price[which] - px);
+         sv_pnl[which] += pnl;
+         sv_trades[which]++;
+         if(pnl > 0.0) sv_wins[which]++;
+         sv_time[which] = 0;
+         return;                              // close-only: no re-entry this bar
+      }
+      return;                                 // still holding
+   }
+
+   //--- entries, only when flat and not sideway
+   if(sw) return;
+   if(dm_up)        { sv_time[which] = t; sv_price[which] = px; sv_dir[which] = "LONG";  }
+   else if(dm_down) { sv_time[which] = t; sv_price[which] = px; sv_dir[which] = "SHORT"; }
+}
+
+//+------------------------------------------------------------------+
+//| Mark a ladder-detected sideway bar on top of the M15 midline.    |
+//+------------------------------------------------------------------+
+void SL_DrawLadderLabel(datetime t, double mid)
+{
+   if(!SL_DrawLadderLabels || mid <= 0.0 || t <= 0) return;
+
+   string name = "SLLAD_" + IntegerToString((int)t);
+   if(ObjectFind(0, name) >= 0) return;
+
+   if(!ObjectCreate(0, name, OBJ_TEXT, 0, t, mid)) return;
+   ObjectSetString (0, name, OBJPROP_TEXT,       "*");
+   ObjectSetInteger(0, name, OBJPROP_COLOR,      SL_LadderColor);
+   ObjectSetInteger(0, name, OBJPROP_FONTSIZE,   SL_LadderFont);
+   ObjectSetInteger(0, name, OBJPROP_ANCHOR,     ANCHOR_LOWER);
+   ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+}
 
 //+------------------------------------------------------------------+
 //| Compute the ladder for the current bar. Call ONCE per M15 bar,   |
@@ -580,6 +684,33 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    //--- Called here, each range appears as soon as its bars exist. The ObjectFind
    //--- guard inside makes repeat calls a no-op.
    if(SL_DrawUserLabels) SL_DrawUserLabelRanges();
+
+   //--- DUAL VIRTUAL SIM: run USER labels and the ladder side by side.
+   //--- Neither places an order; this only reports how far apart they are.
+   datetime t_bar   = iTime(_Symbol, PERIOD_M15, 0);
+   double   px_bar  = iClose(_Symbol, PERIOD_M5, 0);
+   double   dm_bar  = BB_datas[1].BB_diffMid_Trend[LA];
+   double   mid_bar = BB_datas[1].BBMidLV[LA];
+
+   bool sw_user = SL_InUserLabel(t_bar);
+   bool sw_ladd = (SL_state[LA] >= 2);
+
+   sv_scored++;
+   if(sw_user && sw_ladd)       sv_agree++;
+   else if(sw_user && !sw_ladd) sv_user_only++;
+   else if(!sw_user && sw_ladd) sv_ladd_only++;
+
+   SL_VirtualStep(0, sw_user, dm_bar, t_bar, px_bar);
+   SL_VirtualStep(1, sw_ladd, dm_bar, t_bar, px_bar);
+
+   if(sw_ladd) SL_DrawLadderLabel(t_bar, mid_bar);
+
+   if(SL_WriteLog)
+      Print("[SWCMP] bar:[", TimeToString(t_bar, TIME_DATE|TIME_MINUTES),
+            "] user:[", (sw_user ? "SW" : "--"),
+            "] ladder:[", (sw_ladd ? "SW" : "--"),
+            "] match:[", (sw_user == sw_ladd ? "yes" : "NO"),
+            "] lad_state:[", SL_state[LA], "]");
 }
 
 
@@ -756,6 +887,32 @@ void SL_PrintSummary()
          "] win_sum:[", DoubleToString(sl_win_sum, 2),
          "] loss_sum:[", DoubleToString(sl_loss_sum, 2),
          "] profit_factor:[", DoubleToString(pf, 2), "]");
+   //--- side-by-side comparison of the two sideway sources
+   double prec = (sv_bars[1] > 0) ? 100.0 * sv_agree / sv_bars[1] : 0.0;
+   double rec  = (sv_bars[0] > 0) ? 100.0 * sv_agree / sv_bars[0] : 0.0;
+   double f1   = (prec + rec > 0.0) ? 2.0 * prec * rec / (prec + rec) : 0.0;
+   double wr0  = (sv_trades[0] > 0) ? 100.0 * sv_wins[0] / sv_trades[0] : 0.0;
+   double wr1  = (sv_trades[1] > 0) ? 100.0 * sv_wins[1] / sv_trades[1] : 0.0;
+
+   Print("[SWCMP_SUMMARY] scored_bars:[", sv_scored,
+         "] both_sideway:[", sv_agree,
+         "] user_only:[", sv_user_only,
+         "] ladder_only:[", sv_ladd_only, "]");
+   Print("[SWCMP_SUMMARY] USER   bars:[", sv_bars[0],
+         "] ranges:[", sv_ranges[0],
+         "] trades:[", sv_trades[0],
+         "] win_rate:[", DoubleToString(wr0, 1),
+         "%] pnl:[", DoubleToString(sv_pnl[0], 2), "]");
+   Print("[SWCMP_SUMMARY] LADDER bars:[", sv_bars[1],
+         "] ranges:[", sv_ranges[1],
+         "] trades:[", sv_trades[1],
+         "] win_rate:[", DoubleToString(wr1, 1),
+         "%] pnl:[", DoubleToString(sv_pnl[1], 2), "]");
+   Print("[SWCMP_SUMMARY] ladder vs user - precision:[", DoubleToString(prec, 1),
+         "%] recall:[", DoubleToString(rec, 1),
+         "%] f1:[", DoubleToString(f1, 1),
+         "] pnl_gap:[", DoubleToString(sv_pnl[1] - sv_pnl[0], 2), "]");
+
    Print("[LADDER_SUMMARY] exits - sideways:[", sl_r_sideways,
          "] reversal_dn:[", sl_r_rev_dn,
          "] reversal_up:[", sl_r_rev_up, "]");
