@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "38.15"
+#property version   "38.16"
 
 #define HAS_TOFYSIDEWAY_LADDER
 //+------------------------------------------------------------------+
@@ -447,6 +447,51 @@ int      sv_scored     = 0;
 //--- emitting a separate stream. "" = nothing happened on this bar.
 string   sv_evt[2]     = {"", ""};
 
+//+------------------------------------------------------------------+
+//| S30 CHAIN WAIVER  +  M30 LATCH                      (v38.16)     |
+//|                                                                  |
+//| Both measured against references/SIDEWAY_LABELS_FEB.md            |
+//| (27 ranges, 858 bars, 58 trades, +415.36 = the hindsight ceiling).|
+//|                                                                  |
+//| 1. SL_S30WaivesChain                                              |
+//|    Level 2 normally needs prev >= 1 - the M15 chain must already  |
+//|    be running. With this on, S30 alone waives that requirement.   |
+//|    A30 and ev30 STILL apply; only the chain is skipped.           |
+//|    Not the same as S30 setting state 2 outright:                  |
+//|      S30 overrides everything  -> helped 69/72 pairs, best  +37   |
+//|      S30 waives the chain only -> helped 31/72 pairs, best +202   |
+//|    The second helps in fewer places but far more where it does.   |
+//|                                                                  |
+//| 2. SL_UseM30Latch                                                 |
+//|    A range is a PERIOD, not a per-bar property. Without a latch   |
+//|    the detector re-decides each bar and one labelled range comes  |
+//|    out as several fragments - 27 labelled became 57-60 detected.  |
+//|    With it, detection ENGAGES the state and only a close outside  |
+//|    the M30 band RELEASES it.                                      |
+//|                                                                  |
+//| MEASURED, best cell of each (February):                           |
+//|   plain                        -250.66   54 ranges, 67 trades     |
+//|   + latch                       +57.06   60 ranges, 68 trades     |
+//|   + latch + S30 waiver         +201.83   56 ranges, 66 trades     |
+//|                                          at L1=1 L2=1 brk=0       |
+//|                                                                  |
+//| CAUTION: +201.83 is the best of 216 configurations tested on the  |
+//| SAME month the labels were drawn from. Its F1 is 71.9 vs 73.9 for |
+//| the latch-only cell - WORSE detection, better P&L. That pattern   |
+//| is what overfitting looks like. The latch itself is a structural  |
+//| fix and improved things broadly; the specific L1=1 L2=1 brk=0     |
+//| cell is a candidate, not a validated edge, until it runs on a     |
+//| second month labelled BEFORE the run.                             |
+//|                                                                  |
+//| A latch has MEMORY: a false engage costs the whole run until the  |
+//| next breakout, not one bar. It amplifies good and bad detections. |
+//+------------------------------------------------------------------+
+bool   SL_S30WaivesChain = false;   // S30 skips the prev >= 1 requirement
+bool   SL_UseM30Latch    = false;   // hold sideway until price leaves the M30 band
+
+//--- latch state. true = a range is currently open.
+bool   sl_latched = false;
+
 //--- ladder state history: [LA]=current, ages toward [LA_4]
 int SL_state[5];
 
@@ -675,7 +720,11 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    else if(SL_L2Mode == 2) ev30 = C30;
    else if(SL_L2Mode == 3) ev30 = (A30 && (S30 || C30));
 
-   if(prev >= 1 && A30 && ev30) SL_state[LA] = 2;
+   //--- S30 can waive the prev >= 1 chain. A30 and ev30 still apply.
+   bool chain_ok = (prev >= 1);
+   if(SL_S30WaivesChain && S30) chain_ok = true;
+
+   if(chain_ok && A30 && ev30) SL_state[LA] = 2;
 
    //--- BREAKOUT CANCELS the sideway state (M15 band, index 1)
    bool brk = false;
@@ -699,6 +748,27 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
 
    // extra adding to test
    // if(prev >= 1 && W15 && SL_state[LA] == 0) SL_state[LA] = 1;
+
+   //--- M30 LATCH. Detection engages the state; a close outside the M30 band
+   //--- releases it. Applied AFTER the M15 breakout cancel, so that cancel still
+   //--- governs whether a bar is allowed to engage in the first place.
+   if(SL_UseM30Latch)
+   {
+      double px_l  = iClose(_Symbol, PERIOD_M5, 0);
+      double upp30 = BB_datas[2].BBUppLV[LA];
+      double low30 = BB_datas[2].BBLowLV[LA];
+      bool   out30 = (px_l > upp30 || px_l < low30);
+
+      if(sl_latched)
+      {
+         if(out30) sl_latched = false;                        // released
+      }
+      else
+      {
+         if(SL_state[LA] >= 2 && !out30) sl_latched = true;   // engaged
+      }
+      SL_state[LA] = sl_latched ? 2 : 0;
+   }
 
    //--- H1 block -> state 3 (needs previous bar == 2). OFF by default.
    bool A1H = false, B1H = false, C1H = false;
@@ -986,6 +1056,8 @@ void SL_PrintSummary()
    double wr  = (trades > 0) ? 100.0 * sl_win_count / trades : 0.0;
    double pf  = (sl_loss_sum != 0.0) ? sl_win_sum / MathAbs(sl_loss_sum) : 0.0;
 
+   Print("[LADDER_SUMMARY] s30waive:[", SL_S30WaivesChain,
+         "] m30latch:[", SL_UseM30Latch, "]");
    Print("[LADDER_SUMMARY] mode:[", SL_ExitMode,
          "] L1m:[", SL_L1Mode, "] L2m:[", SL_L2Mode,
          "] brkmode:[", SL_BreakoutMode, "]");
