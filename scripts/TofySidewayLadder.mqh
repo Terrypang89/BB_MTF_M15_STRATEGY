@@ -156,7 +156,7 @@ bool SL_ShowFails = true;    // draw gray L0-A/L0-B labels for undetected bars
 //| ##################################################                |
 //+------------------------------------------------------------------+
 bool   SL_DrawUserLabels = true;   // draw the labelled ranges on the chart
-color  SL_LabelColor     = clrDarkSlateGray;   // pink
+color  SL_LabelColor     = clrViolet;   // pink
 bool   SL_LabelFill      = true;
 
 //--- Draw each trade as a segment from entry to exit, tagged with its P&L.
@@ -418,7 +418,7 @@ int    SL_LadderFont      = 7;
 //---   PINK  = the USER-label run
 //---   WHITE = the ladder run
 bool   SL_DrawVirtualTrades = true;
-color  SL_UserTradeColor    = clrYellow;    // yellow - user labels. NOT magenta: the
+color  SL_UserTradeColor    = Magenta;    // yellow - user labels. NOT magenta: the
                                                 // label rectangles are magenta, so a
                                                 // magenta trade line vanishes on top of them.
 color  SL_LaddTradeColor    = clrWhite;     // white - ladder
