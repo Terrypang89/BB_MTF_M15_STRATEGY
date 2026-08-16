@@ -751,14 +751,14 @@ void OnTick()
                ATRSLBUF_count+=1;
             }
 
-            if(Show_plot && r==1)
-            {
-               // perform  draw labels
-               if(TRADE_comment != "")
-               {
-                  DRAW_LABEL(TRADE_comment, TIME_CURRENT, close_prices[LA_1], LightCyan, 9, 2, 0, ANCHOR_LEFT, BB_datas[TF2arraynum(_Period)]);
-               }
-            }
+            // if(Show_plot && r==1)
+            // {
+            //    // perform  draw labels
+            //    if(TRADE_comment != "")
+            //    {
+            //       DRAW_LABEL(TRADE_comment, TIME_CURRENT, close_prices[LA_1], LightCyan, 9, 2, 0, ANCHOR_LEFT, BB_datas[TF2arraynum(_Period)]);
+            //    }
+            // }
          }
       }
             

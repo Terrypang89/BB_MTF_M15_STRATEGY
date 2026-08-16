@@ -421,7 +421,9 @@ bool   SL_DrawVirtualTrades = true;
 color  SL_UserTradeColor    = Magenta;    // yellow - user labels. NOT magenta: the
                                                 // label rectangles are magenta, so a
                                                 // magenta trade line vanishes on top of them.
-color  SL_LaddTradeColor    = clrWhite;     // white - ladder
+color  SL_LaddTradeColor    = clrDeepSkyBlue;  // blue - ladder. NOT white:
+                                               // the EA draws its own
+                                               // OpenB/CloseB labels white.
 int    SL_VTradeFont        = 8;
 int    SL_VTradeWidth       = 3;    // virtual trade line thickness
 
@@ -439,6 +441,9 @@ int      sv_agree      = 0;             // bars where both agree sideway
 int      sv_user_only  = 0;
 int      sv_ladd_only  = 0;
 int      sv_scored     = 0;
+//--- last virtual event per source, folded into the [SWCMP] line instead of
+//--- emitting a separate stream. "" = nothing happened on this bar.
+string   sv_evt[2]     = {"", ""};
 
 //--- ladder state history: [LA]=current, ages toward [LA_4]
 int SL_state[5];
@@ -505,6 +510,12 @@ void SL_VirtualStep(int which, bool sw, double dm, datetime t, double px)
       sv_trades[which]++;
       if(pnl > 0.0) sv_wins[which]++;
 
+      sv_evt[which] = cmt + "#" + IntegerToString(sv_trades[which]) +
+                      " pnl:" + DoubleToString(pnl, 2) +
+                      " cum:" + DoubleToString(sv_pnl[which], 2) +
+                      " w:" + IntegerToString(sv_wins[which]) +
+                      "/" + IntegerToString(sv_trades[which]);
+
       if(SL_DrawVirtualTrades)
       {
          color col = (which == 0) ? SL_UserTradeColor : SL_LaddTradeColor;
@@ -549,6 +560,10 @@ void SL_VirtualStep(int which, bool sw, double dm, datetime t, double px)
       sv_price[which] = px;
       sv_dir[which]   = (act == 3) ? "LONG" : "SHORT";
       cmt             = (act == 3) ? "OpenB" : "OpenS";
+
+      sv_evt[which] = cmt + "#" + IntegerToString(sv_trades[which] + 1) +
+                      " @" + DoubleToString(px, 2) +
+                      " cum:" + DoubleToString(sv_pnl[which], 2);
 
       if(SL_DrawVirtualTrades)
       {
@@ -783,6 +798,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    else if(sw_user && !sw_ladd) sv_user_only++;
    else if(!sw_user && sw_ladd) sv_ladd_only++;
 
+   sv_evt[0] = ""; sv_evt[1] = "";
    SL_VirtualStep(0, sw_user, dm_bar, t_bar, px_bar);
    SL_VirtualStep(1, sw_ladd, dm_bar, t_bar, px_bar);
 
@@ -793,7 +809,9 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
             "] user:[", (sw_user ? "SW" : "--"),
             "] ladder:[", (sw_ladd ? "SW" : "--"),
             "] match:[", (sw_user == sw_ladd ? "yes" : "NO"),
-            "] lad_state:[", SL_state[LA], "]");
+            "] lad_state:[", SL_state[LA],
+            "] U:[", (sv_evt[0] == "" ? "-" : sv_evt[0]),
+            "] L:[", (sv_evt[1] == "" ? "-" : sv_evt[1]), "]");
 }
 
 
