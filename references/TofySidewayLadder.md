@@ -589,3 +589,127 @@ If A is not clearly better than B, none of §16.3 or §16.4 was real.
 | dropping A30 | best detection, unclear P&L. Undecided. |
 | every specific P&L number in §16 | inside the implementation-noise band. |
 | March labels | still not made. Until then February is in-sample for all of this. |
+
+---
+
+## 17. Latch timeframe, and the S30 waiver measured on its own
+
+Continues §16. Same caveat applies throughout — see §16.5. The *directions* below
+are mechanically clear; the specific figures sit inside the implementation-noise
+band and should not be quoted as results.
+
+### 17.1 Which band should release the latch?
+
+The latch releases when price leaves a band. Tested M15, M30, both, and none
+across 144 configurations.
+
+| release band | best P&L | ranges | F1 |
+|---|---|---|---|
+| **M30** | **−2.70** | **50** | **71.4** |
+| both (either band) | −46.78 | 72 | 65.7 |
+| none (no latch) | −89.28 | 60 | 60.3 |
+| **M15** | **−127.65** | 67 | 66.1 |
+
+Head to head on `L1=1 L2=1 brk=0 +S30w`:
+
+| release band | ranges | bars | F1 | trades | P&L |
+|---|---|---|---|---|---|
+| none | 58 | 837 | 59.1 | 79 | −245.76 |
+| **M30** | **50** | 975 | **71.4** | **66** | **−2.70** |
+| M15 | 67 | 882 | 66.1 | 85 | −127.65 |
+| both | 72 | 806 | 65.7 | 92 | −46.78 |
+
+**An M15 latch is worse than no latch at all.** The reason is visible in the range
+count: 50 with M30, 67 with M15. M15 bands are tighter, so price leaves them more
+often, so the latch releases more often — **more fragmentation, not less**, which
+is the opposite of what a latch is for.
+
+`both` is worse still at 72 ranges, since it releases whenever *either* band is
+pierced.
+
+**The mechanism worth remembering:** a latch earns its keep by holding a range
+open *through the noise inside it*. A tight band gets pierced by exactly that
+noise, so an M15 latch releases on the moves it should be ignoring. The M30 band
+is wide enough to contain them.
+
+This suggests H1 might hold better still — wider again, releasing only on
+structural breaks. Untested.
+
+### 17.2 The S30 waiver on its own — it needs the latch
+
+| config | ranges | F1 | trades | P&L |
+|---|---|---|---|---|
+| plain, latch off | 53 | 59.3 | 78 | −119.71 |
+| **+S30 waiver, latch off** | 58 | 59.1 | 79 | **−245.76** |
+| +S30 waiver, latch on | 50 | 71.4 | 66 | −2.70 |
+
+**The waiver alone makes things worse** — −245.76 against −119.71 without it. It
+only pays off in combination with the latch.
+
+That is consistent: the waiver makes the state easier to **engage**, and with
+nothing holding it open, easier engagement just produces more fragments (58 ranges
+vs 53) at lower precision. The latch is what converts extra engagements into
+longer ranges instead of more of them.
+
+### 17.3 An unexplained result
+
+`L1=1 L2=1 brk=0`, no waiver, latch **on**, produced **0 ranges and 0 sideway
+bars** — the latch never engaged at all, so the run degraded to no-sideway-exit
+(114 trades, −636.37, exactly the floor).
+
+Without the waiver, that configuration apparently never produces a state-2 bar
+that also has price inside the M30 band. No explanation has been found. Recorded
+here because an unexplained zero is more likely to be a bug than a finding.
+
+### 17.4 Where the losses actually are
+
+Exit breakdown for `L1=1 L2=1 brk=0 +S30w`, latch off:
+
+| exit reason | trades | P&L |
+|---|---|---|
+| SIDEWAYS | 54 | **+16.60** |
+| REVERSAL_DN | 11 | −99.77 |
+| REVERSAL_UP | 14 | −162.59 |
+
+**Sideway exits are roughly break-even. The 25 reversal exits lose −262.36.** That
+is the entire deficit.
+
+The same pattern appears under *perfect* detection (§ ceiling report): reversal
+exits lost −238 across 31 trades while sideway exits made +653.
+
+Two independent measurements, one with a real detector and one with the answer
+key, both saying the reversal rule is the larger problem. **It is a deletion, not
+a parameter**, so it is not exposed to the implementation-noise issue in §16.5 the
+way the latch variants are.
+
+**Untested:** DMONLY with the reversal exits removed entirely — sideway exits
+only. Under perfect detection that would have been +653 instead of +415.
+
+### 17.5 Ladder range rectangles
+
+`SL_DrawLadderRanges` (default off, `clrDarkSlateGray`) draws each run of
+consecutive `SL_state >= 2` bars as one rectangle, the ladder counterpart of
+`SL_DrawUserLabelRanges`. Drawn when a run **ends**, so the high/low span is final.
+
+Put beside the pink hand-label blocks, the two sets show over- and under-detection
+as geometry rather than as a trade count. The summary also reports it directly:
+
+```
+[LADDER_SUMMARY] ladder_ranges_drawn:[57] vs hand labels:[27]
+```
+
+That ratio — 27 labelled ranges detected as 50-60 — remains the largest single
+difference between the ladder and the labels, and the latch is the only change so
+far that has moved it.
+
+### 17.6 Status after §17
+
+| item | state |
+|---|---|
+| M30 as the latch band | settled by a clear mechanism, not just a number |
+| M15 latch | rejected — worse than no latch |
+| S30 waiver alone | rejected — needs the latch |
+| S30 waiver + M30 latch | plausible, figure unreliable, needs the MT5 A/B |
+| the 0-range case in §17.3 | unexplained, treat as a suspected bug |
+| **removing the reversal exit** | **the strongest untested lead in the study** |
+| March labels | still not made — February remains in-sample for all of §16 and §17 |
