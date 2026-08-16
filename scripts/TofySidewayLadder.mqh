@@ -104,7 +104,7 @@ int    SL_L1Mode = 1;
 //---   1  S30 || C30            n=2701 (35%) lift +13.3  window 19/50
 //---   2  C30 only              n=2384 (31%) lift +14.7  window 11/50
 //--- Higher modes are more precise but cover the target range worse.
-int    SL_L2Mode = 0;
+int    SL_L2Mode = 1;
 
 //--- A close outside the M15 band means the range has broken, so the sideway
 //--- state is cancelled. MEASURED (with CL_NEAR 10.5):
@@ -123,7 +123,7 @@ int    SL_L2Mode = 0;
 //--- Mode 1 is the most precise but flickers (flag toggles on ~12% of bars).
 //--- Modes 2 and 3 are steadier and cost ~2.7 lift points. Flicker is cosmetic while
 //--- this module drives nothing; it would matter if it ever drove an exit.
-int    SL_BreakoutMode = 1;
+int    SL_BreakoutMode = 0;
 
 //--- W30 dbbw < 1 fires +4.4 and is now part of the level-2 evidence gate.
 //--- Threshold value barely matters: <0 <1 <2 <5 all give the same result.
@@ -486,11 +486,38 @@ string   sv_evt[2]     = {"", ""};
 //| A latch has MEMORY: a false engage costs the whole run until the  |
 //| next breakout, not one bar. It amplifies good and bad detections. |
 //+------------------------------------------------------------------+
-bool   SL_S30WaivesChain = false;   // S30 skips the prev >= 1 requirement
-bool   SL_UseM30Latch    = false;   // hold sideway until price leaves the M30 band
+bool   SL_S30WaivesChain = true;   // S30 skips the prev >= 1 requirement
+bool   SL_UseM30Latch    = true;   // hold sideway until price leaves the M30 band
 
 //--- latch state. true = a range is currently open.
 bool   sl_latched = false;
+
+//+------------------------------------------------------------------+
+//| LADDER RANGE RECTANGLES                                          |
+//|                                                                  |
+//| The ladder equivalent of SL_DrawUserLabelRanges. A ladder range   |
+//| is a run of consecutive SL_state >= 2 bars; when the run ends,    |
+//| the whole span is drawn as one rectangle over the high/low the    |
+//| candles actually traded inside it.                                |
+//|                                                                  |
+//| Put side by side with the pink hand-label rectangles, the two     |
+//| block sets show over- and under-detection as GEOMETRY rather      |
+//| than as a trade count: 27 labelled ranges have been coming out    |
+//| as 50-60 ladder ranges, and that fragmentation is the single      |
+//| largest difference between them.                                  |
+//|                                                                  |
+//| Drawn only when a range CLOSES, so the geometry is final - the    |
+//| same reason SL_DrawUserLabelRanges waits for a range to form      |
+//| before drawing it.                                                |
+//+------------------------------------------------------------------+
+bool     SL_DrawLadderRanges = true;              // ladder ranges as rectangles
+color    SL_LadderRangeColor = clrDarkSlateGray;
+bool     SL_LadderRangeFill  = true;
+int      SL_LadderRangeFont  = 8;
+
+//--- open ladder range: 0 = none currently open
+datetime sl_lr_start = 0;
+int      sl_lr_seq   = 0;
 
 //--- ladder state history: [LA]=current, ages toward [LA_4]
 int SL_state[5];
@@ -646,6 +673,61 @@ void SL_DrawLadderLabel(datetime t, double mid)
    ObjectSetInteger(0, name, OBJPROP_FONTSIZE,   SL_LadderFont);
    ObjectSetInteger(0, name, OBJPROP_ANCHOR,     ANCHOR_LOWER);
    ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+}
+
+//+------------------------------------------------------------------+
+//| Close the currently open ladder range and draw it.               |
+//| t_end = the last bar that was still sideway.                     |
+//+------------------------------------------------------------------+
+void SL_CloseLadderRange(datetime t_end)
+{
+   if(sl_lr_start == 0) return;
+   if(!SL_DrawLadderRanges || t_end <= sl_lr_start) { sl_lr_start = 0; return; }
+
+   int b1 = iBarShift(_Symbol, PERIOD_M15, t_end,       false);   // newer, smaller shift
+   int b2 = iBarShift(_Symbol, PERIOD_M15, sl_lr_start, false);   // older, larger shift
+   if(b1 < 0 || b2 < 0 || b2 < b1) { sl_lr_start = 0; return; }
+
+   //--- scan bars directly. iHighest/iLowest are ambiguous here because
+   //--- mql4compat.mqh declares int-typed overloads next to the MQL5 built-ins.
+   double hi = 0.0, lo = 0.0;
+   for(int b = b1; b <= b2; b++)
+   {
+      double h = iHigh(_Symbol, PERIOD_M15, b);
+      double l = iLow (_Symbol, PERIOD_M15, b);
+      if(h <= 0.0 || l <= 0.0) continue;
+      if(hi == 0.0 || h > hi) hi = h;
+      if(lo == 0.0 || l < lo) lo = l;
+   }
+   if(hi <= 0.0 || lo <= 0.0 || hi <= lo) { sl_lr_start = 0; return; }
+
+   sl_lr_seq++;
+   string name = "SLLR_" + IntegerToString(sl_lr_seq);
+   if(ObjectFind(0, name) < 0 &&
+      ObjectCreate(0, name, OBJ_RECTANGLE, 0, sl_lr_start, lo, t_end, hi))
+   {
+      ObjectSetInteger(0, name, OBJPROP_COLOR,      SL_LadderRangeColor);
+      ObjectSetInteger(0, name, OBJPROP_FILL,       SL_LadderRangeFill);
+      ObjectSetInteger(0, name, OBJPROP_BACK,       true);
+      ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+      ObjectSetString (0, name, OBJPROP_TOOLTIP,
+                       "LADDER RANGE #" + IntegerToString(sl_lr_seq) + "  " +
+                       TimeToString(sl_lr_start, TIME_DATE|TIME_MINUTES) + " -> " +
+                       TimeToString(t_end, TIME_DATE|TIME_MINUTES) +
+                       "  bars " + IntegerToString(b2 - b1 + 1) +
+                       "  range " + DoubleToString(lo, 2) + " - " + DoubleToString(hi, 2));
+
+      string tag = name + "_T";
+      if(ObjectCreate(0, tag, OBJ_TEXT, 0, sl_lr_start, lo))
+      {
+         ObjectSetString (0, tag, OBJPROP_TEXT,       "LR" + IntegerToString(sl_lr_seq));
+         ObjectSetInteger(0, tag, OBJPROP_COLOR,      SL_LadderRangeColor);
+         ObjectSetInteger(0, tag, OBJPROP_FONTSIZE,   SL_LadderRangeFont);
+         ObjectSetInteger(0, tag, OBJPROP_ANCHOR,     ANCHOR_UPPER);
+         ObjectSetInteger(0, tag, OBJPROP_SELECTABLE, false);
+      }
+   }
+   sl_lr_start = 0;
 }
 
 //+------------------------------------------------------------------+
@@ -877,6 +959,19 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
 
    if(sw_ladd) SL_DrawLadderLabel(t_bar, mid_bar);
 
+   //--- Track the open ladder range. A run of SL_state >= 2 bars is one range;
+   //--- it is drawn when the run ENDS so the high/low span is final.
+   static datetime sl_lr_last = 0;
+   if(sw_ladd)
+   {
+      if(sl_lr_start == 0) sl_lr_start = t_bar;   // range opens
+      sl_lr_last = t_bar;
+   }
+   else
+   {
+      if(sl_lr_start != 0) SL_CloseLadderRange(sl_lr_last);   // range closes
+   }
+
    if(SL_WriteLog)
    {
       SWCMP_info = "[SWCMP] bar:[" + TimeToString(t_bar, TIME_DATE|TIME_MINUTES);
@@ -1056,6 +1151,8 @@ void SL_PrintSummary()
    double wr  = (trades > 0) ? 100.0 * sl_win_count / trades : 0.0;
    double pf  = (sl_loss_sum != 0.0) ? sl_win_sum / MathAbs(sl_loss_sum) : 0.0;
 
+   Print("[LADDER_SUMMARY] ladder_ranges_drawn:[", sl_lr_seq,
+         "] vs hand labels:[", SL_LABEL_COUNT, "]");
    Print("[LADDER_SUMMARY] s30waive:[", SL_S30WaivesChain,
          "] m30latch:[", SL_UseM30Latch, "]");
    Print("[LADDER_SUMMARY] mode:[", SL_ExitMode,
