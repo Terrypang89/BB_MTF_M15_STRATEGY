@@ -420,7 +420,7 @@ int    SL_LadderFont      = 7;
 //--- One toggle per virtual run, so either can be shown alone.
 //---   [0] = USER labels   [1] = ladder
 bool   SL_DrawVirtual[2] = {true, true};
-color  SL_UserTradeColor    = clrYellow;   // yellow - user labels. NOT magenta: the
+color  SL_UserTradeColor    = Magenta;   // yellow - user labels. NOT magenta: the
                                                 // label rectangles are magenta, so a
                                                 // magenta trade line vanishes on top of them.
 color  SL_LaddTradeColor    = clrDeepSkyBlue;  // blue - ladder. NOT white: the EA
@@ -443,6 +443,10 @@ int      sv_user_only  = 0;
 int      sv_ladd_only  = 0;
 int      sv_scored     = 0;
 
+//--- last virtual event per source, folded into the [SWCMP] line instead of
+//--- emitting a separate stream. "" = nothing happened on this bar.
+string   sv_evt[2]     = {"", ""};
+
 //--- ladder state history: [LA]=current, ages toward [LA_4]
 int SL_state[5];
 
@@ -450,7 +454,7 @@ int SL_state[5];
 //| stage counts as a sideway-ish stage                              |
 //+------------------------------------------------------------------+
 bool SL_StageOK(int st)
-{  return (st == 512 || st == 523 || (st >= 400 && st <= 499)); }
+{  return (st == 513 || st == 523 || (st >= 400 && st <= 499)); }
 
 //+------------------------------------------------------------------+
 //| One step of a virtual DMONLY run. Places NO orders.              |
@@ -508,6 +512,12 @@ void SL_VirtualStep(int which, bool sw, double dm, datetime t, double px)
       sv_trades[which]++;
       if(pnl > 0.0) sv_wins[which]++;
 
+      sv_evt[which] = cmt + "#" + IntegerToString(sv_trades[which]) +
+                      " pnl:" + DoubleToString(pnl, 2) +
+                      " cum:" + DoubleToString(sv_pnl[which], 2) +
+                      " w:" + IntegerToString(sv_wins[which]) +
+                      "/" + IntegerToString(sv_trades[which]);
+
       if(SL_DrawVirtual[which])
       {
          color col = (which == 0) ? SL_UserTradeColor : SL_LaddTradeColor;
@@ -552,6 +562,10 @@ void SL_VirtualStep(int which, bool sw, double dm, datetime t, double px)
       sv_price[which] = px;
       sv_dir[which]   = (act == 3) ? "LONG" : "SHORT";
       cmt             = (act == 3) ? "OpenB" : "OpenS";
+
+      sv_evt[which] = cmt + "#" + IntegerToString(sv_trades[which] + 1) +
+                      " @" + DoubleToString(px, 2) +
+                      " cum:" + DoubleToString(sv_pnl[which], 2);
 
       if(SL_DrawVirtual[which])
       {
@@ -728,7 +742,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
          if(why != "") txt += "-" + why;
 
          string name = txt + "_" + IntegerToString((int)t);   // ID only, one label per bar
-         if(ObjectFind(0, name) < 0)
+         if(ObjectFind(0, name) < 0 && SL_state[LA] > 0)
          {
             color col;
             if(SL_state[LA] == 3)      col = clrAqua;
@@ -780,23 +794,35 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
 
    bool sw_user = SL_InUserLabel(t_bar);
    bool sw_ladd = (SL_state[LA] >= 2);
+   string SWCMP_info = "";
 
    sv_scored++;
    if(sw_user && sw_ladd)       sv_agree++;
    else if(sw_user && !sw_ladd) sv_user_only++;
    else if(!sw_user && sw_ladd) sv_ladd_only++;
 
+   sv_evt[0] = ""; sv_evt[1] = "";
    SL_VirtualStep(0, sw_user, dm_bar, t_bar, px_bar);
    SL_VirtualStep(1, sw_ladd, dm_bar, t_bar, px_bar);
 
    if(sw_ladd) SL_DrawLadderLabel(t_bar, mid_bar);
 
    if(SL_WriteLog)
-      Print("[SWCMP] bar:[", TimeToString(t_bar, TIME_DATE|TIME_MINUTES),
-            "] user:[", (sw_user ? "SW" : "--"),
-            "] ladder:[", (sw_ladd ? "SW" : "--"),
-            "] match:[", (sw_user == sw_ladd ? "yes" : "NO"),
-            "] lad_state:[", SL_state[LA], "]");
+   {
+      SWCMP_info = "[SWCMP] bar:[" + TimeToString(t_bar, TIME_DATE|TIME_MINUTES);
+      if(sw_ladd) SWCMP_info += "] user:[" +  (sw_user ? "SW" : "--");
+      if(sw_user) SWCMP_info += "] ladder:["+ (sw_ladd ? "SW" : "--");
+      SWCMP_info += "] match:["+ (sw_user == sw_ladd ? "yes" : "NO");
+      SWCMP_info += "] lad_state:[" + SL_state[LA] + "]";
+      if(sw_user) SWCMP_info += "] U:[" + (sv_evt[0] == "" ? "-" : sv_evt[0]);
+      if(sw_ladd)  SWCMP_info += "] L:["+ (sv_evt[1] == "" ? "-" : sv_evt[1]) + "]";
+      Print(SWCMP_info);
+      // Print("[SWCMP] bar:[", TimeToString(t_bar, TIME_DATE|TIME_MINUTES),
+      //       "] user:[", (sw_user ? "SW" : "--"),
+      //       "] ladder:[", (sw_ladd ? "SW" : "--"),
+      //       "] match:[", (sw_user == sw_ladd ? "yes" : "NO"),
+      //       "] lad_state:[", SL_state[LA], "]");
+   }
 }
 
 
