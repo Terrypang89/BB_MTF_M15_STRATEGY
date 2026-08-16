@@ -467,3 +467,125 @@ cost precision without improving coverage of the target.
 None of this has been shown to improve trading. That test — DMONLY with the ladder as its
 exit, once, against +$968 — remains the outstanding item, and no amount of detector
 tuning substitutes for it.
+
+---
+
+## 16. The M30 latch, the S30 chain waiver, and a reliability problem
+
+Added after §15. Everything below was measured against
+`references/SIDEWAY_LABELS_FEB.md` on February 2026.
+
+> **Read §16.5 before acting on any number in this section.** Three
+> implementations of the same latch produced +201.83, +57.06 and −2.70. The
+> code variation is an order of magnitude larger than the effects being
+> compared. These are directions, not figures.
+
+### 16.1 The M30 latch — the one structural fix
+
+A range is a **period**, not a per-bar property. The ladder was asking "is this
+bar sideway?" independently every bar, so one labelled range came out as several
+fragments — 27 labelled ranges were being detected as 57-60.
+
+The latch changes the shape of the question:
+
+```
+if(latched)  { if(price outside M30 band) latched = false; }   // release
+else         { if(ladder says sideway)    latched = true;  }   // engage
+sideway = latched;
+```
+
+Detection **engages** a range; only a price breakout **releases** it.
+
+| | ranges | recall | F1 | trades | P&L |
+|---|---|---|---|---|---|
+| plain | 54 | 70.3% | 66.4 | 67 | −250.66 |
+| **+ latch** | 60 | **83.1%** | **73.9** | 68 | **+57.06** |
+
+Recall and F1 both rose — nearly every other change in this study traded one for
+the other. That is why the latch is treated as a structural fix rather than a
+tuning result.
+
+**A latch has memory.** A false engage costs the whole run until the next
+breakout, not one bar. It amplifies good and bad detections alike.
+
+### 16.2 Latch ordering — after the breakout cancel, not before
+
+Tested both placements across 36 matched pairs.
+
+| placement | ranges | F1 | trades | P&L |
+|---|---|---|---|---|
+| **after the M15 breakout cancel** | 50 | 71.4 | 66 | **−2.70** |
+| before it | 61 | 71.5 | 75 | −41.76 |
+
+**After won 36 of 36.** Latching first lets a bar engage and then be cancelled on
+the same bar, so the state flickers — 61 ranges instead of 50. The committed code
+applies the latch after the cancel, which is correct.
+
+### 16.3 The S30 chain waiver
+
+Level 2 normally requires `prev >= 1` — the M15 chain must already be running.
+The waiver lets `S30` alone skip that. `A30` and `ev30` still apply.
+
+This is **not** the same as letting S30 set state 2 outright:
+
+| variant | pairs improved | best P&L |
+|---|---|---|
+| S30 overrides everything | **69 of 72** | +37.00 |
+| S30 waives only the chain | 31 of 72 | **+201.83** |
+
+The override helps almost everywhere but never much. The waiver helps in fewer
+than half the cells and produces a far better peak — which is also the signature
+of a result that will not survive out of sample.
+
+### 16.4 Variants tested and rejected
+
+| change | result |
+|---|---|
+| `chain_ok \|\| (A30 && ev30)` instead of `&&` | −8.23 best. Drops the M30 evidence requirement entirely; coverage jumps to 1,331 bars and precision falls. |
+| C30 bypass (C30 alone sets state 2) | Collapses the ladder to one predicate — L1 and L2 stop mattering. Recall up, P&L down in ~20 of 36 pairs. |
+| Dropping A30 | **Best F1 of anything tested: 73.2, recall 88.5%.** Won 70 of 108 pairs on P&L. But the single best P&L cell keeps A30 (−2.70 vs −11.54). Helps on average, not at the peak. |
+| M30 band containment as a predicate | Reached **95.1% recall** — the highest of any single test. Precision only 51-59%: price sits inside the M30 band most of the time, including during trends. |
+
+### 16.5 Why these numbers are not trustworthy
+
+Three implementations of the same latch, written at different times, produced:
+
+| implementation | best P&L |
+|---|---|
+| first (separate `latch()` function) | **+57.06** |
+| second (inline, in the C30 bypass run) | below −153 |
+| third (unified code path) | **−2.70** |
+
+Same intent, ~$200 apart. The effects being compared in §16.3 and §16.4 are
+$10-20 apart. **The implementation noise is an order of magnitude larger than the
+signal**, so every cell in this section sits inside the error bars.
+
+The +201.83 figure in particular should not be quoted. It appears in the v38.16
+header of `scripts/TofySidewayLadder.mqh` and that header is unreliable.
+
+### 16.6 What would settle it
+
+Not another Python variant. The committed `TofySidewayLadder.mqh` is the
+implementation that will actually trade — MT5 running it end to end is a
+reference the re-derivations are not.
+
+Two runs, February, `Ladder_UseTrade_Ena = true`, `Exit_Mode = 0`:
+
+- **A**: `L1=1 L2=1 brk=0`, `S30_Waive = true`, `M30_Latch = true`
+- **B**: identical, both new flags off
+
+Compare `[LADDER_SUMMARY]` trade counts and P&L. Trade count is an integer and
+does not move with spread, so it is the reliable comparison.
+
+If A is not clearly better than B, none of §16.3 or §16.4 was real.
+
+### 16.7 Status
+
+| item | state |
+|---|---|
+| M30 latch | structural fix, clear mechanism, improved recall AND F1. Keep. |
+| latch ordering (after the cancel) | settled, 36 of 36. |
+| S30 chain waiver | plausible, peak figure unreliable. Needs A/B. |
+| dropping A30 | best detection, unclear P&L. Undecided. |
+| every specific P&L number in §16 | inside the implementation-noise band. |
+| March labels | still not made. Until then February is in-sample for all of this. |
