@@ -123,13 +123,13 @@ input int                Ladder_DiffBBW_Mode        = 0;    // 0=off  1=contract
 input bool               Verify_Label_Ena         = true;
 input bool               Verify_Log_Ena           = true;
 input bool               Ladder_Label_Ena         = true;
-input bool               Ladder_Log_Ena           = false;
-  input bool               Ladder_UserLabel_Ena     = false;
-  input bool               Ladder_Trade_Draw_Ena    = true;
-  input int                Ladder_Exit_Mode         = 0;
-  input bool               Ladder_UseTrade_Ena      = false;
-  input bool               Ladder_Virtual_User_Ena  = true;   // yellow - user labels
-  input bool               Ladder_Virtual_Ladd_Ena  = true;   // blue   - ladder
+input bool               Ladder_Log_Ena           = true;
+input bool               Ladder_UserLabel_Ena     = true;
+input bool               Ladder_Trade_Draw_Ena    = true;
+input int                Ladder_Exit_Mode         = 0;
+input bool               Ladder_UseTrade_Ena      = true;
+input bool               Ladder_Virtual_User_Ena  = true;   // Magenta - user labels
+input bool               Ladder_Virtual_Ladd_Ena  = false;   // blue   - ladder
 
 // #define TF_ANUM 7 // timeframe array number, 0,1,2,3,4,5,6,7
 // #define LA 4 // latest array number
@@ -446,163 +446,164 @@ void OnTick()
 #ifdef HAS_TOFYSIDEWAY
          BBDatas_Midline_Sideway(BBTFImpact, BB_datas);
 #endif
-#ifdef HAS_TOFYSIDEWAY_LADDER
-         SL_Update(BBTFImpact, BB_datas);
-#endif
 #ifdef HAS_TofyVerifySideway
          VS_OnNewM15Bar(iTime(_Symbol, PERIOD_M15, 0),
                (int)BBTFImpact.sideway_selected[LA],
                BB_datas[1].BBMidLV[LA]);     // <-- your actual midline field name
 #endif
-         if(ATRSL1BUF.ATRLV[LA] != 0.0 && ATRSL1BUF.ATRLV[LA_1] != 0.0)
-         {
-            Trade_act = 0;
-            if(Enable_CloseTradeByInd && MODE < 3)
-            {
+      }
 #ifdef HAS_TOFYSIDEWAY_LADDER
-               Trade_Strategy(
-                  BB_datas,       // your multi-TF BB array
-                  ATRSL1BUF,     // ATRSL struct populated each tick
-                  BBTFImpact,     // AllTF struct from your log parser
-                  Trade_act,
-                  tradeInfo,
-                  tradeLots,
-                  tradeSL,
-                  BUYS,
-                  SELLS,
-                  close_prices,
-                  0.01            // your base lot size
-               );
+      SL_Update(BBTFImpact, BB_datas);
 #endif
-               // perform real trade
-               if(Trade_act != 0)
+
+      if(ATRSL1BUF.ATRLV[LA] != 0.0 && ATRSL1BUF.ATRLV[LA_1] != 0.0)
+      {
+         Trade_act = 0;
+         if(Enable_CloseTradeByInd && MODE < 3)
+         {
+#ifdef HAS_TOFYSIDEWAY_LADDER
+            Trade_Strategy(
+               BB_datas,       // your multi-TF BB array
+               ATRSL1BUF,     // ATRSL struct populated each tick
+               BBTFImpact,     // AllTF struct from your log parser
+               Trade_act,
+               tradeInfo,
+               tradeLots,
+               tradeSL,
+               BUYS,
+               SELLS,
+               close_prices,
+               0.01            // your base lot size
+            );
+#endif
+            // perform real trade
+            if(Trade_act != 0)
+            {
+               if(Trade_act == 1) // exit_sell_entry_buy
                {
-                  if(Trade_act == 1) // exit_sell_entry_buy
+                  if(SELLS>0)
                   {
-                     if(SELLS>0)
-                     {
-                        if(TRADE_comment != "") TRADE_comment += "-";
-                        TRADE_comment += "CloseS";
-                        ORDERS_CLOSE(OP_SELL, OPEN_SELL_TICKET_NUM, LOT, Trade_info);
-                     }
-                     if(BUYS==0 && (MODE==2||MODE==0))
-                     {
-                        if(TRADE_comment != "") TRADE_comment += "-";
-                        TRADE_comment += "OpenB";
-                        ORDER_SEND(OP_BUY,LOT,TRADE_comment,MAGIC_NUMBER, Trade_info);
-                     }
+                     if(TRADE_comment != "") TRADE_comment += "-";
+                     TRADE_comment += "CloseS";
+                     ORDERS_CLOSE(OP_SELL, OPEN_SELL_TICKET_NUM, LOT, Trade_info);
                   }
-                  else if(Trade_act == 2) // exit_buy_entry_sell
+                  if(BUYS==0 && (MODE==2||MODE==0))
                   {
-                     if(BUYS>0)
-                     {
-                        if(TRADE_comment != "") TRADE_comment += "-";
-                        TRADE_comment += "CloseB";
-                        ORDERS_CLOSE(OP_BUY, OPEN_BUY_TICKET_NUM, LOT, Trade_info);
-                     }
-                     if(SELLS==0 && (MODE==1||MODE==2))
-                     {
-                        if(TRADE_comment != "") TRADE_comment += "-";
-                        TRADE_comment += "OpenS";
-                        ORDER_SEND(OP_SELL,LOT,TRADE_comment,MAGIC_NUMBER, Trade_info);
-                     }
-                  }
-                  else if(Trade_act == 3) // no_exit_entry_buy
-                  {
-                     if(BUYS==0 && (MODE==2||MODE==0))
-                     {
-                        if(TRADE_comment != "") TRADE_comment += "-";
-                        TRADE_comment += "OpenB";
-                        ORDER_SEND(OP_BUY,LOT,TRADE_comment,MAGIC_NUMBER, Trade_info);
-                     }
-                  }
-                  else if(Trade_act == 4) // no_exit_entry_sell
-                  {
-                     if((MODE==1||MODE==2))
-                     {
-                        if(TRADE_comment != "") TRADE_comment += "-";
-                        TRADE_comment += "OpenS";
-                        ORDER_SEND(OP_SELL,LOT,TRADE_comment,MAGIC_NUMBER, Trade_info);
-                     }
-                  }
-                  else if(Trade_act == 5) // exit_buy_no_entry
-                  {
-                     if(BUYS>0)
-                     {
-                        if(TRADE_comment != "") TRADE_comment += "-";
-                        TRADE_comment += "CloseB";
-                        ORDERS_CLOSE(OP_BUY, OPEN_BUY_TICKET_NUM, LOT, Trade_info);
-                     }
-                  }
-                  else if(Trade_act == 6) // exit_sell_no_entry
-                  {
-                     if(SELLS>0)
-                     {
-                        if(TRADE_comment != "") TRADE_comment += "-";
-                        TRADE_comment += "CloseS";
-                        ORDERS_CLOSE(OP_SELL, OPEN_SELL_TICKET_NUM, LOT, Trade_info);
-                     }
-                  }
-                  else if(Trade_act == 7) // exit_all
-                  {
-                     if(SELLS>0)
-                     {
-                        if(TRADE_comment != "") TRADE_comment += "-";
-                        TRADE_comment += "CloseS";
-                        ORDERS_CLOSE(OP_SELL, OPEN_SELL_TICKET_NUM, LOT, Trade_info);
-                     }
-                     if(BUYS>0)
-                     {
-                        if(TRADE_comment != "") TRADE_comment += "-";
-                        TRADE_comment += "CloseB";
-                        ORDERS_CLOSE(OP_BUY, OPEN_BUY_TICKET_NUM, LOT, Trade_info);
-                     }
-                  }
-                  else if(Trade_act == 11) // exit_sell_entry_buy_ATRSL
-                  {
-                     if(BUYS==0 && (MODE==2||MODE==0) && BBTFImpact.TradeAct_ATRSL_Tracker == 0)
-                     {
-                        BBTFImpact.TradeAct_ATRSL_Tracker = 1;
-                        if(TRADE_comment != "") TRADE_comment += "-";
-                        TRADE_comment += "OpenB";
-                        ORDER_SEND(OP_BUY,LOT,TRADE_comment,MAGIC_NUMBER, Trade_info);
-                     }
-                  }
-                  else if(Trade_act == 12) // exit_buy_entry_sell_ATRSL
-                  {
-                     if(SELLS==0 && (MODE==2||MODE==1) && BBTFImpact.TradeAct_ATRSL_Tracker == 0)
-                     {
-                        BBTFImpact.TradeAct_ATRSL_Tracker = 1;
-                        if(TRADE_comment != "") TRADE_comment += "-";
-                        TRADE_comment += "OpenB";
-                        ORDER_SEND(OP_SELL,LOT,TRADE_comment,MAGIC_NUMBER, Trade_info);
-                     }
+                     if(TRADE_comment != "") TRADE_comment += "-";
+                     TRADE_comment += "OpenB";
+                     ORDER_SEND(OP_BUY,LOT,TRADE_comment,MAGIC_NUMBER, Trade_info);
                   }
                }
-
-               // track by atrsl
-               if(BBTFImpact.TradeAct_ATRSL_Tracker == 1)
+               else if(Trade_act == 2) // exit_buy_entry_sell
                {
-                  // hold buy until atrsl lower drop
-                  if(ATRSL1BUF.ATRTrend[LA] == 1 && ATRSL1BUF.ATRTrend[LA_1] == 1)
+                  if(BUYS>0)
                   {
-                     if(BUYS>0) // check if purchased
-                     {
-                        BBTFImpact.TradeAct_ATRSL_Tracker = 0;
-                        if(TRADE_comment != "") TRADE_comment += "-";
-                        TRADE_comment += "CloseB";
-                        ORDERS_CLOSE(OP_BUY, OPEN_BUY_TICKET_NUM, LOT, Trade_info);
-                     }
+                     if(TRADE_comment != "") TRADE_comment += "-";
+                     TRADE_comment += "CloseB";
+                     ORDERS_CLOSE(OP_BUY, OPEN_BUY_TICKET_NUM, LOT, Trade_info);
                   }
-                  else if(ATRSL1BUF.ATRTrend[LA] == 2 && ATRSL1BUF.ATRTrend[LA_1] == 2)
+                  if(SELLS==0 && (MODE==1||MODE==2))
                   {
-                     if(SELLS>0) // check if sold
-                     {
-                        BBTFImpact.TradeAct_ATRSL_Tracker = 0;
-                        if(TRADE_comment != "") TRADE_comment += "-";
-                        TRADE_comment += "CloseS";
-                        ORDERS_CLOSE(OP_SELL, OPEN_SELL_TICKET_NUM, LOT, Trade_info);
-                     }
+                     if(TRADE_comment != "") TRADE_comment += "-";
+                     TRADE_comment += "OpenS";
+                     ORDER_SEND(OP_SELL,LOT,TRADE_comment,MAGIC_NUMBER, Trade_info);
+                  }
+               }
+               else if(Trade_act == 3) // no_exit_entry_buy
+               {
+                  if(BUYS==0 && (MODE==2||MODE==0))
+                  {
+                     if(TRADE_comment != "") TRADE_comment += "-";
+                     TRADE_comment += "OpenB";
+                     ORDER_SEND(OP_BUY,LOT,TRADE_comment,MAGIC_NUMBER, Trade_info);
+                  }
+               }
+               else if(Trade_act == 4) // no_exit_entry_sell
+               {
+                  if((MODE==1||MODE==2))
+                  {
+                     if(TRADE_comment != "") TRADE_comment += "-";
+                     TRADE_comment += "OpenS";
+                     ORDER_SEND(OP_SELL,LOT,TRADE_comment,MAGIC_NUMBER, Trade_info);
+                  }
+               }
+               else if(Trade_act == 5) // exit_buy_no_entry
+               {
+                  if(BUYS>0)
+                  {
+                     if(TRADE_comment != "") TRADE_comment += "-";
+                     TRADE_comment += "CloseB";
+                     ORDERS_CLOSE(OP_BUY, OPEN_BUY_TICKET_NUM, LOT, Trade_info);
+                  }
+               }
+               else if(Trade_act == 6) // exit_sell_no_entry
+               {
+                  if(SELLS>0)
+                  {
+                     if(TRADE_comment != "") TRADE_comment += "-";
+                     TRADE_comment += "CloseS";
+                     ORDERS_CLOSE(OP_SELL, OPEN_SELL_TICKET_NUM, LOT, Trade_info);
+                  }
+               }
+               else if(Trade_act == 7) // exit_all
+               {
+                  if(SELLS>0)
+                  {
+                     if(TRADE_comment != "") TRADE_comment += "-";
+                     TRADE_comment += "CloseS";
+                     ORDERS_CLOSE(OP_SELL, OPEN_SELL_TICKET_NUM, LOT, Trade_info);
+                  }
+                  if(BUYS>0)
+                  {
+                     if(TRADE_comment != "") TRADE_comment += "-";
+                     TRADE_comment += "CloseB";
+                     ORDERS_CLOSE(OP_BUY, OPEN_BUY_TICKET_NUM, LOT, Trade_info);
+                  }
+               }
+               else if(Trade_act == 11) // exit_sell_entry_buy_ATRSL
+               {
+                  if(BUYS==0 && (MODE==2||MODE==0) && BBTFImpact.TradeAct_ATRSL_Tracker == 0)
+                  {
+                     BBTFImpact.TradeAct_ATRSL_Tracker = 1;
+                     if(TRADE_comment != "") TRADE_comment += "-";
+                     TRADE_comment += "OpenB";
+                     ORDER_SEND(OP_BUY,LOT,TRADE_comment,MAGIC_NUMBER, Trade_info);
+                  }
+               }
+               else if(Trade_act == 12) // exit_buy_entry_sell_ATRSL
+               {
+                  if(SELLS==0 && (MODE==2||MODE==1) && BBTFImpact.TradeAct_ATRSL_Tracker == 0)
+                  {
+                     BBTFImpact.TradeAct_ATRSL_Tracker = 1;
+                     if(TRADE_comment != "") TRADE_comment += "-";
+                     TRADE_comment += "OpenB";
+                     ORDER_SEND(OP_SELL,LOT,TRADE_comment,MAGIC_NUMBER, Trade_info);
+                  }
+               }
+            }
+
+            // track by atrsl
+            if(BBTFImpact.TradeAct_ATRSL_Tracker == 1)
+            {
+               // hold buy until atrsl lower drop
+               if(ATRSL1BUF.ATRTrend[LA] == 1 && ATRSL1BUF.ATRTrend[LA_1] == 1)
+               {
+                  if(BUYS>0) // check if purchased
+                  {
+                     BBTFImpact.TradeAct_ATRSL_Tracker = 0;
+                     if(TRADE_comment != "") TRADE_comment += "-";
+                     TRADE_comment += "CloseB";
+                     ORDERS_CLOSE(OP_BUY, OPEN_BUY_TICKET_NUM, LOT, Trade_info);
+                  }
+               }
+               else if(ATRSL1BUF.ATRTrend[LA] == 2 && ATRSL1BUF.ATRTrend[LA_1] == 2)
+               {
+                  if(SELLS>0) // check if sold
+                  {
+                     BBTFImpact.TradeAct_ATRSL_Tracker = 0;
+                     if(TRADE_comment != "") TRADE_comment += "-";
+                     TRADE_comment += "CloseS";
+                     ORDERS_CLOSE(OP_SELL, OPEN_SELL_TICKET_NUM, LOT, Trade_info);
                   }
                }
             }
@@ -753,14 +754,14 @@ void OnTick()
                ATRSLBUF_count+=1;
             }
 
-            // if(Show_plot && r==1)
-            // {
-            //    // perform  draw labels
-            //    if(TRADE_comment != "")
-            //    {
-            //       DRAW_LABEL(TRADE_comment, TIME_CURRENT, close_prices[LA_1], LightCyan, 9, 2, 0, ANCHOR_LEFT, BB_datas[TF2arraynum(_Period)]);
-            //    }
-            // }
+            if(Show_plot && r==1)
+            {
+               // perform  draw labels
+               if(TRADE_comment != "")
+               {
+                  DRAW_LABEL(TRADE_comment, TIME_CURRENT, close_prices[LA_1], LightCyan, 9, 2, 0, ANCHOR_LEFT, BB_datas[TF2arraynum(_Period)]);
+               }
+            }
          }
       }
             
