@@ -119,14 +119,19 @@ input color              BBColor_6                = LightCyan;
 input color              BBColor_7                = MistyRose;
 input string             Display_Settings         = "---------------------------------------------";
 input bool               Cluster_Label_Ena        = true;
-input int                Ladder_DiffBBW_Mode        = 0;    // 0=off  1=contracting  2=falling
 input bool               Verify_Label_Ena         = true;
 input bool               Verify_Log_Ena           = true;
+input string             SidewayLadder_Settings   = "---------------------------------------------";
 input bool               Ladder_Label_Ena         = true;
 input bool               Ladder_Log_Ena           = true;
 input bool               Ladder_UserLabel_Ena     = true;
 input bool               Ladder_Trade_Draw_Ena    = true;
+input int                Ladder_L1_Mode           = 4;
+input int                Ladder_L2_Mode           = 0;
+input int                Ladder_Breakout_Mode     = 2;
 input int                Ladder_Exit_Mode         = 0;
+input bool               Ladder_UseM30Latch       = true;
+input bool               Ladder_S30WaivesChain    = true;
 input bool               Ladder_UseTrade_Ena      = true;
 input bool               Ladder_Virtual_User_Ena  = true;   // Magenta - user labels
 input bool               Ladder_Virtual_Ladd_Ena  = false;   // blue   - ladder
@@ -192,15 +197,19 @@ int OnInit()
 #ifdef HAS_TOFYSIDEWAY_LADDER
    SL_Draw       = Ladder_Label_Ena;  // TofySidewayLadder.mqh chart labels
    SL_WriteLog   = Ladder_Log_Ena;    // TofySidewayLadder.mqh [LADDER] log lines
-  SL_DrawUserLabels = Ladder_UserLabel_Ena;  // draw the SIDEWAY_LABELS_FEB ranges
+   SL_DrawUserLabels = Ladder_UserLabel_Ena;  // draw the SIDEWAY_LABELS_FEB ranges
    SL_DrawTrades     = Ladder_Trade_Draw_Ena; // draw each trade as a segment + P&L
    SL_ExitMode       = Ladder_Exit_Mode;      // 0 ladder 1 S_flag 2 both 3 either 4 labels
    SL_UseTradeStrategy = Ladder_UseTrade_Ena;  // master switch for Trade_Strategy
    SL_DrawVirtual[0] = Ladder_Virtual_User_Ena;   // USER-label virtual run
    SL_DrawVirtual[1] = Ladder_Virtual_Ladd_Ena;   // ladder virtual run
+   SL_L1Mode = Ladder_L1_Mode;
+   SL_L2Mode = Ladder_L2_Mode;
+   SL_BreakoutMode = Ladder_Breakout_Mode;
+   SL_S30WaivesChain = Ladder_S30WaivesChain;
+   SL_UseM30Latch = Ladder_UseM30Latch;
    SL_DrawUserLabelRanges();                  // draws 27 rectangles; no-op when toggle is false
 #endif
-   // SL_DiffBBWMode = Ladder_DiffBBW_Mode;    // in OnInit
    //Stats_Init();
    TIME_CURRENT=TimeCurrent();
    if(print_init){
