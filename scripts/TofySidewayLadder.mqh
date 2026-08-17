@@ -545,8 +545,8 @@ void SL_VirtualStep(int which, bool sw, double dm, datetime t, double px)
    }
    sv_prev_sw[which] = sw;
 
-   bool dm_up   = (dm == 1.0 || dm == 5.0);
-   bool dm_down = (dm == 2.0 || dm == 4.0);
+   bool dm1_up   = (dm == 1.0 || dm == 5.0);
+   bool dm1_down = (dm == 2.0 || dm == 4.0);
    bool inpos   = (sv_time[which] != 0);
    bool inLong  = (inpos && sv_dir[which] == "LONG");
    bool inShort = (inpos && sv_dir[which] == "SHORT");
@@ -560,12 +560,12 @@ void SL_VirtualStep(int which, bool sw, double dm, datetime t, double px)
    {
       if(inpos) act = 7;                       // sideway: close everything
    }
-   else if(inLong  && dm_down) act = 5;
-   else if(inShort && dm_up)   act = 6;
+   else if(inLong  && dm1_down) act = 5;
+   else if(inShort && dm1_up)   act = 6;
    else if(!inpos)
    {
-      if(dm_up)        act = 3;
-      else if(dm_down) act = 4;
+      if(dm1_up)        act = 3;
+      else if(dm1_down) act = 4;
    }
    if(act == 0) return;
 
@@ -785,6 +785,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    else if(SL_L1Mode == 3) lvl1 = (A15 && S15 && C15);
    else if(SL_L1Mode == 4) lvl1 = (A15 && (S15 || C15) && (D15 || C15));
    else if(SL_L1Mode == 5) lvl1 = (A15 && (S15 || W15) && (D15 || C15));
+   else if(SL_L1Mode == 6) lvl1 = (A15 && (S15 || W15 || D15 || C15));
 
    if(lvl1) SL_state[LA] = 1;
 
@@ -812,6 +813,16 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    bool brk = false;
    if(SL_BreakoutMode > 0)
    {
+      // bool raw = false;
+      // bool raw1 = false;
+      // if(SL_state[LA] == 1)
+      // {
+      //    raw = (BB_datas[1].BB_diffMid[LA] < 3 || BB_datas[1].BBW_stage[LA] == 511 || BB_datas[1].BBW_stage[LA] == 521);
+      // }
+      // else if(SL_state[LA] == 2)
+      // {
+      //    raw1 = (BB_datas[2].BB_diffMid[LA] < 3 || BB_datas[2].BBW_stage[LA] == 511 || BB_datas[2].BBW_stage[LA] == 521);
+      // }
       double close_now  = iClose(_Symbol, PERIOD_M5, 0);
       double close_prev = iClose(_Symbol, PERIOD_M5, 3);   // 3 M5 bars = 1 M15 bar back
 
@@ -941,7 +952,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    //--- Neither places an order; this only reports how far apart they are.
    datetime t_bar   = iTime(_Symbol, PERIOD_M15, 0);
    double   px_bar  = iClose(_Symbol, PERIOD_M5, 0);
-   double   dm_bar  = BB_datas[1].BB_diffMid_Trend[LA];
+   double   dm1_bar  = BB_datas[1].BB_diffMid_Trend[LA];
    double   mid_bar = BB_datas[1].BBMidLV[LA];
 
    bool sw_user = SL_InUserLabel(t_bar);
@@ -954,8 +965,8 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    else if(!sw_user && sw_ladd) sv_ladd_only++;
 
    sv_evt[0] = ""; sv_evt[1] = "";
-   SL_VirtualStep(0, sw_user, dm_bar, t_bar, px_bar);
-   SL_VirtualStep(1, sw_ladd, dm_bar, t_bar, px_bar);
+   SL_VirtualStep(0, sw_user, dm1_bar, t_bar, px_bar);
+   SL_VirtualStep(1, sw_ladd, dm1_bar, t_bar, px_bar);
 
    if(sw_ladd) SL_DrawLadderLabel(t_bar, mid_bar);
 
@@ -1054,7 +1065,8 @@ void Trade_Strategy(
 
    //--- inputs
    double px_now  = iClose(_Symbol, PERIOD_M5, 0);         // same basis as the report
-   double dm      = BB_datas[1].BB_diffMid_Trend[LA];      // index 1 = M15, current
+   double dm0      = BB_datas[0].BB_diffMid_Trend[LA];      // index 1 = M15, current
+   double dm1      = BB_datas[1].BB_diffMid_Trend[LA];      // index 1 = M15, current
    int    sflag   = (int)BBTFImpact.sideway_selected[LA];  // TofySideway S_ (LA = current)
    int    ladder  = SL_state[LA];                          // ladder state for this bar
 
@@ -1068,14 +1080,14 @@ void Trade_Strategy(
    else if(SL_ExitMode == 3) sw = (sw_flag || sw_ladder);
    else if(SL_ExitMode == 4) sw = SL_InUserLabel(cur);   // HINDSIGHT - ceiling only
 
-   bool dm_up   = (dm == 1.0 || dm == 5.0);
-   bool dm_down = (dm == 2.0 || dm == 4.0);
+   bool dm1_up   = (dm1 == 1.0 || dm1 == 5.0);
+   bool dm1_down = (dm1 == 2.0 || dm1 == 4.0);
 
    bool inLong  = (BUYS  > 0);
    bool inShort = (SELLS > 0);
    bool flat    = (!inLong && !inShort);
 
-   Trade_info = "[LADTRADE] dm:" + DoubleToString(dm,1)
+   Trade_info = "[LADTRADE] dm1:" + DoubleToString(dm1,1)
               + " LAD:"   + IntegerToString(ladder)
               + " S_:"    + IntegerToString(sflag)
               + " XM:"    + IntegerToString(SL_ExitMode)
@@ -1099,14 +1111,14 @@ void Trade_Strategy(
    //================================================================
    // PRIORITY 2 - REVERSAL (opposite dm closes; NO same-bar re-entry)
    //================================================================
-   if(inLong && dm_down)
+   if(inLong && dm1_down)
    {
       Trade_act = 5;                           // exit_buy_no_entry
       Trade_info += " [LAD]REVERSAL_DN";
       SL_TrackAct((int)Trade_act, cur, px_now);
       return;
    }
-   if(inShort && dm_up)
+   if(inShort && dm1_up)
    {
       Trade_act = 6;                           // exit_sell_no_entry
       Trade_info += " [LAD]REVERSAL_UP";
@@ -1119,12 +1131,12 @@ void Trade_Strategy(
    //================================================================
    if(flat)
    {
-      if(dm_up)
+      if(dm1_up)
       {
          Trade_act = 3;                        // no_exit_entry_buy
          Trade_info += " [LAD]ENTRY_BUY";
       }
-      else if(dm_down)
+      else if(dm1_down)
       {
          Trade_act = 4;                        // no_exit_entry_sell
          Trade_info += " [LAD]ENTRY_SELL";
