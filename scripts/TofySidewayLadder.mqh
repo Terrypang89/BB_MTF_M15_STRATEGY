@@ -85,6 +85,16 @@ bool   SL_UseTradeStrategy = true;   // off by default - changes nothing until e
 //---   4 = HAND LABELS          hindsight ceiling, NOT tradeable
 int    SL_ExitMode = 0;
 
+//--- Which bar Trade_Strategy decides on.
+//---   0 = M5  - three times the decision points
+//---   1 = M15 - one decision per ladder update
+//--- The measured figures (+415.36 for diffMid_Trend_M15, +1353.85 for
+//--- diffMid_Trend_M5 against the hand labels) were simulated at M15 spacing with
+//--- the chosen dm value forward-filled. M5 spacing is a DIFFERENT strategy and has
+//--- not been measured - the churn analysis found short holds losing consistently,
+//--- so more decision points is not automatically better.
+int    SL_TradeTF = 1;
+
 bool   SL_UseH1     = false;    // measured to DEGRADE the ladder; off by default
 double SL_diffmid_m15 = 3;
 double SL_diffmid_m30 = 1.5;
@@ -737,6 +747,15 @@ void SL_CloseLadderRange(datetime t_end)
 void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
                BB_MTF_Data_struct   &BB_datas[])
 {
+   //--- Self-guard: this MUST run exactly once per M15 bar. The state history below
+   //--- is indexed in M15 bars, so running per M5 tick would age `prev` three times
+   //--- too fast and break every `prev >= 1` chain check, the latch, and the range
+   //--- tracker. Guarding here means the EA can call it from anywhere safely.
+   static datetime sl_lastM15 = 0;
+   datetime m15now = iTime(_Symbol, PERIOD_M15, 0);
+   if(m15now == sl_lastM15) return;
+   sl_lastM15 = m15now;
+
    //--- age the history
    SL_state[LA_4] = SL_state[LA_3];
    SL_state[LA_3] = SL_state[LA_2];
@@ -1059,7 +1078,7 @@ void Trade_Strategy(
 
    //--- Once-per-bar guard
    static datetime sl_lastBar = 0;
-   datetime cur = iTime(_Symbol, PERIOD_M5, 0);
+   datetime cur = iTime(_Symbol, (SL_TradeTF == 0) ? PERIOD_M5 : PERIOD_M15, 0);
    if(cur == sl_lastBar) { Trade_info = ""; return; }
    sl_lastBar = cur;
 
