@@ -95,6 +95,19 @@ int    SL_ExitMode = 0;
 //--- so more decision points is not automatically better.
 int    SL_TradeTF = 1;
 
+//--- Which timeframe's diffMid_Trend drives ENTRIES and REVERSAL exits.
+//---   0 = M5 (BB_datas[0])
+//---   1 = M15 (BB_datas[1])  <- default, unchanged behaviour
+//--- Measured on February against the hand labels, same sideway signal both times:
+//---   M15   58 trades  44.8% win   +415.36
+//---   M5    99 trades  56.6% win  +1353.85
+//--- Hit rates 45.7% vs 47.8% - both under 50%, so this is a narrow edge on a
+//--- concentrated set of trades, measured on the month the labels came from.
+//--- SEPARATE from SL_TradeTF, which controls how OFTEN the strategy decides.
+//--- The measured figures used M15 decision spacing (SL_TradeTF = 1) with the
+//--- chosen dm value - so M5 trend + M15 spacing is the tested combination.
+int    SL_TrendTF = 1;
+
 bool   SL_UseH1     = false;    // measured to DEGRADE the ladder; off by default
 double SL_diffmid_m15 = 3;
 double SL_diffmid_m30 = 1.5;
@@ -1084,8 +1097,9 @@ void Trade_Strategy(
 
    //--- inputs
    double px_now  = iClose(_Symbol, PERIOD_M5, 0);         // same basis as the report
-   double dm0      = BB_datas[0].BB_diffMid_Trend[LA];      // index 1 = M15, current
-   double dm1      = BB_datas[1].BB_diffMid_Trend[LA];      // index 1 = M15, current
+   double dm0     = BB_datas[0].BB_diffMid_Trend[LA];        // M5
+   double dm1     = BB_datas[1].BB_diffMid_Trend[LA];        // M15
+   double dm      = (SL_TrendTF == 0) ? dm0 : dm1;           // the one that decides
    int    sflag   = (int)BBTFImpact.sideway_selected[LA];  // TofySideway S_ (LA = current)
    int    ladder  = SL_state[LA];                          // ladder state for this bar
 
@@ -1099,8 +1113,8 @@ void Trade_Strategy(
    else if(SL_ExitMode == 3) sw = (sw_flag || sw_ladder);
    else if(SL_ExitMode == 4) sw = SL_InUserLabel(cur);   // HINDSIGHT - ceiling only
 
-   bool dm1_up   = (dm1 == 1.0 || dm1 == 5.0);
-   bool dm1_down = (dm1 == 2.0 || dm1 == 4.0);
+   bool dm1_up   = (dm == 1.0 || dm == 5.0);
+   bool dm1_down = (dm == 2.0 || dm == 4.0);
 
    bool inLong  = (BUYS  > 0);
    bool inShort = (SELLS > 0);
