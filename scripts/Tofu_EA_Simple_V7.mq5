@@ -129,7 +129,9 @@ input bool               Ladder_Trade_Draw_Ena    = true;
 input int                Ladder_L1_Mode           = 4;
 input int                Ladder_L2_Mode           = 0;
 input int                Ladder_Breakout_Mode     = 2;
-input int                Ladder_Exit_Mode         = 0;
+input int                Ladder_Exit_Mode         = 0;   // Ladder_Exit_Mode, 0 = ladder only, 1 = TofySideway only, 2 = BOTH must agree, 3 = EITHER fires, 4 = HAND LABELS          hindsight ceiling, NOT tradeable
+input int                Ladder_TrendTF           = 1;   // Ladder_TrendTF, 0 = M5, 1 = M15
+input int                Ladder_TradeTF           = 0;   // Ladder_TradeTF, 0 = M5, 1 = M15
 input bool               Ladder_UseM30Latch       = true;
 input bool               Ladder_S30WaivesChain    = true;
 input bool               Ladder_UseTrade_Ena      = true;
@@ -206,6 +208,8 @@ int OnInit()
    SL_L1Mode = Ladder_L1_Mode;
    SL_L2Mode = Ladder_L2_Mode;
    SL_BreakoutMode = Ladder_Breakout_Mode;
+   SL_TradeTF = Ladder_TradeTF;
+   SL_TrendTF = Ladder_TrendTF;
    SL_S30WaivesChain = Ladder_S30WaivesChain;
    SL_UseM30Latch = Ladder_UseM30Latch;
    SL_DrawUserLabelRanges();                  // draws 27 rectangles; no-op when toggle is false
