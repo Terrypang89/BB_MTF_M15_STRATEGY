@@ -984,7 +984,9 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    //--- Neither places an order; this only reports how far apart they are.
    datetime t_bar   = iTime(_Symbol, PERIOD_M15, 0);
    double   px_bar  = iClose(_Symbol, PERIOD_M5, 0);
-   double   dm1_bar  = BB_datas[1].BB_diffMid_Trend[LA];
+   double   dm0_bar = BB_datas[0].BB_diffMid_Trend[LA];        // M5
+   double   dm1_bar = BB_datas[1].BB_diffMid_Trend[LA];        // M15
+   double   dmv_bar = (SL_TrendTF == 0) ? dm0_bar : dm1_bar;   // same choice as Trade_Strategy
    double   mid_bar = BB_datas[1].BBMidLV[LA];
 
    bool sw_user = SL_InUserLabel(t_bar);
@@ -997,8 +999,8 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    else if(!sw_user && sw_ladd) sv_ladd_only++;
 
    sv_evt[0] = ""; sv_evt[1] = "";
-   SL_VirtualStep(0, sw_user, dm1_bar, t_bar, px_bar);
-   SL_VirtualStep(1, sw_ladd, dm1_bar, t_bar, px_bar);
+   SL_VirtualStep(0, sw_user, dmv_bar, t_bar, px_bar);
+   SL_VirtualStep(1, sw_ladd, dmv_bar, t_bar, px_bar);
 
    if(sw_ladd) SL_DrawLadderLabel(t_bar, mid_bar);
 
