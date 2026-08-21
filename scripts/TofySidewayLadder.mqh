@@ -257,6 +257,82 @@ string SL_LabelEnd[SL_LABEL_COUNT] = {
    "2026.02.27 15:00"    // L27
 };
 
+//--- SOURCE for the label lookup.
+//---   0 = SL_LabelStart / SL_LabelEnd - the HAND LABELS from
+//---       references/SIDEWAY_LABELS_FEB.md. Ground truth. Default.
+//---   1 = SL_FitStart / SL_FitEnd - the same 27 ranges with per-range start and
+//---       end shifts fitted to February M5 P&L.
+//---
+//--- MEASURED on February (M5 trend, DMONLY entries, gross):
+//---   hand labels   99 trades  +1353.85
+//---   fitted        85 trades  +1939.77
+//---
+//--- The fitted set is HINDSIGHT TWICE OVER - the ranges are hand-drawn after the
+//--- fact AND the shifts are fitted to this month's P&L. 54 free parameters against
+//--- 85 trades on one month. Use it to see where the headroom is, never as a result.
+//--- Leave this at 0 for any run that is meant to measure detector quality.
+int SL_LabelSource = 0;
+
+
+string SL_FitStart[SL_LABEL_COUNT] = {
+   "2026.02.02 15:00",   // F1  start +0
+   "2026.02.03 13:00",   // F2  start +2
+   "2026.02.04 07:00",   // F3  start +6
+   "2026.02.05 09:30",   // F4  start -4
+   "2026.02.06 08:15",   // F5  start +6
+   "2026.02.06 21:00",   // F6  start -2
+   "2026.02.09 04:15",   // F7  start +8
+   "2026.02.10 03:15",   // F8  start +2
+   "2026.02.11 06:30",   // F9  start +4
+   "2026.02.11 19:45",   // F10 start +4
+   "2026.02.12 03:15",   // F11 start +2
+   "2026.02.12 21:15",   // F12 start +2
+   "2026.02.13 04:45",   // F13 start +8
+   "2026.02.13 21:45",   // F14 start +8
+   "2026.02.16 14:15",   // F15 start -4
+   "2026.02.17 10:15",   // F16 start +2
+   "2026.02.17 17:30",   // F17 start +8
+   "2026.02.18 07:45",   // F18 start +4
+   "2026.02.19 02:45",   // F19 start -4
+   "2026.02.19 13:45",   // F20 start +4
+   "2026.02.19 20:30",   // F21 start +4
+   "2026.02.20 10:45",   // F22 start +8
+   "2026.02.23 04:45",   // F23 start +8
+   "2026.02.24 05:00",   // F24 start +8
+   "2026.02.24 20:00",   // F25 start +6
+   "2026.02.25 04:15",   // F26 start +8
+   "2026.02.26 22:45"    // F27 start +8
+};
+string SL_FitEnd[SL_LABEL_COUNT] = {
+   "2026.02.03 01:00",   // F1  end +0
+   "2026.02.04 02:00",   // F2  end +0
+   "2026.02.04 16:15",   // F3  end +0
+   "2026.02.05 20:15",   // F4  end -4
+   "2026.02.06 12:00",   // F5  end -4
+   "2026.02.06 23:45",   // F6  end +0
+   "2026.02.09 17:00",   // F7  end +2
+   "2026.02.11 02:15",   // F8  end +4
+   "2026.02.11 11:30",   // F9  end +0
+   "2026.02.12 01:15",   // F10 end +2
+   "2026.02.12 19:30",   // F11 end +6
+   "2026.02.13 02:30",   // F12 end -2
+   "2026.02.13 15:15",   // F13 end -2
+   "2026.02.16 04:15",   // F14 end +0
+   "2026.02.16 21:15",   // F15 end -4
+   "2026.02.17 15:30",   // F16 end +0
+   "2026.02.18 02:45",   // F17 end -4
+   "2026.02.18 14:15",   // F18 end -2
+   "2026.02.19 06:15",   // F19 end -4
+   "2026.02.19 18:15",   // F20 end +6
+   "2026.02.20 06:45",   // F21 end -4
+   "2026.02.20 15:15",   // F22 end +2
+   "2026.02.23 16:15",   // F23 end +0
+   "2026.02.24 13:45",   // F24 end -2
+   "2026.02.25 02:45",   // F25 end +0
+   "2026.02.25 17:45",   // F26 end +0
+   "2026.02.27 14:30"    // F27 end -2
+};
+
 //+------------------------------------------------------------------+
 //| Is this bar inside a hand-labelled range?                        |
 //| Used only when SL_ExitMode == 4. See the hindsight warning above.|
@@ -265,8 +341,8 @@ bool SL_InUserLabel(datetime t)
 {
    for(int i = 0; i < SL_LABEL_COUNT; i++)
    {
-      datetime t1 = StringToTime(SL_LabelStart[i]);
-      datetime t2 = StringToTime(SL_LabelEnd[i]);
+      datetime t1 = StringToTime((SL_LabelSource == 1) ? SL_FitStart[i] : SL_LabelStart[i]);
+      datetime t2 = StringToTime((SL_LabelSource == 1) ? SL_FitEnd[i]   : SL_LabelEnd[i]);
       if(t1 > 0 && t2 > 0 && t >= t1 && t <= t2) return true;
    }
    return false;
@@ -370,8 +446,8 @@ void SL_DrawUserLabelRanges()
 
    for(int i = 0; i < SL_LABEL_COUNT; i++)
    {
-      datetime t1 = StringToTime(SL_LabelStart[i]);
-      datetime t2 = StringToTime(SL_LabelEnd[i]);
+      datetime t1 = StringToTime((SL_LabelSource == 1) ? SL_FitStart[i] : SL_LabelStart[i]);
+      datetime t2 = StringToTime((SL_LabelSource == 1) ? SL_FitEnd[i]   : SL_LabelEnd[i]);
       if(t1 <= 0 || t2 <= 0 || t2 <= t1) continue;
 
       //--- Wait until the range has FULLY formed. Before that iBarShift returns the
@@ -407,7 +483,8 @@ void SL_DrawUserLabelRanges()
       ObjectSetInteger(0, name, OBJPROP_BACK,       true);
       ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
       ObjectSetString (0, name, OBJPROP_TOOLTIP,
-                       "LABEL L" + IntegerToString(i + 1) + "  " +
+                       ((SL_LabelSource == 1) ? "FITTED F" : "SIDEWAY L") +
+                       "LABEL " + IntegerToString(i + 1) + "  " +
                        SL_LabelStart[i] + " -> " + SL_LabelEnd[i]);
       sl_rect_count++;
    }
