@@ -835,3 +835,83 @@ not symmetric. Engage on early evidence, release on a clean break.
 
 That is what the M30 latch already does, which may be why it was the only
 structural change that improved recall and F1 together.
+
+---
+
+## Per-range shifts — tested and rejected
+
+The obvious next question after the start/end asymmetry: do all 27 ranges want
+the same shift, or does each want its own? Range 3 might want +6 while range 4
+wants -2.
+
+They do come out different. The shifts are also meaningless.
+
+### The fit
+
+A greedy optimiser was run over 7 shift values per range, two full passes:
+
+| configuration | M5 P&L | trades |
+|---|---|---|
+| baseline (all 0) | +1353.85 | 99 |
+| uniform start +6 | +1408.74 | 80 |
+| **per-range fitted** | **+1685.97** | 87 |
+
+Fitted shift per range:
+
+| # | start | end | shift | # | start | end | shift |
+|---|---|---|---|---|---|---|---|
+| 1 | 2026.02.02 15:00 | 2026.02.03 01:00 | +0 | 15 | 2026.02.16 13:15 | 2026.02.17 01:45 | -4 |
+| 2 | 2026.02.03 13:30 | 2026.02.04 02:00 | +2 | 16 | 2026.02.17 10:45 | 2026.02.17 15:30 | +2 |
+| 3 | 2026.02.04 08:30 | 2026.02.04 16:15 | +6 | 17 | 2026.02.17 19:25 | 2026.02.18 03:45 | +8 |
+| 4 | 2026.02.05 08:30 | 2026.02.05 21:15 | -4 | 18 | 2026.02.18 08:45 | 2026.02.18 14:45 | +4 |
+| 5 | 2026.02.06 09:40 | 2026.02.06 13:00 | +6 | 19 | 2026.02.19 01:45 | 2026.02.19 07:15 | -4 |
+| 6 | 2026.02.06 20:30 | 2026.02.06 23:45 | -2 | 20 | 2026.02.19 14:45 | 2026.02.19 16:45 | +4 |
+| 7 | 2026.02.09 06:15 | 2026.02.09 16:30 | +8 | 21 | 2026.02.19 21:30 | 2026.02.20 07:45 | +4 |
+| 8 | 2026.02.10 03:45 | 2026.02.11 01:15 | +2 | 22 | 2026.02.20 12:45 | 2026.02.20 14:45 | +8 |
+| 9 | 2026.02.11 07:30 | 2026.02.11 11:30 | +4 | 23 | 2026.02.23 06:45 | 2026.02.23 16:15 | +8 |
+| 10 | 2026.02.11 20:45 | 2026.02.11 23:45 | +4 | 24 | 2026.02.24 07:00 | 2026.02.24 14:15 | +8 |
+| 11 | 2026.02.12 03:45 | 2026.02.12 18:00 | +2 | 25 | 2026.02.24 21:30 | 2026.02.25 02:45 | +6 |
+| 12 | 2026.02.12 21:45 | 2026.02.13 03:00 | +2 | 26 | 2026.02.25 06:15 | 2026.02.25 17:45 | +8 |
+| 13 | 2026.02.13 06:45 | 2026.02.13 15:45 | +8 | 27 | 2026.02.27 01:45 | 2026.02.27 15:00 | +8 |
+| 14 | 2026.02.13 23:45 | 2026.02.16 04:15 | +8 | | | | |
+
+### The control that rejects it
+
+27 ranges with a shift each is 27 free parameters fitted to 99 trades on one
+month. To test whether the gain is real, 150 shift sets were drawn at RANDOM
+from the same grid and scored the same way.
+
+| | M5 P&L |
+|---|---|
+| worst random set | +1177.74 |
+| median random set | +1325.27 |
+| **best random set** | **+1476.49** |
+| fitted | +1685.97 |
+
+| | count |
+|---|---|
+| random sets beating the baseline (+1353.85) | **44 of 150** |
+| random sets beating uniform +6 (+1408.74) | **9 of 150** |
+
+**Random shifts beat the baseline a third of the time.** Simply having 27 knobs
+produces "improvements" without any of them meaning anything.
+
+The fitted result is only **+209 above the best random draw** — and the optimiser
+searched 189 combinations per range across two passes, while the control got 150
+blind guesses. That is not the margin of a real effect.
+
+### Why the shifts are not usable
+
+Look at the fitted vector: range 4 wants -4, range 7 wants +8, range 15 wants -4,
+range 22 wants +8. There is no pattern, no mechanism, and nothing that would let
+you predict what a NEW range wants. It is 27 parameters absorbing the noise in 99
+trades.
+
+Ranges probably do differ in reality — some start more gradually than others. But
+this data cannot say which, and a vector fitted to February means nothing in March.
+
+### What survives
+
+The start/end asymmetry: **extending the start helps, extending the end hurts**.
+One direction, one parameter, mechanically explicable, consistent across every
+variant tested. That is the finding. The per-range vector is not.
