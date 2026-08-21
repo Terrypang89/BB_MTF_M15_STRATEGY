@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "38.16"
+#property version   "38.17"
 
 #define HAS_TOFYSIDEWAY_LADDER
 //+------------------------------------------------------------------+
@@ -180,7 +180,7 @@ bool SL_ShowFails = true;    // draw gray L0-A/L0-B labels for undetected bars
 //+------------------------------------------------------------------+
 bool   SL_DrawUserLabels = true;   // draw the labelled ranges on the chart
 color  SL_LabelColor     = clrViolet;   // pink
-bool   SL_LabelFill      = true;
+bool   SL_LabelFill      = false;
 
 //--- Draw each trade as a segment from entry to exit, tagged with its P&L.
 //--- Together with the range rectangles this reproduces on the chart what the
@@ -480,6 +480,7 @@ void SL_DrawUserLabelRanges()
       if(!ObjectCreate(0, name, OBJ_RECTANGLE, 0, t1, lo, t2, hi)) continue;
       ObjectSetInteger(0, name, OBJPROP_COLOR,      SL_LabelColor);
       ObjectSetInteger(0, name, OBJPROP_FILL,       SL_LabelFill);
+      ObjectSetInteger(0, name, OBJPROP_WIDTH, 5);
       ObjectSetInteger(0, name, OBJPROP_BACK,       true);
       ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
       ObjectSetString (0, name, OBJPROP_TOOLTIP,
@@ -510,7 +511,7 @@ void SL_DrawUserLabelRanges()
 //|   ladder + M30 latch       1072 bars, 60 ranges, 68 trades, +57  |
 //+------------------------------------------------------------------+
 bool   SL_DrawLadderLabels = true;      // aqua marks where the ladder says sideway
-color  SL_LadderColor     = clrAqua;
+color  SL_LadderColor     = MistyRose;
 int    SL_LadderFont      = 7;
 
 //--- Virtual trade labels. Same OpenB / CloseB / OpenS / CloseS wording the EA
@@ -611,8 +612,9 @@ bool   sl_latched = false;
 //| before drawing it.                                                |
 //+------------------------------------------------------------------+
 bool     SL_DrawLadderRanges = true;              // ladder ranges as rectangles
-color    SL_LadderRangeColor = clrDarkSlateGray;
-bool     SL_LadderRangeFill  = true;
+// color    SL_LadderRangeColor = clrDarkSlateGray;
+color    SL_LadderRangeColor = MistyRose;
+bool     SL_LadderRangeFill  = false;
 int      SL_LadderRangeFont  = 8;
 
 //--- open ladder range: 0 = none currently open
@@ -808,6 +810,7 @@ void SL_CloseLadderRange(datetime t_end)
    {
       ObjectSetInteger(0, name, OBJPROP_COLOR,      SL_LadderRangeColor);
       ObjectSetInteger(0, name, OBJPROP_FILL,       SL_LadderRangeFill);
+      ObjectSetInteger(0, name, OBJPROP_WIDTH, 5);
       ObjectSetInteger(0, name, OBJPROP_BACK,       true);
       ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
       ObjectSetString (0, name, OBJPROP_TOOLTIP,
