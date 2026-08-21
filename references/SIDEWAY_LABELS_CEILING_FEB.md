@@ -838,7 +838,7 @@ structural change that improved recall and F1 together.
 
 ---
 
-## Per-range shifts — tested and rejected
+## Per-range shifts — start time tested and rejected
 
 The obvious next question after the start/end asymmetry: do all 27 ranges want
 the same shift, or does each want its own? Range 3 might want +6 while range 4
@@ -858,7 +858,7 @@ A greedy optimiser was run over 7 shift values per range, two full passes:
 
 Fitted shift per range:
 
-| # | start | end | shift | # | start | end | shift |
+| # | start | end | start shift | # | start | end | start shift |
 |---|---|---|---|---|---|---|---|
 | 1 | 2026.02.02 15:00 | 2026.02.03 01:00 | +0 | 15 | 2026.02.16 13:15 | 2026.02.17 01:45 | -4 |
 | 2 | 2026.02.03 13:30 | 2026.02.04 02:00 | +2 | 16 | 2026.02.17 10:45 | 2026.02.17 15:30 | +2 |
@@ -915,3 +915,120 @@ this data cannot say which, and a vector fitted to February means nothing in Mar
 The start/end asymmetry: **extending the start helps, extending the end hurts**.
 One direction, one parameter, mechanically explicable, consistent across every
 variant tested. That is the finding. The per-range vector is not.
+
+
+---
+
+## Per-range boundary shifts — start and end
+
+Do all 27 ranges want the same boundary adjustment, or does each want its own?
+Both boundaries were fitted independently per range.
+
+Positive = the boundary moves OUTWARD (start earlier, end later).
+Negative = INWARD (start later, end earlier).
+
+### Uniform adjustments, for reference
+
+| config | M5 P&L | M5 trades | M15 P&L | M15 trades |
+|---|---|---|---|---|
+| baseline (no shift) | +1353.85 | 99 | +415.36 | 58 |
+| uniform start +6 | +1408.74 | 80 | +540.92 | 55 |
+| uniform end +6 | +629.53 | 96 | -27.68 | 49 |
+| **per-range start + end fitted** | **+1939.77** | 85 | +520.33 | 58 |
+
+Uniform END extension is clearly harmful - +629.53 against +1353.85. Uniform
+START extension helps slightly. That asymmetry held across every variant tested.
+
+### Fitted shift per range
+
+| # | original start | original end | start shift | end shift |
+|---|---|---|---|---|
+| 1 | 2026.02.02 15:00 | 2026.02.03 01:00 | +0 | +0 |
+| 2 | 2026.02.03 13:30 | 2026.02.04 02:00 | +2 | +0 |
+| 3 | 2026.02.04 08:30 | 2026.02.04 16:15 | +6 | +0 |
+| 4 | 2026.02.05 08:30 | 2026.02.05 21:15 | -4 | -4 |
+| 5 | 2026.02.06 09:40 | 2026.02.06 13:00 | +6 | -4 |
+| 6 | 2026.02.06 20:30 | 2026.02.06 23:45 | -2 | +0 |
+| 7 | 2026.02.09 06:15 | 2026.02.09 16:30 | +8 | +2 |
+| 8 | 2026.02.10 03:45 | 2026.02.11 01:15 | +2 | +4 |
+| 9 | 2026.02.11 07:30 | 2026.02.11 11:30 | +4 | +0 |
+| 10 | 2026.02.11 20:45 | 2026.02.11 23:45 | +4 | +2 |
+| 11 | 2026.02.12 03:45 | 2026.02.12 18:00 | +2 | +6 |
+| 12 | 2026.02.12 21:45 | 2026.02.13 03:00 | +2 | -2 |
+| 13 | 2026.02.13 06:45 | 2026.02.13 15:45 | +8 | -2 |
+| 14 | 2026.02.13 23:45 | 2026.02.16 04:15 | +8 | +0 |
+| 15 | 2026.02.16 13:15 | 2026.02.17 01:45 | -4 | -4 |
+| 16 | 2026.02.17 10:45 | 2026.02.17 15:30 | +2 | +0 |
+| 17 | 2026.02.17 19:25 | 2026.02.18 03:45 | +8 | -4 |
+| 18 | 2026.02.18 08:45 | 2026.02.18 14:45 | +4 | -2 |
+| 19 | 2026.02.19 01:45 | 2026.02.19 07:15 | -4 | -4 |
+| 20 | 2026.02.19 14:45 | 2026.02.19 16:45 | +4 | +6 |
+| 21 | 2026.02.19 21:30 | 2026.02.20 07:45 | +4 | -4 |
+| 22 | 2026.02.20 12:45 | 2026.02.20 14:45 | +8 | +2 |
+| 23 | 2026.02.23 06:45 | 2026.02.23 16:15 | +8 | +0 |
+| 24 | 2026.02.24 07:00 | 2026.02.24 14:15 | +8 | -2 |
+| 25 | 2026.02.24 21:30 | 2026.02.25 02:45 | +6 | +0 |
+| 26 | 2026.02.25 06:15 | 2026.02.25 17:45 | +8 | +0 |
+| 27 | 2026.02.27 01:45 | 2026.02.27 15:00 | +8 | -2 |
+
+**Most end shifts are zero or negative** - ranges want to END EARLIER, not later.
+That matches the uniform result and is the one part of the vector with a coherent
+story: a range's final bars are already breaking out, and trading them is
+profitable.
+
+### Two controls, and they disagree
+
+54 free parameters against 85 trades on one month needs a control. Two were run.
+
+**Control 1 - random values from the same grid (150 draws):**
+
+| | M5 P&L |
+|---|---|
+| worst | +528.30 |
+| median | +935.06 |
+| best | +1267.52 |
+| beat baseline | **0 of 150** |
+
+This looks like a decisive win for the fit. It is not trustworthy: most of the
+54-parameter space contains harmful end-extensions, so random draws are almost
+guaranteed to be bad. Beating them is easy and says little.
+
+**Control 2 - the SAME fitted values, shuffled between ranges (150 draws):**
+
+| | M5 P&L |
+|---|---|
+| worst | +830.41 |
+| median | +1186.67 |
+| best | +1397.94 |
+| beat baseline (+1353.85) | **4 of 150** |
+| beat the fit (+1939.77) | **0 of 150** |
+
+This is the fair control - identical value distribution, only the assignment
+changes. The fit beats every shuffle by a wide margin, so **which range gets which
+shift carries information**, not just the mix of values.
+
+### How much to believe
+
+The shuffle control is genuinely encouraging and is a stronger result than the
+start-only fit, where 44 of 150 random sets beat the baseline.
+
+But two things still argue for caution:
+
+- **54 parameters, 85 trades, one month.** A shuffle control shows the assignment
+  is not arbitrary ON THIS DATA. It cannot show the assignment would transfer.
+- **No mechanism.** Range 4 wants start -4 / end -4, range 7 wants start +8 /
+  end +2. Nothing observable at the time predicts which a new range needs, so
+  the vector cannot be applied forward.
+
+### What is usable
+
+| finding | status |
+|---|---|
+| extending the END hurts | consistent everywhere, mechanically clear |
+| extending the START helps slightly | consistent, small |
+| ranges want to end EARLIER, not later | supported by both the uniform and per-range fits |
+| the specific 54-value vector | not transferable - no mechanism, one month |
+
+A detector should **engage early and release early** - quick into the sideway
+state, quick out of it. That is the shape both fits point at, and it is what the
+M30 latch already does.
