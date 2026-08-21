@@ -137,6 +137,7 @@ input bool               Ladder_S30WaivesChain    = true;
 input bool               Ladder_UseTrade_Ena      = true;
 input bool               Ladder_Virtual_User_Ena  = true;   // Magenta - user labels
 input bool               Ladder_Virtual_Ladd_Ena  = false;   // blue   - ladder
+  input int                Ladder_LabelSource       = 0;   // Ladder_LabelSource, 0 = HAND LABELS (ground truth), 1 = FITTED boundaries (hindsight - measurement only)
 
 // #define TF_ANUM 7 // timeframe array number, 0,1,2,3,4,5,6,7
 // #define LA 4 // latest array number
@@ -212,7 +213,8 @@ int OnInit()
    SL_TrendTF = Ladder_TrendTF;
    SL_S30WaivesChain = Ladder_S30WaivesChain;
    SL_UseM30Latch = Ladder_UseM30Latch;
-   SL_DrawUserLabelRanges();                  // draws 27 rectangles; no-op when toggle is false
+   SL_LabelSource = Ladder_LabelSource;  // pass the input to the ladder
+   SL_DrawUserLabelRanges();              // draws 27 rectangles; no-op when toggle is false
 #endif
    //Stats_Init();
    TIME_CURRENT=TimeCurrent();
