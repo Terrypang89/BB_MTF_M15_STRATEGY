@@ -740,3 +740,98 @@ If the win split is near 50/50 and the gap comes from a few large windows, the t
 |---|---|---|---|---|---|---|---|---|---|
 | P  PERFECT - the labels themselves | 27 | 858 | 100.0% | 100.0% | 100.0 | 58 | **+415.36** | 99 | **+1353.85** |
 | N  NO sideway exit at all | 0 | 0 | 0.0% | 0.0% | 0.0 | 114 | **-636.37** | 215 | **+173.78** |
+
+---
+
+## Suggested label adjustment — start earlier, end unchanged
+
+Every labelled range was extended and trimmed uniformly to see whether the hand
+labels sit at the best place. They nearly do — but not symmetrically.
+
+### What was tested
+
+| start | end | sideway bars | M15 P&L | M5 trades | M5 P&L |
+|---|---|---|---|---|---|
+| -2 | -2 | 750 | +133.02 | 125 | +1005.05 |
+| -1 | -1 | 804 | +251.32 | 109 | +1371.47 |
+| +0 | +0 | 858 | +415.36 | 99 | +1353.85 |
+| +1 | +1 | 912 | +482.09 | 95 | +1135.92 |
+| +2 | +2 | 966 | +477.35 | 91 | +1136.34 |
+| +4 | +4 | 1074 | +210.90 | 83 | +812.31 |
+| +8 | +8 | 1277 | -119.57 | 68 | +490.38 |
+| +0 | +2 | 912 | +415.51 | 97 | +1090.58 |
+| +0 | +4 | 966 | +96.03 | 97 | +776.53 |
+| +0 | +8 | 1074 | -134.16 | 94 | +479.42 |
+| +2 | +0 | 912 | +477.20 | 93 | +1399.61 |
+| +4 | +0 | 966 | +530.23 | 85 | +1389.63 |
+| +6 | +0 | 1020 | +540.92 | 80 | +1408.74 |
+| +8 | +0 | 1074 | +409.20 | 75 | +1356.39 |
+
+### The finding: ranges have a soft entry and a sharp exit
+
+Extending the START helps. Extending the END hurts, badly.
+
+| direction | best result |
+|---|---|
+| start +6, end +0 | **+1408.74** |
+| baseline | +1353.85 |
+| start +0, end +8 | **+479.42** |
+
+Symmetric extension is worse than either. So this is not "more sideway is
+better" — it is specifically that **the bars just BEFORE a range should not be
+traded, while the bars just AFTER one should be**.
+
+That is mechanically sensible. A range does not begin abruptly: price is already
+going nowhere for an hour or two before the point a human would mark the start,
+and trading that pre-range chop costs money. But once a range breaks, the move
+that follows is exactly what the strategy wants to catch — extending the end
+throws away the best trades.
+
+M15 shows the same asymmetry more strongly: start +6 gives +540.92 against
+-134.16 for end +8.
+
+### Suggested ranges (start 90 minutes earlier)
+
+> **Not a recommendation to replace the labels.** The gain is +55 on +1354 —
+> about 4% — from one parameter fitted to a single month across 17 variants.
+> The asymmetry is the finding worth keeping; this specific shift is not.
+
+| # | suggested start | original start | end (unchanged) | bars added |
+|---|---|---|---|---|
+| 1 | 2026.02.02 13:30 | 2026.02.02 15:00 | 2026.02.03 01:00 | 6 |
+| 2 | 2026.02.03 12:00 | 2026.02.03 13:30 | 2026.02.04 02:00 | 6 |
+| 3 | 2026.02.04 07:00 | 2026.02.04 08:30 | 2026.02.04 16:15 | 6 |
+| 4 | 2026.02.05 07:00 | 2026.02.05 08:30 | 2026.02.05 21:15 | 6 |
+| 5 | 2026.02.06 08:15 | 2026.02.06 09:40 | 2026.02.06 13:00 | 6 |
+| 6 | 2026.02.06 19:00 | 2026.02.06 20:30 | 2026.02.06 23:45 | 6 |
+| 7 | 2026.02.09 04:45 | 2026.02.09 06:15 | 2026.02.09 16:30 | 6 |
+| 8 | 2026.02.10 02:15 | 2026.02.10 03:45 | 2026.02.11 01:15 | 6 |
+| 9 | 2026.02.11 06:00 | 2026.02.11 07:30 | 2026.02.11 11:30 | 6 |
+| 10 | 2026.02.11 19:15 | 2026.02.11 20:45 | 2026.02.11 23:45 | 6 |
+| 11 | 2026.02.12 02:15 | 2026.02.12 03:45 | 2026.02.12 18:00 | 6 |
+| 12 | 2026.02.12 20:15 | 2026.02.12 21:45 | 2026.02.13 03:00 | 6 |
+| 13 | 2026.02.13 05:15 | 2026.02.13 06:45 | 2026.02.13 15:45 | 6 |
+| 14 | 2026.02.13 22:15 | 2026.02.13 23:45 | 2026.02.16 04:15 | 6 |
+| 15 | 2026.02.16 11:45 | 2026.02.16 13:15 | 2026.02.17 01:45 | 6 |
+| 16 | 2026.02.17 09:15 | 2026.02.17 10:45 | 2026.02.17 15:30 | 6 |
+| 17 | 2026.02.17 18:00 | 2026.02.17 19:25 | 2026.02.18 03:45 | 6 |
+| 18 | 2026.02.18 07:15 | 2026.02.18 08:45 | 2026.02.18 14:45 | 6 |
+| 19 | 2026.02.18 23:15 | 2026.02.19 01:45 | 2026.02.19 07:15 | 6 |
+| 20 | 2026.02.19 13:15 | 2026.02.19 14:45 | 2026.02.19 16:45 | 6 |
+| 21 | 2026.02.19 20:00 | 2026.02.19 21:30 | 2026.02.20 07:45 | 6 |
+| 22 | 2026.02.20 11:15 | 2026.02.20 12:45 | 2026.02.20 14:45 | 6 |
+| 23 | 2026.02.23 05:15 | 2026.02.23 06:45 | 2026.02.23 16:15 | 6 |
+| 24 | 2026.02.24 05:30 | 2026.02.24 07:00 | 2026.02.24 14:15 | 6 |
+| 25 | 2026.02.24 20:00 | 2026.02.24 21:30 | 2026.02.25 02:45 | 6 |
+| 26 | 2026.02.25 04:45 | 2026.02.25 06:15 | 2026.02.25 17:45 | 6 |
+| 27 | 2026.02.26 23:15 | 2026.02.27 01:45 | 2026.02.27 15:00 | 6 |
+
+**Result with these ranges: 1020 sideway bars, 80 trades, M5 +1408.74, M15 +540.92.**
+
+### What this implies for a detector
+
+A detector should be **quick to enter the sideway state and quick to leave it** —
+not symmetric. Engage on early evidence, release on a clean break.
+
+That is what the M30 latch already does, which may be why it was the only
+structural change that improved recall and F1 together.
