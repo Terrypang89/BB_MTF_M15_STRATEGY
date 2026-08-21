@@ -256,12 +256,78 @@ def match_label(s, e, labels, bars):
     return ("L%d %d/%d" % (best, bestn, len(det)), True)
 
 
+
+def trend_segments(trades15, trades5, rngs, bars, PX):
+    """
+    Split the period into TRADING WINDOWS - the stretches between sideway ranges -
+    and total each trend timeframe inside each window. The `better` column says
+    which won that window.
+
+    DIAGNOSTIC ONLY. Choosing the winner per window is hindsight: you only know
+    which won after both have played out. The column is here to show WHETHER a
+    predictable pattern exists, not to be used as a selection rule.
+    """
+    idx = {t: i for i, t in enumerate(bars)}
+    sw = set()
+    for s_, e in rngs:
+        if s_ in idx and e in idx:
+            for k in range(idx[s_], idx[e] + 1): sw.add(bars[k])
+
+    # windows = maximal runs of non-sideway bars
+    wins = []; start = None
+    for t in bars:
+        if t not in sw:
+            if start is None: start = t
+            last = t
+        else:
+            if start is not None: wins.append((start, last)); start = None
+    if start is not None: wins.append((start, last))
+
+    L = []
+    L.append("")
+    L.append("#### Trend timeframe by trading window")
+    L.append("")
+    L.append("Each window is a stretch between sideway ranges - the periods the strategy "
+             "is allowed to trade. Both trend timeframes are totalled inside each window.")
+    L.append("")
+    L.append("> **Diagnostic only.** Picking the winner per window is hindsight - you only "
+             "know which won after both have played out. This is here to show whether a "
+             "*predictable* pattern exists, not as a selection rule.")
+    L.append("")
+    L.append("| # | window start | window end | bars | M15 trades | M15 P&L | M5 trades | M5 P&L | better | gap |")
+    L.append("|---|---|---|---|---|---|---|---|---|---|")
+    w15 = w5 = 0; c15 = c5 = 0.0
+    for i, (a, b) in enumerate(wins, 1):
+        t15 = [x for x in trades15 if a <= x['exit'] <= b]
+        t5  = [x for x in trades5  if a <= x['exit'] <= b]
+        p15 = sum(x['pnl'] for x in t15); p5 = sum(x['pnl'] for x in t5)
+        c15 += p15; c5 += p5
+        if   p5 > p15: better = "**M5**";  w5 += 1
+        elif p15 > p5: better = "**M15**"; w15 += 1
+        else:          better = "tie"
+        nb = idx[b] - idx[a] + 1
+        L.append("| %d | %s | %s | %d | %d | %+.2f | %d | %+.2f | %s | %+.2f |"
+                 % (i, a, b, nb, len(t15), p15, len(t5), p5, better, p5 - p15))
+    n = len(wins)
+    L.append("")
+    L.append("**%d windows. M5 won %d (%.0f%%), M15 won %d (%.0f%%).**  "
+             "Totals: M15 %+.2f, M5 %+.2f, gap %+.2f"
+             % (n, w5, 100.0*w5/n if n else 0, w15, 100.0*w15/n if n else 0, c15, c5, c5 - c15))
+    L.append("")
+    L.append("If the win split is near 50/50 and the gap comes from a few large windows, "
+             "the timeframe choice is not a stable edge - it is a handful of events.")
+    return L
+
 def combined_timeline(trades, rngs, bars, PX, labels=None, trades5=None):
     """
-    One chronological table of events. Separate P&L and cumulative columns per
-    trend timeframe: an M15 trade fills the M15 pair, an M5 trade fills the M5
-    pair, a sideway range fills neither. Both cumulatives carry forward on every
-    row so the two runs can be read against each other at any point in time.
+    One chronological table of events, keyed on exit/end time.
+
+    Columns per trend timeframe: P&L and cum for M15, P&L and cum for M5, then a
+    BETTER group showing which timeframe is ahead at that point, by how much, and
+    the running best-of-both.
+
+    The BETTER columns are DIAGNOSTIC. "Best" is only knowable after both runs have
+    played out, so it is a ceiling on the timeframe choice, not a rule you can trade.
     """
     pk = sorted(PX)
     def price(t):
@@ -292,34 +358,49 @@ def combined_timeline(trades, rngs, bars, PX, labels=None, trades5=None):
     L.append("")
     L.append("#### Combined timeline")
     L.append("")
-    L.append("Rows are events in time order, keyed on the EXIT/END time. `M15` rows are "
-             "trades driven by diffMid_Trend_M15, `M5` rows by diffMid_Trend_M5. Both "
-             "runs share the same sideway signal - only the trend timeframe differs. "
-             "Each has its own P&L and cumulative column.")
+    L.append("Rows are events in time order, keyed on EXIT/END time. `M15` rows are trades "
+             "driven by diffMid_Trend_M15, `M5` rows by diffMid_Trend_M5. Both share the "
+             "same sideway signal - only the trend timeframe differs.")
+    L.append("")
+    L.append("`better` = which timeframe is ahead cumulatively at that point. "
+             "`better P&L` = the P&L of whichever run is ahead. `better cum` = the running "
+             "total of always having been on the leader.")
+    L.append("")
+    L.append("> The `better` columns are DIAGNOSTIC. Which run leads is only knowable after "
+             "both have played out, so `better cum` is a ceiling on the timeframe choice, "
+             "not a tradeable result.")
     L.append("")
     L.append("| # | src | start | end | bars | dir / range | start px | end px | "
-             "P&L M15 | cum M15 | P&L M5 | cum M5 | note |")
-    L.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|")
-    c15 = 0.0; c5 = 0.0
+             "P&L M15 | cum M15 | P&L M5 | cum M5 | better | better P&L | better cum |")
+    L.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
+    c15 = 0.0; c5 = 0.0; cbest = 0.0
     for i, r in enumerate(rows, 1):
-        p15 = "-"; p5 = "-"
+        p15 = "-"; p5 = "-"; bp = "-"
         if r['pnl'] is not None:
             if r['kind'] == 'M15':
                 c15 += r['pnl']; p15 = "%+.2f" % r['pnl']
             else:
                 c5 += r['pnl'];  p5  = "%+.2f" % r['pnl']
+            # the leader BEFORE this row banks whichever run is currently ahead
+            lead = 'M5' if c5 > c15 else ('M15' if c15 > c5 else '=')
+            if (lead == 'M5' and r['kind'] == 'M5') or (lead == 'M15' and r['kind'] == 'M15'):
+                cbest += r['pnl']; bp = "%+.2f" % r['pnl']
+        better = 'M5' if c5 > c15 else ('M15' if c15 > c5 else '=')
         a = price(r['start']); b = price(r['end'])
-        L.append("| %d | %s | %s | %s | %d | %s | %s | %s | %s | %+.2f | %s | %+.2f | %s |" % (
+        L.append("| %d | %s | %s | %s | %d | %s | %s | %s | %s | %+.2f | %s | %+.2f | %s | %s | %+.2f |" % (
             i, r['kind'], r['start'], r['end'], r['bars'], r['what'],
             ("%.2f" % a) if a else "-", ("%.2f" % b) if b else "-",
-            p15, c15, p5, c5, r['note']))
+            p15, c15, p5, c5, better, bp, cbest))
     n15 = sum(1 for r in rows if r['kind'] == 'M15')
     n5  = sum(1 for r in rows if r['kind'] == 'M5')
     nsw = sum(1 for r in rows if r['kind'] == 'SIDEWAY')
     L.append("")
-    L.append("**M15 trend: %d trades, final cum %+.2f.  M5 trend: %d trades, final cum "
-             "%+.2f.  %d sideway ranges.**  Difference: **%+.2f**"
-             % (n15, c15, n5, c5, nsw, c5 - c15))
+    L.append("**M15 trend: %d trades, final cum %+.2f.  M5 trend: %d trades, final cum %+.2f.  "
+             "%d sideway ranges.**  Difference: **%+.2f**" % (n15, c15, n5, c5, nsw, c5 - c15))
+    L.append("")
+    L.append("**Always on the leader: %+.2f** - the hindsight ceiling for switching "
+             "timeframe. The gap between that and %+.2f is what a perfect switching rule "
+             "would add over simply always using M5." % (cbest, max(c15, c5)))
     return L
 
 def parse_labels(path):
@@ -409,6 +490,7 @@ def build_report(D, PX, SF, bars, labels, lblset, settings, a, title, note):
             L.append("| %s | %d | %+.2f |" % (k, pl['buckets'][k][0], pl['buckets'][k][1]))
         if a.timeline:
             L += combined_timeline(trades, rngs, bars, PX, labels if labels else None, trades5)
+            L += trend_segments(trades, trades5, rngs, bars, PX)
 
     L.append("\n## Summary\n")
     L.append("| setting | ranges | bars | precision | recall | F1 | M15 trades | **M15 P&L** | M5 trades | **M5 P&L** |")
