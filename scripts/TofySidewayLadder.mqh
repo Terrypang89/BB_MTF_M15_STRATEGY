@@ -45,6 +45,15 @@
 
 //--- ladder settings
 bool   SL_Draw      = true;     // draw the ladder label
+
+//--- Level-1 diagnostic tags, appended to the chart label and the [LADDER] line.
+//--- These do NOT change any decision - they only report which level-1 shapes are
+//--- present on the bar, so the chart shows WHY a bar did or did not reach state 1.
+//---   L1A  S15 && dm1 >= 3            stage says settled but the midlines are apart
+//---   L1B  dm1 < dm1a < dm1b          midline distance is contracting, 3 bars
+//---   L1C  dm1>=3 && dm1a>=3 && one of them == 3   sitting right at the threshold
+//---   L1D  W15                        M15 band width is contracting
+bool   SL_DrawL1Tags = true;
 bool   SL_WriteLog  = true;     // emit [LADDER] log lines
 int    SL_FontSize  = 10;
 double SL_Angle     = 90.0;     // OBJPROP_ANGLE is a DOUBLE property
@@ -890,6 +899,17 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    bool W15 = (BB_datas[1].BB_diffBBW[LA]   < SL_diffbbw_m15
             && BB_datas[1].BB_diffBBW[LA_1] < SL_diffbbw_m15);  
 
+   //--- LEVEL-1 DIAGNOSTIC TAGS - reporting only, no effect on any decision.
+   string l1tags = "";
+   if(SL_DrawL1Tags)
+   {
+      if(S15 && dm1 >= 3.0)                          l1tags += "A";
+      if(dm1 < dm1a && dm1a < dm1b)                  l1tags += "B";
+      if(dm1 >= 3.0 && dm1a >= 3.0 &&
+         (dm1 == 3.0 || dm1a == 3.0))                l1tags += "C";
+      if(W15)                                        l1tags += "D";
+   }
+
    bool lvl1 = false;
    if(SL_L1Mode == 0)      lvl1 = (A15 && (S15 || C15));
    else if(SL_L1Mode == 1) lvl1 = (A15 && C15);                              // current use
@@ -1015,6 +1035,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       {
          string txt = "L" + IntegerToString(SL_state[LA]);
          if(why != "") txt += "-" + why;
+         if(SL_DrawL1Tags && l1tags != "") txt += "[" + l1tags + "]";
 
          string name = txt + "_" + IntegerToString((int)t);   // ID only, one label per bar
          if(ObjectFind(0, name) < 0 && SL_state[LA] > 0)
@@ -1024,6 +1045,35 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
             else if(SL_state[LA] == 2) col = clrLime;
             else if(SL_state[LA] == 1) col = clrYellow;
             else                       col = clrGray;
+
+            if(ObjectCreate(0, name, OBJ_TEXT, 0, t, mid))
+            {
+               ObjectSetString (0, name, OBJPROP_TEXT,     txt);
+               ObjectSetInteger(0, name, OBJPROP_COLOR,    col);
+               ObjectSetInteger(0, name, OBJPROP_FONTSIZE, SL_FontSize);
+               ObjectSetDouble (0, name, OBJPROP_ANGLE,    SL_Angle);
+               ObjectSetInteger(0, name, OBJPROP_ANCHOR,   ANCHOR_UPPER);
+               ObjectSetInteger(0, name, OBJPROP_BACK,     false);
+            }
+         }
+      }
+   }
+   else if(SL_DrawL1Tags)
+   {
+      double mid = BB_datas[1].BBMidLV[LA];
+      datetime t = iTime(_Symbol, PERIOD_M15, 0);
+
+      // skip state-0 bars only when SL_ShowFails is off
+      if(mid > 0.0 && t > 0)
+      {
+         string txt = "L1";
+         if(SL_DrawL1Tags && l1tags != "") txt += "[" + l1tags + "]";
+
+         string name = txt + "_" + IntegerToString((int)t);   // ID only, one label per bar
+         if(ObjectFind(0, name) < 0 && l1tags != "")
+         {
+            color col;
+            col = clrYellow;
 
             if(ObjectCreate(0, name, OBJ_TEXT, 0, t, mid))
             {
