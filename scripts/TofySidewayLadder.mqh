@@ -63,6 +63,12 @@ bool   SL_DrawL1Tags = true;
 //--- A30 is deliberately NOT tagged - the cluster gate is reported by `why`.
 //--- Reporting only. Nothing here changes a decision.
 bool   SL_DrawL2Tags = true;
+bool   SL_DrawL3Tags = true;    // H1 tags, drawn on the H1 midline at the H1 bar time
+bool   SL_DrawL4Tags = true;    // H4 tags, drawn on the H4 midline at the H4 bar time
+color  SL_L1TagColor = Goldenrod; 
+color  SL_L2TagColor = GreenYellow; 
+color  SL_L3TagColor = Red;
+color  SL_L4TagColor = Yellow;
 bool   SL_WriteLog  = true;     // emit [LADDER] log lines
 int    SL_FontSize  = 10;
 double SL_Angle     = 90.0;     // OBJPROP_ANGLE is a DOUBLE property
@@ -170,6 +176,8 @@ int    SL_BreakoutMode = 0;
 //--- Threshold value barely matters: <0 <1 <2 <5 all give the same result.
 double SL_diffbbw_m15 = 1.0;
 double SL_diffbbw_m30 = 1.0;    // W30 threshold
+double SL_diffbbw_H1  = 1.0;    // WH1 threshold (L3W)
+double SL_diffbbw_H4  = 1.0;    // WH4 threshold (L4W)
 
 //--- add near the other settings
 bool SL_ShowFails = true;    // draw gray L0-A/L0-B labels for undetected bars
@@ -852,6 +860,34 @@ void SL_CloseLadderRange(datetime t_end)
 }
 
 //+------------------------------------------------------------------+
+//| Draw one tag label on a timeframe's own midline, at that          |
+//| timeframe's own bar time. Called once per level.                  |
+//| SL_Update runs per M15 bar, so slower levels are reached several  |
+//| times inside one of their own bars; ObjectFind lets only the      |
+//| first create the label. That is harmless - the tags are built     |
+//| from that timeframe's BB_datas, which do not change within its    |
+//| own bar, so every call computes the same string.                  |
+//+------------------------------------------------------------------+
+void SL_DrawTagLabel(string prefix, string tags, double mid,
+                     ENUM_TIMEFRAMES tf, color col)
+{
+   datetime t = iTime(_Symbol, tf, 0);
+   if(mid <= 0.0 || t <= 0) return;
+
+   string name = prefix + IntegerToString((int)t);
+   if(ObjectFind(0, name) >= 0) return;
+   if(!ObjectCreate(0, name, OBJ_TEXT, 0, t, mid)) return;
+
+   ObjectSetString (0, name, OBJPROP_TEXT,       "{" + (tags == "" ? "-" : tags) + "}");
+   ObjectSetInteger(0, name, OBJPROP_COLOR,      col);
+   ObjectSetInteger(0, name, OBJPROP_FONTSIZE,   SL_FontSize);
+   ObjectSetDouble (0, name, OBJPROP_ANGLE,      SL_Angle);
+   ObjectSetInteger(0, name, OBJPROP_ANCHOR,     ANCHOR_LOWER);
+   ObjectSetInteger(0, name, OBJPROP_BACK,       false);
+   ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+}
+
+//+------------------------------------------------------------------+
 //| Compute the ladder for the current bar. Call ONCE per M15 bar,   |
 //| AFTER BBDatas_Midline_Cluster has updated BB_midline_Cluster.    |
 //+------------------------------------------------------------------+
@@ -899,6 +935,9 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    double dm3  = MathAbs(BB_datas[3].BB_diffMid[LA]);
    double dm3a = MathAbs(BB_datas[3].BB_diffMid[LA_1]);
    double dm3b = MathAbs(BB_datas[3].BB_diffMid[LA_2]);
+   double dm4  = MathAbs(BB_datas[4].BB_diffMid[LA]);
+   double dm4a = MathAbs(BB_datas[4].BB_diffMid[LA_1]);
+   double dm4b = MathAbs(BB_datas[4].BB_diffMid[LA_2]);
 
    //--- LEVEL 1 predicates, named individually (lift measured alone)
    bool A15 = ((c0 < c0a && c0a < c0b) || (c0 < CL_NEAR && c0a < CL_NEAR));  // +4.5
@@ -912,11 +951,11 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    string l1tags = "";
    if(SL_DrawL1Tags)
    {
-      if(S15)                                        l1tags += "A";
+      if(S15)                                        l1tags += "S";
       if(dm1 < dm1a && dm1a < dm1b)                  l1tags += "B";
       if(dm1 >= 3.0 && dm1a >= 3.0 &&
          (dm1 == 3.0 || dm1a == 3.0 || dm1b == 3.0)) l1tags += "C";
-      if(W15)                                        l1tags += "D";
+      if(W15)                                        l1tags += "W";
    }
 
    bool lvl1 = false;
@@ -942,11 +981,37 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    string l2tags = "";
    if(SL_DrawL2Tags)
    {
-      if(S30)                                        l2tags += "A";
-      if(dm2 < dm2a && dm2a < dm2b)                  l2tags += "B";
+      if(S30)                                        l2tags += "S";
+      if(dm2 < dm2a && dm2a < dm2b)                  l2tags += "D";
       if(dm2 >= 3.0 && dm2a >= 3.0 &&
          (dm2 == 3.0 || dm2a == 3.0 || dm2b == 3.0)) l2tags += "C";
-      if(W30)                                        l2tags += "D";
+      if(W30)                                        l2tags += "W";
+   }
+
+   //--- LEVEL-3 (H1) and LEVEL-4 (H4) tags. No B/D contraction tag on these two -
+   //--- only stage, the threshold shape, and band-width contraction.
+   bool SH1 = SL_StageOK((int)BB_datas[3].BBW_stage[LA]);
+   bool WH1 = (BB_datas[3].BB_diffBBW[LA]   < SL_diffbbw_H1
+            && BB_datas[3].BB_diffBBW[LA_1] < SL_diffbbw_H1);
+   string l3tags = "";
+   if(SL_DrawL3Tags)
+   {
+      if(SH1)                                        l3tags += "S";
+      if(dm3 >= 3.0 && dm3a >= 3.0 &&
+         (dm3 == 3.0 || dm3a == 3.0 || dm3b == 3.0)) l3tags += "C";
+      if(WH1)                                        l3tags += "W";
+   }
+
+   bool SH4 = SL_StageOK((int)BB_datas[4].BBW_stage[LA]);
+   bool WH4 = (BB_datas[4].BB_diffBBW[LA]   < SL_diffbbw_H4
+            && BB_datas[4].BB_diffBBW[LA_1] < SL_diffbbw_H4);
+   string l4tags = "";
+   if(SL_DrawL4Tags)
+   {
+      if(SH4)                                        l4tags += "S";
+      if(dm4 >= 3.0 && dm4a >= 3.0 &&
+         (dm4 == 3.0 || dm4a == 3.0 || dm4b == 3.0)) l4tags += "C";
+      if(WH4)                                        l4tags += "W";
    }
 
    bool ev30 = false;
@@ -1085,32 +1150,13 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    //--- create it. That is harmless: l2tags is built from BB_datas[2], which only
    //--- changes when a new M30 bar forms, so both calls compute the same tags.
    //--- Independent of SL_Draw - the M30 side can be shown with the M15 side off.
-   if(SL_DrawL2Tags)
-   {
-      double   mid30 = BB_datas[2].BBMidLV[LA];
-      datetime t30   = iTime(_Symbol, PERIOD_M30, 0);   // M30 bar time, not M15
-
-      //--- One label on EVERY M30 bar, tags or not - "{-}" marks a bar where none of
-      //--- the four L2 shapes were present. Drawing the empty ones too means the row
-      //--- is continuous, so a gap on the chart is a missing bar rather than a bar
-      //--- with nothing to say.
-      if(mid30 > 0.0 && t30 > 0 && l2tags != "")
-      {
-         string txt2  = "[L2-" + l2tags + "]";
-         string name2 = txt2 + "_" + IntegerToString((int)t30);
-         color  SL_L2TagColor = GreenYellow;   // L2 tags are drawn separately, on the M30 midline
-         if(ObjectFind(0, name2) < 0 && ObjectCreate(0, name2, OBJ_TEXT, 0, t30, mid30))
-         {
-            ObjectSetString (0, name2, OBJPROP_TEXT,       txt2);
-            ObjectSetInteger(0, name2, OBJPROP_COLOR,      SL_L2TagColor);
-            ObjectSetInteger(0, name2, OBJPROP_FONTSIZE,   SL_FontSize);
-            ObjectSetDouble (0, name2, OBJPROP_ANGLE,      SL_Angle);
-            ObjectSetInteger(0, name2, OBJPROP_ANCHOR,     ANCHOR_LOWER);
-            ObjectSetInteger(0, name2, OBJPROP_BACK,       false);
-            ObjectSetInteger(0, name2, OBJPROP_SELECTABLE, false);
-         }
-      }
-   }
+   //--- One tag label per level, each on its OWN midline at its OWN bar time.
+   if(SL_DrawL2Tags && l2tags != "") SL_DrawTagLabel("SLL2_", l2tags, BB_datas[2].BBMidLV[LA],
+                                     PERIOD_M30, SL_L2TagColor);
+   if(SL_DrawL3Tags && l3tags != "") SL_DrawTagLabel("SLL3_", l3tags, BB_datas[3].BBMidLV[LA],
+                                     PERIOD_H1,  SL_L3TagColor);
+   if(SL_DrawL4Tags && l4tags != "") SL_DrawTagLabel("SLL4_", l4tags, BB_datas[4].BBMidLV[LA],
+                                     PERIOD_H4,  SL_L4TagColor);
    //--- SL_Draw off: still show the L1 tags on the M15 midline. L2 is NOT drawn
    //--- here - it has its own block below, on the M30 midline at the M30 bar time.
    if(SL_DrawL1Tags && l1tags != "")
@@ -1122,7 +1168,6 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       {
          string txt = "[L1-" + l1tags + "]";
          string name = txt + "_" + IntegerToString((int)t);   // ID only, one label per bar
-         color SL_L1TagColor = clrYellow;
          if(ObjectFind(0, name) < 0 && l1tags != "")
          {
             if(ObjectCreate(0, name, OBJ_TEXT, 0, t, mid))
@@ -1149,7 +1194,9 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
             "] A30:[", A30, "] S30:[", S30, "] C30:[", C30, "] W30:[", W30,
             "] brkmode:[", SL_BreakoutMode,
             "] L1tags:[", (l1tags == "" ? "-" : l1tags),
-            "] L2tags:[", (l2tags == "" ? "-" : l2tags), "] brk:[", brk,
+            "] L2tags:[", (l2tags == "" ? "-" : l2tags),
+            "] L3tags:[", (l3tags == "" ? "-" : l3tags),
+            "] L4tags:[", (l4tags == "" ? "-" : l4tags), "] brk:[", brk,
             "] c0:[", DoubleToString(c0,1),
             "] c1:[", DoubleToString(c1,1),
             "] c2:[", DoubleToString(c2,1),
