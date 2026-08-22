@@ -54,6 +54,15 @@ bool   SL_Draw      = true;     // draw the ladder label
 //---   L1C  dm1>=3 && dm1a>=3 && one of them == 3   sitting right at the threshold
 //---   L1D  W15                        M15 band width is contracting
 bool   SL_DrawL1Tags = true;
+
+//--- Level-2 (M30) diagnostic tags. Same idea as the L1 tags, on the M30 side.
+//---   L2A  S30            M30 stage is in the settled set
+//---   L2B  dm2<dm2a<dm2b  M30 midline distance contracting, 3 bars
+//---   L2C  dm2>=3 && dm2a>=3 && any of dm2/dm2a/dm2b == 3
+//---   L2D  W30            M30 band width contracting, 2 bars
+//--- A30 is deliberately NOT tagged - the cluster gate is reported by `why`.
+//--- Reporting only. Nothing here changes a decision.
+bool   SL_DrawL2Tags = true;
 bool   SL_WriteLog  = true;     // emit [LADDER] log lines
 int    SL_FontSize  = 10;
 double SL_Angle     = 90.0;     // OBJPROP_ANGLE is a DOUBLE property
@@ -903,10 +912,10 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    string l1tags = "";
    if(SL_DrawL1Tags)
    {
-      if(S15 && dm1 >= 3.0)                          l1tags += "A";
+      if(S15)                                        l1tags += "A";
       if(dm1 < dm1a && dm1a < dm1b)                  l1tags += "B";
       if(dm1 >= 3.0 && dm1a >= 3.0 &&
-         (dm1 == 3.0 || dm1a == 3.0))                l1tags += "C";
+         (dm1 == 3.0 || dm1a == 3.0 || dm1b == 3.0)) l1tags += "C";
       if(W15)                                        l1tags += "D";
    }
 
@@ -928,6 +937,17 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    bool D30 = (dm2 < dm2a && dm2a < dm2b);                                   // no use
    bool W30 = (BB_datas[2].BB_diffBBW[LA]   < SL_diffbbw_m30
             && BB_datas[2].BB_diffBBW[LA_1] < SL_diffbbw_m30);               // +4.4
+
+   //--- LEVEL-2 (M30) DIAGNOSTIC TAGS - reporting only, no effect on any decision.
+   string l2tags = "";
+   if(SL_DrawL2Tags)
+   {
+      if(S30)                                        l2tags += "A";
+      if(dm2 < dm2a && dm2a < dm2b)                  l2tags += "B";
+      if(dm2 >= 3.0 && dm2a >= 3.0 &&
+         (dm2 == 3.0 || dm2a == 3.0 || dm2b == 3.0)) l2tags += "C";
+      if(W30)                                        l2tags += "D";
+   }
 
    bool ev30 = false;
    if(SL_L2Mode == 0)      ev30 = (S30 || C30 || W30);                       // current use 
@@ -1029,14 +1049,15 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    {
       double mid = BB_datas[1].BBMidLV[LA];
       datetime t = iTime(_Symbol, PERIOD_M15, 0);
-
+ 
       // skip state-0 bars only when SL_ShowFails is off
       if(mid > 0.0 && t > 0 && (SL_state[LA] > 0 || SL_ShowFails))
       {
          string txt = "L" + IntegerToString(SL_state[LA]);
          if(why != "") txt += "-" + why;
          if(SL_DrawL1Tags && l1tags != "") txt += "[" + l1tags + "]";
-
+         if(SL_DrawL2Tags && l2tags != "") txt += "{" + l2tags + "}";
+ 
          string name = txt + "_" + IntegerToString((int)t);   // ID only, one label per bar
          if(ObjectFind(0, name) < 0 && SL_state[LA] > 0)
          {
@@ -1045,7 +1066,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
             else if(SL_state[LA] == 2) col = clrLime;
             else if(SL_state[LA] == 1) col = clrYellow;
             else                       col = clrGray;
-
+ 
             if(ObjectCreate(0, name, OBJ_TEXT, 0, t, mid))
             {
                ObjectSetString (0, name, OBJPROP_TEXT,     txt);
@@ -1058,7 +1079,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
          }
       }
    }
-   else if(SL_DrawL1Tags)
+   else if(SL_DrawL1Tags || SL_DrawL2Tags)
    {
       double mid = BB_datas[1].BBMidLV[LA];
       datetime t = iTime(_Symbol, PERIOD_M15, 0);
@@ -1066,14 +1087,16 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       // skip state-0 bars only when SL_ShowFails is off
       if(mid > 0.0 && t > 0)
       {
-         string txt = "L1";
-         if(SL_DrawL1Tags && l1tags != "") txt += "[" + l1tags + "]";
+         string txt = "";
+         if(SL_DrawL1Tags && l1tags != "") txt += "[L1-" + l1tags + "]";
+         if(SL_DrawL2Tags && l2tags != "") txt += "[L2-" + l2tags + "]";
 
          string name = txt + "_" + IntegerToString((int)t);   // ID only, one label per bar
-         if(ObjectFind(0, name) < 0 && l1tags != "")
+         if(ObjectFind(0, name) < 0 && (l1tags != "" || l2tags != ""))
          {
             color col;
             col = clrYellow;
+            if(l2tags != "") col = clrLime;
 
             if(ObjectCreate(0, name, OBJ_TEXT, 0, t, mid))
             {
@@ -1097,7 +1120,9 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
             "] L1m:[", SL_L1Mode, "] L2m:[", SL_L2Mode,
             "] A15:[", A15, "] S15:[", S15, "] C15:[", C15,
             "] A30:[", A30, "] S30:[", S30, "] C30:[", C30, "] W30:[", W30,
-            "] brkmode:[", SL_BreakoutMode, "] brk:[", brk,
+            "] brkmode:[", SL_BreakoutMode,
+            "] L1tags:[", (l1tags == "" ? "-" : l1tags),
+            "] L2tags:[", (l2tags == "" ? "-" : l2tags), "] brk:[", brk,
             "] c0:[", DoubleToString(c0,1),
             "] c1:[", DoubleToString(c1,1),
             "] c2:[", DoubleToString(c2,1),
