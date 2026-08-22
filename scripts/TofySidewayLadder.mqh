@@ -69,12 +69,21 @@ color  SL_L1TagColor = Goldenrod;
 color  SL_L2TagColor = GreenYellow; 
 color  SL_L3TagColor = Red;
 color  SL_L4TagColor = Yellow;
+
+//--- Vertical offset for the tag labels, in POINTS above the midline they belong to.
+//--- Drawn exactly on the midline the text collides with the band traces, so lift it
+//--- clear. On XAUUSD _Point is 0.01, so 500 points = $5.00. Raise it if the chart is
+//--- zoomed out, lower it if the labels float too far from their line.
+int    SL_TagOffsetPts = 500;
 bool   SL_WriteLog  = true;     // emit [LADDER] log lines
 int    SL_FontSize  = 10;
 double SL_Angle     = 90.0;     // OBJPROP_ANGLE is a DOUBLE property
-double CL_NEAR      = 10.5;     // 10.0 rejected clus1 = 10.1 by 0.1 and broke
+// double CL_NEAR      = 10.5;     // 10.0 rejected clus1 = 10.1 by 0.1 and broke
                                 // the ladder chain. 10.5 costs +89 bars and takes
                                 // the 2026.02.03 window from 16/50 to 27/50.
+double CL_NEAR_M15    = 10.5;     // 10.0 rejected clus1 = 10.1 by 0.1 and broke
+double CL_NEAR_M30    = 8;     // 10.0 rejected clus1 = 10.1 by 0.1 and broke
+double CL_NEAR_H1     = 30;     // 10.0 rejected clus1 = 10.1 by 0.1 and broke
 //+------------------------------------------------------------------+
 //| TRADE STRATEGY (optional)                                        |
 //|                                                                  |
@@ -874,9 +883,12 @@ void SL_DrawTagLabel(string prefix, string tags, double mid,
    datetime t = iTime(_Symbol, tf, 0);
    if(mid <= 0.0 || t <= 0) return;
 
+   double y = mid + SL_TagOffsetPts * _Point;   // lift clear of the midline
+   // double y = mid + SL_TagOffsetPts;   // lift clear of the midline
+
    string name = prefix + IntegerToString((int)t);
    if(ObjectFind(0, name) >= 0) return;
-   if(!ObjectCreate(0, name, OBJ_TEXT, 0, t, mid)) return;
+   if(!ObjectCreate(0, name, OBJ_TEXT, 0, t, y)) return;
 
    ObjectSetString (0, name, OBJPROP_TEXT,       "{" + (tags == "" ? "-" : tags) + "}");
    ObjectSetInteger(0, name, OBJPROP_COLOR,      col);
@@ -913,10 +925,10 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    int prev = SL_state[LA_1];
 
    //--- cluster distances, current and two bars back
-   double c0  = BBTFImpact.BB_midline_Cluster[0][LA];
+   double c0  = BBTFImpact.BB_midline_Cluster[0][LA];    // M5 + M15
    double c0a = BBTFImpact.BB_midline_Cluster[0][LA_1];
    double c0b = BBTFImpact.BB_midline_Cluster[0][LA_2];
-   double c1  = BBTFImpact.BB_midline_Cluster[1][LA];
+   double c1  = BBTFImpact.BB_midline_Cluster[1][LA];    // M15 + M30
    double c1a = BBTFImpact.BB_midline_Cluster[1][LA_1];
    double c1b = BBTFImpact.BB_midline_Cluster[1][LA_2];
    double c2  = BBTFImpact.BB_midline_Cluster[2][LA];
@@ -940,7 +952,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    double dm4b = MathAbs(BB_datas[4].BB_diffMid[LA_2]);
 
    //--- LEVEL 1 predicates, named individually (lift measured alone)
-   bool A15 = ((c0 < c0a && c0a < c0b) || (c0 < CL_NEAR && c0a < CL_NEAR));  // +4.5
+   bool A15 = ((c0 < c0a && c0a < c0b) || (c0 < CL_NEAR_M15 && c0a < CL_NEAR_M15));  // +4.5
    bool S15 = SL_StageOK((int)BB_datas[1].BBW_stage[LA]);                    // +3.3
    bool C15 = (dm1 < SL_diffmid_m15 && dm1a < SL_diffmid_m15);               // +5.3
    bool D15 = (dm1 < dm1a && dm1a < dm1b);                                   // no use
@@ -966,11 +978,12 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    else if(SL_L1Mode == 4) lvl1 = (A15 && (S15 || C15) && (D15 || C15));
    else if(SL_L1Mode == 5) lvl1 = (A15 && (S15 || W15) && (D15 || C15));
    else if(SL_L1Mode == 6) lvl1 = (A15 && (S15 || W15 || D15 || C15));
+   else if(SL_L1Mode == 7) lvl1 = (A15 && (S15 || C15 || W15));
 
    if(lvl1) SL_state[LA] = 1;
 
    //--- LEVEL 2 predicates, named individually
-   bool A30 = ((c1 < c1a && c1a < c1b) || (c1 < CL_NEAR && c1a < CL_NEAR));  // +5.4
+   bool A30 = ((c1 < c1a && c1a < c1b) || (c1 < CL_NEAR_M15 && c1a < CL_NEAR_M15));  // +5.4
    bool S30 = SL_StageOK((int)BB_datas[2].BBW_stage[LA]);                    // +4.1
    bool C30 = (dm2 < SL_diffmid_m30 && dm2a < SL_diffmid_m30);               // +10.9
    bool D30 = (dm2 < dm2a && dm2a < dm2b);                                   // no use
@@ -1019,6 +1032,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    else if(SL_L2Mode == 1) ev30 = (S30 || C30);
    else if(SL_L2Mode == 2) ev30 = C30;
    else if(SL_L2Mode == 3) ev30 = (A30 && (S30 || C30));
+   else if(SL_L2Mode == 4) ev30 = (A30 && (S30 || C30 || W30));
 
    //--- S30 can waive the prev >= 1 chain. A30 and ev30 still apply.
    bool chain_ok = (prev >= 1);
@@ -1088,7 +1102,8 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
            || (BB_datas[3].BB_diffBBW[LA] < BB_datas[3].BB_diffBBW[LA_1]
             && BB_datas[3].BB_diffBBW[LA_1] < BB_datas[3].BB_diffBBW[LA_2]) );
       B1H = (c2 < c2a && c2a < c2b) || (c3 < c3a && c3a < c3b);
-      C1H = (c1 < CL_NEAR && c1a < CL_NEAR);
+      // C1H = (c1 < CL_NEAR && c1a < CL_NEAR);
+      bool C1H = (c2 < CL_NEAR_H1 && c2a < CL_NEAR_H1);   // CL_NEAR_H1 ~= 30
       // if(prev == 2 && A1H && B1H && C1H) SL_state[LA] = 3;
       if(prev >= 1 && A1H && B1H && C1H) SL_state[LA] = 3;
    }
@@ -1131,7 +1146,8 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
             else if(SL_state[LA] == 1) col = clrYellow;
             else                       col = clrGray;
  
-            if(ObjectCreate(0, name, OBJ_TEXT, 0, t, mid))
+            if(ObjectCreate(0, name, OBJ_TEXT, 0, t, mid + SL_TagOffsetPts * _Point))
+            // if(ObjectCreate(0, name, OBJ_TEXT, 0, t, mid + SL_TagOffsetPts))
             {
                ObjectSetString (0, name, OBJPROP_TEXT,     txt);
                ObjectSetInteger(0, name, OBJPROP_COLOR,    col);
@@ -1159,29 +1175,32 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
                                      PERIOD_H4,  SL_L4TagColor);
    //--- SL_Draw off: still show the L1 tags on the M15 midline. L2 is NOT drawn
    //--- here - it has its own block below, on the M30 midline at the M30 bar time.
-   if(SL_DrawL1Tags && l1tags != "")
-   {
-      double mid = BB_datas[1].BBMidLV[LA];
-      datetime t = iTime(_Symbol, PERIOD_M15, 0);
+   if(SL_DrawL1Tags && l1tags != "") SL_DrawTagLabel("SLL1_", l1tags, BB_datas[1].BBMidLV[LA],
+                                     PERIOD_M15,  SL_L1TagColor);
+   // if(SL_DrawL1Tags && l1tags != "")
+   // {
+   //    double mid = BB_datas[1].BBMidLV[LA];
+   //    datetime t = iTime(_Symbol, PERIOD_M15, 0);
 
-      if(mid > 0.0 && t > 0)
-      {
-         string txt = "[L1-" + l1tags + "]";
-         string name = txt + "_" + IntegerToString((int)t);   // ID only, one label per bar
-         if(ObjectFind(0, name) < 0 && l1tags != "")
-         {
-            if(ObjectCreate(0, name, OBJ_TEXT, 0, t, mid))
-            {
-               ObjectSetString (0, name, OBJPROP_TEXT,     txt);
-               ObjectSetInteger(0, name, OBJPROP_COLOR,    SL_L1TagColor);
-               ObjectSetInteger(0, name, OBJPROP_FONTSIZE, SL_FontSize);
-               ObjectSetDouble (0, name, OBJPROP_ANGLE,    SL_Angle);
-               ObjectSetInteger(0, name, OBJPROP_ANCHOR,   ANCHOR_UPPER);
-               ObjectSetInteger(0, name, OBJPROP_BACK,     false);
-            }
-         }
-      }
-   }
+   //    if(mid > 0.0 && t > 0)
+   //    {
+   //       string txt = "[L1-" + l1tags + "]";
+   //       string name = txt + "_" + IntegerToString((int)t);   // ID only, one label per bar
+   //       if(ObjectFind(0, name) < 0 && l1tags != "")
+   //       {
+   //          // if(ObjectCreate(0, name, OBJ_TEXT, 0, t, mid + SL_TagOffsetPts * _Point))
+   //          if(ObjectCreate(0, name, OBJ_TEXT, 0, t, mid + SL_TagOffsetPts))
+   //          {
+   //             ObjectSetString (0, name, OBJPROP_TEXT,     txt);
+   //             ObjectSetInteger(0, name, OBJPROP_COLOR,    SL_L1TagColor);
+   //             ObjectSetInteger(0, name, OBJPROP_FONTSIZE, SL_FontSize);
+   //             ObjectSetDouble (0, name, OBJPROP_ANGLE,    SL_Angle);
+   //             ObjectSetInteger(0, name, OBJPROP_ANCHOR,   ANCHOR_UPPER);
+   //             ObjectSetInteger(0, name, OBJPROP_BACK,     false);
+   //          }
+   //       }
+   //    }
+   // }
 
    //--- log, so the chart can be cross-checked against the numbers
    if(SL_WriteLog)
