@@ -1056,7 +1056,6 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
          string txt = "L" + IntegerToString(SL_state[LA]);
          if(why != "") txt += "-" + why;
          if(SL_DrawL1Tags && l1tags != "") txt += "[" + l1tags + "]";
-         if(SL_DrawL2Tags && l2tags != "") txt += "{" + l2tags + "}";
  
          string name = txt + "_" + IntegerToString((int)t);   // ID only, one label per bar
          if(ObjectFind(0, name) < 0 && SL_state[LA] > 0)
@@ -1079,29 +1078,57 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
          }
       }
    }
-   else if(SL_DrawL1Tags || SL_DrawL2Tags)
+
+   //--- L2 tags on their OWN label: M30 midline, at the M30 BAR TIME.
+   //--- One label per M30 bar - SL_Update runs per M15 bar, so the two M15 bars
+   //--- inside an M30 bar both reach here, and ObjectFind lets only the first
+   //--- create it. That is harmless: l2tags is built from BB_datas[2], which only
+   //--- changes when a new M30 bar forms, so both calls compute the same tags.
+   //--- Independent of SL_Draw - the M30 side can be shown with the M15 side off.
+   if(SL_DrawL2Tags)
+   {
+      double   mid30 = BB_datas[2].BBMidLV[LA];
+      datetime t30   = iTime(_Symbol, PERIOD_M30, 0);   // M30 bar time, not M15
+
+      //--- One label on EVERY M30 bar, tags or not - "{-}" marks a bar where none of
+      //--- the four L2 shapes were present. Drawing the empty ones too means the row
+      //--- is continuous, so a gap on the chart is a missing bar rather than a bar
+      //--- with nothing to say.
+      if(mid30 > 0.0 && t30 > 0 && l2tags != "")
+      {
+         string txt2  = "[L2-" + l2tags + "]";
+         string name2 = txt2 + "_" + IntegerToString((int)t30);
+         color  SL_L2TagColor = GreenYellow;   // L2 tags are drawn separately, on the M30 midline
+         if(ObjectFind(0, name2) < 0 && ObjectCreate(0, name2, OBJ_TEXT, 0, t30, mid30))
+         {
+            ObjectSetString (0, name2, OBJPROP_TEXT,       txt2);
+            ObjectSetInteger(0, name2, OBJPROP_COLOR,      SL_L2TagColor);
+            ObjectSetInteger(0, name2, OBJPROP_FONTSIZE,   SL_FontSize);
+            ObjectSetDouble (0, name2, OBJPROP_ANGLE,      SL_Angle);
+            ObjectSetInteger(0, name2, OBJPROP_ANCHOR,     ANCHOR_LOWER);
+            ObjectSetInteger(0, name2, OBJPROP_BACK,       false);
+            ObjectSetInteger(0, name2, OBJPROP_SELECTABLE, false);
+         }
+      }
+   }
+   //--- SL_Draw off: still show the L1 tags on the M15 midline. L2 is NOT drawn
+   //--- here - it has its own block below, on the M30 midline at the M30 bar time.
+   if(SL_DrawL1Tags && l1tags != "")
    {
       double mid = BB_datas[1].BBMidLV[LA];
       datetime t = iTime(_Symbol, PERIOD_M15, 0);
 
-      // skip state-0 bars only when SL_ShowFails is off
       if(mid > 0.0 && t > 0)
       {
-         string txt = "";
-         if(SL_DrawL1Tags && l1tags != "") txt += "[L1-" + l1tags + "]";
-         if(SL_DrawL2Tags && l2tags != "") txt += "[L2-" + l2tags + "]";
-
+         string txt = "[L1-" + l1tags + "]";
          string name = txt + "_" + IntegerToString((int)t);   // ID only, one label per bar
-         if(ObjectFind(0, name) < 0 && (l1tags != "" || l2tags != ""))
+         color SL_L1TagColor = clrYellow;
+         if(ObjectFind(0, name) < 0 && l1tags != "")
          {
-            color col;
-            col = clrYellow;
-            if(l2tags != "") col = clrLime;
-
             if(ObjectCreate(0, name, OBJ_TEXT, 0, t, mid))
             {
                ObjectSetString (0, name, OBJPROP_TEXT,     txt);
-               ObjectSetInteger(0, name, OBJPROP_COLOR,    col);
+               ObjectSetInteger(0, name, OBJPROP_COLOR,    SL_L1TagColor);
                ObjectSetInteger(0, name, OBJPROP_FONTSIZE, SL_FontSize);
                ObjectSetDouble (0, name, OBJPROP_ANGLE,    SL_Angle);
                ObjectSetInteger(0, name, OBJPROP_ANCHOR,   ANCHOR_UPPER);
