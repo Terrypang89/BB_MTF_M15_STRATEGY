@@ -88,6 +88,9 @@ double CL_NEAR_M5M15  = 10.5;   // c0 = M5 + M15   - best single field in the lo
 double CL_NEAR_M15M30 = 8;      // c1 = M15 + M30  - +$17 median over 10.5 (paired, 216 cfg)
 double CL_NEAR_M15H1  = 30;     // c2 = M15 + H1   - median 19.8, needs ~3x the c0 value
 double CL_NEAR_M30H1  = 8;      // c3 = M30 + H1   - UNVERIFIED, not in the measured log
+double CL_NEAR_M15H4  = 60;     // c4 = M15 + H4   - UNVERIFIED. Widest pairs measured so
+double CL_NEAR_M30H4  = 60;     // c5 = M30 + H4     far run 2-3x the pair below them, so
+double CL_NEAR_H1H4   = 60;     // c6 = H1  + H4     these start wide. Check the fire rate.
 //+------------------------------------------------------------------+
 //| TRADE STRATEGY (optional)                                        |
 //|                                                                  |
@@ -985,6 +988,13 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    double c2b = BBTFImpact.BB_midline_Cluster[2][LA_2];
    double c3  = BBTFImpact.BB_midline_Cluster[3][LA];
    double c3a = BBTFImpact.BB_midline_Cluster[3][LA_1];
+
+   double c4  = BBTFImpact.BB_midline_Cluster[4][LA];    // M15 + H4
+   double c4a = BBTFImpact.BB_midline_Cluster[4][LA_1];
+   double c5  = BBTFImpact.BB_midline_Cluster[5][LA];    // M30 + H4
+   double c5a = BBTFImpact.BB_midline_Cluster[5][LA_1];
+   double c6  = BBTFImpact.BB_midline_Cluster[6][LA];    // H1  + H4
+   double c6a = BBTFImpact.BB_midline_Cluster[6][LA_1];
    double c3b = BBTFImpact.BB_midline_Cluster[3][LA_2];
 
    double dm1  = MathAbs(BB_datas[1].BB_diffMid[LA]);
@@ -1015,6 +1025,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       if(c0 < CL_NEAR_M5M15  && c0a < CL_NEAR_M5M15)      l1tags += "A";
       if(c1 < CL_NEAR_M15M30 && c1a < CL_NEAR_M15M30)     l1tags += "X";
       if(c2 < CL_NEAR_M15H1  && c2a < CL_NEAR_M15H1)      l1tags += "Y";
+      if(c4 < CL_NEAR_M15H4  && c4a < CL_NEAR_M15H4)      l1tags += "Z";
       if(S15)                                             l1tags += "S";
       if(dm1 < dm1a && dm1a < dm1b)                       l1tags += "B";
       if(dmt1 >= 3.0 && dmt1a >= 3.0 &&
@@ -1050,7 +1061,8 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    string l2tags = "";
    if(SL_DrawL2Tags)
    {
-      if(c3 < CL_NEAR_M30H1 && c3a < CL_NEAR_M30H1)       l2tags += "A";
+      if(c3 < CL_NEAR_M30H1 && c3a < CL_NEAR_M30H1)       l2tags += "Y";
+      if(c5 < CL_NEAR_M30H4 && c5a < CL_NEAR_M30H4)       l2tags += "Z";
       if(S30)                                             l2tags += "S";
       if(dm2 < dm2a && dm2a < dm2b)                       l2tags += "B";
       if(dmt2 >= 3.0 && dmt2a >= 3.0 &&
@@ -1070,6 +1082,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    string l3tags = "";
    if(SL_DrawL3Tags)
    {
+      if(c6 < CL_NEAR_H1H4 && c6a < CL_NEAR_H1H4)         l3tags += "Z";
       if(SH1)                                             l3tags += "S";
       if(dmt3 >= 3.0 && dmt3a >= 3.0 &&
          (dmt3 == 3.0 || dmt3a == 3.0 || dmt3b == 3.0))   l3tags += "C";
@@ -1275,30 +1288,6 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    //--- here - it has its own block below, on the M30 midline at the M30 bar time.
    if(SL_DrawL1Tags && l1tags != "") SL_DrawTagLabel("SLL1_", l1tags, BB_datas[1].BBMidLV[LA],
                                      PERIOD_M15,  SL_L1TagColor);
-   // if(SL_DrawL1Tags && l1tags != "")
-   // {
-   //    double mid = BB_datas[1].BBMidLV[LA];
-   //    datetime t = iTime(_Symbol, PERIOD_M15, 0);
-
-   //    if(mid > 0.0 && t > 0)
-   //    {
-   //       string txt = "[L1-" + l1tags + "]";
-   //       string name = txt + "_" + IntegerToString((int)t);   // ID only, one label per bar
-   //       if(ObjectFind(0, name) < 0 && l1tags != "")
-   //       {
-   //          // if(ObjectCreate(0, name, OBJ_TEXT, 0, t, mid + SL_TagOffsetPts * _Point))
-   //          if(ObjectCreate(0, name, OBJ_TEXT, 0, t, mid + SL_TagOffsetPts))
-   //          {
-   //             ObjectSetString (0, name, OBJPROP_TEXT,     txt);
-   //             ObjectSetInteger(0, name, OBJPROP_COLOR,    SL_L1TagColor);
-   //             ObjectSetInteger(0, name, OBJPROP_FONTSIZE, SL_FontSize);
-   //             ObjectSetDouble (0, name, OBJPROP_ANGLE,    SL_Angle);
-   //             ObjectSetInteger(0, name, OBJPROP_ANCHOR,   ANCHOR_UPPER);
-   //             ObjectSetInteger(0, name, OBJPROP_BACK,     false);
-   //          }
-   //       }
-   //    }
-   // }
 
    //--- log, so the chart can be cross-checked against the numbers
    if(SL_WriteLog)
