@@ -1,211 +1,185 @@
-#property copyright "Copyright 2024, terrypang."
-#property link      "https://www.mql5.com/en/users/terrypang/"
+//+------------------------------------------------------------------+
+//| TofyVerifySideway.mqh                                            |
+//|                                                                  |
+//| VISUAL + LOG verification of the TofySideway S_ flag against     |
+//| what price ACTUALLY did afterward.                               |
+//|                                                                  |
+//| Chart label (rotated 90 deg, drawn ON the M15 BB midline):       |
+//|      S13-NEU = flag S_13 said sideway, price went nowhere  OK    |
+//|      S13-UP  = flag said sideway, price ran up            WRONG  |
+//|      S13-DN  = flag said sideway, price ran down          WRONG  |
+//|      .-NEU   = no flag, but price went nowhere           MISSED  |
+//|      .-UP/.-DN = no flag, price moved                        OK  |
+//|                                                                  |
+//| Log line (parseable, same field:[value] convention as the EA):   |
+//|   [VERIFY_SIDEWAY] bar:[...] S_:[13] outcome:[NEU]               |
+//|        start_px:[4345.50] mid_M15:[4348.12] barsN:[8] X:[10.0]   |
+//|                                                                  |
+//| Barrier (identical to label_base_rate.py, pre-registered):       |
+//|   X = 10.0, N = 8 M15 bars (120 min), first touch on M5 closes.  |
+//|     start+X hit first -> UP ; start-X hit first -> DN            |
+//|     neither within 120 min -> NEU  (this is "sideways")          |
+//|                                                                  |
+//| ############# LOOKAHEAD WARNING #############                    |
+//| Bar T's outcome is NOT knowable until T+120min. This file only   |
+//| resolves and draws bar T-8, using price that already happened.   |
+//| It is a MEASUREMENT OF THE PAST for visual checking.             |
+//| NEVER read these values from trade logic — that would be         |
+//| lookahead bias and would make every later backtest fake.         |
+//| #############################################                    |
+//+------------------------------------------------------------------+
+#define HAS_TofyVerifySideway
+//--- barrier parameters (keep identical to the Python test)
+double VS_X          = 10.0;   // price offset that counts as "a move"
+int    VS_N          = 8;      // M15 bars ahead = 120 minutes
+bool   VS_DrawLabels = true;
+bool   VS_WriteLog   = true;   // emit a [VERIFY_SIDEWAY] line per resolved bar
+int    VS_FontSize   = 11;     // bigger than the default 8
+double VS_Angle      = 90.0;   // rotate label vertical
 
-#include <TofyIncludeSimple.mqh>
-#define HAS_TOFYSIDEWAY
+//--- rolling history so we can resolve bar T-N
+#define VS_MAX 8192
+datetime vs_time[VS_MAX];
+int      vs_sub [VS_MAX];      // S_ sub-type (0 = no flag)
+double   vs_mid [VS_MAX];      // M15 BB midline AT that bar (label is drawn here)
+int      vs_count = 0;
+
+//--- running tally, cross-checkable against the Python report
+int vs_A_up=0, vs_A_dn=0, vs_A_neu=0;   // GROUP A: S_ flag present
+int vs_B_up=0, vs_B_dn=0, vs_B_neu=0;   // GROUP B: no flag
 
 //+------------------------------------------------------------------+
-//| Midline-cluster distance thresholds (price units).                |
-//| BB_midline_Cluster[0] = |M15 mid - M5  mid|                       |
-//| BB_midline_Cluster[1] = |M15 mid - M30 mid|                       |
-//| BB_midline_Cluster[2] = |M15 mid - H1  mid|                       |
+//| Resolve one bar's forward outcome from ALREADY-CLOSED M5 bars.   |
+//| Returns false if the 120-minute window is not fully in the past. |
 //+------------------------------------------------------------------+
-const double CLUS_VTIGHT = 3.0;    // was 3   (S_51)
-const double CLUS_TIGHT  = 6.0;    // was 6   (S_11/12/13, S_21..24, S_41)
-const double CLUS_MED    = 10.0;   // was 10  (S_11/12/13, S_31/32, S_41)
-const double CLUS_LOOSE  = 15.0;   // was 15  (S_31/32)
-//+------------------------------------------------------------------+
-
-//--- cluster label display (diagnostic only; safe to read - no lookahead)
-bool   DC_Draw     = true;
-int    DC_FontSize = 9;
-double DC_Angle    = 90.0;   // 0.0 for horizontal
-int    DC_Digits   = 1;
-//+------------------------------------------------------------------+
-
-void BBDatas_Midline_Cluster(BB_MTF_Impact_struct &BBTFImpact, BB_MTF_Data_struct &BB_datas[])
+bool VS_Resolve(datetime t0, double &start_px, string &outcome)
 {
-   double tempval[4], maxMid[4], minMid[4];
-   
-   double m5Mid = BB_datas[0].BBMidLV[LA];
-   double m15Mid = BB_datas[1].BBMidLV[LA];
-   double m30Mid = BB_datas[2].BBMidLV[LA];
-   double h1Mid  = BB_datas[3].BBMidLV[LA];
+   int s0 = iBarShift(_Symbol, PERIOD_M5, t0, false);
+   if(s0 < 0) return false;
 
-   // M15 vs M5
-   maxMid[0] = MathMax(m15Mid, m5Mid);
-   minMid[0] = MathMin(m15Mid, m5Mid);
+   start_px = iClose(_Symbol, PERIOD_M5, s0);
+   if(start_px <= 0.0) return false;
 
-   // M15 vs M30
-   maxMid[1] = MathMax(m15Mid, m30Mid);
-   minMid[1] = MathMin(m15Mid, m30Mid);
+   datetime t_end = t0 + (datetime)(VS_N * 15 * 60);   // T + 120 minutes
 
-   maxMid[2] = MathMax(m15Mid, h1Mid);
-   minMid[2] = MathMin(m15Mid, h1Mid);
-
-   maxMid[3] = MathMax(m30Mid, h1Mid);
-   minMid[3] = MathMin(m30Mid, h1Mid);
-
-   for(int i = 0; i < 4; i++)
+   // forward in time = DECREASING shift; 0 is the newest closed bar
+   for(int s = s0 - 1; s >= 0; s--)
    {
-      tempval[i] = (maxMid[i] - minMid[i]);
-      if(tempval[i] != BBTFImpact.BB_midline_Cluster[i][LA])
-      {
-         BBTFImpact.BB_midline_Cluster[i][LA_4] = BBTFImpact.BB_midline_Cluster[i][LA_3];
-         BBTFImpact.BB_midline_Cluster[i][LA_3] = BBTFImpact.BB_midline_Cluster[i][LA_2];
-         BBTFImpact.BB_midline_Cluster[i][LA_2] = BBTFImpact.BB_midline_Cluster[i][LA_1];
-         BBTFImpact.BB_midline_Cluster[i][LA_1] = BBTFImpact.BB_midline_Cluster[i][LA];
-         BBTFImpact.BB_midline_Cluster[i][LA] = tempval[i];
-      }
+      datetime ts = iTime(_Symbol, PERIOD_M5, s);
+      if(ts <= 0)    break;
+      if(ts > t_end) { outcome = "NEU"; return true; }   // window expired, nothing hit
+
+      double px = iClose(_Symbol, PERIOD_M5, s);
+      if(px >= start_px + VS_X) { outcome = "UP"; return true; }
+      if(px <= start_px - VS_X) { outcome = "DN"; return true; }
    }
+   return false;   // not enough bars yet — resolve on a later call
 }
 
 //+------------------------------------------------------------------+
-//| Draw the three midline-cluster distances on the M15 midline.      |
-//|   c 3.2|10.8|15.5   =  M15-M5 | M15-M30 | M15-H1                  |
-//| Smaller = midlines bunched = timeframes agree.                    |
-//| Colour = which gate tier Cluster[0] falls into (it appears in 6  |
-//| of the 13 threshold tests below).                                 |
-//| NO LOOKAHEAD - current-bar values only.                           |
+//| Draw the verdict vertically, anchored on the M15 BB midline.     |
 //+------------------------------------------------------------------+
-void DC_DrawClusterLabel(BB_MTF_Impact_struct &BBTFImpact,
-                         BB_MTF_Data_struct &BB_datas[])
+void VS_DrawLabel(datetime t0, double mid_px, int sub, string outcome)
 {
-   if(!DC_Draw) return;
+   if(!VS_DrawLabels) return;
+   if(mid_px <= 0.0)  return;
 
-   double mid_M15 = BB_datas[1].BBMidLV[LA];      // index 1 = M15
-   if(mid_M15 <= 0.0) return;
+   string name = "VS_" + IntegerToString((int)t0);
+   if(ObjectFind(0, name) >= 0) return;          // already drawn
 
-   datetime t_bar = iTime(_Symbol, PERIOD_M15, 0);
-   if(t_bar <= 0) return;
-
-   // keep the DOUBLES for the gate comparison
-   double c0 = BBTFImpact.BB_midline_Cluster[0][LA];
-   double c1 = BBTFImpact.BB_midline_Cluster[1][LA];
-   double c2 = BBTFImpact.BB_midline_Cluster[2][LA];
-
-   // truncate ONLY for display
-   string txt = IntegerToString((int)c0)
-              + "-" + IntegerToString((int)c1)
-              + "-" + IntegerToString((int)c2);
-
-   string name = txt + "_" + IntegerToString((int)t_bar);   // timestamp only = one per bar
-   if(ObjectFind(0, name) >= 0) return;
+   string tag = (sub > 0) ? ("S" + IntegerToString(sub)) : ".";
+   string txt = tag + "-" + outcome;
 
    color col;
-   if(c0 <= CLUS_VTIGHT)     col = clrLime;      // compares the DOUBLE
-   else if(c0 <= CLUS_TIGHT) col = clrAqua;
-   else if(c0 <= CLUS_MED)   col = clrYellow;
-   else                      col = clrGray;
+   if(sub > 0 && outcome == "NEU")   col = clrLime;      // flag correct
+   else if(sub > 0)                  col = clrRed;       // FALSE sideway
+   else if(outcome == "NEU")         col = clrOrange;    // MISSED sideway
+   else                              col = clrDimGray;   // correctly not sideway
 
-   if(!ObjectCreate(0, name, OBJ_TEXT, 0, t_bar, mid_M15)) return;
+   if(!ObjectCreate(0, name, OBJ_TEXT, 0, t0, mid_px)) return;
    ObjectSetString (0, name, OBJPROP_TEXT,     txt);
    ObjectSetInteger(0, name, OBJPROP_COLOR,    col);
-   ObjectSetInteger(0, name, OBJPROP_FONTSIZE, DC_FontSize);
-   ObjectSetDouble (0, name, OBJPROP_ANGLE,    DC_Angle);
-   ObjectSetInteger(0, name, OBJPROP_ANCHOR,   ANCHOR_LOWER);
+   ObjectSetInteger(0, name, OBJPROP_FONTSIZE, VS_FontSize);
+   ObjectSetDouble (0, name, OBJPROP_ANGLE,    VS_Angle);      // vertical
+   ObjectSetInteger(0, name, OBJPROP_ANCHOR,   ANCHOR_LOWER);  // sits on the midline
    ObjectSetInteger(0, name, OBJPROP_BACK,     false);
 }
 
-void BBDatas_Midline_Sideway(BB_MTF_Impact_struct &BBTFImpact, BB_MTF_Data_struct &BB_datas[])
+//+------------------------------------------------------------------+
+//| Call ONCE per new M15 bar.                                       |
+//|   t_bar        = iTime(_Symbol, PERIOD_M15, 0)                   |
+//|   sideway_sub  = (int)BBTFImpact.sideway_selected[0]  (0 = none) |
+//|   mid_lv_M15   = the M15 BB midline value at this bar            |
+//|                  (whatever your struct calls it, e.g.            |
+//|                   BB_datas[1].BB_MidLV[LA])                      |
+//+------------------------------------------------------------------+
+#ifdef HAS_TofyVerifySideway
+void VS_OnNewM15Bar(datetime t_bar, int sideway_sub, double mid_lv_M15)
 {
-
-   BBTFImpact.sideway_selected[LA_4] = BBTFImpact.sideway_selected[LA_3];
-   BBTFImpact.sideway_selected[LA_3] = BBTFImpact.sideway_selected[LA_2];
-   BBTFImpact.sideway_selected[LA_2] = BBTFImpact.sideway_selected[LA_1];
-   BBTFImpact.sideway_selected[LA_1] = BBTFImpact.sideway_selected[LA];
-   BBTFImpact.sideway_selected[LA] = 0;
-   for(int i=4; i>= 0; i--)
+   if(vs_count < VS_MAX)
    {
-      BBTFImpact.sideway_val[i] = 0; 
-      if(BB_datas[i].BB_diffMid_Trend[LA] >= 3)
-      {
-         BBTFImpact.sideway_val[i] += 4;
-      }
-      if(BB_datas[i].BBW_stage[LA] < 500)
-      {
-         BBTFImpact.sideway_val[i] += 2;
-      }
-      else if((BB_datas[i].BBW_stage[LA] == 513 || BB_datas[i].BBW_stage[LA] == 523))
-      {
-         BBTFImpact.sideway_val[i] += 1;
-      }
+      vs_time[vs_count] = t_bar;
+      vs_sub [vs_count] = sideway_sub;
+      vs_mid [vs_count] = mid_lv_M15;
+      vs_count++;
    }
 
-  
-   // when M5 + M15 cluster and M15 + M30 cluster or when M5 + M15 cluster and M15 + H1 cluster
-   if((BBTFImpact.BB_midline_Cluster[0][LA] <= CLUS_TIGHT && BBTFImpact.BB_midline_Cluster[1][LA] <= CLUS_MED) || \
-      (BBTFImpact.BB_midline_Cluster[0][LA] <= CLUS_TIGHT && BBTFImpact.BB_midline_Cluster[2][LA] <= CLUS_MED))
+   // resolve the bar whose 120-minute window has now fully closed
+   int idx = vs_count - 1 - VS_N;
+   if(idx < 0) return;
+
+   double start_px = 0.0;
+   string outcome  = "";
+   if(!VS_Resolve(vs_time[idx], start_px, outcome)) return;
+
+   int sub = vs_sub[idx];
+   if(sub > 0)
    {
-      // M5 fly_shrink or above & M15 diffmid_trend sideway or stage sideway 
-      if(BBTFImpact.sideway_val[0] >= 1 && BBTFImpact.sideway_val[1] >= 4 && (BBTFImpact.sideway_val[3] >= 2 || BBTFImpact.sideway_val[2] >= 4))
-      {
-         BBTFImpact.sideway_selected[LA] = 11;
-      }
-      else if(BBTFImpact.sideway_val[0] >= 4 && BBTFImpact.sideway_val[1] >= 1 && (BBTFImpact.sideway_val[3] >= 2 || BBTFImpact.sideway_val[2] >= 4))
-      {
-         BBTFImpact.sideway_selected[LA] = 12;
-      }
-      else if(BBTFImpact.sideway_val[0] >= 4 && BBTFImpact.sideway_val[1] >= 2)
-      {
-         BBTFImpact.sideway_selected[LA] = 13;
-      }
+      if(outcome == "UP")      vs_A_up++;
+      else if(outcome == "DN") vs_A_dn++;
+      else                     vs_A_neu++;
    }
-   // M15 + M5 cluster only
-   if(BBTFImpact.sideway_selected[LA] == 0 && (BBTFImpact.BB_midline_Cluster[0][LA] <= CLUS_TIGHT && BBTFImpact.BB_midline_Cluster[0][LA_1] <= CLUS_TIGHT))
+   else
    {
-      // M5 diffmid_trend sideway, M5 BBW_stage sideway
-      if(BBTFImpact.sideway_val[0] >= 6)
-      {
-         BBTFImpact.sideway_selected[LA] = 21;
-      }
-      // M5 diffmid_trend sideway & M15 BBW_stage sideway or diffmid_trend sideway
-      else if(BBTFImpact.sideway_val[0] >= 4 && BBTFImpact.sideway_val[1] >= 2)
-      {
-         BBTFImpact.sideway_selected[LA] = 22;
-      }
-      else if(BBTFImpact.sideway_val[1] >= 2 && BBTFImpact.sideway_val[3] >= 5)
-      {
-         BBTFImpact.sideway_selected[LA] = 23;
-      }
-      // 
-      else if(BBTFImpact.sideway_val[0] >= 5 && BBTFImpact.sideway_val[1] >= 1)
-      {
-         BBTFImpact.sideway_selected[LA] = 24;
-      }
+      if(outcome == "UP")      vs_B_up++;
+      else if(outcome == "DN") vs_B_dn++;
+      else                     vs_B_neu++;
    }
 
-   //  M5 + M15 cluster, M15 + M30 cluster
-   if(BBTFImpact.sideway_selected[LA] == 0 && (BBTFImpact.BB_midline_Cluster[0][LA] <= CLUS_MED && BBTFImpact.BB_midline_Cluster[1][LA] <= CLUS_LOOSE))
+   VS_DrawLabel(vs_time[idx], vs_mid[idx], sub, outcome);
+
+   if(VS_WriteLog)
    {
-      // M5 diffmid_trend sideway,  
-      // during M30 && H1 fly, M5 start fly_shrink
-      if(BBTFImpact.sideway_val[0] >= 4 && BBTFImpact.sideway_val[1] >= 2)
-      {
-         BBTFImpact.sideway_selected[LA] = 31;
-      }
-      else if(BBTFImpact.sideway_val[1] >= 2 && BBTFImpact.sideway_val[3] >= 5)
-      {
-         BBTFImpact.sideway_selected[LA] = 32;
-      }
+      Print("[VERIFY_SIDEWAY] bar:[", TimeToString(vs_time[idx], TIME_DATE|TIME_MINUTES),
+            "] S_:[", sub,
+            "] outcome:[", outcome,
+            "] start_px:[", DoubleToString(start_px, 2),
+            "] mid_M15:[", DoubleToString(vs_mid[idx], 2),
+            "] X:[", DoubleToString(VS_X, 1),
+            "] N:[", VS_N, "]");
    }
-   // check if prev is sideway and M30 or H1 still sideway
-   if(BBTFImpact.sideway_selected[LA] == 0 && BBTFImpact.sideway_selected[1] != 0 && BBTFImpact.BB_midline_Cluster[0][LA] <= CLUS_TIGHT && BBTFImpact.BB_midline_Cluster[1][LA] <= CLUS_TIGHT && BBTFImpact.BB_midline_Cluster[2][LA] <= CLUS_MED)
-   {
-      // M30 stage sideway or diffmidtrend sideway / H1 stage sideway or diffmidtrend sideway & H4 stage sideway or diffmidtrend sideway
-      if((BBTFImpact.sideway_val[0] >= 1 || BBTFImpact.sideway_val[1] >= 1) && (BBTFImpact.sideway_val[2] >= 2) && (BBTFImpact.sideway_val[3] >= 2) && (BBTFImpact.sideway_val[4] >= 2))
-      {
-         BBTFImpact.sideway_selected[LA] = 41;
-      }
-   }
-   // if prev is sideway, 
-   if(BBTFImpact.sideway_selected[LA] == 0 && BBTFImpact.sideway_selected[1] != 0 && (BBTFImpact.BB_midline_Cluster[0][LA] <= CLUS_VTIGHT || BBTFImpact.BB_midline_Cluster[1][LA] <= CLUS_VTIGHT) && \
-      (BBTFImpact.BB_midline_Cluster[0][LA] < BBTFImpact.BB_midline_Cluster[0][LA_1] || BBTFImpact.BB_midline_Cluster[1][LA] < BBTFImpact.BB_midline_Cluster[1][LA_1]))
-   {
-      if(BBTFImpact.sideway_val[1] >= 6)
-      {
-         BBTFImpact.sideway_selected[LA] = 51;
-      }
-   }
-   DC_DrawClusterLabel(BBTFImpact, BB_datas);
 }
+#endif
+//+------------------------------------------------------------------+
+//| Call from OnDeinit for the verdict.                              |
+//| THE TEST: A_NEU% must be MATERIALLY HIGHER than B_NEU%.          |
+//| If they are about equal, the S_ flag carries no information      |
+//| about whether price is about to go sideways.                     |
+//+------------------------------------------------------------------+
+#ifdef HAS_TofyVerifySideway
+void VS_PrintSummary()
+{
+   int nA = vs_A_up + vs_A_dn + vs_A_neu;
+   int nB = vs_B_up + vs_B_dn + vs_B_neu;
+   double pA = (nA > 0) ? 100.0 * vs_A_neu / nA : 0.0;
+   double pB = (nB > 0) ? 100.0 * vs_B_neu / nB : 0.0;
+
+   Print("[VERIFY_SIDEWAY_SUMMARY] X:[", DoubleToString(VS_X,1), "] N:[", VS_N, "]");
+   Print("[VERIFY_SIDEWAY_SUMMARY] GROUP_A_flag n:[", nA, "] UP:[", vs_A_up,
+         "] DN:[", vs_A_dn, "] NEU:[", vs_A_neu, "] NEU_pct:[", DoubleToString(pA,1), "]");
+   Print("[VERIFY_SIDEWAY_SUMMARY] GROUP_B_noflag n:[", nB, "] UP:[", vs_B_up,
+         "] DN:[", vs_B_dn, "] NEU:[", vs_B_neu, "] NEU_pct:[", DoubleToString(pB,1), "]");
+   Print("[VERIFY_SIDEWAY_SUMMARY] VERDICT A_minus_B:[", DoubleToString(pA - pB, 1),
+         "] (large positive = flag works ; near zero = flag carries no sideway info)");
+}
+#endif
