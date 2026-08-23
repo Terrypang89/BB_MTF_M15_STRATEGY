@@ -81,10 +81,13 @@ double SL_Angle     = 90.0;     // OBJPROP_ANGLE is a DOUBLE property
 // double CL_NEAR      = 10.5;     // 10.0 rejected clus1 = 10.1 by 0.1 and broke
                                 // the ladder chain. 10.5 costs +89 bars and takes
                                 // the 2026.02.03 window from 16/50 to 27/50.
-double CL_NEAR_M15    = 10.5;     // 10.0 rejected clus1 = 10.1 by 0.1 and broke
-double CL_NEAR_M30    = 8;     // 10.0 rejected clus1 = 10.1 by 0.1 and broke
-double CL_NEAR_H1     = 30;     // 10.0 rejected clus1 = 10.1 by 0.1 and broke
-double CL_NEAR_H4     = 0;
+//--- Cluster thresholds, named by the PAIR they measure rather than by a timeframe,
+//--- because the pairs sit on different scales. February medians: c0 8.1, c1 9.3,
+//--- c2 19.8. c3 is not present in the V36.15 log, so its value is unverified.
+double CL_NEAR_M5M15  = 10.5;   // c0 = M5 + M15   - best single field in the log, F1 72.4
+double CL_NEAR_M15M30 = 8;      // c1 = M15 + M30  - +$17 median over 10.5 (paired, 216 cfg)
+double CL_NEAR_M15H1  = 30;     // c2 = M15 + H1   - median 19.8, needs ~3x the c0 value
+double CL_NEAR_M30H1  = 8;      // c3 = M30 + H1   - UNVERIFIED, not in the measured log
 //+------------------------------------------------------------------+
 //| TRADE STRATEGY (optional)                                        |
 //|                                                                  |
@@ -210,8 +213,9 @@ int    SL_BrkLookback  = 2;
 //--- Threshold value barely matters: <0 <1 <2 <5 all give the same result.
 double SL_diffbbw_m15 = 1.0;
 double SL_diffbbw_m30 = 1.0;    // W30 threshold
-// double SL_diffbbw_H1  = 1.0;    // WH1 threshold (L3W)
-double SL_diffbbw_H1  = 6.5;    // WH1 threshold (L3W)
+// double SL_diffbbw_H1  = 6.5;    // L3W - 92% of long ranges, F1 68.3    // WH1 threshold (L3W)
+// double SL_diffbbw_H1  = 6.5;    // WH1 threshold (L3W)
+double SL_diffbbw_H1  = 2;    // WH1 threshold (L3W)
 double SL_diffbbw_H4 = 1.0;   // L4W tag only. MEASURED: no threshold separates
                               // sideway on H4 - best F1 58.1 at thr 156, firing on
                               // 97% of bars at 41% precision. Left at 1.0 because
@@ -997,7 +1001,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    double dm4b = MathAbs(BB_datas[4].BB_diffMid[LA_2]);
 
    //--- LEVEL 1 predicates, named individually (lift measured alone)
-   bool A15 = ((c0 < c0a && c0a < c0b) || (c0 < CL_NEAR_M15 && c0a < CL_NEAR_M15));  // +4.5
+   bool A15 = ((c0 < c0a && c0a < c0b) || (c0 < CL_NEAR_M5M15 && c0a < CL_NEAR_M5M15));  // +4.5
    bool S15 = SL_StageOK((int)BB_datas[1].BBW_stage[LA]);                    // +3.3
    bool C15 = (dm1 < SL_diffmid_m15 && dm1a < SL_diffmid_m15);               // +5.3
    bool D15 = (dm1 < dm1a && dm1a < dm1b);                                   // no use
@@ -1008,7 +1012,9 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    string l1tags = "";
    if(SL_DrawL1Tags)
    {
-      if(c0 < CL_NEAR_M15 && c0a < CL_NEAR_M15)           l1tags += "A";
+      if(c0 < CL_NEAR_M5M15  && c0a < CL_NEAR_M5M15)      l1tags += "A";
+      if(c1 < CL_NEAR_M15M30 && c1a < CL_NEAR_M15M30)     l1tags += "X";
+      if(c2 < CL_NEAR_M15H1  && c2a < CL_NEAR_M15H1)      l1tags += "Y";
       if(S15)                                             l1tags += "S";
       if(dm1 < dm1a && dm1a < dm1b)                       l1tags += "B";
       if(dmt1 >= 3.0 && dmt1a >= 3.0 &&
@@ -1033,7 +1039,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    if(lvl1) SL_state[LA] = 1;
 
    //--- LEVEL 2 predicates, named individually
-   bool A30 = ((c1 < c1a && c1a < c1b) || (c1 < CL_NEAR_M15 && c1a < CL_NEAR_M15));  // +5.4
+   bool A30 = ((c1 < c1a && c1a < c1b) || (c1 < CL_NEAR_M5M15 && c1a < CL_NEAR_M5M15));  // +5.4
    bool S30 = SL_StageOK((int)BB_datas[2].BBW_stage[LA]);                    // +4.1
    bool C30 = (dm2 < SL_diffmid_m30 && dm2a < SL_diffmid_m30);               // +10.9
    bool D30 = (dm2 < dm2a && dm2a < dm2b);                                   // no use
@@ -1044,7 +1050,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    string l2tags = "";
    if(SL_DrawL2Tags)
    {
-      if(c1 < CL_NEAR_M30 && c1a < CL_NEAR_M30)           l2tags += "A";
+      if(c3 < CL_NEAR_M30H1 && c3a < CL_NEAR_M30H1)       l2tags += "A";
       if(S30)                                             l2tags += "S";
       if(dm2 < dm2a && dm2a < dm2b)                       l2tags += "B";
       if(dmt2 >= 3.0 && dmt2a >= 3.0 &&
@@ -1064,14 +1070,12 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    string l3tags = "";
    if(SL_DrawL3Tags)
    {
-      if(c2 < CL_NEAR_H1 && c2a < CL_NEAR_H1)             l3tags += "A";
       if(SH1)                                             l3tags += "S";
       if(dmt3 >= 3.0 && dmt3a >= 3.0 &&
          (dmt3 == 3.0 || dmt3a == 3.0 || dmt3b == 3.0))   l3tags += "C";
       if(dm3 < SL_diffmid_H1 && dm3a < SL_diffmid_H1)     l3tags += "M";
       if(WH1)                                             l3tags += "W";
-      //--- NOTE: the spec compared dmt3 with itself here, which is always false.
-      //--- Read as M30 vs H1, matching the L1D / L2D pattern.
+      //--- spec compared dmt3 with itself; read as M30 vs H1, matching L1D / L2D
       if(((dmt2 == 1.0 || dmt2 == 5.0) && (dmt3 == 2.0 || dmt3 == 4.0)) ||
          ((dmt2 == 2.0 || dmt2 == 4.0) && (dmt3 == 1.0 || dmt3 == 5.0)) ||
          (dmt2 == 3.0 || dmt3 == 3.0))                    l3tags += "D";
@@ -1083,7 +1087,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    string l4tags = "";
    if(SL_DrawL4Tags)
    {
-      if(c3 < CL_NEAR_H4 && c3a < CL_NEAR_H4)             l4tags += "A";
+      //--- no A tag: c3 is used by L2A, and no wider pair is available
       if(SH4)                                             l4tags += "S";
       if(dmt4 >= 3.0 && dmt4a >= 3.0 &&
          (dmt4 == 3.0 || dmt4a == 3.0 || dmt4b == 3.0))   l4tags += "C";
@@ -1197,7 +1201,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
             && BB_datas[3].BB_diffBBW[LA_1] < BB_datas[3].BB_diffBBW[LA_2]) );
       B1H = (c2 < c2a && c2a < c2b) || (c3 < c3a && c3a < c3b);
       // C1H = (c1 < CL_NEAR && c1a < CL_NEAR);
-      bool C1H = (c2 < CL_NEAR_H1 && c2a < CL_NEAR_H1);   // CL_NEAR_H1 ~= 30
+      bool C1H = (c2 < CL_NEAR_M15H1 && c2a < CL_NEAR_M15H1);   // CL_NEAR_M15H1 ~= 30
       // if(prev == 2 && A1H && B1H && C1H) SL_state[LA] = 3;
       if(prev >= 1 && A1H && B1H && C1H) SL_state[LA] = 3;
    }
