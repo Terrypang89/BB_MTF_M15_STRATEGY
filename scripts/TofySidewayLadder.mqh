@@ -179,7 +179,27 @@ int    SL_L2Mode = 1;
 //--- Mode 1 is the most precise but flickers (flag toggles on ~12% of bars).
 //--- Modes 2 and 3 are steadier and cost ~2.7 lift points. Flicker is cosmetic while
 //--- this module drives nothing; it would matter if it ever drove an exit.
+//--- Breakout cancel. Modes 5-9 add the M30 band and the sequential forms.
+//--- MEASURED on February, M5 trend, paired across 48 ladder settings:
+//---   mode  median   worst    beats mode 1
+//---   0     +231.18  + 88.97   8/48    off entirely
+//---   1     +310.36  + 50.70    -      best median, weakest floor
+//---   2     +287.32  +173.49  14/48
+//---   5     +273.77  + 91.76   6/48
+//---   6     +304.76  + 44.80   2/48
+//---   7     +272.00  + 97.66   4/48
+//---   8     +290.68  +171.84  20/48   best mean of all (+294.67)
+//---   9     +301.39  +173.78  20/48   at SL_BrkLookback = 2
+//--- The consistent effect is CONFIRMATION - requiring two bars or two
+//--- timeframes lifts the worst case from ~+50 to ~+173 for about $20 of
+//--- median. Which form is used looks arbitrary; the confirmation is not.
+//--- NOTE mode 9's reversed control (M30 then M15) scored +294.10 - nearly
+//--- identical - so the ORDER carries little information. The gain comes
+//--- from needing two events, not from the sequence.
 int    SL_BreakoutMode = 0;
+
+//--- How many bars back modes 8/9 look for the first breakout of the pair.
+int    SL_BrkLookback  = 2;
 
 //--- W30 dbbw < 1 fires +4.4 and is now part of the level-2 evidence gate.
 //--- Threshold value barely matters: <0 <1 <2 <5 all give the same result.
@@ -1062,10 +1082,40 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       bool raw1 = (close_prev > BB_datas[1].BBUppLV[LA_1]
                 || close_prev < BB_datas[1].BBLowLV[LA_1]);
 
+      //--- M30 band, same two-bar shape as raw / raw1 on M15
+      bool raw30  = (close_now  > BB_datas[2].BBUppLV[LA]
+                  || close_now  < BB_datas[2].BBLowLV[LA]);
+      bool raw30p = (close_prev > BB_datas[2].BBUppLV[LA_1]
+                  || close_prev < BB_datas[2].BBLowLV[LA_1]);
+
+      //--- Did the OTHER timeframe break out within the last SL_BrkLookback bars?
+      //--- Rolling history, one slot per M15 bar. SL_Update is guarded to run once
+      //--- per M15 bar, so these advance in step with the ladder's own history.
+      static bool h15[8], h30[8];
+      static int  hn = 0;
+      bool prior15 = false, prior30 = false;
+      int look = (SL_BrkLookback < 1) ? 1 : (SL_BrkLookback > 8 ? 8 : SL_BrkLookback);
+      for(int k = 0; k < look && k < hn; k++)
+      {
+         int idx = (hn - 1 - k) % 8;
+         if(h15[idx]) prior15 = true;
+         if(h30[idx]) prior30 = true;
+      }
+
       if(SL_BreakoutMode == 1)      brk = raw;
       else if(SL_BreakoutMode == 2) brk = (raw && raw1);
       else if(SL_BreakoutMode == 3) brk = (raw && !C15);                   // current use
       else if(SL_BreakoutMode == 4) brk = (raw && !C15 && !W15);
+      else if(SL_BreakoutMode == 5) brk = raw30;                           // M30 alone
+      else if(SL_BreakoutMode == 6) brk = (raw || raw30);                  // either band
+      else if(SL_BreakoutMode == 7) brk = (raw && raw30);                  // both bands
+      else if(SL_BreakoutMode == 8) brk = (raw30 && raw30p);               // M30 confirmed
+      else if(SL_BreakoutMode == 9) brk = (prior15 && raw30);              // M15 then M30
+
+      //--- record this bar for the next call's lookback
+      h15[hn % 8] = raw;
+      h30[hn % 8] = raw30;
+      hn++;
 
       if(brk) SL_state[LA] = 0;
    }
