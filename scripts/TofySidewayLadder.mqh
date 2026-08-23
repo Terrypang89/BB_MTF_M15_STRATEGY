@@ -84,6 +84,7 @@ double SL_Angle     = 90.0;     // OBJPROP_ANGLE is a DOUBLE property
 double CL_NEAR_M15    = 10.5;     // 10.0 rejected clus1 = 10.1 by 0.1 and broke
 double CL_NEAR_M30    = 8;     // 10.0 rejected clus1 = 10.1 by 0.1 and broke
 double CL_NEAR_H1     = 30;     // 10.0 rejected clus1 = 10.1 by 0.1 and broke
+double CL_NEAR_H4     = 0;
 //+------------------------------------------------------------------+
 //| TRADE STRATEGY (optional)                                        |
 //|                                                                  |
@@ -142,8 +143,12 @@ int    SL_TradeTF = 1;
 int    SL_TrendTF = 1;
 
 bool   SL_UseH1     = false;    // measured to DEGRADE the ladder; off by default
-double SL_diffmid_m15 = 3;
-double SL_diffmid_m30 = 1.5;
+// double SL_diffmid_m15 = 3;
+// double SL_diffmid_m30 = 1.5;
+double SL_diffmid_m15 = 1.5;
+double SL_diffmid_m30 = 2.3;
+double SL_diffmid_H1  = 3.4;
+double SL_diffmid_H4  = 7.7;
 
 //--- LEVEL 1 evidence gate. Measured (L2Mode 0, BreakoutMode 1):
 //---   0  A15 && (S15 || C15)   n=3158 (42%) lift +11.2  window 25/50  enrich 1.20x
@@ -949,6 +954,22 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    int prev = SL_state[LA_1];
 
    //--- cluster distances, current and two bars back
+   //--- diffMid_Trend CODES (1..5). Distinct from the dm* DISTANCES above:
+   //--- the C and D tags read codes, the M and B tags read distances.
+   double dmt0  = BB_datas[0].BB_diffMid_Trend[LA];
+   double dmt1  = BB_datas[1].BB_diffMid_Trend[LA];
+   double dmt1a = BB_datas[1].BB_diffMid_Trend[LA_1];
+   double dmt1b = BB_datas[1].BB_diffMid_Trend[LA_2];
+   double dmt2  = BB_datas[2].BB_diffMid_Trend[LA];
+   double dmt2a = BB_datas[2].BB_diffMid_Trend[LA_1];
+   double dmt2b = BB_datas[2].BB_diffMid_Trend[LA_2];
+   double dmt3  = BB_datas[3].BB_diffMid_Trend[LA];
+   double dmt3a = BB_datas[3].BB_diffMid_Trend[LA_1];
+   double dmt3b = BB_datas[3].BB_diffMid_Trend[LA_2];
+   double dmt4  = BB_datas[4].BB_diffMid_Trend[LA];
+   double dmt4a = BB_datas[4].BB_diffMid_Trend[LA_1];
+   double dmt4b = BB_datas[4].BB_diffMid_Trend[LA_2];
+
    double c0  = BBTFImpact.BB_midline_Cluster[0][LA];    // M5 + M15
    double c0a = BBTFImpact.BB_midline_Cluster[0][LA_1];
    double c0b = BBTFImpact.BB_midline_Cluster[0][LA_2];
@@ -961,19 +982,6 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    double c3  = BBTFImpact.BB_midline_Cluster[3][LA];
    double c3a = BBTFImpact.BB_midline_Cluster[3][LA_1];
    double c3b = BBTFImpact.BB_midline_Cluster[3][LA_2];
-
-   double dmt1  = MathAbs(BB_datas[1].BB_diffMid_Trend[LA]);
-   double dmt1a = MathAbs(BB_datas[1].BB_diffMid_Trend[LA_1]);
-   double dmt1b = MathAbs(BB_datas[1].BB_diffMid_Trend[LA_2]);
-   double dmt2  = MathAbs(BB_datas[2].BB_diffMid_Trend[LA]);
-   double dmt2a = MathAbs(BB_datas[2].BB_diffMid_Trend[LA_1]);
-   double dmt2b = MathAbs(BB_datas[2].BB_diffMid_Trend[LA_2]);
-   double dmt3  = MathAbs(BB_datas[3].BB_diffMid_Trend[LA]);
-   double dmt3a = MathAbs(BB_datas[3].BB_diffMid_Trend[LA_1]);
-   double dmt3b = MathAbs(BB_datas[3].BB_diffMid_Trend[LA_2]);
-   double dmt4  = MathAbs(BB_datas[4].BB_diffMid_Trend[LA]);
-   double dmt4a = MathAbs(BB_datas[4].BB_diffMid_Trend[LA_1]);
-   double dmt4b = MathAbs(BB_datas[4].BB_diffMid_Trend[LA_2]);
 
    double dm1  = MathAbs(BB_datas[1].BB_diffMid[LA]);
    double dm1a = MathAbs(BB_datas[1].BB_diffMid[LA_1]);
@@ -1000,11 +1008,16 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    string l1tags = "";
    if(SL_DrawL1Tags)
    {
-      if(S15)                                        l1tags += "S";
-      if(dm1 < dm1a && dm1a < dm1b)                  l1tags += "B";
+      if(c0 < CL_NEAR_M15 && c0a < CL_NEAR_M15)           l1tags += "A";
+      if(S15)                                             l1tags += "S";
+      if(dm1 < dm1a && dm1a < dm1b)                       l1tags += "B";
       if(dmt1 >= 3.0 && dmt1a >= 3.0 &&
-         (dmt1 == 3.0 || dmt1a == 3.0 || dmt1b == 3.0)) l1tags += "C";
-      if(W15)                                        l1tags += "W";
+         (dmt1 == 3.0 || dmt1a == 3.0 || dmt1b == 3.0))   l1tags += "C";
+      if(W15)                                             l1tags += "W";
+      if(dm1 < SL_diffmid_m15 && dm1a < SL_diffmid_m15)   l1tags += "M";
+      if(((dmt0 == 1.0 || dmt0 == 5.0) && (dmt1 == 2.0 || dmt1 == 4.0)) ||
+         ((dmt0 == 2.0 || dmt0 == 4.0) && (dmt1 == 1.0 || dmt1 == 5.0)) ||
+         (dmt0 == 3.0 || dmt1 == 3.0))                    l1tags += "D";
    }
 
    bool lvl1 = false;
@@ -1031,11 +1044,16 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    string l2tags = "";
    if(SL_DrawL2Tags)
    {
-      if(S30)                                        l2tags += "S";
-      if(dm2 < dm2a && dm2a < dm2b)                  l2tags += "D";
+      if(c1 < CL_NEAR_M30 && c1a < CL_NEAR_M30)           l2tags += "A";
+      if(S30)                                             l2tags += "S";
+      if(dm2 < dm2a && dm2a < dm2b)                       l2tags += "B";
       if(dmt2 >= 3.0 && dmt2a >= 3.0 &&
-         (dmt2 == 3.0 || dmt2a == 3.0 || dmt2b == 3.0)) l2tags += "C";
-      if(W30)                                        l2tags += "W";
+         (dmt2 == 3.0 || dmt2a == 3.0 || dmt2b == 3.0))   l2tags += "C";
+      if(W30)                                             l2tags += "W";
+      if(dm2 < SL_diffmid_m30 && dm2a < SL_diffmid_m30)   l2tags += "M";
+      if(((dmt1 == 1.0 || dmt1 == 5.0) && (dmt2 == 2.0 || dmt2 == 4.0)) ||
+         ((dmt1 == 2.0 || dmt1 == 4.0) && (dmt2 == 1.0 || dmt2 == 5.0)) ||
+         (dmt1 == 3.0 || dmt2 == 3.0))                    l2tags += "D";
    }
 
    //--- LEVEL-3 (H1) and LEVEL-4 (H4) tags. No B/D contraction tag on these two -
@@ -1046,10 +1064,17 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    string l3tags = "";
    if(SL_DrawL3Tags)
    {
-      if(SH1)                                        l3tags += "S";
+      if(c2 < CL_NEAR_H1 && c2a < CL_NEAR_H1)             l3tags += "A";
+      if(SH1)                                             l3tags += "S";
       if(dmt3 >= 3.0 && dmt3a >= 3.0 &&
-         (dmt3 == 3.0 || dmt3a == 3.0 || dmt3b == 3.0)) l3tags += "C";
-      if(WH1)                                        l3tags += "W";
+         (dmt3 == 3.0 || dmt3a == 3.0 || dmt3b == 3.0))   l3tags += "C";
+      if(dm3 < SL_diffmid_H1 && dm3a < SL_diffmid_H1)     l3tags += "M";
+      if(WH1)                                             l3tags += "W";
+      //--- NOTE: the spec compared dmt3 with itself here, which is always false.
+      //--- Read as M30 vs H1, matching the L1D / L2D pattern.
+      if(((dmt2 == 1.0 || dmt2 == 5.0) && (dmt3 == 2.0 || dmt3 == 4.0)) ||
+         ((dmt2 == 2.0 || dmt2 == 4.0) && (dmt3 == 1.0 || dmt3 == 5.0)) ||
+         (dmt2 == 3.0 || dmt3 == 3.0))                    l3tags += "D";
    }
 
    bool SH4 = SL_StageOK((int)BB_datas[4].BBW_stage[LA]);
@@ -1058,10 +1083,12 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    string l4tags = "";
    if(SL_DrawL4Tags)
    {
-      if(SH4)                                        l4tags += "S";
+      if(c3 < CL_NEAR_H4 && c3a < CL_NEAR_H4)             l4tags += "A";
+      if(SH4)                                             l4tags += "S";
       if(dmt4 >= 3.0 && dmt4a >= 3.0 &&
-         (dmt4 == 3.0 || dmt4a == 3.0 || dmt4b == 3.0)) l4tags += "C";
-      if(WH4)                                        l4tags += "W";
+         (dmt4 == 3.0 || dmt4a == 3.0 || dmt4b == 3.0))   l4tags += "C";
+      if(dm4 < SL_diffmid_H4 && dm4a < SL_diffmid_H4)     l4tags += "M";
+      if(WH4)                                             l4tags += "W";
    }
 
    bool ev30 = false;
@@ -1272,17 +1299,19 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    //--- log, so the chart can be cross-checked against the numbers
    if(SL_WriteLog)
    {
-      Print("[LADDER] state:[", SL_state[LA],
+      Print("[LADDER",  
+            "] L1tags:[", (l1tags == "" ? "-" : l1tags),
+            "] L2tags:[", (l2tags == "" ? "-" : l2tags),
+            "] L3tags:[", (l3tags == "" ? "-" : l3tags),
+            "] L4tags:[", (l4tags == "" ? "-" : l4tags), 
+            "] state:[", SL_state[LA],
             "] prev:[", prev,
             "] why:[", why,
             "] L1m:[", SL_L1Mode, "] L2m:[", SL_L2Mode,
             "] A15:[", A15, "] S15:[", S15, "] C15:[", C15,
             "] A30:[", A30, "] S30:[", S30, "] C30:[", C30, "] W30:[", W30,
             "] brkmode:[", SL_BreakoutMode,
-            "] L1tags:[", (l1tags == "" ? "-" : l1tags),
-            "] L2tags:[", (l2tags == "" ? "-" : l2tags),
-            "] L3tags:[", (l3tags == "" ? "-" : l3tags),
-            "] L4tags:[", (l4tags == "" ? "-" : l4tags), "] brk:[", brk,
+            "] brk:[", brk,
             "] c0:[", DoubleToString(c0,1),
             "] c1:[", DoubleToString(c1,1),
             "] c2:[", DoubleToString(c2,1),
