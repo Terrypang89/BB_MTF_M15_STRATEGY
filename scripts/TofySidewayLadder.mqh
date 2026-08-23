@@ -205,8 +205,12 @@ int    SL_BrkLookback  = 2;
 //--- Threshold value barely matters: <0 <1 <2 <5 all give the same result.
 double SL_diffbbw_m15 = 1.0;
 double SL_diffbbw_m30 = 1.0;    // W30 threshold
-double SL_diffbbw_H1  = 1.0;    // WH1 threshold (L3W)
-double SL_diffbbw_H4  = 1.0;    // WH4 threshold (L4W)
+// double SL_diffbbw_H1  = 1.0;    // WH1 threshold (L3W)
+double SL_diffbbw_H1  = 6.5;    // WH1 threshold (L3W)
+double SL_diffbbw_H4 = 1.0;   // L4W tag only. MEASURED: no threshold separates
+                              // sideway on H4 - best F1 58.1 at thr 156, firing on
+                              // 97% of bars at 41% precision. Left at 1.0 because
+                              // the value does not matter. Do not tune this.
 
 //--- add near the other settings
 bool SL_ShowFails = true;    // draw gray L0-A/L0-B labels for undetected bars
@@ -958,6 +962,19 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    double c3a = BBTFImpact.BB_midline_Cluster[3][LA_1];
    double c3b = BBTFImpact.BB_midline_Cluster[3][LA_2];
 
+   double dmt1  = MathAbs(BB_datas[1].BB_diffMid_Trend[LA]);
+   double dmt1a = MathAbs(BB_datas[1].BB_diffMid_Trend[LA_1]);
+   double dmt1b = MathAbs(BB_datas[1].BB_diffMid_Trend[LA_2]);
+   double dmt2  = MathAbs(BB_datas[2].BB_diffMid_Trend[LA]);
+   double dmt2a = MathAbs(BB_datas[2].BB_diffMid_Trend[LA_1]);
+   double dmt2b = MathAbs(BB_datas[2].BB_diffMid_Trend[LA_2]);
+   double dmt3  = MathAbs(BB_datas[3].BB_diffMid_Trend[LA]);
+   double dmt3a = MathAbs(BB_datas[3].BB_diffMid_Trend[LA_1]);
+   double dmt3b = MathAbs(BB_datas[3].BB_diffMid_Trend[LA_2]);
+   double dmt4  = MathAbs(BB_datas[4].BB_diffMid_Trend[LA]);
+   double dmt4a = MathAbs(BB_datas[4].BB_diffMid_Trend[LA_1]);
+   double dmt4b = MathAbs(BB_datas[4].BB_diffMid_Trend[LA_2]);
+
    double dm1  = MathAbs(BB_datas[1].BB_diffMid[LA]);
    double dm1a = MathAbs(BB_datas[1].BB_diffMid[LA_1]);
    double dm1b = MathAbs(BB_datas[1].BB_diffMid[LA_2]);
@@ -985,8 +1002,8 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    {
       if(S15)                                        l1tags += "S";
       if(dm1 < dm1a && dm1a < dm1b)                  l1tags += "B";
-      if(dm1 >= 3.0 && dm1a >= 3.0 &&
-         (dm1 == 3.0 || dm1a == 3.0 || dm1b == 3.0)) l1tags += "C";
+      if(dmt1 >= 3.0 && dmt1a >= 3.0 &&
+         (dmt1 == 3.0 || dmt1a == 3.0 || dmt1b == 3.0)) l1tags += "C";
       if(W15)                                        l1tags += "W";
    }
 
@@ -1016,8 +1033,8 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    {
       if(S30)                                        l2tags += "S";
       if(dm2 < dm2a && dm2a < dm2b)                  l2tags += "D";
-      if(dm2 >= 3.0 && dm2a >= 3.0 &&
-         (dm2 == 3.0 || dm2a == 3.0 || dm2b == 3.0)) l2tags += "C";
+      if(dmt2 >= 3.0 && dmt2a >= 3.0 &&
+         (dmt2 == 3.0 || dmt2a == 3.0 || dmt2b == 3.0)) l2tags += "C";
       if(W30)                                        l2tags += "W";
    }
 
@@ -1030,8 +1047,8 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    if(SL_DrawL3Tags)
    {
       if(SH1)                                        l3tags += "S";
-      if(dm3 >= 3.0 && dm3a >= 3.0 &&
-         (dm3 == 3.0 || dm3a == 3.0 || dm3b == 3.0)) l3tags += "C";
+      if(dmt3 >= 3.0 && dmt3a >= 3.0 &&
+         (dmt3 == 3.0 || dmt3a == 3.0 || dmt3b == 3.0)) l3tags += "C";
       if(WH1)                                        l3tags += "W";
    }
 
@@ -1042,8 +1059,8 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    if(SL_DrawL4Tags)
    {
       if(SH4)                                        l4tags += "S";
-      if(dm4 >= 3.0 && dm4a >= 3.0 &&
-         (dm4 == 3.0 || dm4a == 3.0 || dm4b == 3.0)) l4tags += "C";
+      if(dmt4 >= 3.0 && dmt4a >= 3.0 &&
+         (dmt4 == 3.0 || dmt4a == 3.0 || dmt4b == 3.0)) l4tags += "C";
       if(WH4)                                        l4tags += "W";
    }
 
