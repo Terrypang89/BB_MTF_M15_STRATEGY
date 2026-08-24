@@ -695,6 +695,38 @@ int      SL_LadderRangeFont  = 8;
 datetime sl_lr_start = 0;
 int      sl_lr_seq   = 0;
 
+
+//+------------------------------------------------------------------+
+//| TAG RECTANGLES - long sideway detection                          |
+//|                                                                  |
+//| Driven by CHARACTERS in l2tags / l3tags, so the rule can be       |
+//| changed from the tester without touching any logic.               |
+//|   *All = every listed character must be present   (AND)           |
+//|   *Any = at least one must be present             (OR)            |
+//|   ""   = no requirement; a level with both empty always passes.   |
+//|                                                                  |
+//| MEASURED on February (labels cover 47% of bars in 27 ranges):     |
+//|   L2All "YZM" + L2Any "SCW", L3 empty   -> 29% of bars, prec 62%  |
+//|   both levels required, ANDed           -> 20%, prec 59%          |
+//|   both levels, ORed                     -> 39%, prec 57%          |
+//|   L2Any "SCW" with no All requirement    -> 87%, prec 52%         |
+//| That last one is the || form written literally - it marks nearly  |
+//| the whole chart against a 47% base rate, so the defaults use All. |
+//+------------------------------------------------------------------+
+bool     SL_DrawTagRects   = true;
+string   SL_TagRectL2All   = "YZM";
+string   SL_TagRectL2Any   = "SCW";
+string   SL_TagRectL3All   = "ZM";
+string   SL_TagRectL3Any   = "";
+int      SL_TagRectJoin    = 0;      // 0 = L2 AND L3, 1 = L2 OR L3
+int      SL_TagRectMinBars = 4;      // ignore runs shorter than this
+color    SL_TagRectColor   = clrTeal;
+bool     SL_TagRectFill    = true;
+
+datetime sl_tr_start = 0;
+datetime sl_tr_last  = 0;
+int      sl_tr_num   = 0;
+
 //--- ladder state history: [LA]=current, ages toward [LA_4]
 int SL_state[5];
 
@@ -936,6 +968,64 @@ void SL_DrawTagLabel(string prefix, string tags, double mid,
    ObjectSetInteger(0, name, OBJPROP_ANCHOR,     ANCHOR_LOWER);
    ObjectSetInteger(0, name, OBJPROP_BACK,       false);
    ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+}
+
+//+------------------------------------------------------------------+
+//| Does `tags` satisfy the All / Any requirement?                   |
+//+------------------------------------------------------------------+
+bool SL_TagsMatch(string tags, string need_all, string need_any)
+{
+   if(need_all == "" && need_any == "") return true;
+   for(int i = 0; i < StringLen(need_all); i++)
+      if(StringFind(tags, StringSubstr(need_all, i, 1)) < 0) return false;
+   if(need_any == "") return true;
+   for(int i = 0; i < StringLen(need_any); i++)
+      if(StringFind(tags, StringSubstr(need_any, i, 1)) >= 0) return true;
+   return false;
+}
+
+//+------------------------------------------------------------------+
+//| Close the open tag-rectangle run and draw it.                    |
+//+------------------------------------------------------------------+
+void SL_CloseTagRect(datetime t_end)
+{
+   if(sl_tr_start == 0) return;
+   if(!SL_DrawTagRects || t_end < sl_tr_start) { sl_tr_start = 0; return; }
+
+   int b1 = iBarShift(_Symbol, PERIOD_M15, t_end,       false);
+   int b2 = iBarShift(_Symbol, PERIOD_M15, sl_tr_start, false);
+   if(b1 < 0 || b2 < 0 || b2 < b1) { sl_tr_start = 0; return; }
+   if(b2 - b1 + 1 < SL_TagRectMinBars) { sl_tr_start = 0; return; }
+
+   double hi = 0.0, lo = 0.0;
+   for(int b = b1; b <= b2; b++)
+   {
+      double h = iHigh(_Symbol, PERIOD_M15, b);
+      double l = iLow (_Symbol, PERIOD_M15, b);
+      if(h <= 0.0 || l <= 0.0) continue;
+      if(hi == 0.0 || h > hi) hi = h;
+      if(lo == 0.0 || l < lo) lo = l;
+   }
+   if(hi <= 0.0 || lo <= 0.0 || hi <= lo) { sl_tr_start = 0; return; }
+
+   sl_tr_num++;
+   string name = "SLTAGR_" + IntegerToString(sl_tr_num);
+   if(ObjectFind(0, name) < 0 &&
+      ObjectCreate(0, name, OBJ_RECTANGLE, 0, sl_tr_start, lo, t_end, hi))
+   {
+      ObjectSetInteger(0, name, OBJPROP_COLOR,      SL_TagRectColor);
+      ObjectSetInteger(0, name, OBJPROP_FILL,       SL_TagRectFill);
+      ObjectSetInteger(0, name, OBJPROP_BACK,       true);
+      ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+      ObjectSetString (0, name, OBJPROP_TOOLTIP,
+                       "TAGRECT #" + IntegerToString(sl_tr_num) +
+                       "  L2[" + SL_TagRectL2All + "/" + SL_TagRectL2Any + "]" +
+                       "  L3[" + SL_TagRectL3All + "/" + SL_TagRectL3Any + "]  " +
+                       TimeToString(sl_tr_start, TIME_DATE|TIME_MINUTES) + " -> " +
+                       TimeToString(t_end, TIME_DATE|TIME_MINUTES) +
+                       "  bars " + IntegerToString(b2 - b1 + 1));
+   }
+   sl_tr_start = 0;
 }
 
 //+------------------------------------------------------------------+
@@ -1291,6 +1381,50 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    //--- here - it has its own block below, on the M30 midline at the M30 bar time.
    if(SL_DrawL1Tags && l1tags != "") SL_DrawTagLabel("SLL1_", l1tags, BB_datas[1].BBMidLV[LA],
                                      PERIOD_M15,  SL_L1TagColor);
+
+   //--- TAG RECTANGLE. Placed AFTER the four label draws so it reads the finished
+   //--- tag strings, and keyed purely on which CHARACTERS are present.
+   bool tr_l2 = SL_TagsMatch(l2tags, SL_TagRectL2All, SL_TagRectL2Any);
+   bool tr_l3 = SL_TagsMatch(l3tags, SL_TagRectL3All, SL_TagRectL3Any);
+   bool tr_on = (SL_TagRectJoin == 1) ? (tr_l2 || tr_l3) : (tr_l2 && tr_l3);
+
+      //--- TAG RECTANGLES. After the label draws, so the tag strings are final.
+   //--- Each level is independent; blocks stack where the levels agree.
+   // if(SL_DrawRectL1) // M5 X M15 
+   // {
+      
+
+   //    SL_RectStep(0, SL_TagsMatch(l1tags, SL_RectL1All, SL_RectL1Any, SL_RectL1None),
+   //                PERIOD_M15, SL_RectL1Color, "SLRC1_");
+   // }
+      
+   // if(SL_DrawRectL2) // M15 x M30
+   // {
+   //    SL_RectStep(1, SL_TagsMatch(l2tags, SL_RectL2All, SL_RectL2Any, SL_RectL2None),
+   //                PERIOD_M30, SL_RectL2Color, "SLRC2_");
+   // }
+      
+   // if(SL_DrawRectL3) // M30 x H1
+   // {
+   //    bool tr_l2 = SL_TagsMatch(l2tags, SL_TagRectL2All, SL_TagRectL2Any);
+   //    bool tr_l3 = SL_TagsMatch(l3tags, SL_TagRectL3All, SL_TagRectL3Any);
+   //    bool tr_on = (SL_TagRectJoin == 1) ? (tr_l2 || tr_l3) : (tr_l2 && tr_l3);
+   //    SL_RectStep(2, SL_TagsMatch(l3tags, SL_RectL3All, SL_RectL3Any, SL_RectL3None),
+   //                PERIOD_H1,  SL_RectL3Color, "SLRC3_");
+   // }
+      
+   // if(SL_DrawRectL4) // H1 x H4
+   // {
+   //    SL_RectStep(3, SL_TagsMatch(l4tags, SL_RectL4All, SL_RectL4Any, SL_RectL4None),
+   //                PERIOD_H4,  SL_RectL4Color, "SLRC4_");
+   // }
+
+   // if(SL_DrawTagRects)
+   // {
+   //    datetime t_tr = iTime(_Symbol, PERIOD_M15, 0);
+   //    if(tr_on) { if(sl_tr_start == 0) sl_tr_start = t_tr; sl_tr_last = t_tr; }
+   //    else if(sl_tr_start != 0) SL_CloseTagRect(sl_tr_last);
+   // }
 
    //--- log, so the chart can be cross-checked against the numbers
    if(SL_WriteLog)
