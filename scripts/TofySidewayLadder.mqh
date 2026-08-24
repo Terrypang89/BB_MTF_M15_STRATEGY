@@ -152,9 +152,12 @@ bool   SL_UseH1     = false;    // measured to DEGRADE the ladder; off by defaul
 // double SL_diffmid_m15 = 3;
 // double SL_diffmid_m30 = 1.5;
 double SL_diffmid_m15 = 1.5;
-double SL_diffmid_m30 = 2.3;
-double SL_diffmid_H1  = 3.4;
-double SL_diffmid_H4  = 7.7;
+// double SL_diffmid_m30 = 2.3;
+// double SL_diffmid_H1  = 3.4;
+// double SL_diffmid_H4  = 7.7;
+double SL_diffmid_m30 = 1.5;
+double SL_diffmid_H1  = 1.5;
+double SL_diffmid_H4  = 4;
 
 //--- LEVEL 1 evidence gate. Measured (L2Mode 0, BreakoutMode 1):
 //---   0  A15 && (S15 || C15)   n=3158 (42%) lift +11.2  window 25/50  enrich 1.20x
