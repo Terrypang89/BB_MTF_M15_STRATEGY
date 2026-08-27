@@ -554,7 +554,7 @@ void SL_DrawUserLabelRanges()
       if(!ObjectCreate(0, name, OBJ_RECTANGLE, 0, t1, lo, t2, hi)) continue;
       ObjectSetInteger(0, name, OBJPROP_COLOR,      SL_LabelColor);
       ObjectSetInteger(0, name, OBJPROP_FILL,       SL_LabelFill);
-      ObjectSetInteger(0, name, OBJPROP_WIDTH, 5);
+      ObjectSetInteger(0, name, OBJPROP_WIDTH, 4);
       ObjectSetInteger(0, name, OBJPROP_BACK,       true);
       ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
       ObjectSetString (0, name, OBJPROP_TOOLTIP,
@@ -685,7 +685,7 @@ bool   sl_latched = false;
 //| same reason SL_DrawUserLabelRanges waits for a range to form      |
 //| before drawing it.                                                |
 //+------------------------------------------------------------------+
-bool     SL_DrawLadderRanges = true;              // ladder ranges as rectangles
+bool     SL_DrawLadderRanges = false;              // ladder ranges as rectangles
 // color    SL_LadderRangeColor = clrDarkSlateGray;
 color    SL_LadderRangeColor = MistyRose;
 bool     SL_LadderRangeFill  = false;
@@ -697,35 +697,88 @@ int      sl_lr_seq   = 0;
 
 
 //+------------------------------------------------------------------+
-//| TAG RECTANGLES - long sideway detection                          |
+//| TAG RECTANGLES - one independent track per level                 |
 //|                                                                  |
-//| Driven by CHARACTERS in l2tags / l3tags, so the rule can be       |
-//| changed from the tester without touching any logic.               |
-//|   *All = every listed character must be present   (AND)           |
-//|   *Any = at least one must be present             (OR)            |
-//|   ""   = no requirement; a level with both empty always passes.   |
+//| Each level draws rectangles over runs where its tag string passes |
+//| that level's rule. Tracks do NOT interact - where levels agree,   |
+//| blocks stack, which says more than a pre-combined single answer.  |
+//|                                                                  |
+//| TWO RULE SLOTS per level, A and B, ORed together. Each slot is    |
+//| three character fields, ANDed:                                    |
+//|     All  - every listed char present      (a && b)                |
+//|     Any  - at least one listed present    (c || d)                |
+//|     None - none of the listed present     (!e)                    |
+//| An empty field imposes no test. A slot with ALL THREE empty is    |
+//| INACTIVE - it does not fire - so leaving B blank gives one rule.   |
+//|                                                                  |
+//| So per level the rule is:                                         |
+//|     (allA && anyA && !noneA)  ||  (allB && anyB && !noneB)        |
+//| e.g. L2 A = "YZ"/"MSCW"/""  is  (Y && Z) && (M||S||C||W)          |
+//|      plus B = "SM"/""/""    adds  || (S && M)                     |
 //|                                                                  |
 //| MEASURED on February (labels cover 47% of bars in 27 ranges):     |
-//|   L2All "YZM" + L2Any "SCW", L3 empty   -> 29% of bars, prec 62%  |
-//|   both levels required, ANDed           -> 20%, prec 59%          |
-//|   both levels, ORed                     -> 39%, prec 57%          |
-//|   L2Any "SCW" with no All requirement    -> 87%, prec 52%         |
-//| That last one is the || form written literally - it marks nearly  |
-//| the whole chart against a 47% base rate, so the defaults use All. |
+//|   L2 "YZM"/"SCW"  -> 29% of bars, precision 62%                   |
+//|   L3 "ZM"/"SCD"   -> 30%, precision 54%                           |
+//|   L2 ""/"SCW"     -> 87%, precision 52% - marks nearly everything |
+//| The All field is what keeps coverage sane; an Any-only rule fires |
+//| on almost every bar.                                              |
 //+------------------------------------------------------------------+
-bool     SL_DrawTagRects   = true;
-string   SL_TagRectL2All   = "YZM";
-string   SL_TagRectL2Any   = "SCW";
-string   SL_TagRectL3All   = "ZM";
-string   SL_TagRectL3Any   = "";
-int      SL_TagRectJoin    = 0;      // 0 = L2 AND L3, 1 = L2 OR L3
-int      SL_TagRectMinBars = 4;      // ignore runs shorter than this
-color    SL_TagRectColor   = clrTeal;
-bool     SL_TagRectFill    = true;
+bool     SL_DrawRectL1 = true;
+bool     SL_DrawRectL2 = true;
+bool     SL_DrawRectL3 = true;
+bool     SL_DrawRectL4 = false;
 
-datetime sl_tr_start = 0;
-datetime sl_tr_last  = 0;
-int      sl_tr_num   = 0;
+//--- slot A            All      Any        Any2        None
+string SL_RectL1All_A  = "A";   string SL_RectL1Any_A  = "XY";
+string SL_RectL1Any2_A = "WSMC";string SL_RectL1None_A = "";
+string SL_RectL2All_A  = "YZ";  string SL_RectL2Any_A  = "MSCW";
+string SL_RectL2Any2_A = "";    string SL_RectL2None_A = "";
+string SL_RectL3All_A  = "ZM";  string SL_RectL3Any_A  = "";
+string SL_RectL3Any2_A = "";    string SL_RectL3None_A = "";
+string SL_RectL4All_A  = "";    string SL_RectL4Any_A  = "";
+string SL_RectL4Any2_A = "";    string SL_RectL4None_A = "";
+
+//--- slot B - ORed with A. All four fields empty = slot unused.
+//--- L3 uses it for the second half of  (Z && M) || (S || C || D)
+string SL_RectL1All_B  = "";    string SL_RectL1Any_B  = "";
+string SL_RectL1Any2_B = "";    string SL_RectL1None_B = "";
+string SL_RectL2All_B  = "";    string SL_RectL2Any_B  = "";
+string SL_RectL2Any2_B = "";    string SL_RectL2None_B = "";
+string SL_RectL3All_B  = "";    string SL_RectL3Any_B  = "SCD";
+string SL_RectL3Any2_B = "";    string SL_RectL3None_B = "";
+string SL_RectL4All_B  = "";    string SL_RectL4Any_B  = "";
+string SL_RectL4Any2_B = "";    string SL_RectL4None_B = "";
+
+color    SL_RectL1Color = clrGoldenrod;
+color    SL_RectL2Color = clrGreenYellow;
+color    SL_RectL3Color = clrRed;
+color    SL_RectL4Color = clrPurple;
+
+//--- minimum run length, counted in the LEVEL'S OWN bars. At 4 that is 1h on L1,
+//--- 2h on L2, 4h on L3, 16h on L4 - the same number is a far stronger filter on
+//--- the slower levels. Raise L2 to 12-16 if only the long ranges are wanted.
+//--- COMBINED track. The four tracks above are independent; this one joins them.
+//--- SL_RectJoinL* picks which levels take part, SL_RectJoinOp how they combine.
+//--- Each level still uses its own two-slot rule, so
+//---     L3 A "ZM"/""  + B ""/"SCD"      = (Z && M) || (S || C || D)
+//---     L2 A "YZ"/"MSCW"                = (Y && Z) && (M || S || C || W)
+//---     join L2+L3 with op 0 (AND)      = the two ANDed together
+//--- which is the whole expression in one track.
+bool     SL_DrawRectJoin = false;
+bool     SL_RectJoinL1   = false;
+bool     SL_RectJoinL2   = true;
+bool     SL_RectJoinL3   = true;
+bool     SL_RectJoinL4   = false;
+int      SL_RectJoinOp   = 0;      // 0 = AND all selected, 1 = OR all selected
+color    SL_RectJoinColor = clrOrangeRed;
+ENUM_TIMEFRAMES SL_RectJoinTF = PERIOD_M30;   // which bars the block spans
+
+int      SL_RectMinBars = 4;
+bool     SL_RectFill    = false;   // outline only
+
+datetime sl_rect_start[5] = {0,0,0,0,0};   // 0..3 = L1..L4, 4 = the joined track
+datetime sl_rect_last [5] = {0,0,0,0,0};
+int      sl_rect_num  [5] = {0,0,0,0,0};
 
 //--- ladder state history: [LA]=current, ages toward [LA_4]
 int SL_state[5];
@@ -971,61 +1024,96 @@ void SL_DrawTagLabel(string prefix, string tags, double mid,
 }
 
 //+------------------------------------------------------------------+
-//| Does `tags` satisfy the All / Any requirement?                   |
+//| One rule slot: All AND Any AND not-None.                         |
+//| All three fields empty = INACTIVE, returns false.                 |
 //+------------------------------------------------------------------+
-bool SL_TagsMatch(string tags, string need_all, string need_any)
+bool SL_AnyOf(string tags, string need_any)
 {
-   if(need_all == "" && need_any == "") return true;
-   for(int i = 0; i < StringLen(need_all); i++)
-      if(StringFind(tags, StringSubstr(need_all, i, 1)) < 0) return false;
-   if(need_any == "") return true;
+   if(need_any == "") return true;                 // no test
    for(int i = 0; i < StringLen(need_any); i++)
       if(StringFind(tags, StringSubstr(need_any, i, 1)) >= 0) return true;
    return false;
 }
 
-//+------------------------------------------------------------------+
-//| Close the open tag-rectangle run and draw it.                    |
-//+------------------------------------------------------------------+
-void SL_CloseTagRect(datetime t_end)
+//--- One slot:  All  &&  Any  &&  Any2  &&  !None
+//--- Two Any groups so rules like  A && (X||Y) && (W||S||M||C)  fit in one slot.
+//--- All four fields empty = INACTIVE, returns false.
+bool SL_TagSlot(string tags, string need_all, string need_any,
+                string need_any2, string need_none)
 {
-   if(sl_tr_start == 0) return;
-   if(!SL_DrawTagRects || t_end < sl_tr_start) { sl_tr_start = 0; return; }
+   if(need_all == "" && need_any == "" && need_any2 == "" && need_none == "")
+      return false;
 
-   int b1 = iBarShift(_Symbol, PERIOD_M15, t_end,       false);
-   int b2 = iBarShift(_Symbol, PERIOD_M15, sl_tr_start, false);
-   if(b1 < 0 || b2 < 0 || b2 < b1) { sl_tr_start = 0; return; }
-   if(b2 - b1 + 1 < SL_TagRectMinBars) { sl_tr_start = 0; return; }
+   for(int i = 0; i < StringLen(need_all); i++)
+      if(StringFind(tags, StringSubstr(need_all, i, 1)) < 0) return false;
+
+   for(int i = 0; i < StringLen(need_none); i++)
+      if(StringFind(tags, StringSubstr(need_none, i, 1)) >= 0) return false;
+
+   return SL_AnyOf(tags, need_any) && SL_AnyOf(tags, need_any2);
+}
+
+//+------------------------------------------------------------------+
+//| Both slots, ORed.                                                |
+//+------------------------------------------------------------------+
+bool SL_TagsMatch(string tags,
+                  string aA, string yA, string y2A, string nA,
+                  string aB, string yB, string y2B, string nB)
+{
+   return SL_TagSlot(tags, aA, yA, y2A, nA) || SL_TagSlot(tags, aB, yB, y2B, nB);
+}
+
+//+------------------------------------------------------------------+
+//| Advance one level's rectangle track by one bar. Drawn when the   |
+//| run ENDS, so the block's price span is final.                    |
+//+------------------------------------------------------------------+
+void SL_RectStep(int lvl, bool on, ENUM_TIMEFRAMES tf, color col, string prefix)
+{
+   datetime t = iTime(_Symbol, PERIOD_M15, 0);
+   if(t <= 0) return;
+
+   if(on)
+   {
+      if(sl_rect_start[lvl] == 0) sl_rect_start[lvl] = t;
+      sl_rect_last[lvl] = t;
+      return;
+   }
+   if(sl_rect_start[lvl] == 0) return;
+
+   datetime a = sl_rect_start[lvl], b = sl_rect_last[lvl];
+   sl_rect_start[lvl] = 0;
+   if(b < a) return;
+
+   int i1 = iBarShift(_Symbol, tf, b, false);
+   int i2 = iBarShift(_Symbol, tf, a, false);
+   if(i1 < 0 || i2 < 0 || i2 < i1) return;
+   if(i2 - i1 + 1 < SL_RectMinBars) return;
 
    double hi = 0.0, lo = 0.0;
-   for(int b = b1; b <= b2; b++)
+   for(int k = i1; k <= i2; k++)
    {
-      double h = iHigh(_Symbol, PERIOD_M15, b);
-      double l = iLow (_Symbol, PERIOD_M15, b);
+      double h = iHigh(_Symbol, tf, k);
+      double l = iLow (_Symbol, tf, k);
       if(h <= 0.0 || l <= 0.0) continue;
       if(hi == 0.0 || h > hi) hi = h;
       if(lo == 0.0 || l < lo) lo = l;
    }
-   if(hi <= 0.0 || lo <= 0.0 || hi <= lo) { sl_tr_start = 0; return; }
+   if(hi <= 0.0 || lo <= 0.0 || hi <= lo) return;
 
-   sl_tr_num++;
-   string name = "SLTAGR_" + IntegerToString(sl_tr_num);
-   if(ObjectFind(0, name) < 0 &&
-      ObjectCreate(0, name, OBJ_RECTANGLE, 0, sl_tr_start, lo, t_end, hi))
-   {
-      ObjectSetInteger(0, name, OBJPROP_COLOR,      SL_TagRectColor);
-      ObjectSetInteger(0, name, OBJPROP_FILL,       SL_TagRectFill);
-      ObjectSetInteger(0, name, OBJPROP_BACK,       true);
-      ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
-      ObjectSetString (0, name, OBJPROP_TOOLTIP,
-                       "TAGRECT #" + IntegerToString(sl_tr_num) +
-                       "  L2[" + SL_TagRectL2All + "/" + SL_TagRectL2Any + "]" +
-                       "  L3[" + SL_TagRectL3All + "/" + SL_TagRectL3Any + "]  " +
-                       TimeToString(sl_tr_start, TIME_DATE|TIME_MINUTES) + " -> " +
-                       TimeToString(t_end, TIME_DATE|TIME_MINUTES) +
-                       "  bars " + IntegerToString(b2 - b1 + 1));
-   }
-   sl_tr_start = 0;
+   sl_rect_num[lvl]++;
+   string name = prefix + IntegerToString(sl_rect_num[lvl]);
+   if(ObjectFind(0, name) >= 0) return;
+   if(!ObjectCreate(0, name, OBJ_RECTANGLE, 0, a, lo, b, hi)) return;
+
+   ObjectSetInteger(0, name, OBJPROP_COLOR,      col);
+   ObjectSetInteger(0, name, OBJPROP_FILL,       SL_RectFill);
+   ObjectSetInteger(0, name, OBJPROP_WIDTH,        5);
+   ObjectSetInteger(0, name, OBJPROP_BACK,       true);
+   ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+   ObjectSetString (0, name, OBJPROP_TOOLTIP,
+                    name + "  " + TimeToString(a, TIME_DATE|TIME_MINUTES) + " -> " +
+                    TimeToString(b, TIME_DATE|TIME_MINUTES) +
+                    "  bars " + IntegerToString(i2 - i1 + 1));
 }
 
 //+------------------------------------------------------------------+
@@ -1382,49 +1470,58 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    if(SL_DrawL1Tags && l1tags != "") SL_DrawTagLabel("SLL1_", l1tags, BB_datas[1].BBMidLV[LA],
                                      PERIOD_M15,  SL_L1TagColor);
 
-   //--- TAG RECTANGLE. Placed AFTER the four label draws so it reads the finished
-   //--- tag strings, and keyed purely on which CHARACTERS are present.
-   bool tr_l2 = SL_TagsMatch(l2tags, SL_TagRectL2All, SL_TagRectL2Any);
-   bool tr_l3 = SL_TagsMatch(l3tags, SL_TagRectL3All, SL_TagRectL3Any);
-   bool tr_on = (SL_TagRectJoin == 1) ? (tr_l2 || tr_l3) : (tr_l2 && tr_l3);
+   //--- TAG RECTANGLES. After the label draws, so the tag strings are final.
+   if(SL_DrawRectL1)
+      SL_RectStep(0, SL_TagsMatch(l1tags, SL_RectL1All_A, SL_RectL1Any_A, SL_RectL1Any2_A, SL_RectL1None_A,
+                                          SL_RectL1All_B, SL_RectL1Any_B, SL_RectL1Any2_B, SL_RectL1None_B),
+                  PERIOD_M15, SL_RectL1Color, "SLRC1_");
+   if(SL_DrawRectL2)
+      SL_RectStep(1, SL_TagsMatch(l2tags, SL_RectL2All_A, SL_RectL2Any_A, SL_RectL2Any2_A, SL_RectL2None_A,
+                                          SL_RectL2All_B, SL_RectL2Any_B, SL_RectL2Any2_B, SL_RectL2None_B),
+                  PERIOD_M30, SL_RectL2Color, "SLRC2_");
+   if(SL_DrawRectL3)
+      SL_RectStep(2, SL_TagsMatch(l3tags, SL_RectL3All_A, SL_RectL3Any_A, SL_RectL3Any2_A, SL_RectL3None_A,
+                                          SL_RectL3All_B, SL_RectL3Any_B, SL_RectL3Any2_B, SL_RectL3None_B),
+                  PERIOD_H1,  SL_RectL3Color, "SLRC3_");
+   if(SL_DrawRectL4)
+      SL_RectStep(3, SL_TagsMatch(l4tags, SL_RectL4All_A, SL_RectL4Any_A, SL_RectL4Any2_A, SL_RectL4None_A,
+                                          SL_RectL4All_B, SL_RectL4Any_B, SL_RectL4Any2_B, SL_RectL4None_B),
+                  PERIOD_H4,  SL_RectL4Color, "SLRC4_");
 
-      //--- TAG RECTANGLES. After the label draws, so the tag strings are final.
-   //--- Each level is independent; blocks stack where the levels agree.
-   // if(SL_DrawRectL1) // M5 X M15 
-   // {
-      
+   //--- COMBINED track: the selected levels joined by AND or OR.
+   if(SL_DrawRectJoin)
+   {
+      bool r1 = SL_TagsMatch(l1tags, SL_RectL1All_A, SL_RectL1Any_A, SL_RectL1Any2_A, SL_RectL1None_A,
+                                     SL_RectL1All_B, SL_RectL1Any_B, SL_RectL1Any2_B, SL_RectL1None_B);
+      bool r2 = SL_TagsMatch(l2tags, SL_RectL2All_A, SL_RectL2Any_A, SL_RectL2Any2_A, SL_RectL2None_A,
+                                     SL_RectL2All_B, SL_RectL2Any_B, SL_RectL2Any2_B, SL_RectL2None_B);
+      bool r3 = SL_TagsMatch(l3tags, SL_RectL3All_A, SL_RectL3Any_A, SL_RectL3Any2_A, SL_RectL3None_A,
+                                     SL_RectL3All_B, SL_RectL3Any_B, SL_RectL3Any2_B, SL_RectL3None_B);
+      bool r4 = SL_TagsMatch(l4tags, SL_RectL4All_A, SL_RectL4Any_A, SL_RectL4Any2_A, SL_RectL4None_A,
+                                     SL_RectL4All_B, SL_RectL4Any_B, SL_RectL4Any2_B, SL_RectL4None_B);
 
-   //    SL_RectStep(0, SL_TagsMatch(l1tags, SL_RectL1All, SL_RectL1Any, SL_RectL1None),
-   //                PERIOD_M15, SL_RectL1Color, "SLRC1_");
-   // }
-      
-   // if(SL_DrawRectL2) // M15 x M30
-   // {
-   //    SL_RectStep(1, SL_TagsMatch(l2tags, SL_RectL2All, SL_RectL2Any, SL_RectL2None),
-   //                PERIOD_M30, SL_RectL2Color, "SLRC2_");
-   // }
-      
-   // if(SL_DrawRectL3) // M30 x H1
-   // {
-   //    bool tr_l2 = SL_TagsMatch(l2tags, SL_TagRectL2All, SL_TagRectL2Any);
-   //    bool tr_l3 = SL_TagsMatch(l3tags, SL_TagRectL3All, SL_TagRectL3Any);
-   //    bool tr_on = (SL_TagRectJoin == 1) ? (tr_l2 || tr_l3) : (tr_l2 && tr_l3);
-   //    SL_RectStep(2, SL_TagsMatch(l3tags, SL_RectL3All, SL_RectL3Any, SL_RectL3None),
-   //                PERIOD_H1,  SL_RectL3Color, "SLRC3_");
-   // }
-      
-   // if(SL_DrawRectL4) // H1 x H4
-   // {
-   //    SL_RectStep(3, SL_TagsMatch(l4tags, SL_RectL4All, SL_RectL4Any, SL_RectL4None),
-   //                PERIOD_H4,  SL_RectL4Color, "SLRC4_");
-   // }
+      bool joined;
+      int  used = 0;
+      if(SL_RectJoinOp == 0)          // AND: start true, fail on any selected level
+      {
+         joined = true;
+         if(SL_RectJoinL1) { joined = joined && r1; used++; }
+         if(SL_RectJoinL2) { joined = joined && r2; used++; }
+         if(SL_RectJoinL3) { joined = joined && r3; used++; }
+         if(SL_RectJoinL4) { joined = joined && r4; used++; }
+      }
+      else                            // OR: start false, pass on any selected level
+      {
+         joined = false;
+         if(SL_RectJoinL1) { joined = joined || r1; used++; }
+         if(SL_RectJoinL2) { joined = joined || r2; used++; }
+         if(SL_RectJoinL3) { joined = joined || r3; used++; }
+         if(SL_RectJoinL4) { joined = joined || r4; used++; }
+      }
+      if(used == 0) joined = false;   // nothing selected - never fire
 
-   // if(SL_DrawTagRects)
-   // {
-   //    datetime t_tr = iTime(_Symbol, PERIOD_M15, 0);
-   //    if(tr_on) { if(sl_tr_start == 0) sl_tr_start = t_tr; sl_tr_last = t_tr; }
-   //    else if(sl_tr_start != 0) SL_CloseTagRect(sl_tr_last);
-   // }
+      SL_RectStep(4, joined, SL_RectJoinTF, SL_RectJoinColor, "SLRCJ_");
+   }
 
    //--- log, so the chart can be cross-checked against the numbers
    if(SL_WriteLog)
