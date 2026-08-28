@@ -155,8 +155,10 @@ double SL_diffmid_m15 = 1.5;
 // double SL_diffmid_m30 = 2.3;
 // double SL_diffmid_H1  = 3.4;
 // double SL_diffmid_H4  = 7.7;
-double SL_diffmid_m30 = 1.5;
-double SL_diffmid_H1  = 1.5;
+// double SL_diffmid_m30 = 1.5;
+double SL_diffmid_m30 = 2.5;
+// double SL_diffmid_H1  = 1.5;
+double SL_diffmid_H1  = 3;
 double SL_diffmid_H4  = 4;
 
 //--- LEVEL 1 evidence gate. Measured (L2Mode 0, BreakoutMode 1):
@@ -554,7 +556,7 @@ void SL_DrawUserLabelRanges()
       if(!ObjectCreate(0, name, OBJ_RECTANGLE, 0, t1, lo, t2, hi)) continue;
       ObjectSetInteger(0, name, OBJPROP_COLOR,      SL_LabelColor);
       ObjectSetInteger(0, name, OBJPROP_FILL,       SL_LabelFill);
-      ObjectSetInteger(0, name, OBJPROP_WIDTH, 4);
+      ObjectSetInteger(0, name, OBJPROP_WIDTH, 5);
       ObjectSetInteger(0, name, OBJPROP_BACK,       true);
       ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
       ObjectSetString (0, name, OBJPROP_TOOLTIP,
@@ -726,33 +728,37 @@ int      sl_lr_seq   = 0;
 bool     SL_DrawRectL1 = true;
 bool     SL_DrawRectL2 = true;
 bool     SL_DrawRectL3 = true;
-bool     SL_DrawRectL4 = false;
+bool     SL_DrawRectL4 = true;
 
-//--- slot A            All      Any        Any2        None
-string SL_RectL1All_A  = "A";   string SL_RectL1Any_A  = "XY";
-string SL_RectL1Any2_A = "WSMC";string SL_RectL1None_A = "";
-string SL_RectL2All_A  = "YZ";  string SL_RectL2Any_A  = "MSCW";
+//--- slot A            All      Any          Any2         None
+//--- L1  (A || X || Y) && (S || C || W || M)
+//--- L2  (Y || Z)      && (M || S || C || W)
+//--- L3  Z || M || S || C || D          - five-way OR, expect a high fire rate
+//--- L4  M || S || C
+string SL_RectL1All_A  = "";    string SL_RectL1Any_A  = "SCMD";
+string SL_RectL1Any2_A = "";    string SL_RectL1None_A = "";
+string SL_RectL2All_A  = "";    string SL_RectL2Any_A  = "MSCD";
 string SL_RectL2Any2_A = "";    string SL_RectL2None_A = "";
-string SL_RectL3All_A  = "ZM";  string SL_RectL3Any_A  = "";
+string SL_RectL3All_A  = "";    string SL_RectL3Any_A  = "MSCD";
 string SL_RectL3Any2_A = "";    string SL_RectL3None_A = "";
-string SL_RectL4All_A  = "";    string SL_RectL4Any_A  = "";
+string SL_RectL4All_A  = "";    string SL_RectL4Any_A  = "MSC";
 string SL_RectL4Any2_A = "";    string SL_RectL4None_A = "";
 
 //--- slot B - ORed with A. All four fields empty = slot unused.
-//--- L3 uses it for the second half of  (Z && M) || (S || C || D)
 string SL_RectL1All_B  = "";    string SL_RectL1Any_B  = "";
 string SL_RectL1Any2_B = "";    string SL_RectL1None_B = "";
 string SL_RectL2All_B  = "";    string SL_RectL2Any_B  = "";
 string SL_RectL2Any2_B = "";    string SL_RectL2None_B = "";
-string SL_RectL3All_B  = "";    string SL_RectL3Any_B  = "SCD";
+string SL_RectL3All_B  = "";    string SL_RectL3Any_B  = "";
 string SL_RectL3Any2_B = "";    string SL_RectL3None_B = "";
 string SL_RectL4All_B  = "";    string SL_RectL4Any_B  = "";
 string SL_RectL4Any2_B = "";    string SL_RectL4None_B = "";
 
-color    SL_RectL1Color = clrGoldenrod;
+// color    SL_RectL1Color = clrGoldenrod;
+color    SL_RectL1Color = PeachPuff;
 color    SL_RectL2Color = clrGreenYellow;
 color    SL_RectL3Color = clrRed;
-color    SL_RectL4Color = clrPurple;
+color    SL_RectL4Color = clrYellow;
 
 //--- minimum run length, counted in the LEVEL'S OWN bars. At 4 that is 1h on L1,
 //--- 2h on L2, 4h on L3, 16h on L4 - the same number is a far stronger filter on
@@ -969,7 +975,7 @@ void SL_CloseLadderRange(datetime t_end)
    {
       ObjectSetInteger(0, name, OBJPROP_COLOR,      SL_LadderRangeColor);
       ObjectSetInteger(0, name, OBJPROP_FILL,       SL_LadderRangeFill);
-      ObjectSetInteger(0, name, OBJPROP_WIDTH, 5);
+      ObjectSetInteger(0, name, OBJPROP_WIDTH,      4);
       ObjectSetInteger(0, name, OBJPROP_BACK,       true);
       ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
       ObjectSetString (0, name, OBJPROP_TOOLTIP,
@@ -1107,7 +1113,7 @@ void SL_RectStep(int lvl, bool on, ENUM_TIMEFRAMES tf, color col, string prefix)
 
    ObjectSetInteger(0, name, OBJPROP_COLOR,      col);
    ObjectSetInteger(0, name, OBJPROP_FILL,       SL_RectFill);
-   ObjectSetInteger(0, name, OBJPROP_WIDTH,        5);
+   ObjectSetInteger(0, name, OBJPROP_WIDTH,      5);
    ObjectSetInteger(0, name, OBJPROP_BACK,       true);
    ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
    ObjectSetString (0, name, OBJPROP_TOOLTIP,
