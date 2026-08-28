@@ -155,9 +155,7 @@ double SL_diffmid_m15 = 1.5;
 // double SL_diffmid_m30 = 2.3;
 // double SL_diffmid_H1  = 3.4;
 // double SL_diffmid_H4  = 7.7;
-// double SL_diffmid_m30 = 1.5;
 double SL_diffmid_m30 = 2.5;
-// double SL_diffmid_H1  = 1.5;
 double SL_diffmid_H1  = 3;
 double SL_diffmid_H4  = 4;
 
@@ -212,6 +210,10 @@ int    SL_L2Mode = 1;
 //--- NOTE mode 9's reversed control (M30 then M15) scored +294.10 - nearly
 //--- identical - so the ORDER carries little information. The gain comes
 //--- from needing two events, not from the sequence.
+//--- thresholds for breakout mode 10
+double SL_brk_dm15 = 3.0;
+double SL_brk_dm30 = 3.0;
+
 int    SL_BreakoutMode = 0;
 
 //--- How many bars back modes 8/9 look for the first breakout of the pair.
@@ -556,7 +558,7 @@ void SL_DrawUserLabelRanges()
       if(!ObjectCreate(0, name, OBJ_RECTANGLE, 0, t1, lo, t2, hi)) continue;
       ObjectSetInteger(0, name, OBJPROP_COLOR,      SL_LabelColor);
       ObjectSetInteger(0, name, OBJPROP_FILL,       SL_LabelFill);
-      ObjectSetInteger(0, name, OBJPROP_WIDTH, 5);
+      ObjectSetInteger(0, name, OBJPROP_WIDTH, 4);
       ObjectSetInteger(0, name, OBJPROP_BACK,       true);
       ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
       ObjectSetString (0, name, OBJPROP_TOOLTIP,
@@ -730,32 +732,42 @@ bool     SL_DrawRectL2 = true;
 bool     SL_DrawRectL3 = true;
 bool     SL_DrawRectL4 = true;
 
-//--- slot A            All      Any          Any2         None
-//--- L1  (A || X || Y) && (S || C || W || M)
-//--- L2  (Y || Z)      && (M || S || C || W)
-//--- L3  Z || M || S || C || D          - five-way OR, expect a high fire rate
-//--- L4  M || S || C
-string SL_RectL1All_A  = "";    string SL_RectL1Any_A  = "SCMD";
+//--- ENTRY rule - what STARTS a run. Two slots, ORed.
+//--- L1 entry: (S && B && D) || (M && W)
+string SL_RectL1All_A  = "SWD"; string SL_RectL1Any_A  = "";
 string SL_RectL1Any2_A = "";    string SL_RectL1None_A = "";
-string SL_RectL2All_A  = "";    string SL_RectL2Any_A  = "MSCD";
-string SL_RectL2Any2_A = "";    string SL_RectL2None_A = "";
-string SL_RectL3All_A  = "";    string SL_RectL3Any_A  = "MSCD";
-string SL_RectL3Any2_A = "";    string SL_RectL3None_A = "";
-string SL_RectL4All_A  = "";    string SL_RectL4Any_A  = "MSC";
-string SL_RectL4Any2_A = "";    string SL_RectL4None_A = "";
-
-//--- slot B - ORed with A. All four fields empty = slot unused.
-string SL_RectL1All_B  = "";    string SL_RectL1Any_B  = "";
+string SL_RectL1All_B  = "MW";  string SL_RectL1Any_B  = "";
 string SL_RectL1Any2_B = "";    string SL_RectL1None_B = "";
+
+string SL_RectL2All_A  = "";    string SL_RectL2Any_A  = "SCMD";
+string SL_RectL2Any2_A = "";    string SL_RectL2None_A = "";
 string SL_RectL2All_B  = "";    string SL_RectL2Any_B  = "";
 string SL_RectL2Any2_B = "";    string SL_RectL2None_B = "";
+
+string SL_RectL3All_A  = "";    string SL_RectL3Any_A  = "SCMD";
+string SL_RectL3Any2_A = "";    string SL_RectL3None_A = "";
 string SL_RectL3All_B  = "";    string SL_RectL3Any_B  = "";
 string SL_RectL3Any2_B = "";    string SL_RectL3None_B = "";
+
+string SL_RectL4All_A  = "";    string SL_RectL4Any_A  = "MSC";
+string SL_RectL4Any2_A = "";    string SL_RectL4None_A = "";
 string SL_RectL4All_B  = "";    string SL_RectL4Any_B  = "";
 string SL_RectL4Any2_B = "";    string SL_RectL4None_B = "";
 
-// color    SL_RectL1Color = clrGoldenrod;
-color    SL_RectL1Color = PeachPuff;
+//--- CONTINUATION rule - what KEEPS a run open once the entry rule has fired.
+//--- One slot each. Normally looser than the entry rule: harder to start, easier
+//--- to stay in. Leave all four fields empty to reuse the entry rule instead.
+//--- L1 continue: S || C || D || M
+string SL_RectL1ContAll  = "";  string SL_RectL1ContAny  = "SCDM";
+string SL_RectL1ContAny2 = "";  string SL_RectL1ContNone = "";
+string SL_RectL2ContAll  = "";  string SL_RectL2ContAny  = "SCMD";
+string SL_RectL2ContAny2 = "";  string SL_RectL2ContNone = "";
+string SL_RectL3ContAll  = "";  string SL_RectL3ContAny  = "SCMD";
+string SL_RectL3ContAny2 = "";  string SL_RectL3ContNone = "";
+string SL_RectL4ContAll  = "";  string SL_RectL4ContAny  = "MSC";
+string SL_RectL4ContAny2 = "";  string SL_RectL4ContNone = "";
+
+color    SL_RectL1Color = BurlyWood;
 color    SL_RectL2Color = clrGreenYellow;
 color    SL_RectL3Color = clrRed;
 color    SL_RectL4Color = clrYellow;
@@ -925,6 +937,15 @@ void SL_VirtualStep(int which, bool sw, double dm, datetime t, double px)
 }
 
 //+------------------------------------------------------------------+
+//| FLY stages - the expanding / trending set, the complement of the |
+//| settled set SL_StageOK tests for.                                |
+//+------------------------------------------------------------------+
+bool SL_StageFly(int st)
+{
+   return (st == 511 || st == 512 || st == 521 || st == 522);
+}
+
+//+------------------------------------------------------------------+
 //| Mark a ladder-detected sideway bar on top of the M15 midline.    |
 //+------------------------------------------------------------------+
 void SL_DrawLadderLabel(datetime t, double mid)
@@ -975,7 +996,7 @@ void SL_CloseLadderRange(datetime t_end)
    {
       ObjectSetInteger(0, name, OBJPROP_COLOR,      SL_LadderRangeColor);
       ObjectSetInteger(0, name, OBJPROP_FILL,       SL_LadderRangeFill);
-      ObjectSetInteger(0, name, OBJPROP_WIDTH,      4);
+      ObjectSetInteger(0, name, OBJPROP_WIDTH, 4);
       ObjectSetInteger(0, name, OBJPROP_BACK,       true);
       ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
       ObjectSetString (0, name, OBJPROP_TOOLTIP,
@@ -1067,6 +1088,24 @@ bool SL_TagsMatch(string tags,
                   string aB, string yB, string y2B, string nB)
 {
    return SL_TagSlot(tags, aA, yA, y2A, nA) || SL_TagSlot(tags, aB, yB, y2B, nB);
+}
+
+//+------------------------------------------------------------------+
+//| Pick the rule for this bar: ENTRY while no run is open,          |
+//| CONTINUATION once one is. If the continuation fields are all      |
+//| empty the entry rule is reused, so the two-phase behaviour is     |
+//| opt-in per level.                                                 |
+//+------------------------------------------------------------------+
+bool SL_RectRule(int lvl, string tags,
+                 string aA, string yA, string y2A, string nA,
+                 string aB, string yB, string y2B, string nB,
+                 string cA, string cY, string cY2, string cN)
+{
+   bool in_run = (sl_rect_start[lvl] != 0);
+   bool has_cont = (cA != "" || cY != "" || cY2 != "" || cN != "");
+
+   if(in_run && has_cont) return SL_TagSlot(tags, cA, cY, cY2, cN);
+   return SL_TagsMatch(tags, aA, yA, y2A, nA, aB, yB, y2B, nB);
 }
 
 //+------------------------------------------------------------------+
@@ -1357,6 +1396,19 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       else if(SL_BreakoutMode == 5) brk = raw30;                           // M30 alone
       else if(SL_BreakoutMode == 6) brk = (raw || raw30);                  // either band
       else if(SL_BreakoutMode == 7) brk = (raw && raw30);                  // both bands
+      //--- Mode 10: a breakout only counts when BOTH timeframes have moved into a
+      //--- fly stage AND both midlines are still close (dm < 3). The intent is to
+      //--- cancel only on a break that the band structure agrees with, rather than
+      //--- on any price excursion. Note brk only has an effect where the state was
+      //--- already >= 1, so "only when sideway was detected" is implicit.
+      //--- UNMEASURED - the fly-stage set has not been tested as a breakout gate.
+      else if(SL_BreakoutMode == 10)
+      {
+         bool fly15 = SL_StageFly((int)BB_datas[1].BBW_stage[LA]);
+         bool fly30 = SL_StageFly((int)BB_datas[2].BBW_stage[LA]);
+         brk = (raw && fly15 && fly30
+                    && dm1 < SL_brk_dm15 && dm2 < SL_brk_dm30);
+      }
       else if(SL_BreakoutMode == 8) brk = (raw30 && raw30p);               // M30 confirmed
       else if(SL_BreakoutMode == 9) brk = (prior15 && raw30);              // M15 then M30
 
@@ -1477,38 +1529,30 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
                                      PERIOD_M15,  SL_L1TagColor);
 
    //--- TAG RECTANGLES. After the label draws, so the tag strings are final.
-   if(SL_DrawRectL1)
-      SL_RectStep(0, SL_TagsMatch(l1tags, SL_RectL1All_A, SL_RectL1Any_A, SL_RectL1Any2_A, SL_RectL1None_A,
-                                          SL_RectL1All_B, SL_RectL1Any_B, SL_RectL1Any2_B, SL_RectL1None_B),
-                  PERIOD_M15, SL_RectL1Color, "SLRC1_");
-   if(SL_DrawRectL2)
-      SL_RectStep(1, SL_TagsMatch(l2tags, SL_RectL2All_A, SL_RectL2Any_A, SL_RectL2Any2_A, SL_RectL2None_A,
-                                          SL_RectL2All_B, SL_RectL2Any_B, SL_RectL2Any2_B, SL_RectL2None_B),
-                  PERIOD_M30, SL_RectL2Color, "SLRC2_");
-   if(SL_DrawRectL3)
-      SL_RectStep(2, SL_TagsMatch(l3tags, SL_RectL3All_A, SL_RectL3Any_A, SL_RectL3Any2_A, SL_RectL3None_A,
-                                          SL_RectL3All_B, SL_RectL3Any_B, SL_RectL3Any2_B, SL_RectL3None_B),
-                  PERIOD_H1,  SL_RectL3Color, "SLRC3_");
-   if(SL_DrawRectL4)
-      SL_RectStep(3, SL_TagsMatch(l4tags, SL_RectL4All_A, SL_RectL4Any_A, SL_RectL4Any2_A, SL_RectL4None_A,
-                                          SL_RectL4All_B, SL_RectL4Any_B, SL_RectL4Any2_B, SL_RectL4None_B),
-                  PERIOD_H4,  SL_RectL4Color, "SLRC4_");
+   //--- r1..r4 are this bar's verdict per level: the ENTRY rule while no run is
+   //--- open, the CONTINUATION rule once one is.
+   bool r1 = SL_RectRule(0, l1tags, SL_RectL1All_A, SL_RectL1Any_A, SL_RectL1Any2_A, SL_RectL1None_A,
+                                    SL_RectL1All_B, SL_RectL1Any_B, SL_RectL1Any2_B, SL_RectL1None_B,
+                            SL_RectL1ContAll, SL_RectL1ContAny, SL_RectL1ContAny2, SL_RectL1ContNone);
+   bool r2 = SL_RectRule(1, l2tags, SL_RectL2All_A, SL_RectL2Any_A, SL_RectL2Any2_A, SL_RectL2None_A,
+                                    SL_RectL2All_B, SL_RectL2Any_B, SL_RectL2Any2_B, SL_RectL2None_B,
+                            SL_RectL2ContAll, SL_RectL2ContAny, SL_RectL2ContAny2, SL_RectL2ContNone);
+   bool r3 = SL_RectRule(2, l3tags, SL_RectL3All_A, SL_RectL3Any_A, SL_RectL3Any2_A, SL_RectL3None_A,
+                                    SL_RectL3All_B, SL_RectL3Any_B, SL_RectL3Any2_B, SL_RectL3None_B,
+                            SL_RectL3ContAll, SL_RectL3ContAny, SL_RectL3ContAny2, SL_RectL3ContNone);
+   bool r4 = SL_RectRule(3, l4tags, SL_RectL4All_A, SL_RectL4Any_A, SL_RectL4Any2_A, SL_RectL4None_A,
+                                    SL_RectL4All_B, SL_RectL4Any_B, SL_RectL4Any2_B, SL_RectL4None_B,
+                            SL_RectL4ContAll, SL_RectL4ContAny, SL_RectL4ContAny2, SL_RectL4ContNone);
 
-   //--- COMBINED track: the selected levels joined by AND or OR.
+   if(SL_DrawRectL1) SL_RectStep(0, r1, PERIOD_M15, SL_RectL1Color, "SLRC1_");
+   if(SL_DrawRectL2) SL_RectStep(1, r2, PERIOD_M30, SL_RectL2Color, "SLRC2_");
+   if(SL_DrawRectL3) SL_RectStep(2, r3, PERIOD_H1,  SL_RectL3Color, "SLRC3_");
+   if(SL_DrawRectL4) SL_RectStep(3, r4, PERIOD_H4,  SL_RectL4Color, "SLRC4_");
+
    if(SL_DrawRectJoin)
    {
-      bool r1 = SL_TagsMatch(l1tags, SL_RectL1All_A, SL_RectL1Any_A, SL_RectL1Any2_A, SL_RectL1None_A,
-                                     SL_RectL1All_B, SL_RectL1Any_B, SL_RectL1Any2_B, SL_RectL1None_B);
-      bool r2 = SL_TagsMatch(l2tags, SL_RectL2All_A, SL_RectL2Any_A, SL_RectL2Any2_A, SL_RectL2None_A,
-                                     SL_RectL2All_B, SL_RectL2Any_B, SL_RectL2Any2_B, SL_RectL2None_B);
-      bool r3 = SL_TagsMatch(l3tags, SL_RectL3All_A, SL_RectL3Any_A, SL_RectL3Any2_A, SL_RectL3None_A,
-                                     SL_RectL3All_B, SL_RectL3Any_B, SL_RectL3Any2_B, SL_RectL3None_B);
-      bool r4 = SL_TagsMatch(l4tags, SL_RectL4All_A, SL_RectL4Any_A, SL_RectL4Any2_A, SL_RectL4None_A,
-                                     SL_RectL4All_B, SL_RectL4Any_B, SL_RectL4Any2_B, SL_RectL4None_B);
-
-      bool joined;
-      int  used = 0;
-      if(SL_RectJoinOp == 0)          // AND: start true, fail on any selected level
+      bool joined; int used = 0;
+      if(SL_RectJoinOp == 0)
       {
          joined = true;
          if(SL_RectJoinL1) { joined = joined && r1; used++; }
@@ -1516,7 +1560,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
          if(SL_RectJoinL3) { joined = joined && r3; used++; }
          if(SL_RectJoinL4) { joined = joined && r4; used++; }
       }
-      else                            // OR: start false, pass on any selected level
+      else
       {
          joined = false;
          if(SL_RectJoinL1) { joined = joined || r1; used++; }
@@ -1524,32 +1568,26 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
          if(SL_RectJoinL3) { joined = joined || r3; used++; }
          if(SL_RectJoinL4) { joined = joined || r4; used++; }
       }
-      if(used == 0) joined = false;   // nothing selected - never fire
-
+      if(used == 0) joined = false;
       SL_RectStep(4, joined, SL_RectJoinTF, SL_RectJoinColor, "SLRCJ_");
    }
 
    //--- log, so the chart can be cross-checked against the numbers
    if(SL_WriteLog)
    {
-      Print("[LADDER",  
+      Print("[LADDER",
             "] L1tags:[", (l1tags == "" ? "-" : l1tags),
             "] L2tags:[", (l2tags == "" ? "-" : l2tags),
             "] L3tags:[", (l3tags == "" ? "-" : l3tags),
-            "] L4tags:[", (l4tags == "" ? "-" : l4tags), 
+            "] L4tags:[", (l4tags == "" ? "-" : l4tags),
             "] state:[", SL_state[LA],
             "] prev:[", prev,
-            "] why:[", why,
-            "] L1m:[", SL_L1Mode, "] L2m:[", SL_L2Mode,
-            "] A15:[", A15, "] S15:[", S15, "] C15:[", C15,
-            "] A30:[", A30, "] S30:[", S30, "] C30:[", C30, "] W30:[", W30,
-            "] brkmode:[", SL_BreakoutMode,
+            "] r1:[", r1,
+            "] r2:[", r2,
+            "] r3:[", r3,
+            "] r4:[", r4,
             "] brk:[", brk,
-            "] c0:[", DoubleToString(c0,1),
-            "] c1:[", DoubleToString(c1,1),
-            "] c2:[", DoubleToString(c2,1),
-            "] ws15:[", (int)BB_datas[1].BBW_stage[LA],
-            "] ws30:[", (int)BB_datas[2].BBW_stage[LA], "]");
+            "] why:[", why, "]");
    }
    //--- Draw the label rectangles lazily. iBarShift returns -1 in OnInit during a
    //--- backtest because no history is loaded yet, so all 27 ranges were skipped.
