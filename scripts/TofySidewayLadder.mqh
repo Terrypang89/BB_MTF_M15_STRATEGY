@@ -1868,6 +1868,12 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    bool sw_ladd = (SL_state[LA] >= 2);
    string SWCMP_info = "";
 
+   //--- comparison accounting (GROUP A: ladder flag; GROUP B: no flag)
+   sv_scored++;
+   if(sw_user && sw_ladd)      sv_agree++;
+   else if(sw_user && !sw_ladd) sv_user_only++;
+   else if(!sw_user && sw_ladd) sv_ladd_only++;
+
    // breakout flag for the dm==3 exit gate
    sv_evt[0] = ""; sv_evt[1] = "";
    SL_VirtualStep(0, sw_user, dmv_bar, t_bar, px_bar, brk);
@@ -2015,6 +2021,18 @@ void Trade_Strategy(
       }
       SL_TrackAct((int)Trade_act, cur, px_now);
       return;   // sideway bar: never enter
+   }
+
+   //================================================================
+   // dm==3 (sideways M5 trend) exits all, but only when there is no active
+   // breakout. This mirrors the gate in SL_VirtualStep.
+   //================================================================
+   if(SL_ExitOnDm3 && !brk && !flat && dm == 3.0)
+   {
+      Trade_act = 7;
+      Trade_info += " [LAD]DM3_EXIT";
+      SL_TrackAct((int)Trade_act, cur, px_now);
+      return;
    }
 
    //================================================================
