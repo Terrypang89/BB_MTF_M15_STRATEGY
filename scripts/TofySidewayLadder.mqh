@@ -149,6 +149,13 @@ int    SL_TradeTF = 1;
 //--- chosen dm value - so M5 trend + M15 spacing is the tested combination.
 int    SL_TrendTF = 0;
 
+//--- dm==3 (neither up nor down) closes all positions, but only when there is
+//--- no active breakout. OFF by default: the churn analysis in this file found
+//--- 844 trades held 1-5 bars lost -$2,258 while 276 held 6+ bars made +$3,227,
+//--- so any change that adds exits is pushing in the measured-losing direction.
+//--- Enable only to measure it.
+bool   SL_ExitOnDm3 = false;
+
 bool   SL_UseH1     = false;    // measured to DEGRADE the ladder; off by default
 // double SL_diffmid_m15 = 3;
 // double SL_diffmid_m30 = 1.5;
@@ -883,7 +890,7 @@ bool SL_StageOK(int st)
 //| Same rules as Trade_Strategy: sideway exits all and blocks entry, |
 //| opposite dm exits, entry only when flat, close-only.              |
 //+------------------------------------------------------------------+
-void SL_VirtualStep(int which, bool sw, double dm, datetime t, double px)
+void SL_VirtualStep(int which, bool sw, double dm, datetime t, double px, bool brk)
 {
    //--- range accounting
    if(sw)
@@ -908,6 +915,7 @@ void SL_VirtualStep(int which, bool sw, double dm, datetime t, double px)
    {
       if(inpos) act = 7;                       // sideway: close everything
    }
+   else if(SL_ExitOnDm3 && !brk && inpos && dm == 3.0) act = 7;   // dm==3 exit-all
    else if(inLong  && dm1_down) act = 5;
    else if(inShort && dm1_up)   act = 6;
    else if(!inpos)
@@ -1860,14 +1868,10 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    bool sw_ladd = (SL_state[LA] >= 2);
    string SWCMP_info = "";
 
-   sv_scored++;
-   if(sw_user && sw_ladd)       sv_agree++;
-   else if(sw_user && !sw_ladd) sv_user_only++;
-   else if(!sw_user && sw_ladd) sv_ladd_only++;
-
+   // breakout flag for the dm==3 exit gate
    sv_evt[0] = ""; sv_evt[1] = "";
-   SL_VirtualStep(0, sw_user, dmv_bar, t_bar, px_bar);
-   SL_VirtualStep(1, sw_ladd, dmv_bar, t_bar, px_bar);
+   SL_VirtualStep(0, sw_user, dmv_bar, t_bar, px_bar, brk);
+   SL_VirtualStep(1, sw_ladd, dmv_bar, t_bar, px_bar, brk);
 
    if(sw_ladd) SL_DrawLadderLabel(t_bar, mid_bar);
 
