@@ -625,6 +625,7 @@ double   sv_pnl[2]     = {0.0, 0.0};
 int      sv_bars[2]    = {0, 0};        // bars flagged sideway
 int      sv_ranges[2]  = {0, 0};        // contiguous sideway blocks
 bool     sv_prev_sw[2] = {false, false};
+bool sl_brk = false;
 int      sv_agree      = 0;             // bars where both agree sideway
 int      sv_user_only  = 0;
 int      sv_ladd_only  = 0;
@@ -915,7 +916,7 @@ void SL_VirtualStep(int which, bool sw, double dm, datetime t, double px, bool b
    {
       if(inpos) act = 7;                       // sideway: close everything
    }
-   else if(SL_ExitOnDm3 && !brk && inpos && dm == 3.0) act = 7;   // dm==3 exit-all
+   else if(SL_ExitOnDm3 && !sl_brk && inpos && dm == 3.0) act = 7;   // dm==3 exit-all
    else if(inLong  && dm1_down) act = 5;
    else if(inShort && dm1_up)   act = 6;
    else if(!inpos)
@@ -1504,7 +1505,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    if(chain_ok && A30 && ev30) SL_state[LA] = 2;
 
    //--- BREAKOUT CANCELS the sideway state (M15 band, index 1)
-   bool brk = false;
+   sl_brk = false;
    if(SL_BreakoutMode > 0)
    {
       // bool raw = false;
@@ -1545,13 +1546,13 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
          if(h30[idx]) prior30 = true;
       }
 
-      if(SL_BreakoutMode == 1)      brk = raw;
-      else if(SL_BreakoutMode == 2) brk = (raw && raw1);
-      else if(SL_BreakoutMode == 3) brk = (raw && !C15);                   // current use
-      else if(SL_BreakoutMode == 4) brk = (raw && !C15 && !W15);
-      else if(SL_BreakoutMode == 5) brk = raw30;                           // M30 alone
-      else if(SL_BreakoutMode == 6) brk = (raw || raw30);                  // either band
-      else if(SL_BreakoutMode == 7) brk = (raw && raw30);                  // both bands
+      if(SL_BreakoutMode == 1)      sl_brk = raw;
+      else if(SL_BreakoutMode == 2) sl_brk = (raw && raw1);
+      else if(SL_BreakoutMode == 3) sl_brk = (raw && !C15);                   // current use
+      else if(SL_BreakoutMode == 4) sl_brk = (raw && !C15 && !W15);
+      else if(SL_BreakoutMode == 5) sl_brk = raw30;                           // M30 alone
+      else if(SL_BreakoutMode == 6) sl_brk = (raw || raw30);                  // either band
+      else if(SL_BreakoutMode == 7) sl_brk = (raw && raw30);                  // both bands
       //--- Mode 10: a breakout only counts when BOTH timeframes have moved into a
       //--- fly stage AND both midlines are still close (dm < 3). The intent is to
       //--- cancel only on a break that the band structure agrees with, rather than
@@ -1562,18 +1563,18 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       {
          bool fly15 = SL_StageFly((int)BB_datas[1].BBW_stage[LA]);
          bool fly30 = SL_StageFly((int)BB_datas[2].BBW_stage[LA]);
-         brk = (raw && fly15 && fly30
+         sl_brk = (raw && fly15 && fly30
                     && dm1 < SL_brk_dm15 && dm2 < SL_brk_dm30);
       }
-      else if(SL_BreakoutMode == 8) brk = (raw30 && raw30p);               // M30 confirmed
-      else if(SL_BreakoutMode == 9) brk = (prior15 && raw30);              // M15 then M30
+      else if(SL_BreakoutMode == 8) sl_brk = (raw30 && raw30p);               // M30 confirmed
+      else if(SL_BreakoutMode == 9) sl_brk = (prior15 && raw30);              // M15 then M30
 
       //--- record this bar for the next call's lookback
       h15[hn % 8] = raw;
       h30[hn % 8] = raw30;
       hn++;
 
-      if(brk) SL_state[LA] = 0;
+      if(sl_brk) SL_state[LA] = 0;
    }
 
    // extra adding to test
@@ -1619,7 +1620,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    string why = "";
    if(SL_state[LA] == 0)
    {
-      if(brk)       why = "brk";
+      if(sl_brk)       why = "brk";
       else if(!A15) why = "A15";
       else          why = "ev15";
    }
@@ -1842,7 +1843,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
             "] r2:[", r2,
             "] r3:[", r3,
             "] r4:[", r4,
-            "] brk:[", brk,
+            "] brk:[", sl_brk,
             "] sw:[", sl_sw_state,
             "] L1sw:[", (sl_sw_l1 ? "1" : "-"),
             "] L2sw:[", (sl_sw_l2 ? "1" : "-"),
@@ -1876,8 +1877,8 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
 
    // breakout flag for the dm==3 exit gate
    sv_evt[0] = ""; sv_evt[1] = "";
-   SL_VirtualStep(0, sw_user, dmv_bar, t_bar, px_bar, brk);
-   SL_VirtualStep(1, sw_ladd, dmv_bar, t_bar, px_bar, brk);
+   SL_VirtualStep(0, sw_user, dmv_bar, t_bar, px_bar, sl_brk);
+   SL_VirtualStep(1, sw_ladd, dmv_bar, t_bar, px_bar, sl_brk);
 
    if(sw_ladd) SL_DrawLadderLabel(t_bar, mid_bar);
 
@@ -2027,7 +2028,7 @@ void Trade_Strategy(
    // dm==3 (sideways M5 trend) exits all, but only when there is no active
    // breakout. This mirrors the gate in SL_VirtualStep.
    //================================================================
-   if(SL_ExitOnDm3 && !brk && !flat && dm == 3.0)
+   if(SL_ExitOnDm3 && !sl_brk && !flat && dm == 3.0)
    {
       Trade_act = 7;
       Trade_info += " [LAD]DM3_EXIT";
