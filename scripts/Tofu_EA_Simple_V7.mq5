@@ -118,26 +118,26 @@ input color              BBColor_5                = Magenta;
 input color              BBColor_6                = LightCyan;
 input color              BBColor_7                = MistyRose;
 input string             Display_Settings         = "---------------------------------------------";
-input bool               Cluster_Label_Ena        = true;
-input bool               Verify_Label_Ena         = true;
+input bool               Cluster_Label_Ena        = false;
+input bool               Verify_Label_Ena         = false;
 input bool               Verify_Log_Ena           = true;
 input string             SidewayLadder_Settings   = "---------------------------------------------";
-input bool               Ladder_Label_Ena         = true;
+input bool               Ladder_Label_Ena         = false;
 input bool               Ladder_Log_Ena           = true;
 input bool               Ladder_UserLabel_Ena     = true;
 input bool               Ladder_Trade_Draw_Ena    = true;
-input int                Ladder_L1_Mode           = 4;
+input int                Ladder_L1_Mode           = 5;
 input int                Ladder_L2_Mode           = 0;
 input int                Ladder_Breakout_Mode     = 2;
-input int                Ladder_Exit_Mode         = 0;   // Ladder_Exit_Mode, 0 = ladder only, 1 = TofySideway only, 2 = BOTH must agree, 3 = EITHER fires, 4 = HAND LABELS          hindsight ceiling, NOT tradeable
-input int                Ladder_TrendTF           = 1;   // Ladder_TrendTF, 0 = M5, 1 = M15
-input int                Ladder_TradeTF           = 0;   // Ladder_TradeTF, 0 = M5, 1 = M15
+input int                Ladder_Exit_Mode         = 5;   // Ladder_Exit_Mode, 0 = ladder only, 1 = TofySideway only, 2 = BOTH must agree, 3 = EITHER fires, 4 = HAND LABELS          hindsight ceiling, NOT tradeable
+input int                Ladder_TrendTF           = 0;   // Ladder_TrendTF, 0 = M5, 1 = M15
+input int                Ladder_TradeTF           = 1;   // Ladder_TradeTF, 0 = M5, 1 = M15
 input bool               Ladder_UseM30Latch       = true;
 input bool               Ladder_S30WaivesChain    = true;
 input bool               Ladder_UseTrade_Ena      = true;
 input bool               Ladder_Virtual_User_Ena  = true;   // Magenta - user labels
 input bool               Ladder_Virtual_Ladd_Ena  = false;   // blue   - ladder
-  input int                Ladder_LabelSource       = 0;   // Ladder_LabelSource, 0 = HAND LABELS (ground truth), 1 = FITTED boundaries (hindsight - measurement only)
+input int                Ladder_LabelSource       = 1;   // Ladder_LabelSource, 0 = HAND LABELS (ground truth), 1 = FITTED boundaries (hindsight - measurement only)
 
 // #define TF_ANUM 7 // timeframe array number, 0,1,2,3,4,5,6,7
 // #define LA 4 // latest array number
@@ -1453,10 +1453,28 @@ void print_BBTFImpact(bool debug_info, BB_MTF_Impact_struct &BBTFImpact, double 
    string BB_midline_Cluster_info = "";
    int TFnum = TF2arraynum(_Period);
 
+   // if(BBTFImpact.BB_midline_Cluster[0][LA] != 0)
+   // {
+   //    BB_midline_Cluster_info += NormalizeDouble(BBTFImpact.BB_midline_Cluster[0][LA], 2) + ", " + NormalizeDouble(BBTFImpact.BB_midline_Cluster[1][LA], 2) + ", " + NormalizeDouble(BBTFImpact.BB_midline_Cluster[2][LA], 2) + ", " + NormalizeDouble(BBTFImpact.BB_midline_Cluster[3][LA], 2);
+      
+   //    if(BB_midline_Cluster_info != "")
+   //    {
+   //       STRATEGY_info += "midline_Cluster:[" + BB_midline_Cluster_info + "], ";
+   //    }
+   // }
+   //--- All seven midline pairs. Loop rather than a fixed list so adding a pair to
+   //--- BBDatas_Midline_Cluster shows up here without a second edit.
+   //---   0 M15+M5   1 M15+M30   2 M15+H1   3 M30+H1
+   //---   4 M15+H4   5 M30+H4    6 H1+H4
    if(BBTFImpact.BB_midline_Cluster[0][LA] != 0)
    {
-      BB_midline_Cluster_info += NormalizeDouble(BBTFImpact.BB_midline_Cluster[0][LA], 2) + ", " + NormalizeDouble(BBTFImpact.BB_midline_Cluster[1][LA], 2) + ", " + NormalizeDouble(BBTFImpact.BB_midline_Cluster[2][LA], 2) + ", " + NormalizeDouble(BBTFImpact.BB_midline_Cluster[3][LA], 2);
-      
+      for(int ci = 0; ci < ArrayRange(BBTFImpact.BB_midline_Cluster, 0); ci++)
+      {
+         if(ci > 0) BB_midline_Cluster_info += ", ";
+         BB_midline_Cluster_info +=
+            DoubleToString(BBTFImpact.BB_midline_Cluster[ci][LA], 2);
+      }
+
       if(BB_midline_Cluster_info != "")
       {
          STRATEGY_info += "midline_Cluster:[" + BB_midline_Cluster_info + "], ";

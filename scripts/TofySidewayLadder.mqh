@@ -124,7 +124,9 @@ bool   SL_UseTradeStrategy = true;   // off by default - changes nothing until e
 //---   3 = EITHER fires         most exits
 //---   4 = HAND LABELS          hindsight ceiling, NOT tradeable
 //---   5 = STATE MACHINE        sl_sw_state >= 1; set SL_UseSwState = true
-int    SL_ExitMode = 0;
+//--- NOTE Tofu_EA_Simple_V7 overrides this from the Ladder_Exit_Mode input, so
+//--- this default only applies when the header is used without that EA.
+int    SL_ExitMode = 5;
 
 //--- Which bar Trade_Strategy decides on.
 //---   0 = M5  - three times the decision points
@@ -150,11 +152,13 @@ int    SL_TradeTF = 1;
 int    SL_TrendTF = 0;
 
 //--- dm==3 (neither up nor down) closes all positions, but only when there is
-//--- no active breakout. OFF by default: the churn analysis in this file found
-//--- 844 trades held 1-5 bars lost -$2,258 while 276 held 6+ bars made +$3,227,
-//--- so any change that adds exits is pushing in the measured-losing direction.
-//--- Enable only to measure it.
-bool   SL_ExitOnDm3 = false;
+//--- no active breakout - the "exit all: dmt == 3" leg of the spec.
+//--- CAUTION: the churn analysis in this file found 844 trades held 1-5 bars lost
+//--- -$2,258 while 276 held 6+ bars made +$3,227, so this pushes in the
+//--- measured-losing direction. On because the spec asks for it; measure it.
+//--- The breakout it consults is sl_brk (SL_BreakoutMode), NOT the state
+//--- machine's raw30 release - see SL_SwReleaseMode.
+bool   SL_ExitOnDm3 = true;
 
 bool   SL_UseH1     = false;    // measured to DEGRADE the ladder; off by default
 // double SL_diffmid_m15 = 3;
@@ -776,7 +780,7 @@ string SL_RectL3ContAny2 = "";  string SL_RectL3ContNone = "";
 string SL_RectL4ContAll  = "";  string SL_RectL4ContAny  = "MSC";
 string SL_RectL4ContAny2 = "";  string SL_RectL4ContNone = "";
 
-color    SL_RectL1Color = BurlyWood;
+color    SL_RectL1Color = clrGoldenrod;   // spec: M15 = Goldenrod (was BurlyWood)
 color    SL_RectL2Color = clrGreenYellow;
 color    SL_RectL3Color = clrRed;
 color    SL_RectL4Color = clrYellow;
@@ -840,9 +844,14 @@ bool     SL_DrawSwRects  = true;
 int      SL_SwPairLo     = 2;      // 1 = M15 (dmt1)  2 = M30  3 = H1
 int      SL_SwPairHi     = 3;      // 2 = M30 (dmt2)  3 = H1
 double   SL_SwPairMax    = 3.0;
-//--- false = the M15 band releases at both levels (measured best)
-//--- true  = M15 at state 1, M30 at state 2
-bool     SL_SwSplitRelease = false;
+//--- Which Bollinger band closes a sideway run - see the measurements at the
+//--- sw_brk line below before changing this.
+//---   0 = M15 band at BOTH levels      measured best, was SL_SwSplitRelease=false
+//---   1 = M15 at state 1, M30 at state 2   the split, was SL_SwSplitRelease=true
+//---   2 = M30 band at BOTH levels      what the spec asks for
+//--- Set to 2 for spec compliance. Mode 0 is the only one that measured positive,
+//--- so a backtest is expected to get WORSE here; measure before keeping it.
+int      SL_SwReleaseMode = 2;
 
 string   SL_SwL1EntryA   = "SWD";  // L1 entry slot A - all of these
 string   SL_SwL1EntryB   = "MW";   // slot B, ORed with A
@@ -1733,7 +1742,11 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       //---   raw15 at L1 / raw30 L2  1147 bars (63%)  M15 -58.20  M5 -161.22
       //--- raw15 throughout is the only positive one: it keeps every run short.
       //--- The split loses because a confirmed run then becomes hard to kill.
-      bool   sw_brk = (SL_SwSplitRelease && sl_sw_state == 2) ? raw30_sw : raw15_sw;
+      //--- SL_SwReleaseMode picks between them; 2 (raw30 throughout) is the spec.
+      bool   sw_brk;
+      if(SL_SwReleaseMode == 2)      sw_brk = raw30_sw;                       // spec
+      else if(SL_SwReleaseMode == 1) sw_brk = (sl_sw_state == 2) ? raw30_sw : raw15_sw;
+      else                           sw_brk = raw15_sw;                       // measured best
       datetime t_sw = iTime(_Symbol, PERIOD_M15, 0);
 
       if(sl_sw_state >= 1 && sw_brk)
