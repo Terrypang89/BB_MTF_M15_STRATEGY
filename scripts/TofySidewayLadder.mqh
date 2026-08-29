@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "38.18"
+#property version   "38.19"
 
 #define HAS_TOFYSIDEWAY_LADDER
 //+------------------------------------------------------------------+
