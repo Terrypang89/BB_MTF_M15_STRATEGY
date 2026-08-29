@@ -123,6 +123,7 @@ bool   SL_UseTradeStrategy = true;   // off by default - changes nothing until e
 //---   2 = BOTH must agree      fewest exits, longest holds
 //---   3 = EITHER fires         most exits
 //---   4 = HAND LABELS          hindsight ceiling, NOT tradeable
+//---   5 = STATE MACHINE        sl_sw_state >= 1; set SL_UseSwState = true
 int    SL_ExitMode = 0;
 
 //--- Which bar Trade_Strategy decides on.
@@ -146,7 +147,7 @@ int    SL_TradeTF = 1;
 //--- SEPARATE from SL_TradeTF, which controls how OFTEN the strategy decides.
 //--- The measured figures used M15 decision spacing (SL_TradeTF = 1) with the
 //--- chosen dm value - so M5 trend + M15 spacing is the tested combination.
-int    SL_TrendTF = 1;
+int    SL_TrendTF = 0;
 
 bool   SL_UseH1     = false;    // measured to DEGRADE the ladder; off by default
 // double SL_diffmid_m15 = 3;
@@ -798,6 +799,74 @@ datetime sl_rect_start[5] = {0,0,0,0,0};   // 0..3 = L1..L4, 4 = the joined trac
 datetime sl_rect_last [5] = {0,0,0,0,0};
 int      sl_rect_num  [5] = {0,0,0,0,0};
 
+
+//+------------------------------------------------------------------+
+//| SIDEWAY STATE MACHINE with live rectangles                       |
+//|                                                                  |
+//| Two branches, chosen by whether the two chosen timeframes agree   |
+//| on direction:                                                     |
+//|   LADDER      dmt1 == dmt2 && dmt1 < 3   (M15 and M30 both fly)   |
+//|   NON-LADDER  everything else - gated on L2 AND L3 agreeing first |
+//|                                                                  |
+//| In either branch:                                                 |
+//|   L1 entry   -> open + FILL the L1 rectangle                      |
+//|   then L2    -> open + FILL the L2 rectangle                      |
+//|   raw30      -> breakout: UNFILL both, close the run              |
+//|   at L2      -> latch: keep extending both rectangles             |
+//|                                                                  |
+//| MEASURED on February (hand labels: 858 bars / 47%, 27 ranges):    |
+//|   release raw3  (H1 band)   1408 bars / 77%, M15 -65.08           |
+//|   release raw30 (M30 band)  1252 bars / 68%, M15 -41.22, M5 -106  |
+//| Both LOSE. Recall is 88% but precision only 60% - the rules catch |
+//| nearly every real range and also a third of the trending time, so |
+//| too few trading windows are left. Coverage needs to come down by  |
+//| about a third; the M15 band as the release is the untried step.   |
+//|                                                                   |
+//| dmt1==dmt2 (M15,M30) measured better than dmt2==dmt3 (M30,H1):    |
+//|   M15 -41.22 vs -155.43. SL_SwPairLo/Hi switch between them.      |
+//+------------------------------------------------------------------+
+//--- SL_UseSwState computes the state machine; SL_DrawSwRects only draws it.
+//--- Kept separate so the state can drive trading with the chart clean.
+bool     SL_UseSwState   = true;
+bool     SL_DrawSwRects  = true;
+int      SL_SwPairLo     = 1;      // 1 = M15 (dmt1)  2 = M30  3 = H1
+int      SL_SwPairHi     = 2;      // 2 = M30 (dmt2)  3 = H1
+double   SL_SwPairMax    = 3.0;
+//--- false = the M15 band releases at both levels (measured best)
+//--- true  = M15 at state 1, M30 at state 2
+bool     SL_SwSplitRelease = false;
+
+string   SL_SwL1EntryA   = "SWD";  // L1 entry slot A - all of these
+string   SL_SwL1EntryB   = "MW";   // slot B, ORed with A
+string   SL_SwL1Cont     = "SCDM"; // continuation once L1 has fired - any of
+string   SL_SwL2Any      = "MSCD";
+string   SL_SwL3Any      = "MSCD";
+
+color    SL_SwL1Color    = clrGoldenrod;
+color    SL_SwL2Color    = clrGreenYellow;
+
+//--- CONFIRMED block. The L1/L2 rectangles above are LIVE - they fill while a run
+//--- is open and unfill when it ends, so nothing stays filled once the run closes.
+//--- This one is the permanent record: drawn when a run ENDS, filled, spanning the
+//--- whole run, so the chart keeps a mark of where sideway actually was.
+//---   SL_SwConfirmLevel 2 = only runs that reached L2 are recorded (the confirmed
+//---                         ones); 1 = every run, including L1-only false starts.
+bool     SL_DrawSwConfirm  = true;
+int      SL_SwConfirmLevel = 2;
+color    SL_SwConfirmColor = clrDarkSlateGray;
+
+int      sl_sw_max     = 0;      // highest state this run reached
+
+//--- 0 = nothing open, 1 = L1 sideway, 2 = L2 sideway
+int      sl_sw_state   = 0;
+int      sl_sw_prev    = 0;      // state on the previous bar, for the latch flag
+bool     sl_sw_l1      = false;  // L1 sideway active this bar
+bool     sl_sw_l2      = false;  // L2 sideway active this bar
+bool     sl_sw_latch   = false;  // L2 held over from the previous bar
+datetime sl_sw_l1_from = 0, sl_sw_l2_from = 0;
+string   sl_sw_l1_name = "",  sl_sw_l2_name = "";
+int      sl_sw_seq     = 0;
+
 //--- ladder state history: [LA]=current, ages toward [LA_4]
 int SL_state[5];
 
@@ -1158,6 +1227,85 @@ void SL_RectStep(int lvl, bool on, ENUM_TIMEFRAMES tf, color col, string prefix)
    ObjectSetString (0, name, OBJPROP_TOOLTIP,
                     name + "  " + TimeToString(a, TIME_DATE|TIME_MINUTES) + " -> " +
                     TimeToString(b, TIME_DATE|TIME_MINUTES) +
+                    "  bars " + IntegerToString(i2 - i1 + 1));
+}
+
+//+------------------------------------------------------------------+
+//| Create or update one sideway rectangle. Called every bar while    |
+//| its run is open, so the block grows and can be filled/unfilled.   |
+//+------------------------------------------------------------------+
+void SL_SwRect(string name, datetime from, datetime to, ENUM_TIMEFRAMES tf,
+               color col, bool filled)
+{
+   if(name == "" || from == 0 || to < from) return;
+
+   int i1 = iBarShift(_Symbol, tf, to,   false);
+   int i2 = iBarShift(_Symbol, tf, from, false);
+   if(i1 < 0 || i2 < 0 || i2 < i1) return;
+
+   double hi = 0.0, lo = 0.0;
+   for(int k = i1; k <= i2; k++)
+   {
+      double h = iHigh(_Symbol, tf, k);
+      double l = iLow (_Symbol, tf, k);
+      if(h <= 0.0 || l <= 0.0) continue;
+      if(hi == 0.0 || h > hi) hi = h;
+      if(lo == 0.0 || l < lo) lo = l;
+   }
+   if(hi <= 0.0 || lo <= 0.0 || hi <= lo) return;
+
+   if(ObjectFind(0, name) < 0)
+   {
+      if(!ObjectCreate(0, name, OBJ_RECTANGLE, 0, from, lo, to, hi)) return;
+      ObjectSetInteger(0, name, OBJPROP_COLOR,      col);
+      ObjectSetInteger(0, name, OBJPROP_BACK,       true);
+      ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+   }
+   ObjectSetInteger(0, name, OBJPROP_TIME,  0, from);
+   ObjectSetDouble (0, name, OBJPROP_PRICE, 0, lo);
+   ObjectSetInteger(0, name, OBJPROP_TIME,  1, to);
+   ObjectSetDouble (0, name, OBJPROP_PRICE, 1, hi);
+   ObjectSetInteger(0, name, OBJPROP_FILL,  filled);
+}
+
+//+------------------------------------------------------------------+
+//| Draw the permanent CONFIRMED block for a run that has just ended.|
+//| Separate object from the live L1/L2 rectangles, so it survives    |
+//| their unfill.                                                     |
+//+------------------------------------------------------------------+
+void SL_SwConfirm(int seq, datetime from, datetime to, int reached)
+{
+   if(!SL_DrawSwConfirm || from == 0 || to < from) return;
+   if(reached < SL_SwConfirmLevel) return;
+
+   int i1 = iBarShift(_Symbol, PERIOD_M15, to,   false);
+   int i2 = iBarShift(_Symbol, PERIOD_M15, from, false);
+   if(i1 < 0 || i2 < 0 || i2 < i1) return;
+
+   double hi = 0.0, lo = 0.0;
+   for(int k = i1; k <= i2; k++)
+   {
+      double h = iHigh(_Symbol, PERIOD_M15, k);
+      double l = iLow (_Symbol, PERIOD_M15, k);
+      if(h <= 0.0 || l <= 0.0) continue;
+      if(hi == 0.0 || h > hi) hi = h;
+      if(lo == 0.0 || l < lo) lo = l;
+   }
+   if(hi <= 0.0 || lo <= 0.0 || hi <= lo) return;
+
+   string name = "SLSWC_" + IntegerToString(seq);
+   if(ObjectFind(0, name) >= 0) return;
+   if(!ObjectCreate(0, name, OBJ_RECTANGLE, 0, from, lo, to, hi)) return;
+
+   ObjectSetInteger(0, name, OBJPROP_COLOR,      SL_SwConfirmColor);
+   ObjectSetInteger(0, name, OBJPROP_FILL,       true);
+   ObjectSetInteger(0, name, OBJPROP_BACK,       true);
+   ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+   ObjectSetString (0, name, OBJPROP_TOOLTIP,
+                    "SIDEWAY #" + IntegerToString(seq) +
+                    "  reached L" + IntegerToString(reached) + "  " +
+                    TimeToString(from, TIME_DATE|TIME_MINUTES) + " -> " +
+                    TimeToString(to, TIME_DATE|TIME_MINUTES) +
                     "  bars " + IntegerToString(i2 - i1 + 1));
 }
 
@@ -1544,6 +1692,106 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
                                     SL_RectL4All_B, SL_RectL4Any_B, SL_RectL4Any2_B, SL_RectL4None_B,
                             SL_RectL4ContAll, SL_RectL4ContAny, SL_RectL4ContAny2, SL_RectL4ContNone);
 
+   //--- SIDEWAY STATE MACHINE ------------------------------------------------
+   if(SL_UseSwState || SL_DrawSwRects)
+   {
+      double pLo = (SL_SwPairLo == 1) ? dmt1 : ((SL_SwPairLo == 2) ? dmt2 : dmt3);
+      double pHi = (SL_SwPairHi == 2) ? dmt2 : dmt3;
+      bool ladder_branch = (pLo == pHi && pLo < SL_SwPairMax);
+
+      bool l1_entry = SL_TagSlot(l1tags, SL_SwL1EntryA, "", "", "")
+                   || SL_TagSlot(l1tags, SL_SwL1EntryB, "", "", "");
+      bool l1_cont  = SL_AnyOf(l1tags, SL_SwL1Cont);
+      bool l2_ok    = SL_AnyOf(l2tags, SL_SwL2Any);
+      bool l3_ok    = SL_AnyOf(l3tags, SL_SwL3Any);
+      bool gate     = ladder_branch ? true : (l2_ok && l3_ok);
+
+      //--- RELEASE band depends on how far the run has got:
+      //---   state 1 (L1 only, unconfirmed) -> the M15 band, easy to kill
+      //---   state 2 (M30 confirmed)        -> the M30 band, harder to kill
+      //--- An unconfirmed run should not survive a move the M15 band already
+      //--- rejects; a confirmed one earns the wider band.
+      //--- MEASURED with a single M30 release: 68% coverage, M15 trend -41.22.
+      //--- The labels sit at 47%, so a tighter release on state 1 is the lever.
+      double px_sw = iClose(_Symbol, PERIOD_M5, 0);
+      bool   raw15_sw = (px_sw > BB_datas[1].BBUppLV[LA] ||
+                         px_sw < BB_datas[1].BBLowLV[LA]);
+      bool   raw30_sw = (px_sw > BB_datas[2].BBUppLV[LA] ||
+                         px_sw < BB_datas[2].BBLowLV[LA]);
+      //--- MEASURED on February, hand labels at 858 bars / 47% for reference:
+      //---   raw30 always            1217 bars (67%)  M15 -21.42  M5 -132.42
+      //---   raw15 always            1039 bars (57%)  M15 +12.43  M5  +43.25
+      //---   raw15 at L1 / raw30 L2  1147 bars (63%)  M15 -58.20  M5 -161.22
+      //--- raw15 throughout is the only positive one: it keeps every run short.
+      //--- The split loses because a confirmed run then becomes hard to kill.
+      bool   sw_brk = (SL_SwSplitRelease && sl_sw_state == 2) ? raw30_sw : raw15_sw;
+      datetime t_sw = iTime(_Symbol, PERIOD_M15, 0);
+
+      if(sl_sw_state >= 1 && sw_brk)
+      {
+         if(SL_DrawSwRects)
+         {
+            SL_SwRect(sl_sw_l1_name, sl_sw_l1_from, t_sw, PERIOD_M15, SL_SwL1Color, false);
+            if(sl_sw_l2_name != "")
+               SL_SwRect(sl_sw_l2_name, sl_sw_l2_from, t_sw, PERIOD_M30, SL_SwL2Color, false);
+         }
+         SL_SwConfirm(sl_sw_seq, sl_sw_l1_from, t_sw, sl_sw_max);   // permanent record
+         sl_sw_state = 0; sl_sw_max = 0; sl_sw_l1_name = ""; sl_sw_l2_name = "";
+         sl_sw_l1_from = 0; sl_sw_l2_from = 0;
+      }
+      else if(gate)
+      {
+         if(sl_sw_state == 0 && l1_entry)
+         {
+            sl_sw_seq++;
+            sl_sw_state   = 1;
+            sl_sw_max     = 1;
+            sl_sw_l1_from = t_sw;
+            sl_sw_l1_name = "SLSW1_" + IntegerToString(sl_sw_seq);
+         }
+         if(sl_sw_state == 1)
+         {
+            if(l1_cont)
+            {
+               if(SL_DrawSwRects) SL_SwRect(sl_sw_l1_name, sl_sw_l1_from, t_sw, PERIOD_M15, SL_SwL1Color, true);
+               if(l2_ok)
+               {
+                  sl_sw_state   = 2;
+                  sl_sw_max     = 2;
+                  sl_sw_l2_from = t_sw;
+                  sl_sw_l2_name = "SLSW2_" + IntegerToString(sl_sw_seq);
+               }
+            }
+            else
+            {
+               //--- L1 never reached L2 and its continuation rule has failed.
+               //--- That ends the run the same way a breakout does - there is no
+               //--- L2 latch to fall back on, so unfill and close.
+               if(SL_DrawSwRects)
+                  SL_SwRect(sl_sw_l1_name, sl_sw_l1_from, t_sw, PERIOD_M15,
+                            SL_SwL1Color, false);
+               SL_SwConfirm(sl_sw_seq, sl_sw_l1_from, t_sw, sl_sw_max);
+               sl_sw_state = 0; sl_sw_max = 0;
+               sl_sw_l1_name = ""; sl_sw_l1_from = 0;
+            }
+         }
+         if(sl_sw_state == 2)
+         {
+            if(SL_DrawSwRects)
+            {
+               SL_SwRect(sl_sw_l1_name, sl_sw_l1_from, t_sw, PERIOD_M15, SL_SwL1Color, true);
+               SL_SwRect(sl_sw_l2_name, sl_sw_l2_from, t_sw, PERIOD_M30, SL_SwL2Color, true);
+            }
+         }
+      }
+
+      //--- reporting flags for the log line
+      sl_sw_l1    = (sl_sw_state == 1);
+      sl_sw_l2    = (sl_sw_state == 2);
+      sl_sw_latch = (sl_sw_state == 2 && sl_sw_prev == 2);
+      sl_sw_prev  = sl_sw_state;
+   }
+
    if(SL_DrawRectL1) SL_RectStep(0, r1, PERIOD_M15, SL_RectL1Color, "SLRC1_");
    if(SL_DrawRectL2) SL_RectStep(1, r2, PERIOD_M30, SL_RectL2Color, "SLRC2_");
    if(SL_DrawRectL3) SL_RectStep(2, r3, PERIOD_H1,  SL_RectL3Color, "SLRC3_");
@@ -1587,6 +1835,10 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
             "] r3:[", r3,
             "] r4:[", r4,
             "] brk:[", brk,
+            "] sw:[", sl_sw_state,
+            "] L1sw:[", (sl_sw_l1 ? "1" : "-"),
+            "] L2sw:[", (sl_sw_l2 ? "1" : "-"),
+            "] L2latch:[", (sl_sw_latch ? "1" : "-"),
             "] why:[", why, "]");
    }
    //--- Draw the label rectangles lazily. iBarShift returns -1 in OnInit during a
@@ -1728,7 +1980,10 @@ void Trade_Strategy(
    else if(SL_ExitMode == 1) sw = sw_flag;
    else if(SL_ExitMode == 2) sw = (sw_flag && sw_ladder);
    else if(SL_ExitMode == 3) sw = (sw_flag || sw_ladder);
-   else if(SL_ExitMode == 4) sw = SL_InUserLabel(cur);   // HINDSIGHT - ceiling only
+   else if(SL_ExitMode == 4) sw = SL_InUserLabel(cur);
+   //--- 5 = the sideway STATE MACHINE. Needs SL_UseSwState = true, and SL_Update
+   //--- must have run for this bar - it does, the EA calls it before the dispatch.
+   else if(SL_ExitMode == 5) sw = (sl_sw_state >= 1);   // HINDSIGHT - ceiling only
 
    bool dm1_up   = (dm == 1.0 || dm == 5.0);
    bool dm1_down = (dm == 2.0 || dm == 4.0);
