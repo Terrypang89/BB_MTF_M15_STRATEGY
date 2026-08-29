@@ -829,8 +829,8 @@ int      sl_rect_num  [5] = {0,0,0,0,0};
 //--- Kept separate so the state can drive trading with the chart clean.
 bool     SL_UseSwState   = true;
 bool     SL_DrawSwRects  = true;
-int      SL_SwPairLo     = 1;      // 1 = M15 (dmt1)  2 = M30  3 = H1
-int      SL_SwPairHi     = 2;      // 2 = M30 (dmt2)  3 = H1
+int      SL_SwPairLo     = 2;      // 1 = M15 (dmt1)  2 = M30  3 = H1
+int      SL_SwPairHi     = 3;      // 2 = M30 (dmt2)  3 = H1
 double   SL_SwPairMax    = 3.0;
 //--- false = the M15 band releases at both levels (measured best)
 //--- true  = M15 at state 1, M30 at state 2
