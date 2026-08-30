@@ -1720,6 +1720,9 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    bool gate = false;
    if(SL_UseSwState || SL_DrawSwRects)
    {
+      //--- L2 confirmation must follow an already-active L1 run. Preserve the
+      //--- incoming state because this bar may start L1 below.
+      int sw_state_before = sl_sw_state;
       double pLo = (SL_SwPairLo == 1) ? dmt1 : ((SL_SwPairLo == 2) ? dmt2 : dmt3);
       double pHi = (SL_SwPairHi == 2) ? dmt2 : dmt3;
       ladder_branch = (pLo == pHi && pLo < SL_SwPairMax);
@@ -1783,7 +1786,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
             if(l1_cont)
             {
                if(SL_DrawSwRects) SL_SwRect(sl_sw_l1_name, sl_sw_l1_from, t_sw, PERIOD_M15, SL_SwL1Color, true);
-               if(l2_ok)
+               if(sw_state_before == 1 && l2_ok)
                {
                   sl_sw_state   = 2;
                   sl_sw_max     = 2;
