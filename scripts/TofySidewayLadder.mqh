@@ -1761,9 +1761,9 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
          sl_sw_state = 0; sl_sw_max = 0; sl_sw_l1_name = ""; sl_sw_l2_name = "";
          sl_sw_l1_from = 0; sl_sw_l2_from = 0;
       }
-      else if(gate)
+      else
       {
-         if(sl_sw_state == 0 && l1_entry)
+         if(sl_sw_state == 0 && gate && l1_entry)
          {
             sl_sw_seq++;
             sl_sw_state   = 1;
@@ -1858,6 +1858,10 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
             "] r4:[", r4,
             "] brk:[", sl_brk,
             "] sw:[", sl_sw_state,
+            "] gate:[", (gate ? "1" : "0"),
+            "] l2ok:[", (l2_ok ? "1" : "-"),
+            "] l3ok:[", (l3_ok ? "1" : "-"),
+            "] lbr:[", (ladder_branch ? "1" : "-"),
             "] L1sw:[", (sl_sw_l1 ? "1" : "-"),
             "] L2sw:[", (sl_sw_l2 ? "1" : "-"),
             "] L2latch:[", (sl_sw_latch ? "1" : "-"),
