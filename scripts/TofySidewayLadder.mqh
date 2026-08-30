@@ -869,7 +869,7 @@ color    SL_SwL2Color    = clrGreenYellow;
 //---   SL_SwConfirmLevel 2 = only runs that reached L2 are recorded (the confirmed
 //---                         ones); 1 = every run, including L1-only false starts.
 bool     SL_DrawSwConfirm  = true;
-int      SL_SwConfirmLevel = 2;
+int      SL_SwConfirmLevel = 1;
 color    SL_SwConfirmColor = clrDarkSlateGray;
 
 int      sl_sw_max     = 0;      // highest state this run reached
@@ -1711,18 +1711,25 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
                             SL_RectL4ContAll, SL_RectL4ContAny, SL_RectL4ContAny2, SL_RectL4ContNone);
 
    //--- SIDEWAY STATE MACHINE ------------------------------------------------
+   //--- These values are also emitted by the log below. Keep false when the
+   //--- optional state machine is disabled, rather than limiting them to its
+   //--- block scope.
+   bool ladder_branch = false;
+   bool l2_ok = false;
+   bool l3_ok = false;
+   bool gate = false;
    if(SL_UseSwState || SL_DrawSwRects)
    {
       double pLo = (SL_SwPairLo == 1) ? dmt1 : ((SL_SwPairLo == 2) ? dmt2 : dmt3);
       double pHi = (SL_SwPairHi == 2) ? dmt2 : dmt3;
-      bool ladder_branch = (pLo == pHi && pLo < SL_SwPairMax);
+      ladder_branch = (pLo == pHi && pLo < SL_SwPairMax);
 
       bool l1_entry = SL_TagSlot(l1tags, SL_SwL1EntryA, "", "", "")
                    || SL_TagSlot(l1tags, SL_SwL1EntryB, "", "", "");
       bool l1_cont  = SL_AnyOf(l1tags, SL_SwL1Cont);
-      bool l2_ok    = SL_AnyOf(l2tags, SL_SwL2Any);
-      bool l3_ok    = SL_AnyOf(l3tags, SL_SwL3Any);
-      bool gate     = ladder_branch ? true : (l2_ok && l3_ok);
+      l2_ok = SL_AnyOf(l2tags, SL_SwL2Any);
+      l3_ok = SL_AnyOf(l3tags, SL_SwL3Any);
+      gate = ladder_branch ? true : (l2_ok && l3_ok);
 
       //--- RELEASE band depends on how far the run has got:
       //---   state 1 (L1 only, unconfirmed) -> the M15 band, easy to kill
