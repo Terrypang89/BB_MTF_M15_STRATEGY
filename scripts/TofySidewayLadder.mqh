@@ -635,8 +635,8 @@ int      sv_user_only  = 0;
 int      sv_ladd_only  = 0;
 int      sv_scored     = 0;
 
-//--- last virtual event per source, folded into the [SWCMP] line instead of
-//--- emitting a separate stream. "" = nothing happened on this bar.
+//--- Last virtual event per source, reported in the [VIRTUAL] and [SWCMP]
+//--- lines. "" = nothing happened on this bar.
 string   sv_evt[2]     = {"", ""};
 
 //+------------------------------------------------------------------+
@@ -1906,6 +1906,47 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    sv_evt[0] = ""; sv_evt[1] = "";
    SL_VirtualStep(0, sw_user, dmv_bar, t_bar, px_bar, sl_brk);
    SL_VirtualStep(1, sw_ladd, dmv_bar, t_bar, px_bar, sl_brk);
+
+   //--- One virtual log line per M15 bar. Include only sources whose virtual
+   //--- chart track is enabled, so the log mirrors the visible USER/LADDER runs.
+   //--- pnl is the live P&L of an open position; cum_pnl is closed P&L.
+   if(SL_WriteLog && (SL_DrawVirtual[0] || SL_DrawVirtual[1]))
+   {
+      string user_pos = "FLAT", ladder_pos = "FLAT";
+      double user_pnl = 0.0,  ladder_pnl = 0.0;
+      if(sv_time[0] != 0)
+      {
+         user_pos = sv_dir[0];
+         user_pnl = (user_pos == "LONG") ? px_bar - sv_price[0]
+                                           : sv_price[0] - px_bar;
+      }
+      if(sv_time[1] != 0)
+      {
+         ladder_pos = sv_dir[1];
+         ladder_pnl = (ladder_pos == "LONG") ? px_bar - sv_price[1]
+                                               : sv_price[1] - px_bar;
+      }
+
+      string virtual_info = "[VIRTUAL] bar:[" +
+                            TimeToString(t_bar, TIME_DATE|TIME_MINUTES) +
+                            "] dm:[" + DoubleToString(dmv_bar, 0) +
+                            "] brk:[" + (sl_brk ? "1" : "-") + "]";
+      if(SL_DrawVirtual[0])
+         virtual_info += " USER:[sw:" + (sw_user ? "1" : "-") +
+                         " pos:" + user_pos +
+                         " pnl:" + DoubleToString(user_pnl, 2) +
+                         " accum_pnl:" + DoubleToString(sv_pnl[0], 2) +
+                         " evt:" + (sv_evt[0] == "" ? "-" : sv_evt[0]) +
+                         "]";
+      if(SL_DrawVirtual[1])
+         virtual_info += " LADDER:[sw:" + (sw_ladd ? "1" : "-") +
+                         " pos:" + ladder_pos +
+                         " pnl:" + DoubleToString(ladder_pnl, 2) +
+                         " accum_pnl:" + DoubleToString(sv_pnl[1], 2) +
+                         " evt:" + (sv_evt[1] == "" ? "-" : sv_evt[1]) +
+                         "]";
+      Print(virtual_info);
+   }
 
    if(sw_ladd) SL_DrawLadderLabel(t_bar, mid_bar);
 
