@@ -1913,27 +1913,29 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    if(SL_WriteLog && (SL_DrawVirtual[0] || SL_DrawVirtual[1]))
    {
       string user_pos = "FLAT", ladder_pos = "FLAT";
+      string user_entry = "none", ladder_entry = "none";
       double user_pnl = 0.0,  ladder_pnl = 0.0;
       if(sv_time[0] != 0)
       {
          user_pos = sv_dir[0];
+         user_entry = TimeToString(sv_time[0], TIME_DATE|TIME_MINUTES);
          user_pnl = (user_pos == "LONG") ? px_bar - sv_price[0]
                                            : sv_price[0] - px_bar;
       }
       if(sv_time[1] != 0)
       {
          ladder_pos = sv_dir[1];
+         ladder_entry = TimeToString(sv_time[1], TIME_DATE|TIME_MINUTES);
          ladder_pnl = (ladder_pos == "LONG") ? px_bar - sv_price[1]
                                                : sv_price[1] - px_bar;
       }
 
-      string virtual_info = "[VIRTUAL] bar:[" +
-                            TimeToString(t_bar, TIME_DATE|TIME_MINUTES) +
-                            "] dm:[" + DoubleToString(dmv_bar, 0) +
+      string virtual_info = "[VIRTUAL] dm:[" + DoubleToString(dmv_bar, 0) +
                             "] brk:[" + (sl_brk ? "1" : "-") + "]";
       if(SL_DrawVirtual[0])
          virtual_info += " USER:[sw:" + (sw_user ? "1" : "-") +
                          " pos:" + user_pos +
+                         " entry:" + user_entry +
                          " pnl:" + DoubleToString(user_pnl, 2) +
                          " accum_pnl:" + DoubleToString(sv_pnl[0], 2) +
                          " evt:" + (sv_evt[0] == "" ? "-" : sv_evt[0]) +
@@ -1941,6 +1943,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       if(SL_DrawVirtual[1])
          virtual_info += " LADDER:[sw:" + (sw_ladd ? "1" : "-") +
                          " pos:" + ladder_pos +
+                         " entry:" + ladder_entry +
                          " pnl:" + DoubleToString(ladder_pnl, 2) +
                          " accum_pnl:" + DoubleToString(sv_pnl[1], 2) +
                          " evt:" + (sv_evt[1] == "" ? "-" : sv_evt[1]) +
