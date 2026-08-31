@@ -4,15 +4,19 @@
 
 #define HAS_TOFYSIDEWAY_LADDER
 //+------------------------------------------------------------------+
-//| TofySidewayLadder.mqh   -- DIAGNOSTIC ONLY                        |
+//| TofySidewayLadder.mqh                                            |
 //|                                                                  |
-//| Computes the proposed sequential sideway LADDER and draws a label |
-//| on every M15 bar so the flow can be verified visually.            |
+//| Computes the sequential sideway LADDER (SL_state) and the parallel|
+//| SwState machine (sl_sw_state), draws diagnostic labels on every   |
+//| M15 bar, AND exposes Trade_Strategy(), which DOES drive live      |
+//| orders when SL_UseTradeStrategy = true (called from the EA's      |
+//| dispatch). It still does not write sideway_selected.              |
 //|                                                                  |
-//| IT DOES NOT TRADE AND DOES NOT WRITE sideway_selected.            |
-//| It writes only its own field so the existing detector and DMONLY  |
-//| are completely unaffected. Run both in parallel, compare, and     |
-//| only then decide whether the ladder should drive anything.        |
+//| WHICH SIGNAL TRADES depends on SL_ExitMode (see Trade_Strategy):  |
+//|   0 = SL_state>=2 (ladder)   1 = S_ flag   2 = both   3 = either  |
+//|   4 = hand labels (HINDSIGHT, not tradeable live)                 |
+//|   5 = sl_sw_state (SwState machine; needs SL_UseSwState = true).  |
+//|       Marked HINDSIGHT/ceiling - audit for look-ahead before live.|
 //|                                                                  |
 //| LADDER (each step needs the PREVIOUS bar one level below):        |
 //|   state 1  M15 : A15 and B15                                      |
@@ -841,6 +845,16 @@ int      sl_rect_num  [5] = {0,0,0,0,0};
 //--- Kept separate so the state can drive trading with the chart clean.
 bool     SL_UseSwState   = true;
 bool     SL_DrawSwRects  = true;
+//====================================================================
+//  SwState CONTROL SURFACE (mode-5 signal). Plain globals here on
+//  purpose: MQL5 forbids `input` inside an included .mqh. To expose
+//  these to the Tester/optimizer, add matching `input` vars in the
+//  main .mq5 and assign them in OnInit (same pattern as
+//  SL_L1Mode = Ladder_L1_Mode). All nine are assignment-free at
+//  runtime, so that wiring is compile-safe.
+//    SL_SwReleaseMode, SL_SwL1EntryA/B, SL_SwL1Cont, SL_SwL2Any,
+//    SL_SwL3Any, SL_SwPairLo/Hi/Max
+//====================================================================
 int      SL_SwPairLo     = 2;      // 1 = M15 (dmt1)  2 = M30  3 = H1
 int      SL_SwPairHi     = 3;      // 2 = M30 (dmt2)  3 = H1
 double   SL_SwPairMax    = 3.0;
@@ -1728,6 +1742,12 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    bool l2_ok = false;
    bool l3_ok = false;
    bool gate = false;
+   //====================================================================
+   //  SwState machine. Produces sl_sw_state, which ONLY drives a trade
+   //  when SL_ExitMode == 5 (HINDSIGHT - measurement only). In every
+   //  other ExitMode this block affects nothing but its own labels, so
+   //  when reading a non-mode-5 build you can skip to the end of it.
+   //====================================================================
    if(SL_UseSwState || SL_DrawSwRects)
    {
       //--- L2 confirmation must follow an already-active L1 run. Preserve the

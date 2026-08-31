@@ -121,23 +121,27 @@ input string             Display_Settings         = "---------------------------
 input bool               Cluster_Label_Ena        = false;
 input bool               Verify_Label_Ena         = false;
 input bool               Verify_Log_Ena           = true;
-input string             SidewayLadder_Settings   = "---------------------------------------------";
+input group "=== Ladder: core trade settings ==="
+input bool               Ladder_UseTrade_Ena      = true;   // master switch for Trade_Strategy
+input int                Ladder_Exit_Mode         = 5;   // 0=ladder 1=S_flag 2=both 3=either 4=hand-labels(hindsight) 5=SwState(hindsight)
+input int                Ladder_TrendTF           = 0;   // 0 = M5, 1 = M15
+input int                Ladder_TradeTF           = 1;   // 0 = M5, 1 = M15
+
+input group "=== Ladder: state-machine tuning ==="
+input int                Ladder_L1_Mode           = 5;
+input int                Ladder_L2_Mode           = 0;
+input int                Ladder_Breakout_Mode     = 2;
+input bool               Ladder_UseM30Latch       = true;
+input bool               Ladder_S30WaivesChain    = true;
+
+input group "=== Ladder: diagnostics / display (no effect on trades) ==="
 input bool               Ladder_Label_Ena         = false;
 input bool               Ladder_Log_Ena           = true;
 input bool               Ladder_UserLabel_Ena     = true;
 input bool               Ladder_Trade_Draw_Ena    = true;
-input int                Ladder_L1_Mode           = 5;
-input int                Ladder_L2_Mode           = 0;
-input int                Ladder_Breakout_Mode     = 2;
-input int                Ladder_Exit_Mode         = 5;   // Ladder_Exit_Mode, 0 = ladder only, 1 = TofySideway only, 2 = BOTH must agree, 3 = EITHER fires, 4 = HAND LABELS          hindsight ceiling, NOT tradeable
-input int                Ladder_TrendTF           = 0;   // Ladder_TrendTF, 0 = M5, 1 = M15
-input int                Ladder_TradeTF           = 1;   // Ladder_TradeTF, 0 = M5, 1 = M15
-input bool               Ladder_UseM30Latch       = true;
-input bool               Ladder_S30WaivesChain    = true;
-input bool               Ladder_UseTrade_Ena      = true;
 input bool               Ladder_Virtual_User_Ena  = true;   // Magenta - user labels
 input bool               Ladder_Virtual_Ladd_Ena  = false;   // blue   - ladder
-input int                Ladder_LabelSource       = 1;   // Ladder_LabelSource, 0 = HAND LABELS (ground truth), 1 = FITTED boundaries (hindsight - measurement only)
+input int                Ladder_LabelSource       = 1;   // 0 = HAND LABELS (ground truth), 1 = FITTED boundaries (hindsight - measurement only)
 
 // #define TF_ANUM 7 // timeframe array number, 0,1,2,3,4,5,6,7
 // #define LA 4 // latest array number
