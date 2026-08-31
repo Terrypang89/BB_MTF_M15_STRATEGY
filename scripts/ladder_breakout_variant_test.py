@@ -171,6 +171,15 @@ def breakout_proposed(r):
     return raw30(r) and (r["dmt1"] < 3 or fly)
 
 
+def breakout_ladder_branch(r):
+    """Ladder branch condition: raw30 AND (dmt0 == dmt1 && dmt0 < 3) AND (stage_m5 is FLY)."""
+    if r["dmt0"] is None or r["dmt1"] is None or r["stage15"] is None:
+        return raw30(r)  # missing data: fall back
+    fly_m5 = r["stage15"] in FLY_STAGES  # stage15 is M5 stage in the log
+    dmt_aligned = r["dmt0"] == r["dmt1"] and r["dmt0"] < 3
+    return raw30(r) and dmt_aligned and fly_m5
+
+
 def replay_state_machine(records, breakout_fn):
     """Reproduces SL_Update's L1/L2/breakout/latch control flow using
     the log's own gate/l2_ok/tags — see module docstring METHOD."""
@@ -264,8 +273,9 @@ def main():
         for i, bar, real, replayed in mismatches[:10]:
             print(f"  bar {bar}: logged sw={real} replayed sw={replayed}")
 
-    # --- current vs proposed breakout, same virtual-trade sim ---
+    # --- current vs proposed vs ladder_branch, same virtual-trade sim ---
     traj_proposed = replay_state_machine(records, breakout_proposed)
+    traj_ladder = replay_state_machine(records, breakout_ladder_branch)
 
     def coverage(traj):
         bars = sum(1 for s in traj if s >= 1)
@@ -278,18 +288,20 @@ def main():
         return bars, ranges
 
     print()
-    print("=== Sideway coverage: current vs proposed breakout ===")
+    print("=== Sideway coverage: current vs proposed vs ladder_branch ===")
     for name, traj in (("current  (raw30)", traj_current),
-                        ("proposed (raw30 & (dmt1<3|fly))", traj_proposed)):
+                        ("proposed (raw30 & (dmt1<3|fly))", traj_proposed),
+                        ("ladder   (raw30 & dmt0==dmt1<3 & m5fly)", traj_ladder)):
         bars, ranges = coverage(traj)
-        print(f"{name:36s} bars={bars:4d} ({100*bars/len(traj):.1f}%)  ranges={ranges}")
+        print(f"{name:40s} bars={bars:4d} ({100*bars/len(traj):.1f}%)  ranges={ranges}")
 
     print()
-    print("=== Virtual DMONLY trade P&L: current vs proposed breakout ===")
+    print("=== Virtual DMONLY trade P&L: current vs proposed vs ladder_branch ===")
     for name, traj in (("current  (raw30)", traj_current),
-                        ("proposed (raw30 & (dmt1<3|fly))", traj_proposed)):
+                        ("proposed (raw30 & (dmt1<3|fly))", traj_proposed),
+                        ("ladder   (raw30 & dmt0==dmt1<3 & m5fly)", traj_ladder)):
         res = simulate_virtual_trades(records, traj)
-        print(f"{name:36s} trades={res['trade_count']:4d}  win={res['win_rate']:5.1f}%  "
+        print(f"{name:40s} trades={res['trade_count']:4d}  win={res['win_rate']:5.1f}%  "
               f"total P&L={res['total_pnl']:+.2f}")
 
     print()

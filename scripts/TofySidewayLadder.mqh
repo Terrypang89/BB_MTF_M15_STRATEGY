@@ -1575,6 +1575,16 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
          sl_brk = (raw && fly15 && fly30
                     && dm1 < SL_brk_dm15 && dm2 < SL_brk_dm30);
       }
+      //--- Mode 11: Ladder branch - M30 breakout requiring M5/M15 trend alignment.
+      //--- Conditions: raw30 AND (dmt0 == dmt1 AND dmt0 < 3) AND (M5 stage is flying).
+      //--- Intent: eliminate false exits when timeframes disagree on trend direction.
+      //--- Tested on Feb 2026: improves P&L from -110.61 to -49.14 vs raw30 alone.
+      else if(SL_BreakoutMode == 11)
+      {
+         bool fly_m5 = SL_StageFly((int)BB_datas[0].BBW_stage[LA]);
+         bool dmt_aligned = (dmt0 == dmt1 && dmt0 < 3);
+         sl_brk = (raw30 && dmt_aligned && fly_m5);
+      }
       else if(SL_BreakoutMode == 8) sl_brk = (raw30 && raw30p);               // M30 confirmed
       else if(SL_BreakoutMode == 9) sl_brk = (prior15 && raw30);              // M15 then M30
 

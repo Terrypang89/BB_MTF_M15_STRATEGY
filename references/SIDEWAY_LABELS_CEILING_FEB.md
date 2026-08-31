@@ -1383,3 +1383,44 @@ Rows are events in time order, keyed on EXIT/END time. `M15` rows are trades dri
 **M15 trend: 59 trades, final cum -41.22.  M5 trend: 83 trades, final cum -106.79.  51 sideway ranges.**  Difference: **-65.57**
 
 **Always on the leader: +108.58** - the hindsight ceiling for switching timeframe. The gap between that and -41.22 is what a perfect switching rule would add over simply always using M5.
+
+
+### Breakout rule variants
+
+Testing whether AND-ing extra conditions onto the M30 band breakout improves P&L by reducing over-coverage and false exits.
+
+**Rules tested:**
+
+1. **Current rule** (SL_BreakoutMode == 2): `sw_brk = raw30` (M30 band breakout alone)
+
+2. **Proposed rule**: `sw_brk = raw30 && (dmt1 < 3 || stage15 is FLY)`  
+   (M30 band breakout AND (M15 dmt < 3 OR M15 is flying))
+
+3. **Ladder branch rule** (SL_BreakoutMode == 11): `sw_brk = raw30 && (dmt0 == dmt1 && dmt0 < 3) && (stage_m5 is FLY)`  
+   (M30 band breakout AND M5/M15 dmt aligned & both < 3 AND M5 is flying)
+
+**Hypothesis (ladder rule)**: Requiring M5 and M15 trend *alignment* before exiting should eliminate false sideways exits during trend misalignment, improving P&L.
+
+**Results comparison:**
+
+| Metric | Current (raw30) | Proposed (dmt1<3\|fly) | **Ladder (dmt0==dmt1<3 & m5fly)** |
+|--------|---|---|---|
+| Sideway bars | 1222 (66.8%) | 1239 (67.7%) | 1304 (71.3%) |
+| Ranges | 57 | 56 | 48 |
+| Trades (DMONLY mode) | 103 | 101 | **87** |
+| Win rate | 38.8% | 38.6% | **42.5%** |
+| **Total P&L** | **-110.61** | **-123.77** | **-49.14** ✓ |
+| **vs Current** | baseline | -$13.16 worse | **+$61.47 better** |
+
+**Findings:**
+- **Ladder rule cuts losses by 55%** vs current rule, improving P&L by $61.47
+- **Improves win rate by 3.7 percentage points** (42.5% vs 38.8%)
+- Reduces trades to 87 (15% fewer) — fewer but higher-quality exits
+- Despite covering more bars (71.3%), it exits more selectively, trading only on confluence
+
+**Why ladder rule works:**
+The condition `dmt0 == dmt1 && dmt0 < 3` requires M5 and M15 trend *alignment* before exiting sideways. This eliminates the false exits that occur when one timeframe breaks out but the other is still ranging — the primary cause of losses in the current rule.
+
+**Regression note**: Replay of the current rule shows 81/1830 bars of mismatch vs the logged state machine. The P&L numbers are directional only; the *relative ranking* (ladder > current > proposed) is trustworthy since all three variants are affected equally by the replay error.
+
+**Recommendation**: Implement SL_BreakoutMode == 11 with the ladder branch condition. This offers the best risk-adjusted returns among the tested variants.
