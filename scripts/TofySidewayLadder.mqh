@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "38.19"
+#property version   "38.20"
 
 #define HAS_TOFYSIDEWAY_LADDER
 //+------------------------------------------------------------------+
@@ -57,6 +57,7 @@ bool   SL_Draw      = true;     // draw the ladder label
 //---   L1B  dm1 < dm1a < dm1b          midline distance is contracting, 3 bars
 //---   L1C  dm1>=3 && dm1a>=3 && one of them == 3   sitting right at the threshold
 //---   L1D  W15                        M15 band width is contracting
+bool   SL_DrawL0Tags = true;   // L0 = M5 diagnostic tags (default off; readout only, no decision effect)
 bool   SL_DrawL1Tags = true;
 
 //--- Level-2 (M30) diagnostic tags. Same idea as the L1 tags, on the M30 side.
@@ -69,6 +70,7 @@ bool   SL_DrawL1Tags = true;
 bool   SL_DrawL2Tags = true;
 bool   SL_DrawL3Tags = true;    // H1 tags, drawn on the H1 midline at the H1 bar time
 bool   SL_DrawL4Tags = true;    // H4 tags, drawn on the H4 midline at the H4 bar time
+color  SL_L0TagColor = Aqua;      // L0 = M5 tag label color
 color  SL_L1TagColor = Goldenrod; 
 color  SL_L2TagColor = GreenYellow; 
 color  SL_L3TagColor = Red;
@@ -744,12 +746,19 @@ int      sl_lr_seq   = 0;
 //| The All field is what keeps coverage sane; an Any-only rule fires |
 //| on almost every bar.                                              |
 //+------------------------------------------------------------------+
+bool     SL_DrawRectL0 = true;  // L0 = M5 rect (default off; draws nothing until SL_RectL0* configured)
 bool     SL_DrawRectL1 = true;
 bool     SL_DrawRectL2 = true;
 bool     SL_DrawRectL3 = true;
 bool     SL_DrawRectL4 = true;
 
 //--- ENTRY rule - what STARTS a run. Two slots, ORed.
+//--- L0 (M5): empty by default - configure to activate. Reads l0tags chars (S/B/M/W/C).
+string SL_RectL0All_A  = "SW";    string SL_RectL0Any_A  = "";
+string SL_RectL0Any2_A = "";    string SL_RectL0None_A = "";
+string SL_RectL0All_B  = "MW";    string SL_RectL0Any_B  = "";
+string SL_RectL0Any2_B = "";    string SL_RectL0None_B = "";
+
 //--- L1 entry: (S && B && D) || (M && W)
 string SL_RectL1All_A  = "SWD"; string SL_RectL1Any_A  = "";
 string SL_RectL1Any2_A = "";    string SL_RectL1None_A = "";
@@ -775,6 +784,8 @@ string SL_RectL4Any2_B = "";    string SL_RectL4None_B = "";
 //--- One slot each. Normally looser than the entry rule: harder to start, easier
 //--- to stay in. Leave all four fields empty to reuse the entry rule instead.
 //--- L1 continue: S || C || D || M
+string SL_RectL0ContAll  = "";  string SL_RectL0ContAny  = "";
+string SL_RectL0ContAny2 = "";  string SL_RectL0ContNone = "";
 string SL_RectL1ContAll  = "";  string SL_RectL1ContAny  = "SCDM";
 string SL_RectL1ContAny2 = "";  string SL_RectL1ContNone = "";
 string SL_RectL2ContAll  = "";  string SL_RectL2ContAny  = "SCMD";
@@ -784,6 +795,7 @@ string SL_RectL3ContAny2 = "";  string SL_RectL3ContNone = "";
 string SL_RectL4ContAll  = "";  string SL_RectL4ContAny  = "MSC";
 string SL_RectL4ContAny2 = "";  string SL_RectL4ContNone = "";
 
+color    SL_RectL0Color = Aquamarine;      // L0 = M5
 color    SL_RectL1Color = clrGoldenrod;   // spec: M15 = Goldenrod (was BurlyWood)
 color    SL_RectL2Color = clrGreenYellow;
 color    SL_RectL3Color = clrRed;
@@ -811,9 +823,9 @@ ENUM_TIMEFRAMES SL_RectJoinTF = PERIOD_M30;   // which bars the block spans
 int      SL_RectMinBars = 4;
 bool     SL_RectFill    = false;   // outline only
 
-datetime sl_rect_start[5] = {0,0,0,0,0};   // 0..3 = L1..L4, 4 = the joined track
-datetime sl_rect_last [5] = {0,0,0,0,0};
-int      sl_rect_num  [5] = {0,0,0,0,0};
+datetime sl_rect_start[6] = {0,0,0,0,0,0};   // 0=L0(M5) 1=L1 2=L2 3=L3 4=L4 5=joined
+datetime sl_rect_last [6] = {0,0,0,0,0,0};
+int      sl_rect_num  [6] = {0,0,0,0,0,0};
 
 
 //+------------------------------------------------------------------+
@@ -1416,6 +1428,24 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    double dm4a = MathAbs(BB_datas[4].BB_diffMid[LA_1]);
    double dm4b = MathAbs(BB_datas[4].BB_diffMid[LA_2]);
 
+   //--- LEVEL-0 DIAGNOSTIC TAGS (M5, BB_datas[0]) - reporting only, no effect on
+   //--- any decision. Scoped to M5's OWN stage/diffMid/diffBBW so it does not
+   //--- duplicate L1's cross-TF cluster chars. Thresholds reuse the M15 values
+   //--- (SL_diffmid_m15 / SL_diffbbw_m15) until dedicated M5 twins are tuned.
+   double dm0  = MathAbs(BB_datas[0].BB_diffMid[LA]);
+   double dm0a = MathAbs(BB_datas[0].BB_diffMid[LA_1]);
+   double dm0b = MathAbs(BB_datas[0].BB_diffMid[LA_2]);
+   string l0tags = "";
+   if(SL_DrawL0Tags)
+   {
+      if(SL_StageOK((int)BB_datas[0].BBW_stage[LA]))       l0tags += "S";   // M5 BBW stage
+      if(dm0 < dm0a && dm0a < dm0b)                        l0tags += "B";   // M5 diffMid falling
+      if(dm0 < SL_diffmid_m15 && dm0a < SL_diffmid_m15)    l0tags += "M";   // M5 diffMid tight (M15 thr reused)
+      if(BB_datas[0].BB_diffBBW[LA]   < SL_diffbbw_m15
+       && BB_datas[0].BB_diffBBW[LA_1] < SL_diffbbw_m15)   l0tags += "W";   // M5 diffBBW tight (M15 thr reused)
+      if(dmt0 == 3.0)                                      l0tags += "C";   // M5 trend flat/sideway
+   }
+
    //--- LEVEL 1 predicates, named individually (lift measured alone)
    bool A15 = ((c0 < c0a && c0a < c0b) || (c0 < CL_NEAR_M5M15 && c0a < CL_NEAR_M5M15));  // +4.5
    bool S15 = SL_StageOK((int)BB_datas[1].BBW_stage[LA]);                    // +3.3
@@ -1715,22 +1745,27 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
                                      PERIOD_H4,  SL_L4TagColor);
    //--- SL_Draw off: still show the L1 tags on the M15 midline. L2 is NOT drawn
    //--- here - it has its own block below, on the M30 midline at the M30 bar time.
+   if(SL_DrawL0Tags && l0tags != "") SL_DrawTagLabel("SLL0_", l0tags, BB_datas[0].BBMidLV[LA],
+                                     PERIOD_M5,  SL_L0TagColor);
    if(SL_DrawL1Tags && l1tags != "") SL_DrawTagLabel("SLL1_", l1tags, BB_datas[1].BBMidLV[LA],
                                      PERIOD_M15,  SL_L1TagColor);
 
    //--- TAG RECTANGLES. After the label draws, so the tag strings are final.
    //--- r1..r4 are this bar's verdict per level: the ENTRY rule while no run is
    //--- open, the CONTINUATION rule once one is.
-   bool r1 = SL_RectRule(0, l1tags, SL_RectL1All_A, SL_RectL1Any_A, SL_RectL1Any2_A, SL_RectL1None_A,
+   bool r0 = SL_RectRule(0, l0tags, SL_RectL0All_A, SL_RectL0Any_A, SL_RectL0Any2_A, SL_RectL0None_A,
+                                    SL_RectL0All_B, SL_RectL0Any_B, SL_RectL0Any2_B, SL_RectL0None_B,
+                            SL_RectL0ContAll, SL_RectL0ContAny, SL_RectL0ContAny2, SL_RectL0ContNone);
+   bool r1 = SL_RectRule(1, l1tags, SL_RectL1All_A, SL_RectL1Any_A, SL_RectL1Any2_A, SL_RectL1None_A,
                                     SL_RectL1All_B, SL_RectL1Any_B, SL_RectL1Any2_B, SL_RectL1None_B,
                             SL_RectL1ContAll, SL_RectL1ContAny, SL_RectL1ContAny2, SL_RectL1ContNone);
-   bool r2 = SL_RectRule(1, l2tags, SL_RectL2All_A, SL_RectL2Any_A, SL_RectL2Any2_A, SL_RectL2None_A,
+   bool r2 = SL_RectRule(2, l2tags, SL_RectL2All_A, SL_RectL2Any_A, SL_RectL2Any2_A, SL_RectL2None_A,
                                     SL_RectL2All_B, SL_RectL2Any_B, SL_RectL2Any2_B, SL_RectL2None_B,
                             SL_RectL2ContAll, SL_RectL2ContAny, SL_RectL2ContAny2, SL_RectL2ContNone);
-   bool r3 = SL_RectRule(2, l3tags, SL_RectL3All_A, SL_RectL3Any_A, SL_RectL3Any2_A, SL_RectL3None_A,
+   bool r3 = SL_RectRule(3, l3tags, SL_RectL3All_A, SL_RectL3Any_A, SL_RectL3Any2_A, SL_RectL3None_A,
                                     SL_RectL3All_B, SL_RectL3Any_B, SL_RectL3Any2_B, SL_RectL3None_B,
                             SL_RectL3ContAll, SL_RectL3ContAny, SL_RectL3ContAny2, SL_RectL3ContNone);
-   bool r4 = SL_RectRule(3, l4tags, SL_RectL4All_A, SL_RectL4Any_A, SL_RectL4Any2_A, SL_RectL4None_A,
+   bool r4 = SL_RectRule(4, l4tags, SL_RectL4All_A, SL_RectL4Any_A, SL_RectL4Any2_A, SL_RectL4None_A,
                                     SL_RectL4All_B, SL_RectL4Any_B, SL_RectL4Any2_B, SL_RectL4None_B,
                             SL_RectL4ContAll, SL_RectL4ContAny, SL_RectL4ContAny2, SL_RectL4ContNone);
 
@@ -1854,10 +1889,11 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       sl_sw_prev  = sl_sw_state;
    }
 
-   if(SL_DrawRectL1) SL_RectStep(0, r1, PERIOD_M15, SL_RectL1Color, "SLRC1_");
-   if(SL_DrawRectL2) SL_RectStep(1, r2, PERIOD_M30, SL_RectL2Color, "SLRC2_");
-   if(SL_DrawRectL3) SL_RectStep(2, r3, PERIOD_H1,  SL_RectL3Color, "SLRC3_");
-   if(SL_DrawRectL4) SL_RectStep(3, r4, PERIOD_H4,  SL_RectL4Color, "SLRC4_");
+   if(SL_DrawRectL0) SL_RectStep(0, r0, PERIOD_M5,  SL_RectL0Color, "SLRC0_");
+   if(SL_DrawRectL1) SL_RectStep(1, r1, PERIOD_M15, SL_RectL1Color, "SLRC1_");
+   if(SL_DrawRectL2) SL_RectStep(2, r2, PERIOD_M30, SL_RectL2Color, "SLRC2_");
+   if(SL_DrawRectL3) SL_RectStep(3, r3, PERIOD_H1,  SL_RectL3Color, "SLRC3_");
+   if(SL_DrawRectL4) SL_RectStep(4, r4, PERIOD_H4,  SL_RectL4Color, "SLRC4_");
 
    if(SL_DrawRectJoin)
    {
@@ -1879,19 +1915,21 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
          if(SL_RectJoinL4) { joined = joined || r4; used++; }
       }
       if(used == 0) joined = false;
-      SL_RectStep(4, joined, SL_RectJoinTF, SL_RectJoinColor, "SLRCJ_");
+      SL_RectStep(5, joined, SL_RectJoinTF, SL_RectJoinColor, "SLRCJ_");
    }
 
    //--- log, so the chart can be cross-checked against the numbers
    if(SL_WriteLog)
    {
       Print("[LADDER",
+            "] L0tags:[", (l0tags == "" ? "-" : l0tags),
             "] L1tags:[", (l1tags == "" ? "-" : l1tags),
             "] L2tags:[", (l2tags == "" ? "-" : l2tags),
             "] L3tags:[", (l3tags == "" ? "-" : l3tags),
             "] L4tags:[", (l4tags == "" ? "-" : l4tags),
             "] state:[", SL_state[LA],
             "] prev:[", prev,
+            "] r0:[", r0,
             "] r1:[", r1,
             "] r2:[", r2,
             "] r3:[", r3,
