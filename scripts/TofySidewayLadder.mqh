@@ -169,6 +169,7 @@ bool   SL_ExitOnDm3 = true;
 bool   SL_UseH1     = false;    // measured to DEGRADE the ladder; off by default
 // double SL_diffmid_m15 = 3;
 // double SL_diffmid_m30 = 1.5;
+double SL_diffmid_m5 = 1.5;
 double SL_diffmid_m15 = 1.5;
 // double SL_diffmid_m30 = 2.3;
 // double SL_diffmid_H1  = 3.4;
@@ -239,6 +240,7 @@ int    SL_BrkLookback  = 2;
 
 //--- W30 dbbw < 1 fires +4.4 and is now part of the level-2 evidence gate.
 //--- Threshold value barely matters: <0 <1 <2 <5 all give the same result.
+double SL_diffbbw_m5 = 1.0;
 double SL_diffbbw_m15 = 1.0;
 double SL_diffbbw_m30 = 1.0;    // W30 threshold
 // double SL_diffbbw_H1  = 6.5;    // L3W - 92% of long ranges, F1 68.3    // WH1 threshold (L3W)
@@ -1152,7 +1154,7 @@ void SL_DrawTagLabel(string prefix, string tags, double mid,
       double y = mid + TagOffsetPts * _Point;   // lift clear of the midline
       // double y = mid + SL_TagOffsetPts;   // lift clear of the midline
 
-      string name = prefix + tags + IntegerToString((int)t);
+      string name = prefix + tags + "_" + IntegerToString((int)t);
       if(ObjectFind(0, name) >= 0) return;
       if(!ObjectCreate(0, name, OBJ_TEXT, 0, t, y)) return;
 
@@ -1471,9 +1473,9 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
          {
             if(SL_StageOK((int)BB_datas[0].BBW_stage[LA]))        l0tags += "S";
             if(dm0m < dm0am && dm0am < dm0bm)                     l0tags += "B";
-            if(dm0m < SL_diffmid_m15 && dm0am < SL_diffmid_m15)   l0tags += "M";
-            if(BB_datas[0].BB_diffBBW[LA]   < SL_diffbbw_m15
-             && BB_datas[0].BB_diffBBW[LA_1] < SL_diffbbw_m15)    l0tags += "W";
+            if(dm0m < SL_diffmid_m5 && dm0am < SL_diffmid_m5)   l0tags += "M";
+            if(BB_datas[0].BB_diffBBW[LA]   < SL_diffbbw_m5
+             && BB_datas[0].BB_diffBBW[LA_1] < SL_diffbbw_m5)    l0tags += "W";
             // if(dmt0m == 3.0)                                      l0tags += "C";
             if(dmt0m >= 3.0 && dmt0am >= 3.0 &&
                (dmt0m == 3.0 || dmt0am == 3.0 || dmt0bm == 3.0))   l0tags += "C";
@@ -1490,6 +1492,11 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
                            SL_RectL0All_B, SL_RectL0Any_B, SL_RectL0Any2_B, SL_RectL0None_B,
                            SL_RectL0ContAll, SL_RectL0ContAny, SL_RectL0ContAny2, SL_RectL0ContNone);
             SL_RectStepM5(r0, PERIOD_M5, SL_RectL0Color, "SLRC0_");
+         }
+
+         if(SL_WriteLog && SL_DrawL0Tags)
+         {
+            Print("[LADDER_M5] L0tags:[", (l0tags=="" ? "-" : l0tags), "] r0:[", r0, "]");
          }
       }
    }
