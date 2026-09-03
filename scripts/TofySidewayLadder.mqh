@@ -57,7 +57,7 @@ bool   SL_Draw      = true;     // draw the ladder label
 //---   L1B  dm1 < dm1a < dm1b          midline distance is contracting, 3 bars
 //---   L1C  dm1>=3 && dm1a>=3 && one of them == 3   sitting right at the threshold
 //---   L1D  W15                        M15 band width is contracting
-bool   SL_DrawL0Tags = true;   // L0 = M5 diagnostic tags (default off; readout only, no decision effect)
+bool   SL_DrawL0Tags = true;    // L0 = M5 diagnostic tags (readout only, no decision effect)
 bool   SL_DrawL1Tags = true;
 
 //--- Level-2 (M30) diagnostic tags. Same idea as the L1 tags, on the M30 side.
@@ -746,7 +746,7 @@ int      sl_lr_seq   = 0;
 //| The All field is what keeps coverage sane; an Any-only rule fires |
 //| on almost every bar.                                              |
 //+------------------------------------------------------------------+
-bool     SL_DrawRectL0 = true;  // L0 = M5 rect (default off; draws nothing until SL_RectL0* configured)
+bool     SL_DrawRectL0 = true;   // L0 = M5 rect (M5 sideway shown on chart, sampled at M15)
 bool     SL_DrawRectL1 = true;
 bool     SL_DrawRectL2 = true;
 bool     SL_DrawRectL3 = true;
@@ -754,9 +754,9 @@ bool     SL_DrawRectL4 = true;
 
 //--- ENTRY rule - what STARTS a run. Two slots, ORed.
 //--- L0 (M5): empty by default - configure to activate. Reads l0tags chars (S/B/M/W/C).
-string SL_RectL0All_A  = "SW";    string SL_RectL0Any_A  = "";
+string SL_RectL0All_A  = "SW";  string SL_RectL0Any_A  = "";
 string SL_RectL0Any2_A = "";    string SL_RectL0None_A = "";
-string SL_RectL0All_B  = "MW";    string SL_RectL0Any_B  = "";
+string SL_RectL0All_B  = "MW";  string SL_RectL0Any_B  = "";
 string SL_RectL0Any2_B = "";    string SL_RectL0None_B = "";
 
 //--- L1 entry: (S && B && D) || (M && W)
@@ -1142,25 +1142,28 @@ void SL_CloseLadderRange(datetime t_end)
 //| own bar, so every call computes the same string.                  |
 //+------------------------------------------------------------------+
 void SL_DrawTagLabel(string prefix, string tags, double mid,
-                     ENUM_TIMEFRAMES tf, color col)
+                     ENUM_TIMEFRAMES tf, int TagOffsetPts, int FontSize, color col)
 {
-   datetime t = iTime(_Symbol, tf, 0);
-   if(mid <= 0.0 || t <= 0) return;
+   if(tags != "")
+   {
+      datetime t = iTime(_Symbol, tf, 0);
+      if(mid <= 0.0 || t <= 0) return;
 
-   double y = mid + SL_TagOffsetPts * _Point;   // lift clear of the midline
-   // double y = mid + SL_TagOffsetPts;   // lift clear of the midline
+      double y = mid + TagOffsetPts * _Point;   // lift clear of the midline
+      // double y = mid + SL_TagOffsetPts;   // lift clear of the midline
 
-   string name = prefix + IntegerToString((int)t);
-   if(ObjectFind(0, name) >= 0) return;
-   if(!ObjectCreate(0, name, OBJ_TEXT, 0, t, y)) return;
+      string name = prefix + tags + IntegerToString((int)t);
+      if(ObjectFind(0, name) >= 0) return;
+      if(!ObjectCreate(0, name, OBJ_TEXT, 0, t, y)) return;
 
-   ObjectSetString (0, name, OBJPROP_TEXT,       "{" + (tags == "" ? "-" : tags) + "}");
-   ObjectSetInteger(0, name, OBJPROP_COLOR,      col);
-   ObjectSetInteger(0, name, OBJPROP_FONTSIZE,   SL_FontSize);
-   ObjectSetDouble (0, name, OBJPROP_ANGLE,      SL_Angle);
-   ObjectSetInteger(0, name, OBJPROP_ANCHOR,     ANCHOR_LOWER);
-   ObjectSetInteger(0, name, OBJPROP_BACK,       false);
-   ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+      ObjectSetString (0, name, OBJPROP_TEXT,       tags);
+      ObjectSetInteger(0, name, OBJPROP_COLOR,      col);
+      ObjectSetInteger(0, name, OBJPROP_FONTSIZE,   FontSize);
+      ObjectSetDouble (0, name, OBJPROP_ANGLE,      SL_Angle);
+      ObjectSetInteger(0, name, OBJPROP_ANCHOR,     ANCHOR_LOWER);
+      ObjectSetInteger(0, name, OBJPROP_BACK,       false);
+      ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+   }
 }
 
 //+------------------------------------------------------------------+
@@ -1209,12 +1212,32 @@ bool SL_TagsMatch(string tags,
 //| empty the entry rule is reused, so the two-phase behaviour is     |
 //| opt-in per level.                                                 |
 //+------------------------------------------------------------------+
+//--- L0 (M5) rectangle state - file scope so both the M5 rule and the M5
+//--- stepper share the run-open flag, mirroring how L1-L4 use sl_rect_start[lvl].
+datetime g_m5_rect_start = 0;
+datetime g_m5_rect_last  = 0;
+int      g_m5_rect_num   = 0;
+
 bool SL_RectRule(int lvl, string tags,
                  string aA, string yA, string y2A, string nA,
                  string aB, string yB, string y2B, string nB,
                  string cA, string cY, string cY2, string cN)
 {
    bool in_run = (sl_rect_start[lvl] != 0);
+   bool has_cont = (cA != "" || cY != "" || cY2 != "" || cN != "");
+
+   if(in_run && has_cont) return SL_TagSlot(tags, cA, cY, cY2, cN);
+   return SL_TagsMatch(tags, aA, yA, y2A, nA, aB, yB, y2B, nB);
+}
+
+//--- M5 variant: same rule logic, but reads the M5 run-open flag
+//--- (g_m5_rect_start) instead of the shared sl_rect_start[] array.
+bool SL_RectRuleM5(string tags,
+                   string aA, string yA, string y2A, string nA,
+                   string aB, string yB, string y2B, string nB,
+                   string cA, string cY, string cY2, string cN)
+{
+   bool in_run = (g_m5_rect_start != 0);
    bool has_cont = (cA != "" || cY != "" || cY2 != "" || cN != "");
 
    if(in_run && has_cont) return SL_TagSlot(tags, cA, cY, cY2, cN);
@@ -1260,6 +1283,62 @@ void SL_RectStep(int lvl, bool on, ENUM_TIMEFRAMES tf, color col, string prefix)
 
    sl_rect_num[lvl]++;
    string name = prefix + IntegerToString(sl_rect_num[lvl]);
+   if(ObjectFind(0, name) >= 0) return;
+   if(!ObjectCreate(0, name, OBJ_RECTANGLE, 0, a, lo, b, hi)) return;
+
+   ObjectSetInteger(0, name, OBJPROP_COLOR,      col);
+   ObjectSetInteger(0, name, OBJPROP_FILL,       SL_RectFill);
+   ObjectSetInteger(0, name, OBJPROP_WIDTH,      5);
+   ObjectSetInteger(0, name, OBJPROP_BACK,       true);
+   ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+   ObjectSetString (0, name, OBJPROP_TOOLTIP,
+                    name + "  " + TimeToString(a, TIME_DATE|TIME_MINUTES) + " -> " +
+                    TimeToString(b, TIME_DATE|TIME_MINUTES) +
+                    "  bars " + IntegerToString(i2 - i1 + 1));
+}
+
+//+------------------------------------------------------------------+
+//| M5-safe variant for L0 only. Identical to SL_RectStep except it   |
+//| (a) stamps the run in the PASSED timeframe's bar time, not M15,   |
+//| and (b) uses its own dedicated state, so it can run at M5 rate    |
+//| without touching the shared sl_rect_start[]/last[]/num[] arrays    |
+//| that L1-L4 advance on the M15 clock. No collision by construction. |
+//+------------------------------------------------------------------+
+void SL_RectStepM5(bool on, ENUM_TIMEFRAMES tf, color col, string prefix)
+{
+   datetime t = iTime(_Symbol, tf, 0);
+   if(t <= 0) return;
+
+   if(on)
+   {
+      if(g_m5_rect_start == 0) g_m5_rect_start = t;
+      g_m5_rect_last = t;
+      return;
+   }
+   if(g_m5_rect_start == 0) return;
+
+   datetime a = g_m5_rect_start, b = g_m5_rect_last;
+   g_m5_rect_start = 0;
+   if(b < a) return;
+
+   int i1 = iBarShift(_Symbol, tf, b, false);
+   int i2 = iBarShift(_Symbol, tf, a, false);
+   if(i1 < 0 || i2 < 0 || i2 < i1) return;
+   if(i2 - i1 + 1 < SL_RectMinBars) return;
+
+   double hi = 0.0, lo = 0.0;
+   for(int k = i1; k <= i2; k++)
+   {
+      double h = iHigh(_Symbol, tf, k);
+      double l = iLow (_Symbol, tf, k);
+      if(h <= 0.0 || l <= 0.0) continue;
+      if(hi == 0.0 || h > hi) hi = h;
+      if(lo == 0.0 || l < lo) lo = l;
+   }
+   if(hi <= 0.0 || lo <= 0.0 || hi <= lo) return;
+
+   g_m5_rect_num++;
+   string name = prefix + IntegerToString(g_m5_rect_num);
    if(ObjectFind(0, name) >= 0) return;
    if(!ObjectCreate(0, name, OBJ_RECTANGLE, 0, a, lo, b, hi)) return;
 
@@ -1364,6 +1443,57 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    //--- is indexed in M15 bars, so running per M5 tick would age `prev` three times
    //--- too fast and break every `prev >= 1` chain check, the latch, and the range
    //--- tracker. Guarding here means the EA can call it from anywhere safely.
+
+   //====================================================================
+   //  LEVEL-0 (M5) TAG DETECTION - runs once per NEW M5 BAR, ahead of the
+   //  M15 gate below. SL_Update is called every tick, so this M5 gate makes
+   //  l0tags refresh at M5 rate while the ladder/L1-L4/r0 rectangle stay on
+   //  M15. Diagnostic only - no decision reads l0tags. Self-contained: reads
+   //  BB_datas[0] (M5) directly, does not use any M15-gated local below.
+   //  l0tags is declared here so the M15 r0 rectangle can still read it.
+   //====================================================================
+   string l0tags = "";
+   bool   r0 = false;   // L0 rect verdict (M5 rate); kept in scope for the log below
+   {
+      static datetime sl_lastM5 = 0;
+      datetime m5now = iTime(_Symbol, PERIOD_M5, 0);
+      if(m5now != sl_lastM5)
+      {
+         sl_lastM5 = m5now;
+         double dm0m  = MathAbs(BB_datas[0].BB_diffMid[LA]);
+         double dm0am = MathAbs(BB_datas[0].BB_diffMid[LA_1]);
+         double dm0bm = MathAbs(BB_datas[0].BB_diffMid[LA_2]);
+         double dmt0m = BB_datas[0].BB_diffMid_Trend[LA];
+         double dmt0am = BB_datas[0].BB_diffMid_Trend[LA_1];
+         double dmt0bm = BB_datas[0].BB_diffMid_Trend[LA_2];
+         
+         if(SL_DrawL0Tags)
+         {
+            if(SL_StageOK((int)BB_datas[0].BBW_stage[LA]))        l0tags += "S";
+            if(dm0m < dm0am && dm0am < dm0bm)                     l0tags += "B";
+            if(dm0m < SL_diffmid_m15 && dm0am < SL_diffmid_m15)   l0tags += "M";
+            if(BB_datas[0].BB_diffBBW[LA]   < SL_diffbbw_m15
+             && BB_datas[0].BB_diffBBW[LA_1] < SL_diffbbw_m15)    l0tags += "W";
+            // if(dmt0m == 3.0)                                      l0tags += "C";
+            if(dmt0m >= 3.0 && dmt0am >= 3.0 &&
+               (dmt0m == 3.0 || dmt0am == 3.0 || dmt0bm == 3.0))   l0tags += "C";
+         }
+         if(SL_DrawL0Tags && l0tags != "")
+            SL_DrawTagLabel("SLL0_", l0tags, BB_datas[0].BBMidLV[LA], PERIOD_M5, 200, 7, SL_L0TagColor);
+
+         //--- L0 rectangle, M5 rate. Own stepper + own state, no collision with
+         //--- L1-L4's M15 rect tracking. SL_RectMinBars now counts M5 bars here.
+         if(SL_DrawRectL0)
+         {
+            r0 = SL_RectRuleM5(l0tags,
+                           SL_RectL0All_A, SL_RectL0Any_A, SL_RectL0Any2_A, SL_RectL0None_A,
+                           SL_RectL0All_B, SL_RectL0Any_B, SL_RectL0Any2_B, SL_RectL0None_B,
+                           SL_RectL0ContAll, SL_RectL0ContAny, SL_RectL0ContAny2, SL_RectL0ContNone);
+            SL_RectStepM5(r0, PERIOD_M5, SL_RectL0Color, "SLRC0_");
+         }
+      }
+   }
+
    static datetime sl_lastM15 = 0;
    datetime m15now = iTime(_Symbol, PERIOD_M15, 0);
    if(m15now == sl_lastM15) return;
@@ -1428,23 +1558,8 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    double dm4a = MathAbs(BB_datas[4].BB_diffMid[LA_1]);
    double dm4b = MathAbs(BB_datas[4].BB_diffMid[LA_2]);
 
-   //--- LEVEL-0 DIAGNOSTIC TAGS (M5, BB_datas[0]) - reporting only, no effect on
-   //--- any decision. Scoped to M5's OWN stage/diffMid/diffBBW so it does not
-   //--- duplicate L1's cross-TF cluster chars. Thresholds reuse the M15 values
-   //--- (SL_diffmid_m15 / SL_diffbbw_m15) until dedicated M5 twins are tuned.
-   double dm0  = MathAbs(BB_datas[0].BB_diffMid[LA]);
-   double dm0a = MathAbs(BB_datas[0].BB_diffMid[LA_1]);
-   double dm0b = MathAbs(BB_datas[0].BB_diffMid[LA_2]);
-   string l0tags = "";
-   if(SL_DrawL0Tags)
-   {
-      if(SL_StageOK((int)BB_datas[0].BBW_stage[LA]))       l0tags += "S";   // M5 BBW stage
-      if(dm0 < dm0a && dm0a < dm0b)                        l0tags += "B";   // M5 diffMid falling
-      if(dm0 < SL_diffmid_m15 && dm0a < SL_diffmid_m15)    l0tags += "M";   // M5 diffMid tight (M15 thr reused)
-      if(BB_datas[0].BB_diffBBW[LA]   < SL_diffbbw_m15
-       && BB_datas[0].BB_diffBBW[LA_1] < SL_diffbbw_m15)   l0tags += "W";   // M5 diffBBW tight (M15 thr reused)
-      if(dmt0 == 3.0)                                      l0tags += "C";   // M5 trend flat/sideway
-   }
+   //--- LEVEL-0 (M5) tags are built ABOVE the M15 gate now (M5 rate). l0tags is
+   //--- already in scope here for the r0 rectangle below.
 
    //--- LEVEL 1 predicates, named individually (lift measured alone)
    bool A15 = ((c0 < c0a && c0a < c0b) || (c0 < CL_NEAR_M5M15 && c0a < CL_NEAR_M5M15));  // +4.5
@@ -1738,24 +1853,20 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    //--- Independent of SL_Draw - the M30 side can be shown with the M15 side off.
    //--- One tag label per level, each on its OWN midline at its OWN bar time.
    if(SL_DrawL2Tags && l2tags != "") SL_DrawTagLabel("SLL2_", l2tags, BB_datas[2].BBMidLV[LA],
-                                     PERIOD_M30, SL_L2TagColor);
+                                     PERIOD_M30, SL_TagOffsetPts, SL_FontSize, SL_L2TagColor);
    if(SL_DrawL3Tags && l3tags != "") SL_DrawTagLabel("SLL3_", l3tags, BB_datas[3].BBMidLV[LA],
-                                     PERIOD_H1,  SL_L3TagColor);
+                                     PERIOD_H1,  SL_TagOffsetPts, SL_FontSize, SL_L3TagColor);
    if(SL_DrawL4Tags && l4tags != "") SL_DrawTagLabel("SLL4_", l4tags, BB_datas[4].BBMidLV[LA],
-                                     PERIOD_H4,  SL_L4TagColor);
+                                     PERIOD_H4,  SL_TagOffsetPts, SL_FontSize, SL_L4TagColor);
    //--- SL_Draw off: still show the L1 tags on the M15 midline. L2 is NOT drawn
    //--- here - it has its own block below, on the M30 midline at the M30 bar time.
-   if(SL_DrawL0Tags && l0tags != "") SL_DrawTagLabel("SLL0_", l0tags, BB_datas[0].BBMidLV[LA],
-                                     PERIOD_M5,  SL_L0TagColor);
    if(SL_DrawL1Tags && l1tags != "") SL_DrawTagLabel("SLL1_", l1tags, BB_datas[1].BBMidLV[LA],
-                                     PERIOD_M15,  SL_L1TagColor);
+                                     PERIOD_M15, SL_TagOffsetPts, SL_FontSize, SL_L1TagColor);
 
    //--- TAG RECTANGLES. After the label draws, so the tag strings are final.
    //--- r1..r4 are this bar's verdict per level: the ENTRY rule while no run is
    //--- open, the CONTINUATION rule once one is.
-   bool r0 = SL_RectRule(0, l0tags, SL_RectL0All_A, SL_RectL0Any_A, SL_RectL0Any2_A, SL_RectL0None_A,
-                                    SL_RectL0All_B, SL_RectL0Any_B, SL_RectL0Any2_B, SL_RectL0None_B,
-                            SL_RectL0ContAll, SL_RectL0ContAny, SL_RectL0ContAny2, SL_RectL0ContNone);
+   //--- r0 (L0) is computed at M5 rate above the M15 gate - not rebuilt here.
    bool r1 = SL_RectRule(1, l1tags, SL_RectL1All_A, SL_RectL1Any_A, SL_RectL1Any2_A, SL_RectL1None_A,
                                     SL_RectL1All_B, SL_RectL1Any_B, SL_RectL1Any2_B, SL_RectL1None_B,
                             SL_RectL1ContAll, SL_RectL1ContAny, SL_RectL1ContAny2, SL_RectL1ContNone);
@@ -1889,7 +2000,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       sl_sw_prev  = sl_sw_state;
    }
 
-   if(SL_DrawRectL0) SL_RectStep(0, r0, PERIOD_M5,  SL_RectL0Color, "SLRC0_");
+   //--- L0 rectangle is drawn at M5 rate above the M15 gate (SL_RectStepM5).
    if(SL_DrawRectL1) SL_RectStep(1, r1, PERIOD_M15, SL_RectL1Color, "SLRC1_");
    if(SL_DrawRectL2) SL_RectStep(2, r2, PERIOD_M30, SL_RectL2Color, "SLRC2_");
    if(SL_DrawRectL3) SL_RectStep(3, r3, PERIOD_H1,  SL_RectL3Color, "SLRC3_");
