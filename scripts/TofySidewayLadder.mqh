@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "38.211"
+#property version   "38.212"
 
 #define HAS_TOFYSIDEWAY_LADDER
 //+------------------------------------------------------------------+
@@ -170,11 +170,12 @@ bool   SL_UseH1     = false;    // measured to DEGRADE the ladder; off by defaul
 // double SL_diffmid_m15 = 3;
 // double SL_diffmid_m30 = 1.5;
 double SL_diffmid_m5 = 1.5;
-double SL_diffmid_m15 = 1.5;
+// double SL_diffmid_m15 = 1.5;
+double SL_diffmid_m15 = 3;
 // double SL_diffmid_m30 = 2.3;
 // double SL_diffmid_H1  = 3.4;
 // double SL_diffmid_H4  = 7.7;
-double SL_diffmid_m30 = 2.5;
+double SL_diffmid_m30 = 3;
 double SL_diffmid_H1  = 3;
 double SL_diffmid_H4  = 4;
 
@@ -240,9 +241,10 @@ int    SL_BrkLookback  = 2;
 
 //--- W30 dbbw < 1 fires +4.4 and is now part of the level-2 evidence gate.
 //--- Threshold value barely matters: <0 <1 <2 <5 all give the same result.
-double SL_diffbbw_m5 = 1.0;
-double SL_diffbbw_m15 = 1.0;
-double SL_diffbbw_m30 = 1.0;    // W30 threshold
+double SL_diffbbw_m5 = 3;
+// double SL_diffbbw_m15 = 1.2;
+double SL_diffbbw_m15 = 13;
+double SL_diffbbw_m30 = 1.2;    // W30 threshold
 // double SL_diffbbw_H1  = 6.5;    // L3W - 92% of long ranges, F1 68.3    // WH1 threshold (L3W)
 // double SL_diffbbw_H1  = 6.5;    // WH1 threshold (L3W)
 double SL_diffbbw_H1  = 2;    // WH1 threshold (L3W)
@@ -759,14 +761,16 @@ bool     SL_DrawRectL4 = true;
 //--- L0 (M5): empty by default - configure to activate. Reads l0tags chars (S/B/M/W/C).
 string SL_RectL0All_A  = "C";   string SL_RectL0Any_A  = "MSW"; // slot A: C && (M||S||W) = (M&C)||(C&S)||(C&W)
 string SL_RectL0Any2_A = "";    string SL_RectL0None_A = "";
-string SL_RectL0All_B  = "";    string SL_RectL0Any_B  = "";     // slot B unused: slot A alone = (M||C)&&(S||W)
+string SL_RectL0All_B  = "MW";  string SL_RectL0Any_B  = "";     // slot B: M && W ; A||B = (M&C)||(C&S)||(C&W)||(M&W)
 string SL_RectL0Any2_B = "";    string SL_RectL0None_B = "";
 
 //--- L1 entry: (S && B && D) || (M && W)
-string SL_RectL1All_A  = "SWD"; string SL_RectL1Any_A  = "";
+string SL_RectL1All_A  = "S";   string SL_RectL1Any_A  = "MWC"; // slot A: S && (M||W||C)
 string SL_RectL1Any2_A = "";    string SL_RectL1None_A = "";
-string SL_RectL1All_B  = "MW";  string SL_RectL1Any_B  = "";
+string SL_RectL1All_B  = "M";   string SL_RectL1Any_B  = "WC";  // slot B: M && (W||C)
 string SL_RectL1Any2_B = "";    string SL_RectL1None_B = "";
+string SL_RectL1All_C  = "WC";  string SL_RectL1Any_C  = "";     // slot C: W && C ; A||B||C = "any 2 of S,M,W,C"
+string SL_RectL1Any2_C = "";    string SL_RectL1None_C = "";
 
 string SL_RectL2All_A  = "";    string SL_RectL2Any_A  = "SCMD";
 string SL_RectL2Any2_A = "";    string SL_RectL2None_A = "";
@@ -789,7 +793,7 @@ string SL_RectL4Any2_B = "";    string SL_RectL4None_B = "";
 //--- L1 continue: S || C || D || M
 string SL_RectL0ContAll  = "";  string SL_RectL0ContAny  = "SC"; // continue while S || C
 string SL_RectL0ContAny2 = "";  string SL_RectL0ContNone = "";
-string SL_RectL1ContAll  = "";  string SL_RectL1ContAny  = "SCDM";
+string SL_RectL1ContAll  = "";  string SL_RectL1ContAny  = "SC";
 string SL_RectL1ContAny2 = "";  string SL_RectL1ContNone = "";
 string SL_RectL2ContAll  = "";  string SL_RectL2ContAny  = "SCMD";
 string SL_RectL2ContAny2 = "";  string SL_RectL2ContNone = "";
@@ -1212,6 +1216,33 @@ bool SL_TagsMatch(string tags,
    return SL_TagSlot(tags, aA, yA, y2A, nA) || SL_TagSlot(tags, aB, yB, y2B, nB);
 }
 
+//--- 3-slot variant: A || B || C. Used where a rule needs three ORed AND-groups
+//--- (e.g. "2 of 4" tags, which can't be written in two slots).
+bool SL_TagsMatch3(string tags,
+                   string aA, string yA, string y2A, string nA,
+                   string aB, string yB, string y2B, string nB,
+                   string aC, string yC, string y2C, string nC)
+{
+   return SL_TagSlot(tags, aA, yA, y2A, nA)
+       || SL_TagSlot(tags, aB, yB, y2B, nB)
+       || SL_TagSlot(tags, aC, yC, y2C, nC);
+}
+
+//--- 3-slot rule: same continuation logic as SL_RectRule, but the ENTRY test
+//--- ORs three slots. Continuation still uses the single cont slot.
+bool SL_RectRule3(int lvl, string tags,
+                  string aA, string yA, string y2A, string nA,
+                  string aB, string yB, string y2B, string nB,
+                  string aC, string yC, string y2C, string nC,
+                  string cA, string cY, string cY2, string cN)
+{
+   bool in_run = (sl_rect_start[lvl] != 0);
+   bool has_cont = (cA != "" || cY != "" || cY2 != "" || cN != "");
+
+   if(in_run && has_cont) return SL_TagSlot(tags, cA, cY, cY2, cN);
+   return SL_TagsMatch3(tags, aA, yA, y2A, nA, aB, yB, y2B, nB, aC, yC, y2C, nC);
+}
+
 //+------------------------------------------------------------------+
 //| Pick the rule for this bar: ENTRY while no run is open,          |
 //| CONTINUATION once one is. If the continuation fields are all      |
@@ -1289,7 +1320,7 @@ void SL_RectStep(int lvl, bool on, ENUM_TIMEFRAMES tf, color col, string prefix)
       if(!ObjectCreate(0, dname, OBJ_ARROW, 0, a, dmid)) return;
       ObjectSetInteger(0, dname, OBJPROP_ARROWCODE,  159);   // small filled circle
       ObjectSetInteger(0, dname, OBJPROP_COLOR,      col);
-      ObjectSetInteger(0, dname, OBJPROP_WIDTH,      5);
+      ObjectSetInteger(0, dname, OBJPROP_WIDTH,      1);
       ObjectSetInteger(0, dname, OBJPROP_BACK,       false);  // in front, so it shows over the filled rects
       ObjectSetInteger(0, dname, OBJPROP_SELECTABLE, false);
       ObjectSetString (0, dname, OBJPROP_TOOLTIP,
@@ -1368,7 +1399,7 @@ void SL_RectStepM5(bool on, ENUM_TIMEFRAMES tf, color col, string prefix)
       if(!ObjectCreate(0, dname, OBJ_ARROW, 0, a, mid)) return;
       ObjectSetInteger(0, dname, OBJPROP_ARROWCODE,  159);   // small filled circle
       ObjectSetInteger(0, dname, OBJPROP_COLOR,      col);
-      ObjectSetInteger(0, dname, OBJPROP_WIDTH,      5);
+      ObjectSetInteger(0, dname, OBJPROP_WIDTH,      1);
       ObjectSetInteger(0, dname, OBJPROP_BACK,       false);
       ObjectSetInteger(0, dname, OBJPROP_SELECTABLE, false);
       ObjectSetString (0, dname, OBJPROP_TOOLTIP,
@@ -1927,8 +1958,9 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    //--- r1..r4 are this bar's verdict per level: the ENTRY rule while no run is
    //--- open, the CONTINUATION rule once one is.
    //--- r0 (L0) is computed at M5 rate above the M15 gate - not rebuilt here.
-   bool r1 = SL_RectRule(1, l1tags, SL_RectL1All_A, SL_RectL1Any_A, SL_RectL1Any2_A, SL_RectL1None_A,
+   bool r1 = SL_RectRule3(1, l1tags, SL_RectL1All_A, SL_RectL1Any_A, SL_RectL1Any2_A, SL_RectL1None_A,
                                     SL_RectL1All_B, SL_RectL1Any_B, SL_RectL1Any2_B, SL_RectL1None_B,
+                                    SL_RectL1All_C, SL_RectL1Any_C, SL_RectL1Any2_C, SL_RectL1None_C,
                             SL_RectL1ContAll, SL_RectL1ContAny, SL_RectL1ContAny2, SL_RectL1ContNone);
    bool r2 = SL_RectRule(2, l2tags, SL_RectL2All_A, SL_RectL2Any_A, SL_RectL2Any2_A, SL_RectL2None_A,
                                     SL_RectL2All_B, SL_RectL2Any_B, SL_RectL2Any2_B, SL_RectL2None_B,
