@@ -169,7 +169,7 @@ bool   SL_ExitOnDm3 = true;
 bool   SL_UseH1     = false;    // measured to DEGRADE the ladder; off by default
 // double SL_diffmid_m15 = 3;
 // double SL_diffmid_m30 = 1.5;
-double SL_diffmid_m5 = 1.4;
+double SL_diffmid_m5 = 1.5;
 double SL_diffmid_m15 = 1.5;
 // double SL_diffmid_m30 = 2.3;
 // double SL_diffmid_H1  = 3.4;
@@ -619,9 +619,10 @@ int    SL_LadderFont      = 7;
 //--- One toggle per virtual run, so either can be shown alone.
 //---   [0] = USER labels   [1] = ladder
 bool   SL_DrawVirtual[2] = {true, true};
-color  SL_UserTradeColor    = Magenta;   // yellow - user labels. NOT magenta: the
+// color  SL_UserTradeColor    = Magenta;   // yellow - user labels. NOT magenta: the
                                                 // label rectangles are magenta, so a
                                                 // magenta trade line vanishes on top of them.
+color  SL_UserTradeColor    = clrViolet;
 color  SL_LaddTradeColor    = clrDeepSkyBlue;  // blue - ladder. NOT white: the EA
                                                // draws its own OpenB/CloseB in white.
 int    SL_VTradeFont        = 8;
@@ -786,7 +787,7 @@ string SL_RectL4Any2_B = "";    string SL_RectL4None_B = "";
 //--- One slot each. Normally looser than the entry rule: harder to start, easier
 //--- to stay in. Leave all four fields empty to reuse the entry rule instead.
 //--- L1 continue: S || C || D || M
-string SL_RectL0ContAll  = "";  string SL_RectL0ContAny  = "SM"; // continue while S || M
+string SL_RectL0ContAll  = "";  string SL_RectL0ContAny  = "S"; // continue while S || M
 string SL_RectL0ContAny2 = "";  string SL_RectL0ContNone = "";
 string SL_RectL1ContAll  = "";  string SL_RectL1ContAny  = "SCDM";
 string SL_RectL1ContAny2 = "";  string SL_RectL1ContNone = "";
@@ -796,8 +797,8 @@ string SL_RectL3ContAll  = "";  string SL_RectL3ContAny  = "SCMD";
 string SL_RectL3ContAny2 = "";  string SL_RectL3ContNone = "";
 string SL_RectL4ContAll  = "";  string SL_RectL4ContAny  = "MSC";
 string SL_RectL4ContAny2 = "";  string SL_RectL4ContNone = "";
-
-// color    SL_RectL0Color = Aquamarine;      // L0 = M5
+ 
+// color    SL_RectL0Color = Aquamarine;      // L0 = M5 (outline; white = highest contrast vs cyan/yellow/orange clutter)
 color    SL_RectL0Color = clrLightCyan;      // L0 = M5
 color    SL_RectL1Color = clrGoldenrod;   // spec: M15 = Goldenrod (was BurlyWood)
 color    SL_RectL2Color = clrGreenYellow;
@@ -899,7 +900,8 @@ color    SL_SwL2Color    = clrGreenYellow;
 //---                         ones); 1 = every run, including L1-only false starts.
 bool     SL_DrawSwConfirm  = true;
 int      SL_SwConfirmLevel = 1;
-color    SL_SwConfirmColor = clrDarkSlateGray;
+// color    SL_SwConfirmColor = clrLightGray;  // light neutral fill: lifts the region (vs darkening) so inner rects stay spottable; not a hue used by L0-L4
+color    SL_SwConfirmColor = clrDarkSlateGray;  // light neutral fill: lifts the region (vs darkening) so inner rects stay spottable; not a hue used by L0-L4
 
 int      sl_sw_max     = 0;      // highest state this run reached
 
@@ -1346,9 +1348,9 @@ void SL_RectStepM5(bool on, ENUM_TIMEFRAMES tf, color col, string prefix)
    if(!ObjectCreate(0, name, OBJ_RECTANGLE, 0, a, lo, b, hi)) return;
 
    ObjectSetInteger(0, name, OBJPROP_COLOR,      col);
-   ObjectSetInteger(0, name, OBJPROP_FILL,       SL_RectFill);
+   ObjectSetInteger(0, name, OBJPROP_FILL,       false);   // L0: outline only
    ObjectSetInteger(0, name, OBJPROP_WIDTH,      5);
-   ObjectSetInteger(0, name, OBJPROP_BACK,       false);
+   ObjectSetInteger(0, name, OBJPROP_BACK,       false);  // L0: draw in front
    ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
    ObjectSetString (0, name, OBJPROP_TOOLTIP,
                     name + "  " + TimeToString(a, TIME_DATE|TIME_MINUTES) + " -> " +
@@ -1384,7 +1386,7 @@ void SL_SwRect(string name, datetime from, datetime to, ENUM_TIMEFRAMES tf,
    {
       if(!ObjectCreate(0, name, OBJ_RECTANGLE, 0, from, lo, to, hi)) return;
       ObjectSetInteger(0, name, OBJPROP_COLOR,      col);
-      ObjectSetInteger(0, name, OBJPROP_BACK,       false);
+      ObjectSetInteger(0, name, OBJPROP_BACK,       false);  // L0: draw in front
       ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
    }
    ObjectSetInteger(0, name, OBJPROP_TIME,  0, from);
@@ -1424,8 +1426,8 @@ void SL_SwConfirm(int seq, datetime from, datetime to, int reached)
    if(!ObjectCreate(0, name, OBJ_RECTANGLE, 0, from, lo, to, hi)) return;
 
    ObjectSetInteger(0, name, OBJPROP_COLOR,      SL_SwConfirmColor);
-   ObjectSetInteger(0, name, OBJPROP_FILL,       true);
-   ObjectSetInteger(0, name, OBJPROP_BACK,       true);
+   ObjectSetInteger(0, name, OBJPROP_FILL,       true);    // filled shaded region (kept per preference); use a LIGHT color so it lifts the backdrop instead of dimming inner rects
+   ObjectSetInteger(0, name, OBJPROP_BACK,       true);    // behind bars, so inner rectangles/labels stay on top
    ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
    ObjectSetString (0, name, OBJPROP_TOOLTIP,
                     "SIDEWAY #" + IntegerToString(seq) +
@@ -1481,7 +1483,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
             if(BB_datas[0].BB_diffBBW[LA]   < SL_diffbbw_m5
              && BB_datas[0].BB_diffBBW[LA_1] < SL_diffbbw_m5)    l0tags += "W";
             // if(dmt0m == 3.0)                                      l0tags += "C";
-            if(dmt0m >= 3.0 && dmt0am >= 3.0 &&
+            if(dmt0m >= 3.0 &&
                (dmt0m == 3.0 || dmt0am == 3.0 || dmt0bm == 3.0))   l0tags += "C";
          }
          if(SL_DrawL0Tags && l0tags != "")
@@ -1590,7 +1592,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       if(c4 < CL_NEAR_M15H4  && c4a < CL_NEAR_M15H4)      l1tags += "Z";
       if(S15)                                             l1tags += "S";
       if(dm1 < dm1a && dm1a < dm1b)                       l1tags += "B";
-      if(dmt1 >= 3.0 && dmt1a >= 3.0 &&
+      if(dmt1 >= 3.0 &&
          (dmt1 == 3.0 || dmt1a == 3.0 || dmt1b == 3.0))   l1tags += "C";
       if(W15)                                             l1tags += "W";
       if(dm1 < SL_diffmid_m15 && dm1a < SL_diffmid_m15)   l1tags += "M";
@@ -1627,7 +1629,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       if(c5 < CL_NEAR_M30H4 && c5a < CL_NEAR_M30H4)       l2tags += "Z";
       if(S30)                                             l2tags += "S";
       if(dm2 < dm2a && dm2a < dm2b)                       l2tags += "B";
-      if(dmt2 >= 3.0 && dmt2a >= 3.0 &&
+      if(dmt2 >= 3.0 &&
          (dmt2 == 3.0 || dmt2a == 3.0 || dmt2b == 3.0))   l2tags += "C";
       if(W30)                                             l2tags += "W";
       if(dm2 < SL_diffmid_m30 && dm2a < SL_diffmid_m30)   l2tags += "M";
@@ -1646,7 +1648,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    {
       if(c6 < CL_NEAR_H1H4 && c6a < CL_NEAR_H1H4)         l3tags += "Z";
       if(SH1)                                             l3tags += "S";
-      if(dmt3 >= 3.0 && dmt3a >= 3.0 &&
+      if(dmt3 >= 3.0 &&
          (dmt3 == 3.0 || dmt3a == 3.0 || dmt3b == 3.0))   l3tags += "C";
       if(dm3 < SL_diffmid_H1 && dm3a < SL_diffmid_H1)     l3tags += "M";
       if(WH1)                                             l3tags += "W";
@@ -1664,7 +1666,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    {
       //--- no A tag: c3 is used by L2A, and no wider pair is available
       if(SH4)                                             l4tags += "S";
-      if(dmt4 >= 3.0 && dmt4a >= 3.0 &&
+      if(dmt4 >= 3.0 &&
          (dmt4 == 3.0 || dmt4a == 3.0 || dmt4b == 3.0))   l4tags += "C";
       if(dm4 < SL_diffmid_H4 && dm4a < SL_diffmid_H4)     l4tags += "M";
       if(WH4)                                             l4tags += "W";
