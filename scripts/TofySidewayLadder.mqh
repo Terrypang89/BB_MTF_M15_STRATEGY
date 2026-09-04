@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "38.20"
+#property version   "38.211"
 
 #define HAS_TOFYSIDEWAY_LADDER
 //+------------------------------------------------------------------+
@@ -757,9 +757,9 @@ bool     SL_DrawRectL4 = true;
 
 //--- ENTRY rule - what STARTS a run. Two slots, ORed.
 //--- L0 (M5): empty by default - configure to activate. Reads l0tags chars (S/B/M/W/C).
-string SL_RectL0All_A  = "S";   string SL_RectL0Any_A  = "MW";  // slot A: S && (M||W) = (S&M)||(S&W)
+string SL_RectL0All_A  = "C";   string SL_RectL0Any_A  = "MSW"; // slot A: C && (M||S||W) = (M&C)||(C&S)||(C&W)
 string SL_RectL0Any2_A = "";    string SL_RectL0None_A = "";
-string SL_RectL0All_B  = "MW";  string SL_RectL0Any_B  = "";     // slot B: M && W ; A||B = "at least 2 of S,M,W"
+string SL_RectL0All_B  = "";    string SL_RectL0Any_B  = "";     // slot B unused: slot A alone = (M||C)&&(S||W)
 string SL_RectL0Any2_B = "";    string SL_RectL0None_B = "";
 
 //--- L1 entry: (S && B && D) || (M && W)
@@ -787,7 +787,7 @@ string SL_RectL4Any2_B = "";    string SL_RectL4None_B = "";
 //--- One slot each. Normally looser than the entry rule: harder to start, easier
 //--- to stay in. Leave all four fields empty to reuse the entry rule instead.
 //--- L1 continue: S || C || D || M
-string SL_RectL0ContAll  = "";  string SL_RectL0ContAny  = "S"; // continue while S || M
+string SL_RectL0ContAll  = "";  string SL_RectL0ContAny  = "SC"; // continue while S || C
 string SL_RectL0ContAny2 = "";  string SL_RectL0ContNone = "";
 string SL_RectL1ContAll  = "";  string SL_RectL1ContAny  = "SCDM";
 string SL_RectL1ContAny2 = "";  string SL_RectL1ContNone = "";
@@ -824,7 +824,8 @@ int      SL_RectJoinOp   = 0;      // 0 = AND all selected, 1 = OR all selected
 color    SL_RectJoinColor = clrOrangeRed;
 ENUM_TIMEFRAMES SL_RectJoinTF = PERIOD_M30;   // which bars the block spans
 
-int      SL_RectMinBars = 4;
+int      SL_RectMinBars   = 2;   // L1-L4 (each level's own TF bars) - 2 = show all runs
+int      SL_RectMinBarsM5 = 2;   // L0 (M5 bars) - show all runs
 bool     SL_RectFill    = false;   // outline only
 
 datetime sl_rect_start[6] = {0,0,0,0,0,0};   // 0=L0(M5) 1=L1 2=L2 3=L3 4=L4 5=joined
@@ -1273,7 +1274,31 @@ void SL_RectStep(int lvl, bool on, ENUM_TIMEFRAMES tf, color col, string prefix)
    int i1 = iBarShift(_Symbol, tf, b, false);
    int i2 = iBarShift(_Symbol, tf, a, false);
    if(i1 < 0 || i2 < 0 || i2 < i1) return;
-   if(i2 - i1 + 1 < SL_RectMinBars) return;
+
+   int barspan = i2 - i1 + 1;
+
+   //--- 1-bar run: no width for a rectangle, so mark it as a dot at the bar's midline
+   //--- (1 bar here = 1 bar of THIS level's timeframe: M15/M30/H1/H4).
+   if(barspan == 1)
+   {
+      double dmid = (iHigh(_Symbol, tf, i1) + iLow(_Symbol, tf, i1)) / 2.0;
+      if(dmid <= 0.0) return;
+      sl_rect_num[lvl]++;
+      string dname = prefix + "DOT_" + IntegerToString(sl_rect_num[lvl]);
+      if(ObjectFind(0, dname) >= 0) return;
+      if(!ObjectCreate(0, dname, OBJ_ARROW, 0, a, dmid)) return;
+      ObjectSetInteger(0, dname, OBJPROP_ARROWCODE,  159);   // small filled circle
+      ObjectSetInteger(0, dname, OBJPROP_COLOR,      col);
+      ObjectSetInteger(0, dname, OBJPROP_WIDTH,      5);
+      ObjectSetInteger(0, dname, OBJPROP_BACK,       false);  // in front, so it shows over the filled rects
+      ObjectSetInteger(0, dname, OBJPROP_SELECTABLE, false);
+      ObjectSetString (0, dname, OBJPROP_TOOLTIP,
+                       "L" + IntegerToString(lvl) + " 1-bar sideway  " +
+                       TimeToString(a, TIME_DATE|TIME_MINUTES));
+      return;
+   }
+
+   if(barspan < SL_RectMinBars) return;
 
    double hi = 0.0, lo = 0.0;
    for(int k = i1; k <= i2; k++)
@@ -1329,7 +1354,29 @@ void SL_RectStepM5(bool on, ENUM_TIMEFRAMES tf, color col, string prefix)
    int i1 = iBarShift(_Symbol, tf, b, false);
    int i2 = iBarShift(_Symbol, tf, a, false);
    if(i1 < 0 || i2 < 0 || i2 < i1) return;
-   if(i2 - i1 + 1 < SL_RectMinBars) return;
+
+   int barspan = i2 - i1 + 1;
+
+   //--- 1-bar run: no width for a rectangle, so mark it as a dot at the bar's midline.
+   if(barspan == 1)
+   {
+      double mid = (iHigh(_Symbol, tf, i1) + iLow(_Symbol, tf, i1)) / 2.0;
+      if(mid <= 0.0) return;
+      g_m5_rect_num++;
+      string dname = prefix + "DOT_" + IntegerToString(g_m5_rect_num);
+      if(ObjectFind(0, dname) >= 0) return;
+      if(!ObjectCreate(0, dname, OBJ_ARROW, 0, a, mid)) return;
+      ObjectSetInteger(0, dname, OBJPROP_ARROWCODE,  159);   // small filled circle
+      ObjectSetInteger(0, dname, OBJPROP_COLOR,      col);
+      ObjectSetInteger(0, dname, OBJPROP_WIDTH,      5);
+      ObjectSetInteger(0, dname, OBJPROP_BACK,       false);
+      ObjectSetInteger(0, dname, OBJPROP_SELECTABLE, false);
+      ObjectSetString (0, dname, OBJPROP_TOOLTIP,
+                       "L0 1-bar sideway  " + TimeToString(a, TIME_DATE|TIME_MINUTES));
+      return;
+   }
+
+   if(barspan < SL_RectMinBarsM5) return;
 
    double hi = 0.0, lo = 0.0;
    for(int k = i1; k <= i2; k++)
