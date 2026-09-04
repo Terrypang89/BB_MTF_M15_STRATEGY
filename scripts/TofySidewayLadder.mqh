@@ -169,7 +169,7 @@ bool   SL_ExitOnDm3 = true;
 bool   SL_UseH1     = false;    // measured to DEGRADE the ladder; off by default
 // double SL_diffmid_m15 = 3;
 // double SL_diffmid_m30 = 1.5;
-double SL_diffmid_m5 = 1.5;
+double SL_diffmid_m5 = 1.4;
 double SL_diffmid_m15 = 1.5;
 // double SL_diffmid_m30 = 2.3;
 // double SL_diffmid_H1  = 3.4;
@@ -756,9 +756,9 @@ bool     SL_DrawRectL4 = true;
 
 //--- ENTRY rule - what STARTS a run. Two slots, ORed.
 //--- L0 (M5): empty by default - configure to activate. Reads l0tags chars (S/B/M/W/C).
-string SL_RectL0All_A  = "SW";  string SL_RectL0Any_A  = "";
+string SL_RectL0All_A  = "S";   string SL_RectL0Any_A  = "MW";  // slot A: S && (M||W) = (S&M)||(S&W)
 string SL_RectL0Any2_A = "";    string SL_RectL0None_A = "";
-string SL_RectL0All_B  = "MW";  string SL_RectL0Any_B  = "";
+string SL_RectL0All_B  = "MW";  string SL_RectL0Any_B  = "";     // slot B: M && W ; A||B = "at least 2 of S,M,W"
 string SL_RectL0Any2_B = "";    string SL_RectL0None_B = "";
 
 //--- L1 entry: (S && B && D) || (M && W)
@@ -786,7 +786,7 @@ string SL_RectL4Any2_B = "";    string SL_RectL4None_B = "";
 //--- One slot each. Normally looser than the entry rule: harder to start, easier
 //--- to stay in. Leave all four fields empty to reuse the entry rule instead.
 //--- L1 continue: S || C || D || M
-string SL_RectL0ContAll  = "";  string SL_RectL0ContAny  = "";
+string SL_RectL0ContAll  = "";  string SL_RectL0ContAny  = "SM"; // continue while S || M
 string SL_RectL0ContAny2 = "";  string SL_RectL0ContNone = "";
 string SL_RectL1ContAll  = "";  string SL_RectL1ContAny  = "SCDM";
 string SL_RectL1ContAny2 = "";  string SL_RectL1ContNone = "";
@@ -797,7 +797,8 @@ string SL_RectL3ContAny2 = "";  string SL_RectL3ContNone = "";
 string SL_RectL4ContAll  = "";  string SL_RectL4ContAny  = "MSC";
 string SL_RectL4ContAny2 = "";  string SL_RectL4ContNone = "";
 
-color    SL_RectL0Color = Aquamarine;      // L0 = M5
+// color    SL_RectL0Color = Aquamarine;      // L0 = M5
+color    SL_RectL0Color = clrLightCyan;      // L0 = M5
 color    SL_RectL1Color = clrGoldenrod;   // spec: M15 = Goldenrod (was BurlyWood)
 color    SL_RectL2Color = clrGreenYellow;
 color    SL_RectL3Color = clrRed;
@@ -1347,7 +1348,7 @@ void SL_RectStepM5(bool on, ENUM_TIMEFRAMES tf, color col, string prefix)
    ObjectSetInteger(0, name, OBJPROP_COLOR,      col);
    ObjectSetInteger(0, name, OBJPROP_FILL,       SL_RectFill);
    ObjectSetInteger(0, name, OBJPROP_WIDTH,      5);
-   ObjectSetInteger(0, name, OBJPROP_BACK,       true);
+   ObjectSetInteger(0, name, OBJPROP_BACK,       false);
    ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
    ObjectSetString (0, name, OBJPROP_TOOLTIP,
                     name + "  " + TimeToString(a, TIME_DATE|TIME_MINUTES) + " -> " +
@@ -1383,7 +1384,7 @@ void SL_SwRect(string name, datetime from, datetime to, ENUM_TIMEFRAMES tf,
    {
       if(!ObjectCreate(0, name, OBJ_RECTANGLE, 0, from, lo, to, hi)) return;
       ObjectSetInteger(0, name, OBJPROP_COLOR,      col);
-      ObjectSetInteger(0, name, OBJPROP_BACK,       true);
+      ObjectSetInteger(0, name, OBJPROP_BACK,       false);
       ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
    }
    ObjectSetInteger(0, name, OBJPROP_TIME,  0, from);
@@ -1471,6 +1472,9 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
          
          if(SL_DrawL0Tags)
          {
+            double c0m  = BBTFImpact.BB_midline_Cluster[0][LA];      // M5 + M15
+            double c0am = BBTFImpact.BB_midline_Cluster[0][LA_1];
+            if(c0m < CL_NEAR_M5M15 && c0am < CL_NEAR_M5M15)      l0tags += "A";   // M5+M15 midline cluster
             if(SL_StageOK((int)BB_datas[0].BBW_stage[LA]))        l0tags += "S";
             if(dm0m < dm0am && dm0am < dm0bm)                     l0tags += "B";
             if(dm0m < SL_diffmid_m5 && dm0am < SL_diffmid_m5)   l0tags += "M";
