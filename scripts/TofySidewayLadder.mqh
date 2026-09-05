@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "38.212"
+#property version   "38.213"
 
 #define HAS_TOFYSIDEWAY_LADDER
 //+------------------------------------------------------------------+
@@ -772,12 +772,12 @@ string SL_RectL1Any2_B = "";    string SL_RectL1None_B = "";
 string SL_RectL1All_C  = "WC";  string SL_RectL1Any_C  = "";     // slot C: W && C ; A||B||C = "any 2 of S,M,W,C"
 string SL_RectL1Any2_C = "";    string SL_RectL1None_C = "";
 
-string SL_RectL2All_A  = "";    string SL_RectL2Any_A  = "SCMD";
+string SL_RectL2All_A  = "";    string SL_RectL2Any_A  = "SCM";
 string SL_RectL2Any2_A = "";    string SL_RectL2None_A = "";
 string SL_RectL2All_B  = "";    string SL_RectL2Any_B  = "";
 string SL_RectL2Any2_B = "";    string SL_RectL2None_B = "";
 
-string SL_RectL3All_A  = "";    string SL_RectL3Any_A  = "SCMD";
+string SL_RectL3All_A  = "";    string SL_RectL3Any_A  = "SCM";
 string SL_RectL3Any2_A = "";    string SL_RectL3None_A = "";
 string SL_RectL3All_B  = "";    string SL_RectL3Any_B  = "";
 string SL_RectL3Any2_B = "";    string SL_RectL3None_B = "";
@@ -795,9 +795,9 @@ string SL_RectL0ContAll  = "";  string SL_RectL0ContAny  = "SC"; // continue whi
 string SL_RectL0ContAny2 = "";  string SL_RectL0ContNone = "";
 string SL_RectL1ContAll  = "";  string SL_RectL1ContAny  = "SC";
 string SL_RectL1ContAny2 = "";  string SL_RectL1ContNone = "";
-string SL_RectL2ContAll  = "";  string SL_RectL2ContAny  = "SCMD";
+string SL_RectL2ContAll  = "";  string SL_RectL2ContAny  = "SCM";
 string SL_RectL2ContAny2 = "";  string SL_RectL2ContNone = "";
-string SL_RectL3ContAll  = "";  string SL_RectL3ContAny  = "SCMD";
+string SL_RectL3ContAll  = "";  string SL_RectL3ContAny  = "SCM";
 string SL_RectL3ContAny2 = "";  string SL_RectL3ContNone = "";
 string SL_RectL4ContAll  = "";  string SL_RectL4ContAny  = "MSC";
 string SL_RectL4ContAny2 = "";  string SL_RectL4ContNone = "";
@@ -1239,7 +1239,12 @@ bool SL_RectRule3(int lvl, string tags,
    bool in_run = (sl_rect_start[lvl] != 0);
    bool has_cont = (cA != "" || cY != "" || cY2 != "" || cN != "");
 
-   if(in_run && has_cont) return SL_TagSlot(tags, cA, cY, cY2, cN);
+   if(in_run && has_cont)
+   {
+      // continue if the run still holds; else re-test entry so a fresh early
+      // sideway on this same bar keeps the run alive instead of going dark.
+      if(SL_TagSlot(tags, cA, cY, cY2, cN)) return true;
+   }
    return SL_TagsMatch3(tags, aA, yA, y2A, nA, aB, yB, y2B, nB, aC, yC, y2C, nC);
 }
 
@@ -1263,8 +1268,11 @@ bool SL_RectRule(int lvl, string tags,
    bool in_run = (sl_rect_start[lvl] != 0);
    bool has_cont = (cA != "" || cY != "" || cY2 != "" || cN != "");
 
-   if(in_run && has_cont) return SL_TagSlot(tags, cA, cY, cY2, cN);
-   return SL_TagsMatch(tags, aA, yA, y2A, nA, aB, yB, y2B, nB);
+   if(in_run && has_cont)
+   {
+      if(SL_TagSlot(tags, cA, cY, cY2, cN)) return true;   // continue holds
+   }
+   return SL_TagsMatch(tags, aA, yA, y2A, nA, aB, yB, y2B, nB);  // else re-test entry
 }
 
 //--- M5 variant: same rule logic, but reads the M5 run-open flag
@@ -1277,8 +1285,11 @@ bool SL_RectRuleM5(string tags,
    bool in_run = (g_m5_rect_start != 0);
    bool has_cont = (cA != "" || cY != "" || cY2 != "" || cN != "");
 
-   if(in_run && has_cont) return SL_TagSlot(tags, cA, cY, cY2, cN);
-   return SL_TagsMatch(tags, aA, yA, y2A, nA, aB, yB, y2B, nB);
+   if(in_run && has_cont)
+   {
+      if(SL_TagSlot(tags, cA, cY, cY2, cN)) return true;   // continue holds
+   }
+   return SL_TagsMatch(tags, aA, yA, y2A, nA, aB, yB, y2B, nB);  // else re-test entry
 }
 
 //+------------------------------------------------------------------+
@@ -1726,6 +1737,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    {
       if(c6 < CL_NEAR_H1H4 && c6a < CL_NEAR_H1H4)         l3tags += "Z";
       if(SH1)                                             l3tags += "S";
+      if(dm3 < dm3a && dm3a < dm3b)                       l3tags += "B";
       if(dmt3 >= 3.0 &&
          (dmt3 == 3.0 || dmt3a == 3.0 || dmt3b == 3.0))   l3tags += "C";
       if(dm3 < SL_diffmid_H1 && dm3a < SL_diffmid_H1)     l3tags += "M";
@@ -1744,6 +1756,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    {
       //--- no A tag: c3 is used by L2A, and no wider pair is available
       if(SH4)                                             l4tags += "S";
+      if(dm4 < dm4a && dm4a < dm4b)                       l4tags += "B";
       if(dmt4 >= 3.0 &&
          (dmt4 == 3.0 || dmt4a == 3.0 || dmt4b == 3.0))   l4tags += "C";
       if(dm4 < SL_diffmid_H4 && dm4a < SL_diffmid_H4)     l4tags += "M";
