@@ -175,8 +175,9 @@ double SL_diffmid_m15 = 3;
 // double SL_diffmid_m30 = 2.3;
 // double SL_diffmid_H1  = 3.4;
 // double SL_diffmid_H4  = 7.7;
-double SL_diffmid_m30 = 3;
-double SL_diffmid_H1  = 3;
+// double SL_diffmid_m30 = 4.5;
+double SL_diffmid_m30 = 3.5;
+double SL_diffmid_H1  = 4.5;
 double SL_diffmid_H4  = 4;
 
 //--- LEVEL 1 evidence gate. Measured (L2Mode 0, BreakoutMode 1):
@@ -244,10 +245,11 @@ int    SL_BrkLookback  = 2;
 double SL_diffbbw_m5 = 3;
 // double SL_diffbbw_m15 = 1.2;
 double SL_diffbbw_m15 = 13;
-double SL_diffbbw_m30 = 1.2;    // W30 threshold
+// double SL_diffbbw_m30 = 1.2;    // W30 threshold
+double SL_diffbbw_m30 = 15;    // W30 threshold
 // double SL_diffbbw_H1  = 6.5;    // L3W - 92% of long ranges, F1 68.3    // WH1 threshold (L3W)
 // double SL_diffbbw_H1  = 6.5;    // WH1 threshold (L3W)
-double SL_diffbbw_H1  = 2;    // WH1 threshold (L3W)
+double SL_diffbbw_H1  = 15;    // WH1 threshold (L3W)
 double SL_diffbbw_H4 = 1.0;   // L4W tag only. MEASURED: no threshold separates
                               // sideway on H4 - best F1 58.1 at thr 156, firing on
                               // 97% of bars at 41% precision. Left at 1.0 because
@@ -1560,6 +1562,9 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
          double dmt0m = BB_datas[0].BB_diffMid_Trend[LA];
          double dmt0am = BB_datas[0].BB_diffMid_Trend[LA_1];
          double dmt0bm = BB_datas[0].BB_diffMid_Trend[LA_2];
+         double dmt1m  = BB_datas[1].BB_diffMid_Trend[LA];
+         double dmt2m  = BB_datas[2].BB_diffMid_Trend[LA];
+         double dmt3m  = BB_datas[3].BB_diffMid_Trend[LA];
          
          if(SL_DrawL0Tags)
          {
@@ -1574,6 +1579,16 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
             // if(dmt0m == 3.0)                                      l0tags += "C";
             if(dmt0m >= 3.0 &&
                (dmt0m == 3.0 || dmt0am == 3.0 || dmt0bm == 3.0))   l0tags += "C";
+            if(dmt0m >= 3.0 && dmt0am >= 3.0)                     l0tags += "H";   // 2-bar sideway persist
+            if(((dmt0m == 1.0 || dmt0m == 5.0) && (dmt1m == 2.0 || dmt1m == 4.0)) ||
+               ((dmt0m == 2.0 || dmt0m == 4.0) && (dmt1m == 1.0 || dmt1m == 5.0)))
+                                                                  l0tags += "D";
+            if(((dmt0m == 1.0 || dmt0m == 5.0) && (dmt2m == 2.0 || dmt2m == 4.0)) ||
+               ((dmt0m == 2.0 || dmt0m == 4.0) && (dmt2m == 1.0 || dmt2m == 5.0)))
+                                                                  l0tags += "E";
+            if(((dmt0m == 1.0 || dmt0m == 5.0) && (dmt3m == 2.0 || dmt3m == 4.0)) ||
+               ((dmt0m == 2.0 || dmt0m == 4.0) && (dmt3m == 1.0 || dmt3m == 5.0)))
+                                                                  l0tags += "F";
          }
          if(SL_DrawL0Tags && l0tags != "")
             SL_DrawTagLabel("SLL0_", l0tags, BB_datas[0].BBMidLV[LA], PERIOD_M5, 200, 7, SL_L0TagColor);
@@ -1683,11 +1698,18 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       if(dm1 < dm1a && dm1a < dm1b)                       l1tags += "B";
       if(dmt1 >= 3.0 &&
          (dmt1 == 3.0 || dmt1a == 3.0 || dmt1b == 3.0))   l1tags += "C";
+      if(dmt1 >= 3.0 && dmt1a >= 3.0)                     l1tags += "H";   // 2-bar sideway persist
       if(W15)                                             l1tags += "W";
       if(dm1 < SL_diffmid_m15 && dm1a < SL_diffmid_m15)   l1tags += "M";
       if(((dmt0 == 1.0 || dmt0 == 5.0) && (dmt1 == 2.0 || dmt1 == 4.0)) ||
-         ((dmt0 == 2.0 || dmt0 == 4.0) && (dmt1 == 1.0 || dmt1 == 5.0)) ||
-         (dmt0 == 3.0 || dmt1 == 3.0))                    l1tags += "D";
+         ((dmt0 == 2.0 || dmt0 == 4.0) && (dmt1 == 1.0 || dmt1 == 5.0)))
+                                                         l1tags += "D";
+      if(((dmt1 == 1.0 || dmt1 == 5.0) && (dmt2 == 2.0 || dmt2 == 4.0)) ||
+         ((dmt1 == 2.0 || dmt1 == 4.0) && (dmt2 == 1.0 || dmt2 == 5.0)))
+                                                         l1tags += "E";
+      if(((dmt1 == 1.0 || dmt1 == 5.0) && (dmt3 == 2.0 || dmt3 == 4.0)) ||
+         ((dmt1 == 2.0 || dmt1 == 4.0) && (dmt3 == 1.0 || dmt3 == 5.0)))
+                                                         l1tags += "F";
    }
 
    bool lvl1 = false;
@@ -1720,18 +1742,18 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       if(dm2 < dm2a && dm2a < dm2b)                       l2tags += "B";
       if(dmt2 >= 3.0 &&
          (dmt2 == 3.0 || dmt2a == 3.0 || dmt2b == 3.0))   l2tags += "C";
+      if(dmt2 >= 3.0 && dmt2a >= 3.0)                     l2tags += "H";   // 2-bar sideway persist
       if(W30)                                             l2tags += "W";
       if(dm2 < SL_diffmid_m30 && dm2a < SL_diffmid_m30)   l2tags += "M";
-      if(((dmt1 == 1.0 || dmt1 == 5.0) && (dmt2 == 2.0 || dmt2 == 4.0)) ||
-         ((dmt1 == 2.0 || dmt1 == 4.0) && (dmt2 == 1.0 || dmt2 == 5.0)) ||
-         (dmt1 == 3.0 || dmt2 == 3.0))                    l2tags += "D";
+      if(((dmt2 == 1.0 || dmt2 == 5.0) && (dmt3 == 2.0 || dmt3 == 4.0)) ||
+         ((dmt2 == 2.0 || dmt2 == 4.0) && (dmt3 == 1.0 || dmt3 == 5.0)))
+                                                         l2tags += "F";
    }
 
    //--- LEVEL-3 (H1) and LEVEL-4 (H4) tags. No B/D contraction tag on these two -
    //--- only stage, the threshold shape, and band-width contraction.
    bool SH1 = SL_StageOK((int)BB_datas[3].BBW_stage[LA]);
-   bool WH1 = (BB_datas[3].BB_diffBBW[LA]   < SL_diffbbw_H1
-            && BB_datas[3].BB_diffBBW[LA_1] < SL_diffbbw_H1);
+   bool WH1 = (BB_datas[3].BB_diffBBW[LA]   < SL_diffbbw_H1);
    string l3tags = "";
    if(SL_DrawL3Tags)
    {
@@ -1740,17 +1762,17 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       if(dm3 < dm3a && dm3a < dm3b)                       l3tags += "B";
       if(dmt3 >= 3.0 &&
          (dmt3 == 3.0 || dmt3a == 3.0 || dmt3b == 3.0))   l3tags += "C";
+      if(dmt3 >= 3.0 && dmt3a >= 3.0)                     l3tags += "H";   // 2-bar sideway persist
       if(dm3 < SL_diffmid_H1 && dm3a < SL_diffmid_H1)     l3tags += "M";
       if(WH1)                                             l3tags += "W";
       //--- spec compared dmt3 with itself; read as M30 vs H1, matching L1D / L2D
-      if(((dmt2 == 1.0 || dmt2 == 5.0) && (dmt3 == 2.0 || dmt3 == 4.0)) ||
-         ((dmt2 == 2.0 || dmt2 == 4.0) && (dmt3 == 1.0 || dmt3 == 5.0)) ||
-         (dmt2 == 3.0 || dmt3 == 3.0))                    l3tags += "D";
+      if(((dmt3 == 1.0 || dmt3 == 5.0) && (dmt4 == 2.0 || dmt4 == 4.0)) ||
+         ((dmt3 == 2.0 || dmt3 == 4.0) && (dmt4 == 1.0 || dmt4 == 5.0)))
+                                                         l3tags += "G";
    }
 
    bool SH4 = SL_StageOK((int)BB_datas[4].BBW_stage[LA]);
-   bool WH4 = (BB_datas[4].BB_diffBBW[LA]   < SL_diffbbw_H4
-            && BB_datas[4].BB_diffBBW[LA_1] < SL_diffbbw_H4);
+   bool WH4 = (BB_datas[4].BB_diffBBW[LA]   < SL_diffbbw_H4);
    string l4tags = "";
    if(SL_DrawL4Tags)
    {
@@ -1759,6 +1781,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       if(dm4 < dm4a && dm4a < dm4b)                       l4tags += "B";
       if(dmt4 >= 3.0 &&
          (dmt4 == 3.0 || dmt4a == 3.0 || dmt4b == 3.0))   l4tags += "C";
+      if(dmt4 >= 3.0 && dmt4a >= 3.0)                     l4tags += "H";   // 2-bar sideway persist
       if(dm4 < SL_diffmid_H4 && dm4a < SL_diffmid_H4)     l4tags += "M";
       if(WH4)                                             l4tags += "W";
    }
