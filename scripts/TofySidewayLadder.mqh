@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "38.214"
+#property version   "38.215"
 
 #define HAS_TOFYSIDEWAY_LADDER
 //+------------------------------------------------------------------+
@@ -294,7 +294,7 @@ bool   SL_LabelFill      = false;
 bool   SL_DrawTrades   = true;
 color  SL_WinColor     = clrLime;
 color  SL_LossColor    = clrRed;
-int    SL_TradeWidth   = 2;
+int    SL_TradeWidth   = 5;
 int    SL_TradeFont    = 8;
 
 //--- Hand-labelled sideway ranges from references/SIDEWAY_LABELS_FEB.md
@@ -2546,7 +2546,7 @@ void Trade_Strategy(
       {
          if(fly12)
          {
-            if(fly01) { if(!r0c && !r1c && !r2c && sw_sl_state >= 0)    sw_sl_state = -1; }   // all fly -> reset
+            if(fly01) { if(!r0c && !r1c && sw_sl_state >= 0)            sw_sl_state = -1; }   // all fly -> reset
             else if(r0c && bw_rev && sw_sl_state == -1)                 sw_sl_state = 0;
             else if(!r0c && !r1c && !r2c && sw_sl_state >= 0)           sw_sl_state = -1;
          }
@@ -2597,7 +2597,10 @@ void Trade_Strategy(
       bool down6 = (dmt_use == 2.0 || dmt_use == 4.0);
 
       Trade_info = "[LADTRADE6] cur:" + IntegerToString(dmt_cur)
-                 + " dmt_use:" + DoubleToString(dmt_use,1)
+                 + " dmt0:" + DoubleToString(dmt0c,1)
+                 + " dmt1:" + DoubleToString(dmt1c,1)
+                 + " dmt2:" + DoubleToString(dmt2c,1)
+                 + " dmt3:" + DoubleToString(dmt3c,1)
                  + " sw_sl:" + IntegerToString(sw_sl_state)
                  + " r0:" + (r0c?"1":"0") + " r1:" + (r1c?"1":"0")
                  + " r2:" + (r2c?"1":"0") + " r3:" + (r3c?"1":"0")
