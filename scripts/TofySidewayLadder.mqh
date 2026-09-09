@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "38.213"
+#property version   "38.214"
 
 #define HAS_TOFYSIDEWAY_LADDER
 //+------------------------------------------------------------------+
@@ -2541,20 +2541,20 @@ void Trade_Strategy(
       if(r4c) { if(dmt_cur == 1) dmt_cur = 0; }       // H4 sideway -> M5
 
       //================= Set sw_sl_state =================
-      int sw_sl_state = -1;
+      static int sw_sl_state = -1;
       if(fly23)
       {
          if(fly12)
          {
-            if(fly01) { if(sw_sl_state >= 0) sw_sl_state = -1; }   // all fly -> reset
-            else if(r0c && bw_rev) sw_sl_state = 0;
-            else sw_sl_state = -1;
+            if(fly01) { if(!r0c && !r1c && !r2c && sw_sl_state >= 0)    sw_sl_state = -1; }   // all fly -> reset
+            else if(r0c && bw_rev && sw_sl_state == -1)                 sw_sl_state = 0;
+            else if(!r0c && !r1c && !r2c && sw_sl_state >= 0)           sw_sl_state = -1;
          }
          if(!fly12)                                   // M30&H1 fly, M15&M30 not
          {
-            if(fly02) { if(sw_sl_state >= 0) sw_sl_state = -1; }   // M5&M30&H1 fly (no M15)
-            else if(r1c) { if(r0c) sw_sl_state = 0; }
-            else sw_sl_state = -1;
+            if(fly02) { if(!r0c && !r1c && !r2c && sw_sl_state >= 0)    sw_sl_state = -1; }   // M5&M30&H1 fly (no M15)
+            else if(r1c ) { if(r0c && sw_sl_state == -1)                sw_sl_state = 0; }
+            else if(!r0c && !r1c && !r2c && sw_sl_state >= 0)           sw_sl_state = -1;
          }
       }
       else 
@@ -2563,18 +2563,16 @@ void Trade_Strategy(
          {
             if(!fly12)                                   // M15&M30&H1 not fly
             {
-               if(r0c) sw_sl_state = 0;
+               if(r0c && sw_sl_state == -1) sw_sl_state = 0;
             }
          }
          // final ladder (authoritative)
-         if(r1c && sw_sl_state >= 0)                 sw_sl_state = 1;
-         else if(r2c && r1c && sw_sl_state >= 0)     sw_sl_state = 1;
-         else if(r2c && r3c && sw_sl_state >= 1)      sw_sl_state = 2;
-         else                                          sw_sl_state = -1;
+         if(r1c && sw_sl_state == 0)                                    sw_sl_state = 1;
+         else if(r2c && r1c && sw_sl_state >= 0 && sw_sl_state < 2)     sw_sl_state = 1;
+         else if(r2c && r3c && sw_sl_state >= 1 && sw_sl_state < 3)     sw_sl_state = 2;
+         else if(!r0c && !r1c && !r2c && sw_sl_state >= 0)              sw_sl_state = -1;
       }
       
-      
-
       //--- track sw_sl_state>=0 spans and draw them (same look as SwConfirm)
       static datetime sw6_from = 0;
       static int      sw6_seq  = 0;
