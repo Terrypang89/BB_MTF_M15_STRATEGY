@@ -2537,42 +2537,112 @@ void Trade_Strategy(
          else { if(dmt_cur == 1) dmt_cur = 0; }      // M15&M30 no longer fly -> M5
       }
       else { if(dmt_cur == 1) dmt_cur = 0; }         // M30&H1 no longer fly -> M5
-
       if(r4c) { if(dmt_cur == 1) dmt_cur = 0; }       // H4 sideway -> M5
 
       //================= Set sw_sl_state =================
+      string debug_sw_sl_state = dmt_cur;
       static int sw_sl_state = -1;
       if(fly23)
       {
+         debug_sw_sl_state += "-23";
          if(fly12)
          {
-            if(fly01) { if(!r0c && !r1c && sw_sl_state >= 0)            sw_sl_state = -1; }   // all fly -> reset
-            else if(r0c && bw_rev && sw_sl_state == -1)                 sw_sl_state = 0;
-            else if(!r0c && !r1c && !r2c && sw_sl_state >= 0)           sw_sl_state = -1;
-         }
-         if(!fly12)                                   // M30&H1 fly, M15&M30 not
-         {
-            if(fly02) { if(!r0c && !r1c && !r2c && sw_sl_state >= 0)    sw_sl_state = -1; }   // M5&M30&H1 fly (no M15)
-            else if(r1c ) { if(r0c && sw_sl_state == -1)                sw_sl_state = 0; }
-            else if(!r0c && !r1c && !r2c && sw_sl_state >= 0)           sw_sl_state = -1;
-         }
-      }
-      else 
-      {
-         if(!fly23)                                      // M30&H1 not fly
-         {
-            if(!fly12)                                   // M15&M30&H1 not fly
+            debug_sw_sl_state += "-12";
+            if(fly01) // M5 and M15 and M30 fly
             {
-               if(r0c && sw_sl_state == -1) sw_sl_state = 0;
+               debug_sw_sl_state += "-01";
+               if(!r0c && !r1c && sw_sl_state >= 0)
+               {
+                                                                        debug_sw_sl_state += "-{1, "+ sw_sl_state + "_-1}";
+                                                                        sw_sl_state = -1;
+               }
+            }   // all fly -> reset
+            else if(r0c && bw_rev && sw_sl_state == -1)
+            {
+                                                                        debug_sw_sl_state += "-{1, "+ sw_sl_state + "_0}";
+                                                                        sw_sl_state = 0;
+            }
+            else if(!r0c && !r1c && !r2c && sw_sl_state >= 0)
+            {
+                                                                        debug_sw_sl_state += "-{2, "+ sw_sl_state + "_-1}";
+                                                                        sw_sl_state = -1;
             }
          }
-         // final ladder (authoritative)
-         if(r1c && sw_sl_state == 0)                                    sw_sl_state = 1;
-         else if(r2c && r1c && sw_sl_state >= 0 && sw_sl_state < 2)     sw_sl_state = 1;
-         else if(r2c && r3c && sw_sl_state >= 1 && sw_sl_state < 3)     sw_sl_state = 2;
-         else if(!r0c && !r1c && !r2c && sw_sl_state >= 0)              sw_sl_state = -1;
+         if(!fly12) // M30&H1 fly, M15&M30 not
+         {
+            debug_sw_sl_state += "-!12";
+            if(fly02) // M5 and M30 fly
+            {
+               debug_sw_sl_state += "-02";
+               if(!r0c && !r1c && !r2c && sw_sl_state >= 0)
+               {
+                                                                        debug_sw_sl_state += "-{3, "+ sw_sl_state + "_-1}";
+                                                                        sw_sl_state = -1;
+               }
+            } // M5&M30&H1 fly (no M15)
+            else if(r1c && r0c && sw_sl_state == -1)
+            {
+                                                                        debug_sw_sl_state += "-{2, "+ sw_sl_state + "_0}";
+                                                                        sw_sl_state = 0;
+            }
+            else if(!r0c && !r1c && !r2c && sw_sl_state >= 0)
+            {
+                                                                        debug_sw_sl_state += "-{4, "+ sw_sl_state + "_-1}";
+                                                                        sw_sl_state = -1;
+            }
+         }
       }
-      
+      else if(!fly23) // M30&H1 not fly
+      {
+         debug_sw_sl_state += "-!23";
+         if(fly12)
+         {
+            debug_sw_sl_state += "-12";
+            if(fly01)
+            {
+               debug_sw_sl_state += "-01";
+               // if(sw_sl_state >= 0)
+               // {
+               //                                                          debug_sw_sl_state += "-{5, "+ sw_sl_state + "_-1}";
+               //                                                          sw_sl_state = -1;
+               // }
+            }
+            // else if(!fly01)
+            // {
+            // }
+         }
+         else if(!fly12) // M15&M30&H1 not fly
+         {
+            if(r0c && sw_sl_state == -1)
+            {
+                                                                        debug_sw_sl_state += "-{3, "+ sw_sl_state + "_0}";
+                                                                        sw_sl_state = 0;
+            }
+         }
+      }
+
+      // final ladder (authoritative)
+      if(r1c && sw_sl_state == 0)
+      {
+                                                                     debug_sw_sl_state += "-{A, "+ sw_sl_state + "_1}";
+                                                                     sw_sl_state = 1;
+      }
+      else if(r2c && r1c && sw_sl_state >= 0 && sw_sl_state < 2)
+      {
+                                                                     debug_sw_sl_state += "-{B, "+ sw_sl_state + "_1}";
+                                                                     sw_sl_state = 1;
+      }
+      else if(r2c && r3c && sw_sl_state >= 1 && sw_sl_state < 3)
+      {
+                                                                     debug_sw_sl_state += "-{C, "+ sw_sl_state + "_2}";
+                                                                     sw_sl_state = 2;
+      }
+      else if(!r0c && !r1c && !r2c && sw_sl_state >= 0)
+      {
+                                                                     debug_sw_sl_state += "-{Z, "+ sw_sl_state + "_-1}";
+                                                                     sw_sl_state = -1;
+      }
+
       //--- track sw_sl_state>=0 spans and draw them (same look as SwConfirm)
       static datetime sw6_from = 0;
       static int      sw6_seq  = 0;
@@ -2604,6 +2674,7 @@ void Trade_Strategy(
                  + " sw_sl:" + IntegerToString(sw_sl_state)
                  + " r0:" + (r0c?"1":"0") + " r1:" + (r1c?"1":"0")
                  + " r2:" + (r2c?"1":"0") + " r3:" + (r3c?"1":"0")
+                 + " dbg:[" + debug_sw_sl_state + "]"
                  + " BUYS:" + IntegerToString(BUYS) + " SELLS:" + IntegerToString(SELLS);
 
       if(sw_sl_state >= 0)
