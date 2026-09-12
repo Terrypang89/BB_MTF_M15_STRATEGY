@@ -91,9 +91,10 @@ double SL_Angle     = 90.0;     // OBJPROP_ANGLE is a DOUBLE property
 //--- because the pairs sit on different scales. February medians: c0 8.1, c1 9.3,
 //--- c2 19.8. c3 is not present in the V36.15 log, so its value is unverified.
 double CL_NEAR_M5M15  = 10.5;   // c0 = M5 + M15   - best single field in the log, F1 72.4
-double CL_NEAR_M15M30 = 8;      // c1 = M15 + M30  - +$17 median over 10.5 (paired, 216 cfg)
+// double CL_NEAR_M15M30 = 8;      // c1 = M15 + M30  - +$17 median over 10.5 (paired, 216 cfg)
+double CL_NEAR_M15M30 = 11;
 double CL_NEAR_M15H1  = 30;     // c2 = M15 + H1   - median 19.8, needs ~3x the c0 value
-double CL_NEAR_M30H1  = 8;      // c3 = M30 + H1   - UNVERIFIED, not in the measured log
+double CL_NEAR_M30H1  = 32;      // c3 = M30 + H1   - UNVERIFIED, not in the measured log
 double CL_NEAR_M15H4  = 60;     // c4 = M15 + H4   - UNVERIFIED. Widest pairs measured so
 double CL_NEAR_M30H4  = 60;     // c5 = M30 + H4     far run 2-3x the pair below them, so
 double CL_NEAR_H1H4   = 60;     // c6 = H1  + H4     these start wide. Check the fire rate.
