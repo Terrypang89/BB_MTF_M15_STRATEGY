@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "38.215"
+#property version   "38.216"
 
 #define HAS_TOFYSIDEWAY_LADDER
 //+------------------------------------------------------------------+
@@ -92,7 +92,7 @@ double SL_Angle     = 90.0;     // OBJPROP_ANGLE is a DOUBLE property
 //--- c2 19.8. c3 is not present in the V36.15 log, so its value is unverified.
 double CL_NEAR_M5M15  = 10.5;   // c0 = M5 + M15   - best single field in the log, F1 72.4
 // double CL_NEAR_M15M30 = 8;      // c1 = M15 + M30  - +$17 median over 10.5 (paired, 216 cfg)
-double CL_NEAR_M15M30 = 11;
+double CL_NEAR_M15M30 = 30;
 double CL_NEAR_M15H1  = 30;     // c2 = M15 + H1   - median 19.8, needs ~3x the c0 value
 double CL_NEAR_M30H1  = 32;      // c3 = M30 + H1   - UNVERIFIED, not in the measured log
 double CL_NEAR_M15H4  = 60;     // c4 = M15 + H4   - UNVERIFIED. Widest pairs measured so
@@ -177,7 +177,8 @@ double SL_diffmid_m15 = 3;
 // double SL_diffmid_H1  = 3.4;
 // double SL_diffmid_H4  = 7.7;
 // double SL_diffmid_m30 = 4.5;
-double SL_diffmid_m30 = 3.5;
+// double SL_diffmid_m30 = 3.5;
+double SL_diffmid_m30 = 2.5;
 double SL_diffmid_H1  = 4.5;
 double SL_diffmid_H4  = 4;
 
@@ -247,10 +248,12 @@ double SL_diffbbw_m5 = 3;
 // double SL_diffbbw_m15 = 1.2;
 double SL_diffbbw_m15 = 13;
 // double SL_diffbbw_m30 = 1.2;    // W30 threshold
-double SL_diffbbw_m30 = 15;    // W30 threshold
+// double SL_diffbbw_m30 = 15;    // W30 threshold
+double SL_diffbbw_m30 = 8;    // W30 threshold by claude
 // double SL_diffbbw_H1  = 6.5;    // L3W - 92% of long ranges, F1 68.3    // WH1 threshold (L3W)
 // double SL_diffbbw_H1  = 6.5;    // WH1 threshold (L3W)
-double SL_diffbbw_H1  = 15;    // WH1 threshold (L3W)
+// double SL_diffbbw_H1  = 15;    // WH1 threshold (L3W)
+double SL_diffbbw_H1  = 8;    // WH1 threshold by claude
 double SL_diffbbw_H4 = 1.0;   // L4W tag only. MEASURED: no threshold separates
                               // sideway on H4 - best F1 58.1 at thr 156, firing on
                               // 97% of bars at 41% precision. Left at 1.0 because
@@ -819,6 +822,38 @@ string SL_RectL3ContAll  = "";  string SL_RectL3ContAny  = "SCM";
 string SL_RectL3ContAny2 = "";  string SL_RectL3ContNone = "";
 string SL_RectL4ContAll  = "";  string SL_RectL4ContAny  = "MSC";
 string SL_RectL4ContAny2 = "";  string SL_RectL4ContNone = "";
+
+// string SL_RectL2All_A  = "S";    string SL_RectL2Any_A  = "MWC";
+// string SL_RectL2Any2_A = "";    string SL_RectL2None_A = "";
+// string SL_RectL2All_B  = "M";    string SL_RectL2Any_B  = "WC";
+// string SL_RectL2Any2_B = "";    string SL_RectL2None_B = "";
+
+// string SL_RectL3All_A  = "S";    string SL_RectL3Any_A  = "MWC";
+// string SL_RectL3Any2_A = "";    string SL_RectL3None_A = "";
+// string SL_RectL3All_B  = "M";    string SL_RectL3Any_B  = "WC";
+// string SL_RectL3Any2_B = "";    string SL_RectL3None_B = "";
+
+// string SL_RectL4All_A  = "";    string SL_RectL4Any_A  = "MSC";
+// string SL_RectL4Any2_A = "";    string SL_RectL4None_A = "";
+// string SL_RectL4All_B  = "";    string SL_RectL4Any_B  = "";
+// string SL_RectL4Any2_B = "";    string SL_RectL4None_B = "";
+
+// //--- CONTINUATION rule - what KEEPS a run open once the entry rule has fired.
+// //--- One slot each. Normally looser than the entry rule: harder to start, easier
+// //--- to stay in. Leave all four fields empty to reuse the entry rule instead.
+// //--- L1 continue: S || C || D || M
+// string SL_RectL0ContAll  = "";  string SL_RectL0ContAny  = "SC"; // continue while S || C
+// string SL_RectL0ContAny2 = "";  string SL_RectL0ContNone = "";
+// string SL_RectL1ContAll  = "";  string SL_RectL1ContAny  = "SC";
+// string SL_RectL1ContAny2 = "";  string SL_RectL1ContNone = "";
+// string SL_RectL2ContAll  = "M";  string SL_RectL2ContAny  = "SCW";
+// string SL_RectL2ContAny2 = "";  string SL_RectL2ContNone = "";
+// string SL_RectL3ContAll  = "M";  string SL_RectL3ContAny  = "SCW";
+// string SL_RectL3ContAny2 = "";  string SL_RectL3ContNone = "";
+// string SL_RectL4ContAll  = "";  string SL_RectL4ContAny  = "MSC";
+// string SL_RectL4ContAny2 = "";  string SL_RectL4ContNone = "";
+
+
  
 // color    SL_RectL0Color = Aquamarine;      // L0 = M5 (outline; white = highest contrast vs cyan/yellow/orange clutter)
 color    SL_RectL0Color = clrLightCyan;      // L0 = M5
