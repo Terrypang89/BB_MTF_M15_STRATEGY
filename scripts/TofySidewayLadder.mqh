@@ -460,6 +460,7 @@ bool SL_InUserLabel(datetime t)
 datetime sl_tr_time  = 0;      // entry bar time, 0 = flat
 double   sl_tr_price = 0.0;
 string   sl_tr_dir   = "";
+int      sl_tr_cur   = 0;      // dmt_cur captured at entry (for the SLTR cur label)
 int      sl_tr_seq   = 0;
 double   sl_tr_cum   = 0.0;    // running total, mirrors the report column
 double   sl_tr_last  = 0.0;    // most recent closed trade's pnl (for mode-6 log)
@@ -490,6 +491,7 @@ void SL_TrackAct(int act, datetime t, double px)
       sl_tr_time  = t;
       sl_tr_price = px;
       sl_tr_dir   = (act == 3) ? "LONG" : "SHORT";
+      sl_tr_cur   = g_tradectx.dmt_cur;   // capture dmt_cur AT ENTRY (label uses this)
       return;
    }
 
@@ -540,11 +542,11 @@ void SL_TrackAct(int act, datetime t, double px)
 
    //--- dmt_cur label (0 = M5, 1 = M15) at the open end. Colored by win/loss
    //--- (lime/red) to match the line; larger + offset so it stays readable.
-   string ctag = base + "_CUR" + IntegerToString(g_tradectx.dmt_cur);
+   string ctag = base + "_CUR" + IntegerToString(sl_tr_cur);
    double coff = sl_tr_price + (sl_tr_dir == "LONG" ? 2.0 : -2.0);
    if(ObjectCreate(0, ctag, OBJ_TEXT, 0, sl_tr_time, coff))
    {
-      ObjectSetString (0, ctag, OBJPROP_TEXT, "cur" + IntegerToString(g_tradectx.dmt_cur));
+      ObjectSetString (0, ctag, OBJPROP_TEXT, "cur" + IntegerToString(sl_tr_cur));
       ObjectSetInteger(0, ctag, OBJPROP_COLOR,      col);   // same color as this trade's line
       ObjectSetInteger(0, ctag, OBJPROP_FONTSIZE,   SL_TradeFont + 3);
       ObjectSetInteger(0, ctag, OBJPROP_ANCHOR,     ANCHOR_LOWER);
@@ -2534,10 +2536,18 @@ void Trade_Strategy(
             debug_sw_sl_state += "-12";
             if(fly01) { // M5&M15&M30&H1 fly
                debug_sw_sl_state += "-01";
-               if(dmt_cur == 0){
+               if(r4c) { 
+                  debug_sw_sl_state += "-S4";
+                  if(dmt_cur == 1) {
+                                                   debug_dmt_cur += "->0";
+                                                   dmt_cur = 0; 
+                  }                                  
+               }
+               else if(dmt_cur == 0){
                                                    debug_dmt_cur += "->1";
                                                    dmt_cur = 1;         // all fly -> M15 dmt1
-               } 
+               }
+
                if(r0c && r1c && r2c && r3c) {
                   if(sw_sl_state == -1) {
                                                    debug_sw_sl_state += "-{S1, "+ sw_sl_state + "_0}";
@@ -2554,21 +2564,18 @@ void Trade_Strategy(
             }
             else if(!fly01) { // M15&M30&H1 fly, M5&M15 not fly
                debug_sw_sl_state += "-!01";
-               if(r0c && bw_rev1) {
+               if(r4c) { 
+                  debug_sw_sl_state += "-S4";
+                  if(dmt_cur == 1) {
+                                                   debug_dmt_cur += "->0";
+                                                   dmt_cur = 0; 
+                  }                                  
+               }
+               else if(r0c && bw_rev1) {
                   if(dmt_cur == 1) {
                                                    debug_dmt_cur += "->0";
                                                    dmt_cur = 0;
                   }
-                  if(sw_sl_state == -1) {
-                                                   debug_sw_sl_state += "-{S1, "+ sw_sl_state + "_0}";
-                                                   sw_sl_state = 0;
-                  }                                
-               }
-               else if(r0c && r1c && r2c && r3c) {
-                  if(sw_sl_state == -1) {
-                                                   debug_sw_sl_state += "-{S1, "+ sw_sl_state + "_0}";
-                                                   sw_sl_state = 0;
-                  }   
                }
                else if(bw_rev2) {
                   if(dmt_cur == 0) {
@@ -2576,7 +2583,22 @@ void Trade_Strategy(
                                                    dmt_cur = 1;         // M15 shrink->fly -> M15 dmt1
                   }
                }
+               if(r0c && bw_rev1) {
+                  debug_sw_sl_state += "-A";
+                  if(sw_sl_state == -1) {
+                                                   debug_sw_sl_state += "-{S1, "+ sw_sl_state + "_0}";
+                                                   sw_sl_state = 0;
+                  }  
+               }
+               else if(r0c && r1c && r2c && r3c) {
+                  debug_sw_sl_state += "-B";
+                  if(sw_sl_state == -1) {
+                                                   debug_sw_sl_state += "-{S1, "+ sw_sl_state + "_0}";
+                                                   sw_sl_state = 0;
+                  }   
+               }
                else if(!r0c && !r1c && !r2c) {
+                  debug_sw_sl_state += "-D";
                   if(sw_sl_state >= 0) {
                                                    debug_sw_sl_state += "-{R2, "+ sw_sl_state + "_-1}";
                                                    sw_sl_state = -1;
@@ -2597,6 +2619,7 @@ void Trade_Strategy(
                                                    debug_dmt_cur += "->0";
                                                    dmt_cur = 0;
             }
+
             if(fly01) { // M5&M15 fly, M30&H1 fly, M15&M30 not fly
                debug_sw_sl_state += "-01";
                if(!r0c && !r1c) {
@@ -2631,21 +2654,21 @@ void Trade_Strategy(
          }
       }
       else if(!fly23) { // M30&H1 not fly
-         
          debug_sw_sl_state += "-!23";
-         if(dmt_cur == 1) {
-                                                   debug_dmt_cur += "->0";
-                                                   dmt_cur = 0;
-         }
          if(fly12) { // M30&H1 not fly, M15&M30 fly
             debug_sw_sl_state += "-12";
-            // if(r4c) { 
-            //    debug_sw_sl_state += "-S4";
-            //    if(dmt_cur == 1) {
-            //                                              debug_dmt_cur += "->0";
-            //                                              dmt_cur = 0; 
-            //    }                                  
-            // }
+            if(r4c) { 
+               debug_sw_sl_state += "-S4";
+               if(dmt_cur == 1) {
+                                                   debug_dmt_cur += "->0";
+                                                   dmt_cur = 0; 
+               }                                  
+            }
+            else if(dmt_cur == 1) {
+                                                   debug_dmt_cur += "->0";
+                                                   dmt_cur = 0;
+            }
+            
             if(fly01) { // M30&H1 not fly, M5&M15&M30 fly
                debug_sw_sl_state += "-01";
                if(sw_sl_state >= 0) {
@@ -2664,15 +2687,19 @@ void Trade_Strategy(
             }
          }
          else if(!fly12) { // M15&M30&H1 not fly
-            
             debug_sw_sl_state += "-!12";
             if(r4c) { 
                debug_sw_sl_state += "-S4";
                if(dmt_cur == 1) {
-                                                         debug_dmt_cur += "->0";
-                                                         dmt_cur = 0; 
+                                                   debug_dmt_cur += "->0";
+                                                   dmt_cur = 0; 
                }                                  
             }
+            else if(dmt_cur == 1) {
+                                                   debug_dmt_cur += "->0";
+                                                   dmt_cur = 0;
+            }
+
             if(fly01) { // M15&M30&H1 not fly, M5&M15 fly
                debug_sw_sl_state += "-01";
                if( !r1c && !r2c) {
@@ -2691,14 +2718,6 @@ void Trade_Strategy(
             }
          }
       }
-
-      // if(r4c) { 
-      //    debug_sw_sl_state += "-S4";
-      //    if(dmt_cur == 1) {
-      //                                              debug_dmt_cur += "->0";
-      //                                              dmt_cur = 0; 
-      //    }                                  
-      // }
 
       // final ladder (authoritative)
       if( !fly23 || !fly12)
