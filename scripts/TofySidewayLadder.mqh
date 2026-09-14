@@ -802,7 +802,7 @@ string SL_RectL3Any2_A = "";    string SL_RectL3None_A = "";
 string SL_RectL3All_B  = "";    string SL_RectL3Any_B  = "";
 string SL_RectL3Any2_B = "";    string SL_RectL3None_B = "";
 
-string SL_RectL4All_A  = "";    string SL_RectL4Any_A  = "MSC";
+string SL_RectL4All_A  = "";    string SL_RectL4Any_A  = "MSCW";
 string SL_RectL4Any2_A = "";    string SL_RectL4None_A = "";
 string SL_RectL4All_B  = "";    string SL_RectL4Any_B  = "";
 string SL_RectL4Any2_B = "";    string SL_RectL4None_B = "";
@@ -1851,11 +1851,11 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    {
       //--- no A tag: c3 is used by L2A, and no wider pair is available
       if(SH4)                                             l4tags += "S";
-      if(dm4 < dm4a && dm4a < dm4b)                       l4tags += "B";
+      if(dm4 < dm4a )                                     l4tags += "B";
       if(dmt4 >= 3.0 &&
          (dmt4 == 3.0 || dmt4a == 3.0 || dmt4b == 3.0))   l4tags += "C";
-      if(dmt4 >= 3.0 && dmt4a >= 3.0)                     l4tags += "H";   // 2-bar sideway persist
-      if(dm4 < SL_diffmid_H4 && dm4a < SL_diffmid_H4)     l4tags += "M";
+      if(dmt4 >= 3.0)                                     l4tags += "H";   // 2-bar sideway persist
+      if(dm4 < SL_diffmid_H4)                             l4tags += "M";
       if(WH4)                                             l4tags += "W";
    }
 
