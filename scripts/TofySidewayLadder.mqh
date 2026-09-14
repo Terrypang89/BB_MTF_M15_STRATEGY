@@ -855,6 +855,9 @@ bool     SL_RectFill    = false;   // outline only
 datetime sl_rect_start[6] = {0,0,0,0,0,0};   // 0=L0(M5) 1=L1 2=L2 3=L3 4=L4 5=joined
 datetime sl_rect_last [6] = {0,0,0,0,0,0};
 int      sl_rect_num  [6] = {0,0,0,0,0,0};
+datetime sl_rect_contfrom[6] = {0,0,0,0,0,0};  // when the CONTINUE phase began (0 = still in entry phase)
+int      sl_rect_phase[6] = {0,0,0,0,0,0};     // last rule verdict phase: 0=none/entry, 1=continue (for E/C log)
+bool     SL_DrawContDotted = true;             // draw the continuation portion as a dotted rectangle
 
 
 //+------------------------------------------------------------------+
@@ -1264,9 +1267,11 @@ bool SL_RectRule3(int lvl, string tags,
    {
       // continue if the run still holds; else re-test entry so a fresh early
       // sideway on this same bar keeps the run alive instead of going dark.
-      if(SL_TagSlot(tags, cA, cY, cY2, cN)) return true;
+      if(SL_TagSlot(tags, cA, cY, cY2, cN)) { sl_rect_phase[lvl] = 1; return true; }
    }
-   return SL_TagsMatch3(tags, aA, yA, y2A, nA, aB, yB, y2B, nB, aC, yC, y2C, nC);
+   bool e = SL_TagsMatch3(tags, aA, yA, y2A, nA, aB, yB, y2B, nB, aC, yC, y2C, nC);
+   sl_rect_phase[lvl] = 0;
+   return e;
 }
 
 //+------------------------------------------------------------------+
@@ -1280,6 +1285,7 @@ bool SL_RectRule3(int lvl, string tags,
 datetime g_m5_rect_start = 0;
 datetime g_m5_rect_last  = 0;
 int      g_m5_rect_num   = 0;
+datetime g_m5_rect_contfrom = 0;   // L0 continuation phase start
 
 bool SL_RectRule(int lvl, string tags,
                  string aA, string yA, string y2A, string nA,
@@ -1291,9 +1297,11 @@ bool SL_RectRule(int lvl, string tags,
 
    if(in_run && has_cont)
    {
-      if(SL_TagSlot(tags, cA, cY, cY2, cN)) return true;   // continue holds
+      if(SL_TagSlot(tags, cA, cY, cY2, cN)) { sl_rect_phase[lvl] = 1; return true; }  // continue
    }
-   return SL_TagsMatch(tags, aA, yA, y2A, nA, aB, yB, y2B, nB);  // else re-test entry
+   bool e = SL_TagsMatch(tags, aA, yA, y2A, nA, aB, yB, y2B, nB);
+   sl_rect_phase[lvl] = 0;   // entry (or no match)
+   return e;
 }
 
 //--- M5 variant: same rule logic, but reads the M5 run-open flag
@@ -1308,9 +1316,11 @@ bool SL_RectRuleM5(string tags,
 
    if(in_run && has_cont)
    {
-      if(SL_TagSlot(tags, cA, cY, cY2, cN)) return true;   // continue holds
+      if(SL_TagSlot(tags, cA, cY, cY2, cN)) { sl_rect_phase[0] = 1; return true; }   // continue
    }
-   return SL_TagsMatch(tags, aA, yA, y2A, nA, aB, yB, y2B, nB);  // else re-test entry
+   bool e = SL_TagsMatch(tags, aA, yA, y2A, nA, aB, yB, y2B, nB);
+   sl_rect_phase[0] = 0;
+   return e;
 }
 
 //+------------------------------------------------------------------+
@@ -1324,7 +1334,9 @@ void SL_RectStep(int lvl, bool on, ENUM_TIMEFRAMES tf, color col, string prefix)
 
    if(on)
    {
-      if(sl_rect_start[lvl] == 0) sl_rect_start[lvl] = t;
+      if(sl_rect_start[lvl] == 0) { sl_rect_start[lvl] = t; sl_rect_contfrom[lvl] = 0; }
+      else if(sl_rect_last[lvl] != t && sl_rect_contfrom[lvl] == 0)
+         sl_rect_contfrom[lvl] = t;   // first bar after entry = continuation phase begins
       sl_rect_last[lvl] = t;
       return;
    }
@@ -1374,20 +1386,44 @@ void SL_RectStep(int lvl, bool on, ENUM_TIMEFRAMES tf, color col, string prefix)
    }
    if(hi <= 0.0 || lo <= 0.0 || hi <= lo) return;
 
+   datetime cfrom = sl_rect_contfrom[lvl];
+   sl_rect_contfrom[lvl] = 0;
+
+   // Solid entry portion: a -> (cfrom or b). Dotted continuation portion: cfrom -> b.
+   datetime entry_end = (SL_DrawContDotted && cfrom != 0) ? cfrom : b;
+
    sl_rect_num[lvl]++;
    string name = prefix + IntegerToString(sl_rect_num[lvl]);
-   if(ObjectFind(0, name) >= 0) return;
-   if(!ObjectCreate(0, name, OBJ_RECTANGLE, 0, a, lo, b, hi)) return;
+   if(ObjectFind(0, name) < 0 && ObjectCreate(0, name, OBJ_RECTANGLE, 0, a, lo, entry_end, hi))
+   {
+      ObjectSetInteger(0, name, OBJPROP_COLOR,      col);
+      ObjectSetInteger(0, name, OBJPROP_FILL,       SL_RectFill);
+      ObjectSetInteger(0, name, OBJPROP_STYLE,      STYLE_SOLID);
+      ObjectSetInteger(0, name, OBJPROP_WIDTH,      5);
+      ObjectSetInteger(0, name, OBJPROP_BACK,       true);
+      ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+      ObjectSetString (0, name, OBJPROP_TOOLTIP,
+                       name + " ENTRY  " + TimeToString(a, TIME_DATE|TIME_MINUTES) + " -> " +
+                       TimeToString(entry_end, TIME_DATE|TIME_MINUTES));
+   }
 
-   ObjectSetInteger(0, name, OBJPROP_COLOR,      col);
-   ObjectSetInteger(0, name, OBJPROP_FILL,       SL_RectFill);
-   ObjectSetInteger(0, name, OBJPROP_WIDTH,      5);
-   ObjectSetInteger(0, name, OBJPROP_BACK,       true);
-   ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
-   ObjectSetString (0, name, OBJPROP_TOOLTIP,
-                    name + "  " + TimeToString(a, TIME_DATE|TIME_MINUTES) + " -> " +
-                    TimeToString(b, TIME_DATE|TIME_MINUTES) +
-                    "  bars " + IntegerToString(i2 - i1 + 1));
+   // dotted continuation rectangle, only if there was a continuation phase
+   if(SL_DrawContDotted && cfrom != 0 && cfrom < b)
+   {
+      string cname = prefix + "CONT_" + IntegerToString(sl_rect_num[lvl]);
+      if(ObjectFind(0, cname) < 0 && ObjectCreate(0, cname, OBJ_RECTANGLE, 0, cfrom, lo, b, hi))
+      {
+         ObjectSetInteger(0, cname, OBJPROP_COLOR,      col);
+         ObjectSetInteger(0, cname, OBJPROP_FILL,       false);   // outline so the dotted style shows
+         ObjectSetInteger(0, cname, OBJPROP_STYLE,      STYLE_DOT);
+         ObjectSetInteger(0, cname, OBJPROP_WIDTH,      2);
+         ObjectSetInteger(0, cname, OBJPROP_BACK,       true);
+         ObjectSetInteger(0, cname, OBJPROP_SELECTABLE, false);
+         ObjectSetString (0, cname, OBJPROP_TOOLTIP,
+                          cname + " CONTINUE  " + TimeToString(cfrom, TIME_DATE|TIME_MINUTES) + " -> " +
+                          TimeToString(b, TIME_DATE|TIME_MINUTES));
+      }
+   }
 }
 
 //+------------------------------------------------------------------+
@@ -1404,7 +1440,8 @@ void SL_RectStepM5(bool on, ENUM_TIMEFRAMES tf, color col, string prefix)
 
    if(on)
    {
-      if(g_m5_rect_start == 0) g_m5_rect_start = t;
+      if(g_m5_rect_start == 0) { g_m5_rect_start = t; g_m5_rect_contfrom = 0; }
+      else if(g_m5_rect_last != t && g_m5_rect_contfrom == 0) g_m5_rect_contfrom = t;
       g_m5_rect_last = t;
       return;
    }
@@ -1452,20 +1489,40 @@ void SL_RectStepM5(bool on, ENUM_TIMEFRAMES tf, color col, string prefix)
    }
    if(hi <= 0.0 || lo <= 0.0 || hi <= lo) return;
 
+   datetime cfrom = g_m5_rect_contfrom;
+   g_m5_rect_contfrom = 0;
+   datetime entry_end = (SL_DrawContDotted && cfrom != 0) ? cfrom : b;
+
    g_m5_rect_num++;
    string name = prefix + IntegerToString(g_m5_rect_num);
-   if(ObjectFind(0, name) >= 0) return;
-   if(!ObjectCreate(0, name, OBJ_RECTANGLE, 0, a, lo, b, hi)) return;
-
-   ObjectSetInteger(0, name, OBJPROP_COLOR,      col);
-   ObjectSetInteger(0, name, OBJPROP_FILL,       false);   // L0: outline only
-   ObjectSetInteger(0, name, OBJPROP_WIDTH,      5);
-   ObjectSetInteger(0, name, OBJPROP_BACK,       false);  // L0: draw in front
-   ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
-   ObjectSetString (0, name, OBJPROP_TOOLTIP,
-                    name + "  " + TimeToString(a, TIME_DATE|TIME_MINUTES) + " -> " +
-                    TimeToString(b, TIME_DATE|TIME_MINUTES) +
-                    "  bars " + IntegerToString(i2 - i1 + 1));
+   if(ObjectFind(0, name) < 0 && ObjectCreate(0, name, OBJ_RECTANGLE, 0, a, lo, entry_end, hi))
+   {
+      ObjectSetInteger(0, name, OBJPROP_COLOR,      col);
+      ObjectSetInteger(0, name, OBJPROP_FILL,       false);   // L0: outline only
+      ObjectSetInteger(0, name, OBJPROP_STYLE,      STYLE_SOLID);
+      ObjectSetInteger(0, name, OBJPROP_WIDTH,      5);
+      ObjectSetInteger(0, name, OBJPROP_BACK,       false);
+      ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+      ObjectSetString (0, name, OBJPROP_TOOLTIP,
+                       name + " ENTRY  " + TimeToString(a, TIME_DATE|TIME_MINUTES) + " -> " +
+                       TimeToString(entry_end, TIME_DATE|TIME_MINUTES));
+   }
+   if(SL_DrawContDotted && cfrom != 0 && cfrom < b)
+   {
+      string cname = prefix + "CONT_" + IntegerToString(g_m5_rect_num);
+      if(ObjectFind(0, cname) < 0 && ObjectCreate(0, cname, OBJ_RECTANGLE, 0, cfrom, lo, b, hi))
+      {
+         ObjectSetInteger(0, cname, OBJPROP_COLOR,      col);
+         ObjectSetInteger(0, cname, OBJPROP_FILL,       false);
+         ObjectSetInteger(0, cname, OBJPROP_STYLE,      STYLE_DOT);
+         ObjectSetInteger(0, cname, OBJPROP_WIDTH,      2);
+         ObjectSetInteger(0, cname, OBJPROP_BACK,       false);
+         ObjectSetInteger(0, cname, OBJPROP_SELECTABLE, false);
+         ObjectSetString (0, cname, OBJPROP_TOOLTIP,
+                          cname + " CONTINUE  " + TimeToString(cfrom, TIME_DATE|TIME_MINUTES) + " -> " +
+                          TimeToString(b, TIME_DATE|TIME_MINUTES));
+      }
+   }
 }
 
 //+------------------------------------------------------------------+
@@ -2778,8 +2835,10 @@ void Trade_Strategy(
                  + " l3t:" + l3t
                  + " cur:" + IntegerToString(dmt_cur)
                  + " sw_sl:" + IntegerToString(sw_sl_state)
-                 + " r0:" + (r0c?"1":"0") + " r1:" + (r1c?"1":"0")
-                 + " r2:" + (r2c?"1":"0") + " r3:" + (r3c?"1":"0")
+                 + " r0:" + (r0c ? (sl_rect_phase[0]==1?"1C":"1E") : "0")
+                 + " r1:" + (r1c ? (sl_rect_phase[1]==1?"1C":"1E") : "0")
+                 + " r2:" + (r2c ? (sl_rect_phase[2]==1?"1C":"1E") : "0")
+                 + " r3:" + (r3c ? (sl_rect_phase[3]==1?"1C":"1E") : "0")
                  + " dbg:[" + debug_dmt_cur + debug_sw_sl_state + "]"
                  + " BUYS:" + IntegerToString(BUYS) + " SELLS:" + IntegerToString(SELLS);
 
