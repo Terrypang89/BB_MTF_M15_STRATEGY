@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "38.216"
+#property version   "38.217"
 
 #define HAS_TOFYSIDEWAY_LADDER
 //+------------------------------------------------------------------+
@@ -660,7 +660,7 @@ double   sv_pnl[2]     = {0.0, 0.0};
 int      sv_bars[2]    = {0, 0};        // bars flagged sideway
 int      sv_ranges[2]  = {0, 0};        // contiguous sideway blocks
 bool     sv_prev_sw[2] = {false, false};
-bool sl_brk = false;
+bool     sl_brk        = false;
 int      sv_agree      = 0;             // bars where both agree sideway
 int      sv_user_only  = 0;
 int      sv_ladd_only  = 0;
@@ -822,8 +822,8 @@ string SL_RectL3ContAny2 = "";  string SL_RectL3ContNone = "";
 string SL_RectL4ContAll  = "";  string SL_RectL4ContAny  = "MSC";
 string SL_RectL4ContAny2 = "";  string SL_RectL4ContNone = "";
  
-// color    SL_RectL0Color = Aquamarine;      // L0 = M5 (outline; white = highest contrast vs cyan/yellow/orange clutter)
-color    SL_RectL0Color = clrLightCyan;      // L0 = M5
+color    SL_RectL0Color = Aquamarine;      // L0 = M5 (outline; white = highest contrast vs cyan/yellow/orange clutter)
+// color    SL_RectL0Color = clrLightCyan;      // L0 = M5
 color    SL_RectL1Color = clrGoldenrod;   // spec: M15 = Goldenrod (was BurlyWood)
 color    SL_RectL2Color = clrGreenYellow;
 color    SL_RectL3Color = clrRed;
@@ -930,7 +930,7 @@ bool     SL_DrawSwConfirm  = false;
 bool     SL_DrawSwConfirm6 = true;   // mode-6: draw sw_sl_state>=0 spans (same look as SwConfirm)
 int      SL_SwConfirmLevel = 1;
 // color    SL_SwConfirmColor = clrLightGray;  // light neutral fill: lifts the region (vs darkening) so inner rects stay spottable; not a hue used by L0-L4
-color    SL_SwConfirmColor = clrDarkSlateGray;  // light neutral fill: lifts the region (vs darkening) so inner rects stay spottable; not a hue used by L0-L4
+color    SL_SwConfirmColor = White;  // light neutral fill: lifts the region (vs darkening) so inner rects stay spottable; not a hue used by L0-L4
 
 int      sl_sw_max     = 0;      // highest state this run reached
 
@@ -1632,7 +1632,9 @@ void SL_SwConfirm6(int seq, datetime from, datetime to, int reached)
    if(!ObjectCreate(0, name, OBJ_RECTANGLE, 0, from, lo, to, hi)) return;
 
    ObjectSetInteger(0, name, OBJPROP_COLOR,      SL_SwConfirmColor);
-   ObjectSetInteger(0, name, OBJPROP_FILL,       true);
+   ObjectSetInteger(0, name, OBJPROP_FILL,       false);
+   ObjectSetInteger(0, name, OBJPROP_STYLE,      STYLE_SOLID);
+   ObjectSetInteger(0, name, OBJPROP_WIDTH,      6);
    ObjectSetInteger(0, name, OBJPROP_BACK,       true);
    ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
    ObjectSetString (0, name, OBJPROP_TOOLTIP,
@@ -2152,111 +2154,111 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    //  other ExitMode this block affects nothing but its own labels, so
    //  when reading a non-mode-5 build you can skip to the end of it.
    //====================================================================
-   if(SL_UseSwState || SL_DrawSwRects)
-   {
-      //--- L2 confirmation must follow an already-active L1 run. Preserve the
-      //--- incoming state because this bar may start L1 below.
-      int sw_state_before = sl_sw_state;
-      double pLo = (SL_SwPairLo == 1) ? dmt1 : ((SL_SwPairLo == 2) ? dmt2 : dmt3);
-      double pHi = (SL_SwPairHi == 2) ? dmt2 : dmt3;
-      ladder_branch = (pLo == pHi && pLo < SL_SwPairMax);
+   // if(SL_UseSwState || SL_DrawSwRects)
+   // {
+   //    //--- L2 confirmation must follow an already-active L1 run. Preserve the
+   //    //--- incoming state because this bar may start L1 below.
+   //    int sw_state_before = sl_sw_state;
+   //    double pLo = (SL_SwPairLo == 1) ? dmt1 : ((SL_SwPairLo == 2) ? dmt2 : dmt3);
+   //    double pHi = (SL_SwPairHi == 2) ? dmt2 : dmt3;
+   //    ladder_branch = (pLo == pHi && pLo < SL_SwPairMax);
 
-      bool l1_entry = SL_TagSlot(l1tags, SL_SwL1EntryA, "", "", "")
-                   || SL_TagSlot(l1tags, SL_SwL1EntryB, "", "", "");
-      bool l1_cont  = SL_AnyOf(l1tags, SL_SwL1Cont);
-      l2_ok = SL_AnyOf(l2tags, SL_SwL2Any);
-      l3_ok = SL_AnyOf(l3tags, SL_SwL3Any);
-      gate = ladder_branch ? true : (l2_ok && l3_ok);
+   //    bool l1_entry = SL_TagSlot(l1tags, SL_SwL1EntryA, "", "", "")
+   //                 || SL_TagSlot(l1tags, SL_SwL1EntryB, "", "", "");
+   //    bool l1_cont  = SL_AnyOf(l1tags, SL_SwL1Cont);
+   //    l2_ok = SL_AnyOf(l2tags, SL_SwL2Any);
+   //    l3_ok = SL_AnyOf(l3tags, SL_SwL3Any);
+   //    gate = ladder_branch ? true : (l2_ok && l3_ok);
 
-      //--- RELEASE band depends on how far the run has got:
-      //---   state 1 (L1 only, unconfirmed) -> the M15 band, easy to kill
-      //---   state 2 (M30 confirmed)        -> the M30 band, harder to kill
-      //--- An unconfirmed run should not survive a move the M15 band already
-      //--- rejects; a confirmed one earns the wider band.
-      //--- MEASURED with a single M30 release: 68% coverage, M15 trend -41.22.
-      //--- The labels sit at 47%, so a tighter release on state 1 is the lever.
-      double px_sw = iClose(_Symbol, PERIOD_M5, 0);
-      bool   raw15_sw = (px_sw > BB_datas[1].BBUppLV[LA] ||
-                         px_sw < BB_datas[1].BBLowLV[LA]);
-      bool   raw30_sw = (px_sw > BB_datas[2].BBUppLV[LA] ||
-                         px_sw < BB_datas[2].BBLowLV[LA]);
-      //--- MEASURED on February, hand labels at 858 bars / 47% for reference:
-      //---   raw30 always            1217 bars (67%)  M15 -21.42  M5 -132.42
-      //---   raw15 always            1039 bars (57%)  M15 +12.43  M5  +43.25
-      //---   raw15 at L1 / raw30 L2  1147 bars (63%)  M15 -58.20  M5 -161.22
-      //--- raw15 throughout is the only positive one: it keeps every run short.
-      //--- The split loses because a confirmed run then becomes hard to kill.
-      //--- SL_SwReleaseMode picks between them; 2 (raw30 throughout) is the spec.
-      bool   sw_brk;
-      if(SL_SwReleaseMode == 2)      sw_brk = raw30_sw;                       // spec
-      else if(SL_SwReleaseMode == 1) sw_brk = (sl_sw_state == 2) ? raw30_sw : raw15_sw;
-      else                           sw_brk = raw15_sw;                       // measured best
-      datetime t_sw = iTime(_Symbol, PERIOD_M15, 0);
+   //    //--- RELEASE band depends on how far the run has got:
+   //    //---   state 1 (L1 only, unconfirmed) -> the M15 band, easy to kill
+   //    //---   state 2 (M30 confirmed)        -> the M30 band, harder to kill
+   //    //--- An unconfirmed run should not survive a move the M15 band already
+   //    //--- rejects; a confirmed one earns the wider band.
+   //    //--- MEASURED with a single M30 release: 68% coverage, M15 trend -41.22.
+   //    //--- The labels sit at 47%, so a tighter release on state 1 is the lever.
+   //    double px_sw = iClose(_Symbol, PERIOD_M5, 0);
+   //    bool   raw15_sw = (px_sw > BB_datas[1].BBUppLV[LA] ||
+   //                       px_sw < BB_datas[1].BBLowLV[LA]);
+   //    bool   raw30_sw = (px_sw > BB_datas[2].BBUppLV[LA] ||
+   //                       px_sw < BB_datas[2].BBLowLV[LA]);
+   //    //--- MEASURED on February, hand labels at 858 bars / 47% for reference:
+   //    //---   raw30 always            1217 bars (67%)  M15 -21.42  M5 -132.42
+   //    //---   raw15 always            1039 bars (57%)  M15 +12.43  M5  +43.25
+   //    //---   raw15 at L1 / raw30 L2  1147 bars (63%)  M15 -58.20  M5 -161.22
+   //    //--- raw15 throughout is the only positive one: it keeps every run short.
+   //    //--- The split loses because a confirmed run then becomes hard to kill.
+   //    //--- SL_SwReleaseMode picks between them; 2 (raw30 throughout) is the spec.
+   //    bool   sw_brk;
+   //    if(SL_SwReleaseMode == 2)      sw_brk = raw30_sw;                       // spec
+   //    else if(SL_SwReleaseMode == 1) sw_brk = (sl_sw_state == 2) ? raw30_sw : raw15_sw;
+   //    else                           sw_brk = raw15_sw;                       // measured best
+   //    datetime t_sw = iTime(_Symbol, PERIOD_M15, 0);
 
-      if(sl_sw_state >= 1 && sw_brk)
-      {
-         if(SL_DrawSwRects)
-         {
-            SL_SwRect(sl_sw_l1_name, sl_sw_l1_from, t_sw, PERIOD_M15, SL_SwL1Color, false);
-            if(sl_sw_l2_name != "")
-               SL_SwRect(sl_sw_l2_name, sl_sw_l2_from, t_sw, PERIOD_M30, SL_SwL2Color, false);
-         }
-         SL_SwConfirm(sl_sw_seq, sl_sw_l1_from, t_sw, sl_sw_max);   // permanent record
-         sl_sw_state = 0; sl_sw_max = 0; sl_sw_l1_name = ""; sl_sw_l2_name = "";
-         sl_sw_l1_from = 0; sl_sw_l2_from = 0;
-      }
-      else
-      {
-         if(sl_sw_state == 0 && gate && l1_entry)
-         {
-            sl_sw_seq++;
-            sl_sw_state   = 1;
-            sl_sw_max     = 1;
-            sl_sw_l1_from = t_sw;
-            sl_sw_l1_name = "SLSW1_" + IntegerToString(sl_sw_seq);
-         }
-         if(sl_sw_state == 1)
-         {
-            if(l1_cont)
-            {
-               if(SL_DrawSwRects) SL_SwRect(sl_sw_l1_name, sl_sw_l1_from, t_sw, PERIOD_M15, SL_SwL1Color, true);
-               if(sw_state_before == 1 && l2_ok)
-               {
-                  sl_sw_state   = 2;
-                  sl_sw_max     = 2;
-                  sl_sw_l2_from = t_sw;
-                  sl_sw_l2_name = "SLSW2_" + IntegerToString(sl_sw_seq);
-               }
-            }
-            else
-            {
-               //--- L1 never reached L2 and its continuation rule has failed.
-               //--- That ends the run the same way a breakout does - there is no
-               //--- L2 latch to fall back on, so unfill and close.
-               if(SL_DrawSwRects)
-                  SL_SwRect(sl_sw_l1_name, sl_sw_l1_from, t_sw, PERIOD_M15,
-                            SL_SwL1Color, false);
-               SL_SwConfirm(sl_sw_seq, sl_sw_l1_from, t_sw, sl_sw_max);
-               sl_sw_state = 0; sl_sw_max = 0;
-               sl_sw_l1_name = ""; sl_sw_l1_from = 0;
-            }
-         }
-         if(sl_sw_state == 2)
-         {
-            if(SL_DrawSwRects)
-            {
-               SL_SwRect(sl_sw_l1_name, sl_sw_l1_from, t_sw, PERIOD_M15, SL_SwL1Color, true);
-               SL_SwRect(sl_sw_l2_name, sl_sw_l2_from, t_sw, PERIOD_M30, SL_SwL2Color, true);
-            }
-         }
-      }
+   //    if(sl_sw_state >= 1 && sw_brk)
+   //    {
+   //       if(SL_DrawSwRects)
+   //       {
+   //          SL_SwRect(sl_sw_l1_name, sl_sw_l1_from, t_sw, PERIOD_M15, SL_SwL1Color, false);
+   //          if(sl_sw_l2_name != "")
+   //             SL_SwRect(sl_sw_l2_name, sl_sw_l2_from, t_sw, PERIOD_M30, SL_SwL2Color, false);
+   //       }
+   //       SL_SwConfirm(sl_sw_seq, sl_sw_l1_from, t_sw, sl_sw_max);   // permanent record
+   //       sl_sw_state = 0; sl_sw_max = 0; sl_sw_l1_name = ""; sl_sw_l2_name = "";
+   //       sl_sw_l1_from = 0; sl_sw_l2_from = 0;
+   //    }
+   //    else
+   //    {
+   //       if(sl_sw_state == 0 && gate && l1_entry)
+   //       {
+   //          sl_sw_seq++;
+   //          sl_sw_state   = 1;
+   //          sl_sw_max     = 1;
+   //          sl_sw_l1_from = t_sw;
+   //          sl_sw_l1_name = "SLSW1_" + IntegerToString(sl_sw_seq);
+   //       }
+   //       if(sl_sw_state == 1)
+   //       {
+   //          if(l1_cont)
+   //          {
+   //             if(SL_DrawSwRects) SL_SwRect(sl_sw_l1_name, sl_sw_l1_from, t_sw, PERIOD_M15, SL_SwL1Color, true);
+   //             if(sw_state_before == 1 && l2_ok)
+   //             {
+   //                sl_sw_state   = 2;
+   //                sl_sw_max     = 2;
+   //                sl_sw_l2_from = t_sw;
+   //                sl_sw_l2_name = "SLSW2_" + IntegerToString(sl_sw_seq);
+   //             }
+   //          }
+   //          else
+   //          {
+   //             //--- L1 never reached L2 and its continuation rule has failed.
+   //             //--- That ends the run the same way a breakout does - there is no
+   //             //--- L2 latch to fall back on, so unfill and close.
+   //             if(SL_DrawSwRects)
+   //                SL_SwRect(sl_sw_l1_name, sl_sw_l1_from, t_sw, PERIOD_M15,
+   //                          SL_SwL1Color, false);
+   //             SL_SwConfirm(sl_sw_seq, sl_sw_l1_from, t_sw, sl_sw_max);
+   //             sl_sw_state = 0; sl_sw_max = 0;
+   //             sl_sw_l1_name = ""; sl_sw_l1_from = 0;
+   //          }
+   //       }
+   //       if(sl_sw_state == 2)
+   //       {
+   //          if(SL_DrawSwRects)
+   //          {
+   //             SL_SwRect(sl_sw_l1_name, sl_sw_l1_from, t_sw, PERIOD_M15, SL_SwL1Color, true);
+   //             SL_SwRect(sl_sw_l2_name, sl_sw_l2_from, t_sw, PERIOD_M30, SL_SwL2Color, true);
+   //          }
+   //       }
+   //    }
 
-      //--- reporting flags for the log line
-      sl_sw_l1    = (sl_sw_state == 1);
-      sl_sw_l2    = (sl_sw_state == 2);
-      sl_sw_latch = (sl_sw_state == 2 && sl_sw_prev == 2);
-      sl_sw_prev  = sl_sw_state;
-   }
+   //    //--- reporting flags for the log line
+   //    sl_sw_l1    = (sl_sw_state == 1);
+   //    sl_sw_l2    = (sl_sw_state == 2);
+   //    sl_sw_latch = (sl_sw_state == 2 && sl_sw_prev == 2);
+   //    sl_sw_prev  = sl_sw_state;
+   // }
 
    //--- L0 rectangle is drawn at M5 rate above the M15 gate (SL_RectStepM5).
    if(SL_DrawRectL1) SL_RectStep(1, r1, PERIOD_M15, SL_RectL1Color, "SLRC1_");
@@ -2264,28 +2266,28 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    if(SL_DrawRectL3) SL_RectStep(3, r3, PERIOD_H1,  SL_RectL3Color, "SLRC3_");
    if(SL_DrawRectL4) SL_RectStep(4, r4, PERIOD_H4,  SL_RectL4Color, "SLRC4_");
 
-   if(SL_DrawRectJoin)
-   {
-      bool joined; int used = 0;
-      if(SL_RectJoinOp == 0)
-      {
-         joined = true;
-         if(SL_RectJoinL1) { joined = joined && r1; used++; }
-         if(SL_RectJoinL2) { joined = joined && r2; used++; }
-         if(SL_RectJoinL3) { joined = joined && r3; used++; }
-         if(SL_RectJoinL4) { joined = joined && r4; used++; }
-      }
-      else
-      {
-         joined = false;
-         if(SL_RectJoinL1) { joined = joined || r1; used++; }
-         if(SL_RectJoinL2) { joined = joined || r2; used++; }
-         if(SL_RectJoinL3) { joined = joined || r3; used++; }
-         if(SL_RectJoinL4) { joined = joined || r4; used++; }
-      }
-      if(used == 0) joined = false;
-      SL_RectStep(5, joined, SL_RectJoinTF, SL_RectJoinColor, "SLRCJ_");
-   }
+   // if(SL_DrawRectJoin)
+   // {
+   //    bool joined; int used = 0;
+   //    if(SL_RectJoinOp == 0)
+   //    {
+   //       joined = true;
+   //       if(SL_RectJoinL1) { joined = joined && r1; used++; }
+   //       if(SL_RectJoinL2) { joined = joined && r2; used++; }
+   //       if(SL_RectJoinL3) { joined = joined && r3; used++; }
+   //       if(SL_RectJoinL4) { joined = joined && r4; used++; }
+   //    }
+   //    else
+   //    {
+   //       joined = false;
+   //       if(SL_RectJoinL1) { joined = joined || r1; used++; }
+   //       if(SL_RectJoinL2) { joined = joined || r2; used++; }
+   //       if(SL_RectJoinL3) { joined = joined || r3; used++; }
+   //       if(SL_RectJoinL4) { joined = joined || r4; used++; }
+   //    }
+   //    if(used == 0) joined = false;
+   //    SL_RectStep(5, joined, SL_RectJoinTF, SL_RectJoinColor, "SLRCJ_");
+   // }
 
    //--- Fill the trade context for SL_ExitMode 6 (unconditional - trading must
    //--- not depend on SL_WriteLog). All fields are live here.
