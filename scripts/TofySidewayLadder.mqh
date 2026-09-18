@@ -1712,6 +1712,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
             if(dmt0m >= 3.0 &&
                (dmt0m == 3.0 || dmt0am == 3.0 || dmt0bm == 3.0))   l0tags += "C";
             if(dmt0m >= 3.0 && dmt0am >= 3.0)                     l0tags += "H";   // 2-bar sideway persist
+            if(dmt0m == dmt1m && dmt0m < 3.0)                     l0tags += "I";   // fly01 (M5==M15 fly)
             if(((dmt0m == 1.0 || dmt0m == 5.0) && (dmt1m == 2.0 || dmt1m == 4.0)) ||
                ((dmt0m == 2.0 || dmt0m == 4.0) && (dmt1m == 1.0 || dmt1m == 5.0)))
                                                                   l0tags += "D";
@@ -1831,6 +1832,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       if(dmt1 >= 3.0 &&
          (dmt1 == 3.0 || dmt1a == 3.0 || dmt1b == 3.0))   l1tags += "C";
       if(dmt1 >= 3.0 && dmt1a >= 3.0)                     l1tags += "H";   // 2-bar sideway persist
+      if(dmt1 == dmt2 && dmt1 < 3.0)                      l1tags += "J";   // fly12 (M15==M30 fly)
       if(W15)                                             l1tags += "W";
       if(dm1 < SL_diffmid_m15 && dm1a < SL_diffmid_m15)   l1tags += "M";
       if(((dmt0 == 1.0 || dmt0 == 5.0) && (dmt1 == 2.0 || dmt1 == 4.0)) ||
@@ -1875,6 +1877,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       if(dmt2 >= 3.0 &&
          (dmt2 == 3.0 || dmt2a == 3.0 || dmt2b == 3.0))   l2tags += "C";
       if(dmt2 >= 3.0 && dmt2a >= 3.0)                     l2tags += "H";   // 2-bar sideway persist
+      if(dmt2 == dmt3 && dmt2 < 3.0)                      l2tags += "K";   // fly23 (M30==H1 fly)
       if(W30)                                             l2tags += "W";
       if(dm2 < SL_diffmid_m30 && dm2a < SL_diffmid_m30)   l2tags += "M";
       if(((dmt2 == 1.0 || dmt2 == 5.0) && (dmt3 == 2.0 || dmt3 == 4.0)) ||
@@ -1895,6 +1898,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       if(dmt3 >= 3.0 &&
          (dmt3 == 3.0 || dmt3a == 3.0 || dmt3b == 3.0))   l3tags += "C";
       if(dmt3 >= 3.0 && dmt3a >= 3.0)                     l3tags += "H";   // 2-bar sideway persist
+      if(dmt3 == dmt4 && dmt3 < 3.0)                      l3tags += "L";   // fly34 (H1==H4 fly)
       if(dm3 < SL_diffmid_H1 && dm3a < SL_diffmid_H1)     l3tags += "M";
       if(WH1)                                             l3tags += "W";
       //--- spec compared dmt3 with itself; read as M30 vs H1, matching L1D / L2D
@@ -2069,40 +2073,40 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    }
 
    //--- draw
-   if(SL_Draw)
-   {
-      double mid = BB_datas[1].BBMidLV[LA];
-      datetime t = iTime(_Symbol, PERIOD_M15, 0);
+   // if(SL_Draw)
+   // {
+   //    double mid = BB_datas[1].BBMidLV[LA];
+   //    datetime t = iTime(_Symbol, PERIOD_M15, 0);
  
-      // skip state-0 bars only when SL_ShowFails is off
-      if(mid > 0.0 && t > 0 && (SL_state[LA] > 0 || SL_ShowFails))
-      {
-         string txt = "L" + IntegerToString(SL_state[LA]);
-         if(why != "") txt += "-" + why;
-         if(SL_DrawL1Tags && l1tags != "") txt += "[" + l1tags + "]";
+   //    // skip state-0 bars only when SL_ShowFails is off
+   //    if(mid > 0.0 && t > 0 && (SL_state[LA] > 0 || SL_ShowFails))
+   //    {
+   //       string txt = "L" + IntegerToString(SL_state[LA]);
+   //       if(why != "") txt += "-" + why;
+   //       if(SL_DrawL1Tags && l1tags != "") txt += "[" + l1tags + "]";
  
-         string name = txt + "_" + IntegerToString((int)t);   // ID only, one label per bar
-         if(ObjectFind(0, name) < 0 && SL_state[LA] > 0)
-         {
-            color col;
-            if(SL_state[LA] == 3)      col = clrAqua;
-            else if(SL_state[LA] == 2) col = clrLime;
-            else if(SL_state[LA] == 1) col = clrYellow;
-            else                       col = clrGray;
+   //       string name = txt + "_" + IntegerToString((int)t);   // ID only, one label per bar
+   //       if(ObjectFind(0, name) < 0 && SL_state[LA] > 0)
+   //       {
+   //          color col;
+   //          if(SL_state[LA] == 3)      col = clrAqua;
+   //          else if(SL_state[LA] == 2) col = clrLime;
+   //          else if(SL_state[LA] == 1) col = clrYellow;
+   //          else                       col = clrGray;
  
-            if(ObjectCreate(0, name, OBJ_TEXT, 0, t, mid + SL_TagOffsetPts * _Point))
-            // if(ObjectCreate(0, name, OBJ_TEXT, 0, t, mid + SL_TagOffsetPts))
-            {
-               ObjectSetString (0, name, OBJPROP_TEXT,     txt);
-               ObjectSetInteger(0, name, OBJPROP_COLOR,    col);
-               ObjectSetInteger(0, name, OBJPROP_FONTSIZE, SL_FontSize);
-               ObjectSetDouble (0, name, OBJPROP_ANGLE,    SL_Angle);
-               ObjectSetInteger(0, name, OBJPROP_ANCHOR,   ANCHOR_UPPER);
-               ObjectSetInteger(0, name, OBJPROP_BACK,     false);
-            }
-         }
-      }
-   }
+   //          if(ObjectCreate(0, name, OBJ_TEXT, 0, t, mid + SL_TagOffsetPts * _Point))
+   //          // if(ObjectCreate(0, name, OBJ_TEXT, 0, t, mid + SL_TagOffsetPts))
+   //          {
+   //             ObjectSetString (0, name, OBJPROP_TEXT,     txt);
+   //             ObjectSetInteger(0, name, OBJPROP_COLOR,    col);
+   //             ObjectSetInteger(0, name, OBJPROP_FONTSIZE, SL_FontSize);
+   //             ObjectSetDouble (0, name, OBJPROP_ANGLE,    SL_Angle);
+   //             ObjectSetInteger(0, name, OBJPROP_ANCHOR,   ANCHOR_UPPER);
+   //             ObjectSetInteger(0, name, OBJPROP_BACK,     false);
+   //          }
+   //       }
+   //    }
+   // }
 
    //--- L2 tags on their OWN label: M30 midline, at the M30 BAR TIME.
    //--- One label per M30 bar - SL_Update runs per M15 bar, so the two M15 bars
@@ -2298,32 +2302,32 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    g_tradectx.dmt3 = dmt3; g_tradectx.dmt4 = dmt4;
 
    //--- log, so the chart can be cross-checked against the numbers
-   if(SL_WriteLog)
-   {
-      Print("[LADDER",
-            "] L0tags:[", (l0tags == "" ? "-" : l0tags),
-            "] L1tags:[", (l1tags == "" ? "-" : l1tags),
-            "] L2tags:[", (l2tags == "" ? "-" : l2tags),
-            "] L3tags:[", (l3tags == "" ? "-" : l3tags),
-            "] L4tags:[", (l4tags == "" ? "-" : l4tags),
-            "] state:[", SL_state[LA],
-            "] prev:[", prev,
-            "] r0:[", r0,
-            "] r1:[", r1,
-            "] r2:[", r2,
-            "] r3:[", r3,
-            "] r4:[", r4,
-            "] brk:[", sl_brk,
-            "] sw:[", sl_sw_state,
-            "] gate:[", (gate ? "1" : "0"),
-            "] l2ok:[", (l2_ok ? "1" : "-"),
-            "] l3ok:[", (l3_ok ? "1" : "-"),
-            "] lbr:[", (ladder_branch ? "1" : "-"),
-            "] L1sw:[", (sl_sw_l1 ? "1" : "-"),
-            "] L2sw:[", (sl_sw_l2 ? "1" : "-"),
-            "] L2latch:[", (sl_sw_latch ? "1" : "-"),
-            "] why:[", why, "]");
-   }
+   // if(SL_WriteLog)
+   // {
+   //    Print("[LADDER",
+   //          "] L0tags:[", (l0tags == "" ? "-" : l0tags),
+   //          "] L1tags:[", (l1tags == "" ? "-" : l1tags),
+   //          "] L2tags:[", (l2tags == "" ? "-" : l2tags),
+   //          "] L3tags:[", (l3tags == "" ? "-" : l3tags),
+   //          "] L4tags:[", (l4tags == "" ? "-" : l4tags),
+   //          "] state:[", SL_state[LA],
+   //          "] prev:[", prev,
+   //          "] r0:[", r0,
+   //          "] r1:[", r1,
+   //          "] r2:[", r2,
+   //          "] r3:[", r3,
+   //          "] r4:[", r4,
+   //          "] brk:[", sl_brk,
+   //          "] sw:[", sl_sw_state,
+   //          "] gate:[", (gate ? "1" : "0"),
+   //          "] l2ok:[", (l2_ok ? "1" : "-"),
+   //          "] l3ok:[", (l3_ok ? "1" : "-"),
+   //          "] lbr:[", (ladder_branch ? "1" : "-"),
+   //          "] L1sw:[", (sl_sw_l1 ? "1" : "-"),
+   //          "] L2sw:[", (sl_sw_l2 ? "1" : "-"),
+   //          "] L2latch:[", (sl_sw_latch ? "1" : "-"),
+   //          "] why:[", why, "]");
+   // }
    //--- Draw the label rectangles lazily. iBarShift returns -1 in OnInit during a
    //--- backtest because no history is loaded yet, so all 27 ranges were skipped.
    //--- Called here, each range appears as soon as its bars exist. The ObjectFind
@@ -2546,12 +2550,12 @@ void Trade_Strategy(
    bool inShort = (SELLS > 0);
    bool flat    = (!inLong && !inShort);
 
-   Trade_info = "[LADTRADE] dm1:" + DoubleToString(dm1,1)
-              + " LAD:"   + IntegerToString(ladder)
-              + " S_:"    + IntegerToString(sflag)
-              + " XM:"    + IntegerToString(SL_ExitMode)
-              + " BUYS:"  + IntegerToString(BUYS)
-              + " SELLS:" + IntegerToString(SELLS);
+   // Trade_info = "[LADTRADE] dm1:" + DoubleToString(dm1,1)
+   //            + " LAD:"   + IntegerToString(ladder)
+   //            + " S_:"    + IntegerToString(sflag)
+   //            + " XM:"    + IntegerToString(SL_ExitMode)
+   //            + " BUYS:"  + IntegerToString(BUYS)
+   //            + " SELLS:" + IntegerToString(SELLS);
 
    //================================================================
    // SL_ExitMode 6 - TEST CASE: H1 & M30 fly, dmt_cur timeframe switch
@@ -2570,10 +2574,10 @@ void Trade_Strategy(
       string l3t = g_tradectx.l3tags;
       string l4t = g_tradectx.l4tags;
 
-      bool fly23 = (dmt2c == dmt3c && dmt2c < 3.0);  // M30 & H1 fly
-      bool fly12 = (dmt1c == dmt2c && dmt2c < 3.0);  // M15 & M30 fly
-      bool fly01 = (dmt0c == dmt1c && dmt1c < 3.0);  // M5 & M15 fly
-      bool fly02 = (dmt0c == dmt2c && dmt0c < 3.0);  // M5 & M30 fly (M15 skipped)
+      bool fly23 = (StringFind(l2t,"K") >= 0);  // M30 & H1 fly  (tag K in l2t)
+      bool fly12 = (StringFind(l1t,"J") >= 0);  // M15 & M30 fly (tag J in l1t)
+      bool fly01 = (StringFind(l0t,"I") >= 0);  // M5 & M15 fly  (tag I in l0t)
+      bool fly02 = (dmt0c == dmt2c && dmt0c < 3.0);  // M5 & M30 fly (no tag - kept as dmt)
 
       // bool r1c_f = r1c && StringFind(l1t,"S")<=0; 
 
