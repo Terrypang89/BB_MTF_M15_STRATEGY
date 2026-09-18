@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "38.217"
+#property version   "38.30"
 
 #define HAS_TOFYSIDEWAY_LADDER
 //+------------------------------------------------------------------+
@@ -859,6 +859,62 @@ datetime sl_rect_contfrom[6] = {0,0,0,0,0,0};  // when the CONTINUE phase began 
 int      sl_rect_phase[6] = {0,0,0,0,0,0};     // last rule verdict phase: 0=none/entry, 1=continue (for E/C log)
 bool     SL_DrawContDotted = true;             // draw the continuation portion as a dotted rectangle
 
+//+------------------------------------------------------------------+
+//| SIDEWAY STATE MACHINE with live rectangles                       |
+//|                                                                  |
+//| Two branches, chosen by whether the two chosen timeframes agree   |
+//| on direction:                                                     |
+//|   LADDER      dmt1 == dmt2 && dmt1 < 3   (M15 and M30 both fly)   |
+//|   NON-LADDER  everything else - gated on L2 AND L3 agreeing first |
+//|                                                                  |
+//| In either branch:                                                 |
+//|   L1 entry   -> open + FILL the L1 rectangle                      |
+//|   then L2    -> open + FILL the L2 rectangle                      |
+//|   raw30      -> breakout: UNFILL both, close the run              |
+//|   at L2      -> latch: keep extending both rectangles             |
+//|                                                                  |
+//| MEASURED on February (hand labels: 858 bars / 47%, 27 ranges):    |
+//|   release raw3  (H1 band)   1408 bars / 77%, M15 -65.08           |
+//|   release raw30 (M30 band)  1252 bars / 68%, M15 -41.22, M5 -106  |
+//| Both LOSE. Recall is 88% but precision only 60% - the rules catch |
+//| nearly every real range and also a third of the trending time, so |
+//| too few trading windows are left. Coverage needs to come down by  |
+//| about a third; the M15 band as the release is the untried step.   |
+//|                                                                   |
+//| dmt1==dmt2 (M15,M30) measured better than dmt2==dmt3 (M30,H1):    |
+//|   M15 -41.22 vs -155.43. SL_SwPairLo/Hi switch between them.      |
+//+------------------------------------------------------------------+
+//--- SL_UseSwState computes the state machine; SL_DrawSwRects only draws it.
+//--- Kept separate so the state can drive trading with the chart clean.
+// bool     SL_UseSwState   = true;
+bool     SL_UseClusterContinue = true;   // mode-6: hold sideway while l1tags cluster chars present
+bool     SL_ClusterUseX        = true;    // X = M15+M30 (sep 4.5)
+bool     SL_ClusterUseY        = true;    // Y = M15+H1  (sep 10.6, STRONGEST)
+bool     SL_ClusterUseZ        = false;   // Z = M15+H4  (sep -0.7, useless - off)
+bool     SL_DrawClusterHold    = true;    // draw an M5 outline box over cluster-hold (CLHOLD) spans
+color    SL_ClusterHoldColor   = clrDeepPink;  // distinct; unfilled so it reads over SwConfirm6
+datetime g_clh_from = 0;   // cluster-hold span start (file scope so run-end can flush it)
+datetime g_clh_last = 0;
+int      g_clh_seq  = 0;
+//--- 3 test-condition visual boxes (visual-only, no trade effect):
+bool     SL_DrawTestConds = true;
+bool     SL_UseTC1 = true;    // enable cond1: 0A+(0M||1M)
+bool     SL_UseTC2 = true;    // enable cond2: 1X+(1M||2M)
+bool     SL_UseTC3 = true;    // enable cond3: 2Y+(2M||3M)
+bool     SL_UseTC4 = true;
+int      SL_TagBoxMaxGap = 3;   // bridge only short flicker gaps (<=3 bars); real trends break the box
+int      SL_TagBoxPad    = 3000; // vertical padding (points) each side, so tight spans are visible (XAUUSD: 3000pt=$30)
+// color    SL_TC1Color = C'40,80,40';    // cond1: 0A+(0M||1M)  dark green (behind bars)
+// color    SL_TC2Color = C'80,60,20';    // cond2: 1X+(1M||2M)  dark amber
+color    SL_TC1Color = C'80,60,20';
+color    SL_TC2Color = C'40,80,40';    // cond1: 0A+(0M||1M)  dark green (behind bars)
+color    SL_TC3Color = C'80,30,30';    // cond3: 2Y+(2M||3M)  dark red
+color    SL_TC4Color = C'80,0,80';
+datetime g_tc_from[3] = {0,0,0};
+datetime g_tc_last[3] = {0,0,0};
+int      g_tc_seq[3]  = {0,0,0};
+int      g_tc_gap[3]  = {0,0,0};   // consecutive false-bar count per condition (for gap-bridging)
+// bool     SL_DrawSwRects  = false;
 
 //+------------------------------------------------------------------+
 //| SIDEWAY STATE MACHINE with live rectangles                       |
@@ -1643,6 +1699,23 @@ void SL_SwConfirm6(int seq, datetime from, datetime to, int reached)
                     TimeToString(from, TIME_DATE|TIME_MINUTES) + " -> " +
                     TimeToString(to, TIME_DATE|TIME_MINUTES) +
                     "  bars " + IntegerToString(i2 - i1 + 1));
+}
+
+//--- Generic filled span box (visual-only) for the 3 test conditions. Filled +
+//--- behind bars so it reads as background shading; live redraw-in-place.
+void SL_TagBox(string tag, int seq, datetime from, datetime to, color col, double boxLo, double boxHi)
+{
+   if(SL_ExitMode != 6 || from == 0 || to < from) return;
+   if(boxLo <= 0.0 || boxHi <= 0.0 || boxHi <= boxLo) return;   // band not populated -> skip
+   double lo = boxLo, hi = boxHi;
+   string name = tag + IntegerToString(seq);
+   ObjectDelete(0, name);
+   if(!ObjectCreate(0, name, OBJ_RECTANGLE, 0, from, lo, to, hi)) return;
+   ObjectSetInteger(0, name, OBJPROP_COLOR,      col);
+   ObjectSetInteger(0, name, OBJPROP_FILL,       true);    // filled
+   ObjectSetInteger(0, name, OBJPROP_BACK,       true);    // behind bars = reads as shading
+   ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+   ObjectSetString (0, name, OBJPROP_TOOLTIP, name);
 }
 
 //+------------------------------------------------------------------+
@@ -2572,19 +2645,68 @@ void Trade_Strategy(
       string l2t = g_tradectx.l2tags;
       string l3t = g_tradectx.l3tags;
       string l4t = g_tradectx.l4tags;
+      bool   tc[3] = {0,0,0};
+      color  tcc[3] = {SL_TC1Color, SL_TC2Color, SL_TC3Color}; 
+      string tcp[3] = {"SLTC1_", "SLTC2_", "SLTC3_"};
 
       bool fly23 = (StringFind(l2t,"K") >= 0);  // M30 & H1 fly  (tag K in l2t)
       bool fly12 = (StringFind(l1t,"J") >= 0);  // M15 & M30 fly (tag J in l1t)
       bool fly01 = (StringFind(l0t,"I") >= 0);  // M5 & M15 fly  (tag I in l0t)
       bool fly02 = (dmt0c == dmt2c && dmt0c < 3.0);  // M5 & M30 fly (no tag - kept as dmt)
 
-      // bool r1c_f = r1c && StringFind(l1t,"S")<=0; 
-
       bool bw_rev1 = (StringFind(l1t,"B")>=0 && StringFind(l1t,"W")>=0 &&
                         StringFind(l2t,"B")>=0); // during fly . r0 appear 
 
       bool bw_rev2 = (StringFind(l1t,"B")<0 || StringFind(l1t,"W")<0 || StringFind(l1t,"D")<0);
       
+       //--- 3 TEST CONDITIONS (visual-only, no trade effect). Each draws a filled
+      //--- span box where it fires, so you can compare against user labels on the chart.
+      if(SL_DrawTestConds)
+      {
+         tc[0] = SL_UseTC1 && (!fly01)
+                    && (StringFind(l0t,"A")>=0)
+                    && (StringFind(l0t,"M")>=0 || StringFind(l1t,"M")>=0);   // 0A+(0M||1M)
+         tc[1] = SL_UseTC2 && (!fly12)
+                    && (StringFind(l1t,"X")>=0)
+                    && (StringFind(l1t,"M")>=0 || StringFind(l2t,"M")>=0);   // 1X+(1M||2M)
+         tc[2] = SL_UseTC3 && (!fly23)
+                    && (StringFind(l2t,"Y")>=0)
+                    && (StringFind(l2t,"M")>=0 && StringFind(l3t,"M")>=0);   // 2Y+(2M||3M)
+         
+         // tc[3] = SL_UseTC4 && (!fly23)
+         //            && (StringFind(l2t,"Y")>=0)
+         //            && (StringFind(l2t,"M")>=0 && StringFind(l3t,"M")>=0);   // 2Y+(2M||3M)
+         
+         // tc[2] = SL_UseTC3
+         //            && (StringFind(l2t,"Y")>=0)
+         //            && (StringFind(l2t,"M")>=0 && StringFind(l3t,"M")>=0);   // 2Y+(2M||3M)
+         // tc[0]=tc1; tc[1]=tc2; tc[2]=tc3;
+         // tcc[0]=SL_TC1Color; tcc[1]=SL_TC2Color; tcc[2]=SL_TC3Color; tcc[3]=SL_TC4Color;
+         // tcp[0]="SLTC1_"; tcp[1]="SLTC2_"; tcp[2]="SLTC3_"; tcp[3]="SLTC3_";
+         for(int ti=0; ti<3; ti++)
+         {
+            if(tc[ti])
+            {
+               if(g_tc_from[ti]==0) { g_tc_from[ti]=cur; g_tc_seq[ti]++; }
+               g_tc_last[ti]=cur;
+               g_tc_gap[ti]=0;   // reset false-bar counter
+               // tc0->M15 band(1), tc1->M30 band(2), tc2->H1 band(3)
+               int bi = ti + 1;
+               double bLo = BB_datas[bi].BBLowLV[LA];
+               double bHi = BB_datas[bi].BBUppLV[LA];
+               SL_TagBox(tcp[ti], g_tc_seq[ti], g_tc_from[ti], g_tc_last[ti], tcc[ti], bLo, bHi);
+            }
+            else if(g_tc_from[ti]!=0)
+            {
+               // condition false: bridge short gaps (<= SL_TagBoxMaxGap bars) so
+               // flicker doesn't split the box; close the span only on a sustained gap.
+               g_tc_gap[ti]++;
+               if(g_tc_gap[ti] > SL_TagBoxMaxGap) { g_tc_from[ti]=0; g_tc_gap[ti]=0; }
+               // else: keep span open (bridged), box stays drawn to g_tc_last
+            }
+         }
+      }
+
       //================= Set sw_sl_state =================
       static int dmt_cur = 0;         // [ASSUMPTION] first-bar default 0 = trade M5 (dm0)
       static int sw_sl_state = -1;
