@@ -62,8 +62,8 @@ bool   SL_DrawL1Tags = true;
 
 //--- Level-2 (M30) diagnostic tags. Same idea as the L1 tags, on the M30 side.
 //---   L2A  S30            M30 stage is in the settled set
-//---   L2B  dm2<dm2a<dm2b  M30 midline distance contracting, 3 bars
-//---   L2C  dm2>=3 && dm2a>=3 && any of dm2/dm2a/dm2b == 3
+//---   L2B  g_tradectx.dm[2][0]<g_tradectx.dm[2][1]<g_tradectx.dm[2][2]  M30 midline distance contracting, 3 bars
+//---   L2C  g_tradectx.dm[2][0]>=3 && g_tradectx.dm[2][1]>=3 && any of g_tradectx.dm[2][0]/g_tradectx.dm[2][1]/g_tradectx.dm[2][2] == 3
 //---   L2D  W30            M30 band width contracting, 2 bars
 //--- A30 is deliberately NOT tagged - the cluster gate is reported by `why`.
 //--- Reporting only. Nothing here changes a decision.
@@ -865,7 +865,7 @@ bool     SL_DrawContDotted = true;             // draw the continuation portion 
 //|                                                                  |
 //| Two branches, chosen by whether the two chosen timeframes agree   |
 //| on direction:                                                     |
-//|   LADDER      dmt1 == dmt2 && dmt1 < 3   (M15 and M30 both fly)   |
+//|   LADDER      g_tradectx.dmt[1][0] == g_tradectx.dmt[2][0] && g_tradectx.dmt[1][0] < 3   (M15 and M30 both fly)   |
 //|   NON-LADDER  everything else - gated on L2 AND L3 agreeing first |
 //|                                                                  |
 //| In either branch:                                                 |
@@ -882,7 +882,7 @@ bool     SL_DrawContDotted = true;             // draw the continuation portion 
 //| too few trading windows are left. Coverage needs to come down by  |
 //| about a third; the M15 band as the release is the untried step.   |
 //|                                                                   |
-//| dmt1==dmt2 (M15,M30) measured better than dmt2==dmt3 (M30,H1):    |
+//| g_tradectx.dmt[1][0]==g_tradectx.dmt[2][0] (M15,M30) measured better than g_tradectx.dmt[2][0]==g_tradectx.dmt[3][0] (M30,H1):    |
 //|   M15 -41.22 vs -155.43. SL_SwPairLo/Hi switch between them.      |
 //+------------------------------------------------------------------+
 //--- SL_UseSwState computes the state machine; SL_DrawSwRects only draws it.
@@ -899,8 +899,8 @@ bool     SL_DrawSwRects  = false;
 //    SL_SwReleaseMode, SL_SwL1EntryA/B, SL_SwL1Cont, SL_SwL2Any,
 //    SL_SwL3Any, SL_SwPairLo/Hi/Max
 //====================================================================
-int      SL_SwPairLo     = 2;      // 1 = M15 (dmt1)  2 = M30  3 = H1
-int      SL_SwPairHi     = 3;      // 2 = M30 (dmt2)  3 = H1
+int      SL_SwPairLo     = 2;      // 1 = M15 (g_tradectx.dmt[1][0])  2 = M30  3 = H1
+int      SL_SwPairHi     = 3;      // 2 = M30 (g_tradectx.dmt[2][0])  3 = H1
 double   SL_SwPairMax    = 3.0;
 //--- Which Bollinger band closes a sideway run - see the measurements at the
 //--- sw_brk line below before changing this.
@@ -1657,10 +1657,13 @@ struct SL_TradeCtx_struct
 {
    bool     r0, r1, r2, r3, r4;
    string   l1tags, l0tags, l2tags, l3tags, l4tags;
-   double   dmt0, dmt1, dmt2, dmt3, dmt4;
+   // double   dmt0, dmt1, dmt2, dmt3, dmt4;
    int      dmt_cur;      // mode-6: which TF is trading (0=M5,1=M15) - for SWCMP log
    bool     swconfirm;    // mode-6: swconfirm flag - for SWCMP log
    int      sw_sl_state;  // mode-6: graded sideway state (-1 trade, 0/1/2 exit)
+   double   dmt[5][3];
+   double   c[7][3];
+   double   dm[5][3];
 };
 SL_TradeCtx_struct g_tradectx;
 
@@ -1680,7 +1683,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    //  BB_datas[0] (M5) directly, does not use any M15-gated local below.
    //  l0tags is declared here so the M15 r0 rectangle can still read it.
    //====================================================================
-   string l0tags = "";
+   g_tradectx.l0tags = "";
    bool   r0 = false;   // L0 rect verdict (M5 rate); kept in scope for the log below
    {
       static datetime sl_lastM5 = 0;
@@ -1688,49 +1691,56 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       if(m5now != sl_lastM5)
       {
          sl_lastM5 = m5now;
-         double dm0m  = MathAbs(BB_datas[0].BB_diffMid[LA]);
-         double dm0am = MathAbs(BB_datas[0].BB_diffMid[LA_1]);
-         double dm0bm = MathAbs(BB_datas[0].BB_diffMid[LA_2]);
-         double dmt0m = BB_datas[0].BB_diffMid_Trend[LA];
-         double dmt0am = BB_datas[0].BB_diffMid_Trend[LA_1];
-         double dmt0bm = BB_datas[0].BB_diffMid_Trend[LA_2];
-         double dmt1m  = BB_datas[1].BB_diffMid_Trend[LA];
-         double dmt2m  = BB_datas[2].BB_diffMid_Trend[LA];
-         double dmt3m  = BB_datas[3].BB_diffMid_Trend[LA];
-         
+         g_tradectx.dm[0][0] = MathAbs(BB_datas[0].BB_diffMid[LA]);
+         g_tradectx.dm[0][1] = MathAbs(BB_datas[0].BB_diffMid[LA_1]);
+         g_tradectx.dm[0][2] = MathAbs(BB_datas[0].BB_diffMid[LA_2]);
+         g_tradectx.dmt[0][0] = BB_datas[0].BB_diffMid_Trend[LA];
+         g_tradectx.dmt[0][1] = BB_datas[0].BB_diffMid_Trend[LA_1];
+         g_tradectx.dmt[0][2] = BB_datas[0].BB_diffMid_Trend[LA_2];
+         g_tradectx.dmt[1][0] = BB_datas[1].BB_diffMid_Trend[LA];
+         g_tradectx.dmt[2][0] = BB_datas[2].BB_diffMid_Trend[LA];
+         g_tradectx.dmt[3][0] = BB_datas[3].BB_diffMid_Trend[LA];
+         g_tradectx.c[0][0] = BBTFImpact.BB_midline_Cluster[0][LA];
+         g_tradectx.c[0][1] = BBTFImpact.BB_midline_Cluster[0][LA_1];
+         g_tradectx.c[0][2] = BBTFImpact.BB_midline_Cluster[0][LA_2];
+
          if(SL_DrawL0Tags)
          {
-            double c0m  = BBTFImpact.BB_midline_Cluster[0][LA];      // M5 + M15
-            double c0am = BBTFImpact.BB_midline_Cluster[0][LA_1];
-            if(c0m < CL_NEAR_M5M15 && c0am < CL_NEAR_M5M15)      l0tags += "A";   // M5+M15 midline cluster
-            if(SL_StageOK((int)BB_datas[0].BBW_stage[LA]))        l0tags += "S";
-            if(dm0m < dm0am && dm0am < dm0bm)                     l0tags += "B";
-            if(dm0m < SL_diffmid_m5 && dm0am < SL_diffmid_m5)   l0tags += "M";
+            if(g_tradectx.c[0][0] < CL_NEAR_M5M15 && g_tradectx.c[0][1] < CL_NEAR_M5M15)
+                                                                  g_tradectx.l0tags += "A";   // M5+M15 midline cluster
+            
+            if(SL_StageOK((int)BB_datas[0].BBW_stage[LA]))        g_tradectx.l0tags += "S";
+            if(g_tradectx.dm[0][0] < g_tradectx.dm[0][1] && g_tradectx.dm[0][1] < g_tradectx.dm[0][2])                     
+                                                                  g_tradectx.l0tags += "B";
+             if(g_tradectx.dm[0][0] < SL_diffmid_m5 && g_tradectx.dm[0][1] < SL_diffmid_m5)     
+                                                                  g_tradectx.l0tags += "M";
             if(BB_datas[0].BB_diffBBW[LA]   < SL_diffbbw_m5
-             && BB_datas[0].BB_diffBBW[LA_1] < SL_diffbbw_m5)    l0tags += "W";
-            // if(dmt0m == 3.0)                                      l0tags += "C";
-            if(dmt0m >= 3.0 &&
-               (dmt0m == 3.0 || dmt0am == 3.0 || dmt0bm == 3.0))   l0tags += "C";
-            if(dmt0m >= 3.0 && dmt0am >= 3.0)                     l0tags += "H";   // 2-bar sideway persist
-            if(dmt0m == dmt1m && dmt0m < 3.0)                     l0tags += "I";   // fly01 (M5==M15 fly)
-            if(((dmt0m == 1.0 || dmt0m == 5.0) && (dmt1m == 2.0 || dmt1m == 4.0)) ||
-               ((dmt0m == 2.0 || dmt0m == 4.0) && (dmt1m == 1.0 || dmt1m == 5.0)))
-                                                                  l0tags += "D";
-            if(((dmt0m == 1.0 || dmt0m == 5.0) && (dmt2m == 2.0 || dmt2m == 4.0)) ||
-               ((dmt0m == 2.0 || dmt0m == 4.0) && (dmt2m == 1.0 || dmt2m == 5.0)))
-                                                                  l0tags += "E";
-            if(((dmt0m == 1.0 || dmt0m == 5.0) && (dmt3m == 2.0 || dmt3m == 4.0)) ||
-               ((dmt0m == 2.0 || dmt0m == 4.0) && (dmt3m == 1.0 || dmt3m == 5.0)))
-                                                                  l0tags += "F";
+             && BB_datas[0].BB_diffBBW[LA_1] < SL_diffbbw_m5)     g_tradectx.l0tags += "W";
+            if(g_tradectx.dmt[0][0] >= 3.0 &&
+               (g_tradectx.dmt[0][0] == 3.0 || g_tradectx.dmt[0][1] == 3.0 || g_tradectx.dmt[0][2] == 3.0))  
+                                                                  g_tradectx.l0tags += "C";
+            if(g_tradectx.dmt[0][0] >= 3.0 && g_tradectx.dmt[0][1] >= 3.0)                     
+                                                                  g_tradectx.l0tags += "H";   // 2-bar sideway persist
+            if(g_tradectx.dmt[0][0] == g_tradectx.dmt[1][0] && g_tradectx.dmt[0][0] < 3.0)
+                                                                  g_tradectx.l0tags += "I";   // fly01 (M5==M15 fly)
+            if(((g_tradectx.dmt[0][0] == 1.0 || g_tradectx.dmt[0][0] == 5.0) && (g_tradectx.dmt[1][0] == 2.0 || g_tradectx.dmt[1][0] == 4.0)) ||
+               ((g_tradectx.dmt[0][0] == 2.0 || g_tradectx.dmt[0][0] == 4.0) && (g_tradectx.dmt[1][0] == 1.0 || g_tradectx.dmt[1][0] == 5.0)))
+                                                                  g_tradectx.l0tags += "D";
+            if(((g_tradectx.dmt[0][0] == 1.0 || g_tradectx.dmt[0][0] == 5.0) && (g_tradectx.dmt[2][0] == 2.0 || g_tradectx.dmt[2][0] == 4.0)) ||
+               ((g_tradectx.dmt[0][0] == 2.0 || g_tradectx.dmt[0][0] == 4.0) && (g_tradectx.dmt[2][0] == 1.0 || g_tradectx.dmt[2][0] == 5.0)))
+                                                                  g_tradectx.l0tags += "E";
+            if(((g_tradectx.dmt[0][0] == 1.0 || g_tradectx.dmt[0][0] == 5.0) && (g_tradectx.dmt[3][0] == 2.0 || g_tradectx.dmt[3][0] == 4.0)) ||
+               ((g_tradectx.dmt[0][0] == 2.0 || g_tradectx.dmt[0][0] == 4.0) && (g_tradectx.dmt[3][0] == 1.0 || g_tradectx.dmt[3][0] == 5.0)))
+                                                                  g_tradectx.l0tags += "F";
          }
-         if(SL_DrawL0Tags && l0tags != "")
-            SL_DrawTagLabel("SLL0_", l0tags, BB_datas[0].BBMidLV[LA], PERIOD_M5, 200, 7, SL_L0TagColor);
+         if(SL_DrawL0Tags && g_tradectx.l0tags != "")
+            SL_DrawTagLabel("SLL0_", g_tradectx.l0tags, BB_datas[0].BBMidLV[LA], PERIOD_M5, 200, 7, SL_L0TagColor);
 
          //--- L0 rectangle, M5 rate. Own stepper + own state, no collision with
          //--- L1-L4's M15 rect tracking. SL_RectMinBars now counts M5 bars here.
          if(SL_DrawRectL0)
          {
-            r0 = SL_RectRuleM5(l0tags,
+            g_tradectx.r0 = SL_RectRuleM5(g_tradectx.l0tags,
                            SL_RectL0All_A, SL_RectL0Any_A, SL_RectL0Any2_A, SL_RectL0None_A,
                            SL_RectL0All_B, SL_RectL0Any_B, SL_RectL0Any2_B, SL_RectL0None_B,
                            SL_RectL0ContAll, SL_RectL0ContAny, SL_RectL0ContAny2, SL_RectL0ContNone);
@@ -1739,7 +1749,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
 
          if(SL_WriteLog && SL_DrawL0Tags)
          {
-            Print("[LADDER_M5] L0tags:[", (l0tags=="" ? "-" : l0tags), "] r0:[", r0, "]");
+            Print("[LADDER_M5] L0tags:[", (g_tradectx.l0tags=="" ? "-" : g_tradectx.l0tags), "] r0:[", g_tradectx.r0, "]");
          }
       }
    }
@@ -1758,92 +1768,67 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
 
    int prev = SL_state[LA_1];
 
-   //--- cluster distances, current and two bars back
-   //--- diffMid_Trend CODES (1..5). Distinct from the dm* DISTANCES above:
-   //--- the C and D tags read codes, the M and B tags read distances.
-   double dmt0  = BB_datas[0].BB_diffMid_Trend[LA];
-   double dmt1  = BB_datas[1].BB_diffMid_Trend[LA];
-   double dmt1a = BB_datas[1].BB_diffMid_Trend[LA_1];
-   double dmt1b = BB_datas[1].BB_diffMid_Trend[LA_2];
-   double dmt2  = BB_datas[2].BB_diffMid_Trend[LA];
-   double dmt2a = BB_datas[2].BB_diffMid_Trend[LA_1];
-   double dmt2b = BB_datas[2].BB_diffMid_Trend[LA_2];
-   double dmt3  = BB_datas[3].BB_diffMid_Trend[LA];
-   double dmt3a = BB_datas[3].BB_diffMid_Trend[LA_1];
-   double dmt3b = BB_datas[3].BB_diffMid_Trend[LA_2];
-   double dmt4  = BB_datas[4].BB_diffMid_Trend[LA];
-   double dmt4a = BB_datas[4].BB_diffMid_Trend[LA_1];
-   double dmt4b = BB_datas[4].BB_diffMid_Trend[LA_2];
-
-   double c0  = BBTFImpact.BB_midline_Cluster[0][LA];    // M5 + M15
-   double c0a = BBTFImpact.BB_midline_Cluster[0][LA_1];
-   double c0b = BBTFImpact.BB_midline_Cluster[0][LA_2];
-   double c1  = BBTFImpact.BB_midline_Cluster[1][LA];    // M15 + M30
-   double c1a = BBTFImpact.BB_midline_Cluster[1][LA_1];
-   double c1b = BBTFImpact.BB_midline_Cluster[1][LA_2];
-   double c2  = BBTFImpact.BB_midline_Cluster[2][LA];
-   double c2a = BBTFImpact.BB_midline_Cluster[2][LA_1];
-   double c2b = BBTFImpact.BB_midline_Cluster[2][LA_2];
-   double c3  = BBTFImpact.BB_midline_Cluster[3][LA];
-   double c3a = BBTFImpact.BB_midline_Cluster[3][LA_1];
-
-   double c4  = BBTFImpact.BB_midline_Cluster[4][LA];    // M15 + H4
-   double c4a = BBTFImpact.BB_midline_Cluster[4][LA_1];
-   double c5  = BBTFImpact.BB_midline_Cluster[5][LA];    // M30 + H4
-   double c5a = BBTFImpact.BB_midline_Cluster[5][LA_1];
-   double c6  = BBTFImpact.BB_midline_Cluster[6][LA];    // H1  + H4
-   double c6a = BBTFImpact.BB_midline_Cluster[6][LA_1];
-   double c3b = BBTFImpact.BB_midline_Cluster[3][LA_2];
-
-   double dm1  = MathAbs(BB_datas[1].BB_diffMid[LA]);
-   double dm1a = MathAbs(BB_datas[1].BB_diffMid[LA_1]);
-   double dm1b = MathAbs(BB_datas[1].BB_diffMid[LA_2]);
-   double dm2  = MathAbs(BB_datas[2].BB_diffMid[LA]);
-   double dm2a = MathAbs(BB_datas[2].BB_diffMid[LA_1]);
-   double dm2b = MathAbs(BB_datas[2].BB_diffMid[LA_2]);
-   double dm3  = MathAbs(BB_datas[3].BB_diffMid[LA]);
-   double dm3a = MathAbs(BB_datas[3].BB_diffMid[LA_1]);
-   double dm3b = MathAbs(BB_datas[3].BB_diffMid[LA_2]);
-   double dm4  = MathAbs(BB_datas[4].BB_diffMid[LA]);
-   double dm4a = MathAbs(BB_datas[4].BB_diffMid[LA_1]);
-   double dm4b = MathAbs(BB_datas[4].BB_diffMid[LA_2]);
+   for(int i=1; i < 7; i++)
+   {
+      if(i <= 4)
+      {
+         g_tradectx.dmt[i][0] = BB_datas[i].BB_diffMid_Trend[LA];
+         g_tradectx.dmt[i][1] = BB_datas[i].BB_diffMid_Trend[LA_1];
+         g_tradectx.dmt[i][2] = BB_datas[i].BB_diffMid_Trend[LA_2];
+         g_tradectx.dm[i][0]  = MathAbs(BB_datas[i].BB_diffMid[LA]);
+         g_tradectx.dm[i][1]  = MathAbs(BB_datas[i].BB_diffMid[LA_1]);
+         g_tradectx.dm[i][2]  = MathAbs(BB_datas[i].BB_diffMid[LA_2]);
+      }
+      g_tradectx.c[i][0] = BBTFImpact.BB_midline_Cluster[i][LA];
+      g_tradectx.c[i][1] = BBTFImpact.BB_midline_Cluster[i][LA_1];
+      g_tradectx.c[i][2] = BBTFImpact.BB_midline_Cluster[i][LA_2];
+   }
 
    //--- LEVEL-0 (M5) tags are built ABOVE the M15 gate now (M5 rate). l0tags is
    //--- already in scope here for the r0 rectangle below.
 
    //--- LEVEL 1 predicates, named individually (lift measured alone)
-   bool A15 = ((c0 < c0a && c0a < c0b) || (c0 < CL_NEAR_M5M15 && c0a < CL_NEAR_M5M15));  // +4.5
+   bool A15 = ((g_tradectx.c[0][0] < g_tradectx.c[0][1] && g_tradectx.c[0][1] < g_tradectx.c[0][2]) || (g_tradectx.c[0][0] < CL_NEAR_M5M15 && g_tradectx.c[0][1] < CL_NEAR_M5M15));  // +4.5
    bool S15 = SL_StageOK((int)BB_datas[1].BBW_stage[LA]);                    // +3.3
-   bool C15 = (dm1 < SL_diffmid_m15 && dm1a < SL_diffmid_m15);               // +5.3
-   bool D15 = (dm1 < dm1a && dm1a < dm1b);                                   // no use
+   bool C15 = (g_tradectx.dm[1][0] < SL_diffmid_m15 && g_tradectx.dm[1][1] < SL_diffmid_m15);               // +5.3
+   bool D15 = (g_tradectx.dm[1][0] < g_tradectx.dm[1][1] && g_tradectx.dm[1][1] < g_tradectx.dm[1][2]);                                   // no use
    bool W15 = (BB_datas[1].BB_diffBBW[LA]   < SL_diffbbw_m15
             && BB_datas[1].BB_diffBBW[LA_1] < SL_diffbbw_m15);  
 
    //--- LEVEL-1 DIAGNOSTIC TAGS - reporting only, no effect on any decision.
-   string l1tags = "";
+   g_tradectx.l1tags = "";
    if(SL_DrawL1Tags)
    {
-      if(c0 < CL_NEAR_M5M15  && c0a < CL_NEAR_M5M15)      l1tags += "A";
-      if(c1 < CL_NEAR_M15M30 && c1a < CL_NEAR_M15M30)     l1tags += "X";
-      if(c2 < CL_NEAR_M15H1  && c2a < CL_NEAR_M15H1)      l1tags += "Y";
-      if(c4 < CL_NEAR_M15H4  && c4a < CL_NEAR_M15H4)      l1tags += "Z";
-      if(S15)                                             l1tags += "S";
-      if(dm1 < dm1a && dm1a < dm1b)                       l1tags += "B";
-      if(dmt1 >= 3.0 &&
-         (dmt1 == 3.0 || dmt1a == 3.0 || dmt1b == 3.0))   l1tags += "C";
-      if(dmt1 >= 3.0 && dmt1a >= 3.0)                     l1tags += "H";   // 2-bar sideway persist
-      if(dmt1 == dmt2 && dmt1 < 3.0)                      l1tags += "J";   // fly12 (M15==M30 fly)
-      if(W15)                                             l1tags += "W";
-      if(dm1 < SL_diffmid_m15 && dm1a < SL_diffmid_m15)   l1tags += "M";
-      if(((dmt0 == 1.0 || dmt0 == 5.0) && (dmt1 == 2.0 || dmt1 == 4.0)) ||
-         ((dmt0 == 2.0 || dmt0 == 4.0) && (dmt1 == 1.0 || dmt1 == 5.0)))
-                                                         l1tags += "D";
-      if(((dmt1 == 1.0 || dmt1 == 5.0) && (dmt2 == 2.0 || dmt2 == 4.0)) ||
-         ((dmt1 == 2.0 || dmt1 == 4.0) && (dmt2 == 1.0 || dmt2 == 5.0)))
-                                                         l1tags += "E";
-      if(((dmt1 == 1.0 || dmt1 == 5.0) && (dmt3 == 2.0 || dmt3 == 4.0)) ||
-         ((dmt1 == 2.0 || dmt1 == 4.0) && (dmt3 == 1.0 || dmt3 == 5.0)))
-                                                         l1tags += "F";
+      if(g_tradectx.c[0][0] < CL_NEAR_M5M15  && g_tradectx.c[0][1] < CL_NEAR_M5M15)
+                                                          g_tradectx.l1tags += "A";
+      if(g_tradectx.c[1][0] < CL_NEAR_M15M30 && g_tradectx.c[1][1] < CL_NEAR_M15M30)
+                                                          g_tradectx.l1tags += "X";
+      if(g_tradectx.c[2][0] < CL_NEAR_M15H1  && g_tradectx.c[2][1] < CL_NEAR_M15H1)      
+                                                          g_tradectx.l1tags += "Y";
+      if(g_tradectx.c[4][0] < CL_NEAR_M15H4  && g_tradectx.c[4][1] < CL_NEAR_M15H4)      
+                                                          g_tradectx.l1tags += "Z";
+      if(S15)                                             g_tradectx.l1tags += "S";
+      if(g_tradectx.dm[1][0] < g_tradectx.dm[1][1] && g_tradectx.dm[1][1] < g_tradectx.dm[1][2])
+                                                          g_tradectx.l1tags += "B";
+      if(g_tradectx.dmt[1][0] >= 3.0 &&
+         (g_tradectx.dmt[1][0] == 3.0 || g_tradectx.dmt[1][1] == 3.0 || g_tradectx.dmt[1][2] == 3.0))
+                                                          g_tradectx.l1tags += "C";
+      if(g_tradectx.dmt[1][0] >= 3.0 && g_tradectx.dmt[1][1] >= 3.0)
+                                                          g_tradectx.l1tags += "H";   // 2-bar sideway persist
+      if(g_tradectx.dmt[1][0] == g_tradectx.dmt[2][0] && g_tradectx.dmt[1][0] < 3.0)
+                                                          g_tradectx.l1tags += "J";   // fly12 (M15==M30 fly)
+      if(W15)                                             g_tradectx.l1tags += "W";
+      if(g_tradectx.dmt[1][0] < SL_diffmid_m15 && g_tradectx.dmt[1][1] < SL_diffmid_m15)   
+                                                          g_tradectx.l1tags += "M";
+      if(((g_tradectx.dmt[0][0] == 1.0 || g_tradectx.dmt[0][0] == 5.0) && (g_tradectx.dmt[1][0] == 2.0 || g_tradectx.dmt[1][0] == 4.0)) ||
+         ((g_tradectx.dmt[0][0] == 2.0 || g_tradectx.dmt[0][0] == 4.0) && (g_tradectx.dmt[1][0] == 1.0 || g_tradectx.dmt[1][0] == 5.0)))
+                                                          g_tradectx.l1tags += "D";
+      if(((g_tradectx.dmt[1][0] == 1.0 || g_tradectx.dmt[1][0] == 5.0) && (g_tradectx.dmt[2][0] == 2.0 || g_tradectx.dmt[2][0] == 4.0)) ||
+         ((g_tradectx.dmt[1][0] == 2.0 || g_tradectx.dmt[1][0] == 4.0) && (g_tradectx.dmt[2][0] == 1.0 || g_tradectx.dmt[2][0] == 5.0)))
+                                                          g_tradectx.l1tags += "E";
+      if(((g_tradectx.dmt[1][0] == 1.0 || g_tradectx.dmt[1][0] == 5.0) && (g_tradectx.dmt[3][0] == 2.0 || g_tradectx.dmt[3][0] == 4.0)) ||
+         ((g_tradectx.dmt[1][0] == 2.0 || g_tradectx.dmt[1][0] == 4.0) && (g_tradectx.dmt[3][0] == 1.0 || g_tradectx.dmt[3][0] == 5.0)))
+                                                          g_tradectx.l1tags += "F";
    }
 
    bool lvl1 = false;
@@ -1859,67 +1844,81 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    if(lvl1) SL_state[LA] = 1;
 
    //--- LEVEL 2 predicates, named individually
-   bool A30 = ((c1 < c1a && c1a < c1b) || (c1 < CL_NEAR_M5M15 && c1a < CL_NEAR_M5M15));  // +5.4
+   bool A30 = ((g_tradectx.c[1][0] < g_tradectx.c[1][1] && g_tradectx.c[1][1] < g_tradectx.c[1][2]) || (g_tradectx.c[1][0] < CL_NEAR_M5M15 && g_tradectx.c[1][1] < CL_NEAR_M5M15));  // +5.4
    bool S30 = SL_StageOK((int)BB_datas[2].BBW_stage[LA]);                    // +4.1
-   bool C30 = (dm2 < SL_diffmid_m30 && dm2a < SL_diffmid_m30);               // +10.9
-   bool D30 = (dm2 < dm2a && dm2a < dm2b);                                   // no use
+   bool C30 = (g_tradectx.dm[2][0] < SL_diffmid_m30 && g_tradectx.dm[2][1] < SL_diffmid_m30);               // +10.9
+   bool D30 = (g_tradectx.dm[2][0] < g_tradectx.dm[2][1] && g_tradectx.dm[2][1] < g_tradectx.dm[2][2]);                                   // no use
    bool W30 = (BB_datas[2].BB_diffBBW[LA]   < SL_diffbbw_m30
             && BB_datas[2].BB_diffBBW[LA_1] < SL_diffbbw_m30);               // +4.4
 
    //--- LEVEL-2 (M30) DIAGNOSTIC TAGS - reporting only, no effect on any decision.
-   string l2tags = "";
+   g_tradectx.l2tags = "";
    if(SL_DrawL2Tags)
    {
-      if(c3 < CL_NEAR_M30H1 && c3a < CL_NEAR_M30H1)       l2tags += "Y";
-      if(c5 < CL_NEAR_M30H4 && c5a < CL_NEAR_M30H4)       l2tags += "Z";
-      if(S30)                                             l2tags += "S";
-      if(dm2 < dm2a && dm2a < dm2b)                       l2tags += "B";
-      if(dmt2 >= 3.0 &&
-         (dmt2 == 3.0 || dmt2a == 3.0 || dmt2b == 3.0))   l2tags += "C";
-      if(dmt2 >= 3.0 && dmt2a >= 3.0)                     l2tags += "H";   // 2-bar sideway persist
-      if(dmt2 == dmt3 && dmt2 < 3.0)                      l2tags += "K";   // fly23 (M30==H1 fly)
-      if(W30)                                             l2tags += "W";
-      if(dm2 < SL_diffmid_m30 && dm2a < SL_diffmid_m30)   l2tags += "M";
-      if(((dmt2 == 1.0 || dmt2 == 5.0) && (dmt3 == 2.0 || dmt3 == 4.0)) ||
-         ((dmt2 == 2.0 || dmt2 == 4.0) && (dmt3 == 1.0 || dmt3 == 5.0)))
-                                                         l2tags += "F";
+      if(g_tradectx.c[3][0] < CL_NEAR_M30H1 && g_tradectx.c[3][1] < CL_NEAR_M30H1)       
+                                                          g_tradectx.l2tags += "Y";
+      if(g_tradectx.c[5][0] < CL_NEAR_M30H4 && g_tradectx.c[5][1] < CL_NEAR_M30H4)       
+                                                          g_tradectx.l2tags += "Z";
+      if(S30)                                             g_tradectx.l2tags += "S";
+      if(g_tradectx.dm[2][0] < g_tradectx.dm[2][1] && g_tradectx.dm[2][1] < g_tradectx.dm[2][2])                       
+                                                          g_tradectx.l2tags += "B";
+      if(g_tradectx.dmt[2][0] >= 3.0 &&
+         (g_tradectx.dmt[2][0] == 3.0 || g_tradectx.dmt[2][1] == 3.0 || g_tradectx.dmt[2][2] == 3.0))   
+                                                          g_tradectx.l2tags += "C";
+      if(g_tradectx.dmt[2][0] >= 3.0 && g_tradectx.dmt[2][1] >= 3.0)                     
+                                                          g_tradectx.l2tags += "H";   // 2-bar sideway persist
+      if(g_tradectx.dmt[2][0] == g_tradectx.dmt[3][0] && g_tradectx.dmt[2][0] < 3.0)                      
+      g_tradectx.l2tags += "K";   // fly23 (M30==H1 fly)
+      if(W30)                                             g_tradectx.l2tags += "W";
+      if(g_tradectx.dm[2][0] < SL_diffmid_m30 && g_tradectx.dm[2][1] < SL_diffmid_m30)   
+                                                          g_tradectx.l2tags += "M";
+      if(((g_tradectx.dmt[2][0] == 1.0 || g_tradectx.dmt[2][0] == 5.0) && (g_tradectx.dmt[3][0] == 2.0 || g_tradectx.dmt[3][0] == 4.0)) ||
+         ((g_tradectx.dmt[2][0] == 2.0 || g_tradectx.dmt[2][0] == 4.0) && (g_tradectx.dmt[3][0] == 1.0 || g_tradectx.dmt[3][0] == 5.0)))
+                                                          g_tradectx.l2tags += "F";
    }
 
    //--- LEVEL-3 (H1) and LEVEL-4 (H4) tags. No B/D contraction tag on these two -
    //--- only stage, the threshold shape, and band-width contraction.
    bool SH1 = SL_StageOK((int)BB_datas[3].BBW_stage[LA]);
    bool WH1 = (BB_datas[3].BB_diffBBW[LA]   < SL_diffbbw_H1);
-   string l3tags = "";
+   g_tradectx.l3tags = "";
    if(SL_DrawL3Tags)
    {
-      if(c6 < CL_NEAR_H1H4 && c6a < CL_NEAR_H1H4)         l3tags += "Z";
-      if(SH1)                                             l3tags += "S";
-      if(dm3 < dm3a && dm3a < dm3b)                       l3tags += "B";
-      if(dmt3 >= 3.0 &&
-         (dmt3 == 3.0 || dmt3a == 3.0 || dmt3b == 3.0))   l3tags += "C";
-      if(dmt3 >= 3.0 && dmt3a >= 3.0)                     l3tags += "H";   // 2-bar sideway persist
-      if(dmt3 == dmt4 && dmt3 < 3.0)                      l3tags += "L";   // fly34 (H1==H4 fly)
-      if(dm3 < SL_diffmid_H1 && dm3a < SL_diffmid_H1)     l3tags += "M";
-      if(WH1)                                             l3tags += "W";
-      //--- spec compared dmt3 with itself; read as M30 vs H1, matching L1D / L2D
-      if(((dmt3 == 1.0 || dmt3 == 5.0) && (dmt4 == 2.0 || dmt4 == 4.0)) ||
-         ((dmt3 == 2.0 || dmt3 == 4.0) && (dmt4 == 1.0 || dmt4 == 5.0)))
-                                                         l3tags += "G";
+      if(g_tradectx.c[6][0] < CL_NEAR_H1H4 && g_tradectx.c[6][1] < CL_NEAR_H1H4)         
+                                                          g_tradectx.l3tags += "Z";
+      if(SH1)                                             g_tradectx.l3tags += "S";
+      if(g_tradectx.dm[3][0] < g_tradectx.dm[3][1] && g_tradectx.dm[3][1] < g_tradectx.dm[3][2])                       
+                                                          g_tradectx.l3tags += "B";
+      if(g_tradectx.dmt[3][0] >= 3.0 &&
+         (g_tradectx.dmt[3][0] == 3.0 || g_tradectx.dmt[3][1] == 3.0 || g_tradectx.dmt[3][2] == 3.0))   
+                                                          g_tradectx.l3tags += "C";
+      if(g_tradectx.dmt[3][0] >= 3.0 && g_tradectx.dmt[3][1] >= 3.0)                     
+                                                          g_tradectx.l3tags += "H";   // 2-bar sideway persist
+      if(g_tradectx.dmt[3][0] == g_tradectx.dmt[4][0] && g_tradectx.dmt[3][0] < 3.0)                      
+                                                          g_tradectx.l3tags += "L";   // fly34 (H1==H4 fly)
+      if(g_tradectx.dm[3][0] < SL_diffmid_H1 && g_tradectx.dm[3][1] < SL_diffmid_H1)     
+                                                          g_tradectx.l3tags += "M";
+      if(WH1)                                             g_tradectx.l3tags += "W";
+      //--- spec compared g_tradectx.dmt[3][0] with itself; read as M30 vs H1, matching L1D / L2D
+      if(((g_tradectx.dmt[3][0] == 1.0 || g_tradectx.dmt[3][0] == 5.0) && (g_tradectx.dmt[4][0] == 2.0 || g_tradectx.dmt[4][0] == 4.0)) ||
+         ((g_tradectx.dmt[3][0] == 2.0 || g_tradectx.dmt[3][0] == 4.0) && (g_tradectx.dmt[4][0] == 1.0 || g_tradectx.dmt[4][0] == 5.0)))
+                                                          g_tradectx.l3tags += "G";
    }
 
    bool SH4 = SL_StageOK((int)BB_datas[4].BBW_stage[LA]);
    bool WH4 = (BB_datas[4].BB_diffBBW[LA]   < SL_diffbbw_H4);
-   string l4tags = "";
+   g_tradectx.l4tags = "";
    if(SL_DrawL4Tags)
    {
       //--- no A tag: c3 is used by L2A, and no wider pair is available
-      if(SH4)                                             l4tags += "S";
-      if(dm4 < dm4a )                                     l4tags += "B";
-      if(dmt4 >= 3.0 &&
-         (dmt4 == 3.0 || dmt4a == 3.0 || dmt4b == 3.0))   l4tags += "C";
-      if(dmt4 >= 3.0)                                     l4tags += "H";   // 2-bar sideway persist
-      if(dm4 < SL_diffmid_H4)                             l4tags += "M";
-      if(WH4)                                             l4tags += "W";
+      if(SH4)                                             g_tradectx.l4tags += "S";
+      if(g_tradectx.dm[1][0] < g_tradectx.dm[1][1] )      g_tradectx.l4tags += "B";
+      if(g_tradectx.dmt[4][0] >= 3.0 &&
+         (g_tradectx.dmt[4][0] == 3.0 || g_tradectx.dmt[4][1] == 3.0 || g_tradectx.dmt[4][2] == 3.0))   
+                                                          g_tradectx.l4tags += "C";
+      if(g_tradectx.dmt[4][0] >= 3.0)                     g_tradectx.l4tags += "H";   // 2-bar sideway persist
+      if(g_tradectx.dm[1][0] < SL_diffmid_H4)             g_tradectx.l4tags += "M";
+      if(WH4)                                             g_tradectx.l4tags += "W";
    }
 
    bool ev30 = false;
@@ -1995,16 +1994,16 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
          bool fly15 = SL_StageFly((int)BB_datas[1].BBW_stage[LA]);
          bool fly30 = SL_StageFly((int)BB_datas[2].BBW_stage[LA]);
          sl_brk = (raw && fly15 && fly30
-                    && dm1 < SL_brk_dm15 && dm2 < SL_brk_dm30);
+                    && g_tradectx.dm[1][0] < SL_brk_dm15 && g_tradectx.dm[2][0] < SL_brk_dm30);
       }
       //--- Mode 11: Ladder branch - M30 breakout requiring M5/M15 trend alignment.
-      //--- Conditions: raw30 AND (dmt0 == dmt1 AND dmt0 < 3) AND (M5 stage is flying).
+      //--- Conditions: raw30 AND (dmt0 == g_tradectx.dmt[1][0] AND dmt0 < 3) AND (M5 stage is flying).
       //--- Intent: eliminate false exits when timeframes disagree on trend direction.
       //--- Tested on Feb 2026: improves P&L from -110.61 to -49.14 vs raw30 alone.
       else if(SL_BreakoutMode == 11)
       {
          bool fly_m5 = SL_StageFly((int)BB_datas[0].BBW_stage[LA]);
-         bool dmt_aligned = (dmt0 == dmt1 && dmt0 < 3);
+         bool dmt_aligned = (g_tradectx.dmt[0][0] == g_tradectx.dmt[1][0] && g_tradectx.dmt[0][0] < 3);
          sl_brk = (raw30 && dmt_aligned && fly_m5);
       }
       else if(SL_BreakoutMode == 8) sl_brk = (raw30 && raw30p);               // M30 confirmed
@@ -2049,9 +2048,9 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       A1H = ( SL_StageOK((int)BB_datas[3].BBW_stage[LA])
            || (BB_datas[3].BB_diffBBW[LA] < BB_datas[3].BB_diffBBW[LA_1]
             && BB_datas[3].BB_diffBBW[LA_1] < BB_datas[3].BB_diffBBW[LA_2]) );
-      B1H = (c2 < c2a && c2a < c2b) || (c3 < c3a && c3a < c3b);
+      B1H = (g_tradectx.c[2][0] < g_tradectx.c[2][1] && g_tradectx.c[2][1] < g_tradectx.c[2][2]) || (g_tradectx.c[3][0] < g_tradectx.c[3][1] && g_tradectx.c[3][1] < g_tradectx.c[3][2]);
       // C1H = (c1 < CL_NEAR && c1a < CL_NEAR);
-      bool C1H = (c2 < CL_NEAR_M15H1 && c2a < CL_NEAR_M15H1);   // CL_NEAR_M15H1 ~= 30
+      bool C1H = (g_tradectx.c[2][0] < CL_NEAR_M15H1 && g_tradectx.c[2][1] < CL_NEAR_M15H1);   // CL_NEAR_M15H1 ~= 30
       // if(prev == 2 && A1H && B1H && C1H) SL_state[LA] = 3;
       if(prev >= 1 && A1H && B1H && C1H) SL_state[LA] = 3;
    }
@@ -2115,32 +2114,32 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    //--- changes when a new M30 bar forms, so both calls compute the same tags.
    //--- Independent of SL_Draw - the M30 side can be shown with the M15 side off.
    //--- One tag label per level, each on its OWN midline at its OWN bar time.
-   if(SL_DrawL2Tags && l2tags != "") SL_DrawTagLabel("SLL2_", l2tags, BB_datas[2].BBMidLV[LA],
+   if(SL_DrawL2Tags && g_tradectx.l2tags != "") SL_DrawTagLabel("SLL2_", g_tradectx.l2tags, BB_datas[2].BBMidLV[LA],
                                      PERIOD_M30, SL_TagOffsetPts, SL_FontSize, SL_L2TagColor);
-   if(SL_DrawL3Tags && l3tags != "") SL_DrawTagLabel("SLL3_", l3tags, BB_datas[3].BBMidLV[LA],
+   if(SL_DrawL3Tags && g_tradectx.l3tags != "") SL_DrawTagLabel("SLL3_", g_tradectx.l3tags, BB_datas[3].BBMidLV[LA],
                                      PERIOD_H1,  SL_TagOffsetPts, SL_FontSize, SL_L3TagColor);
-   if(SL_DrawL4Tags && l4tags != "") SL_DrawTagLabel("SLL4_", l4tags, BB_datas[4].BBMidLV[LA],
+   if(SL_DrawL4Tags && g_tradectx.l4tags != "") SL_DrawTagLabel("SLL4_", g_tradectx.l4tags, BB_datas[4].BBMidLV[LA],
                                      PERIOD_H4,  SL_TagOffsetPts, SL_FontSize, SL_L4TagColor);
    //--- SL_Draw off: still show the L1 tags on the M15 midline. L2 is NOT drawn
    //--- here - it has its own block below, on the M30 midline at the M30 bar time.
-   if(SL_DrawL1Tags && l1tags != "") SL_DrawTagLabel("SLL1_", l1tags, BB_datas[1].BBMidLV[LA],
+   if(SL_DrawL1Tags && g_tradectx.l1tags != "") SL_DrawTagLabel("SLL1_", g_tradectx.l1tags, BB_datas[1].BBMidLV[LA],
                                      PERIOD_M15, SL_TagOffsetPts, SL_FontSize, SL_L1TagColor);
 
    //--- TAG RECTANGLES. After the label draws, so the tag strings are final.
    //--- r1..r4 are this bar's verdict per level: the ENTRY rule while no run is
    //--- open, the CONTINUATION rule once one is.
    //--- r0 (L0) is computed at M5 rate above the M15 gate - not rebuilt here.
-   bool r1 = SL_RectRule3(1, l1tags, SL_RectL1All_A, SL_RectL1Any_A, SL_RectL1Any2_A, SL_RectL1None_A,
+   g_tradectx.r1 = SL_RectRule3(1, g_tradectx.l1tags, SL_RectL1All_A, SL_RectL1Any_A, SL_RectL1Any2_A, SL_RectL1None_A,
                                     SL_RectL1All_B, SL_RectL1Any_B, SL_RectL1Any2_B, SL_RectL1None_B,
                                     SL_RectL1All_C, SL_RectL1Any_C, SL_RectL1Any2_C, SL_RectL1None_C,
                             SL_RectL1ContAll, SL_RectL1ContAny, SL_RectL1ContAny2, SL_RectL1ContNone);
-   bool r2 = SL_RectRule(2, l2tags, SL_RectL2All_A, SL_RectL2Any_A, SL_RectL2Any2_A, SL_RectL2None_A,
+   g_tradectx.r2 = SL_RectRule(2, g_tradectx.l2tags, SL_RectL2All_A, SL_RectL2Any_A, SL_RectL2Any2_A, SL_RectL2None_A,
                                     SL_RectL2All_B, SL_RectL2Any_B, SL_RectL2Any2_B, SL_RectL2None_B,
                             SL_RectL2ContAll, SL_RectL2ContAny, SL_RectL2ContAny2, SL_RectL2ContNone);
-   bool r3 = SL_RectRule(3, l3tags, SL_RectL3All_A, SL_RectL3Any_A, SL_RectL3Any2_A, SL_RectL3None_A,
+   g_tradectx.r3 = SL_RectRule(3, g_tradectx.l3tags, SL_RectL3All_A, SL_RectL3Any_A, SL_RectL3Any2_A, SL_RectL3None_A,
                                     SL_RectL3All_B, SL_RectL3Any_B, SL_RectL3Any2_B, SL_RectL3None_B,
                             SL_RectL3ContAll, SL_RectL3ContAny, SL_RectL3ContAny2, SL_RectL3ContNone);
-   bool r4 = SL_RectRule(4, l4tags, SL_RectL4All_A, SL_RectL4Any_A, SL_RectL4Any2_A, SL_RectL4None_A,
+   g_tradectx.r4 = SL_RectRule(4, g_tradectx.l4tags, SL_RectL4All_A, SL_RectL4Any_A, SL_RectL4Any2_A, SL_RectL4None_A,
                                     SL_RectL4All_B, SL_RectL4Any_B, SL_RectL4Any2_B, SL_RectL4None_B,
                             SL_RectL4ContAll, SL_RectL4ContAny, SL_RectL4ContAny2, SL_RectL4ContNone);
 
@@ -2163,8 +2162,8 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    //    //--- L2 confirmation must follow an already-active L1 run. Preserve the
    //    //--- incoming state because this bar may start L1 below.
    //    int sw_state_before = sl_sw_state;
-   //    double pLo = (SL_SwPairLo == 1) ? dmt1 : ((SL_SwPairLo == 2) ? dmt2 : dmt3);
-   //    double pHi = (SL_SwPairHi == 2) ? dmt2 : dmt3;
+   //    double pLo = (SL_SwPairLo == 1) ? g_tradectx.dmt[1][0] : ((SL_SwPairLo == 2) ? g_tradectx.dmt[2][0] : g_tradectx.dmt[3][0]);
+   //    double pHi = (SL_SwPairHi == 2) ? g_tradectx.dmt[2][0] : g_tradectx.dmt[3][0];
    //    ladder_branch = (pLo == pHi && pLo < SL_SwPairMax);
 
    //    bool l1_entry = SL_TagSlot(l1tags, SL_SwL1EntryA, "", "", "")
@@ -2265,10 +2264,10 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    // }
 
    //--- L0 rectangle is drawn at M5 rate above the M15 gate (SL_RectStepM5).
-   if(SL_DrawRectL1) SL_RectStep(1, r1, PERIOD_M15, SL_RectL1Color, "SLRC1_");
-   if(SL_DrawRectL2) SL_RectStep(2, r2, PERIOD_M30, SL_RectL2Color, "SLRC2_");
-   if(SL_DrawRectL3) SL_RectStep(3, r3, PERIOD_H1,  SL_RectL3Color, "SLRC3_");
-   if(SL_DrawRectL4) SL_RectStep(4, r4, PERIOD_H4,  SL_RectL4Color, "SLRC4_");
+   if(SL_DrawRectL1) SL_RectStep(1, g_tradectx.r1, PERIOD_M15, SL_RectL1Color, "SLRC1_");
+   if(SL_DrawRectL2) SL_RectStep(2, g_tradectx.r2, PERIOD_M30, SL_RectL2Color, "SLRC2_");
+   if(SL_DrawRectL3) SL_RectStep(3, g_tradectx.r3, PERIOD_H1,  SL_RectL3Color, "SLRC3_");
+   if(SL_DrawRectL4) SL_RectStep(4, g_tradectx.r4, PERIOD_H4,  SL_RectL4Color, "SLRC4_");
 
    // if(SL_DrawRectJoin)
    // {
@@ -2276,18 +2275,18 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    //    if(SL_RectJoinOp == 0)
    //    {
    //       joined = true;
-   //       if(SL_RectJoinL1) { joined = joined && r1; used++; }
-   //       if(SL_RectJoinL2) { joined = joined && r2; used++; }
-   //       if(SL_RectJoinL3) { joined = joined && r3; used++; }
-   //       if(SL_RectJoinL4) { joined = joined && r4; used++; }
+   //       if(SL_RectJoinL1) { joined = joined && g_tradectx.r1; used++; }
+   //       if(SL_RectJoinL2) { joined = joined && g_tradectx.r2; used++; }
+   //       if(SL_RectJoinL3) { joined = joined && g_tradectx.r3; used++; }
+   //       if(SL_RectJoinL4) { joined = joined && g_tradectxr4; used++; }
    //    }
    //    else
    //    {
    //       joined = false;
-   //       if(SL_RectJoinL1) { joined = joined || r1; used++; }
-   //       if(SL_RectJoinL2) { joined = joined || r2; used++; }
-   //       if(SL_RectJoinL3) { joined = joined || r3; used++; }
-   //       if(SL_RectJoinL4) { joined = joined || r4; used++; }
+   //       if(SL_RectJoinL1) { joined = joined || g_tradectx.r1; used++; }
+   //       if(SL_RectJoinL2) { joined = joined || g_tradectx.r2; used++; }
+   //       if(SL_RectJoinL3) { joined = joined || g_tradectx.r3; used++; }
+   //       if(SL_RectJoinL4) { joined = joined || g_tradectx.r4; used++; }
    //    }
    //    if(used == 0) joined = false;
    //    SL_RectStep(5, joined, SL_RectJoinTF, SL_RectJoinColor, "SLRCJ_");
@@ -2295,39 +2294,39 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
 
    //--- Fill the trade context for SL_ExitMode 6 (unconditional - trading must
    //--- not depend on SL_WriteLog). All fields are live here.
-   g_tradectx.r0 = r0; g_tradectx.r1 = r1; g_tradectx.r2 = r2;
-   g_tradectx.r3 = r3; g_tradectx.r4 = r4;
-   g_tradectx.l1tags = l1tags; g_tradectx.l0tags = l0tags; g_tradectx.l2tags = l2tags; g_tradectx.l3tags = l3tags; g_tradectx.l4tags = l4tags;
-   g_tradectx.dmt0 = dmt0; g_tradectx.dmt1 = dmt1; g_tradectx.dmt2 = dmt2;
-   g_tradectx.dmt3 = dmt3; g_tradectx.dmt4 = dmt4;
+   // g_tradectx.r0 = r0; g_tradectx.r1 = r1; g_tradectx.r2 = r2;
+   // g_tradectx.r3 = r3; g_tradectx.r4 = r4;
+   // g_tradectx.l1tags = l1tags; g_tradectx.l0tags = l0tags; g_tradectx.l2tags = l2tags; g_tradectx.l3tags = l3tags; g_tradectx.l4tags = l4tags;
+   // g_tradectx.dmt0 = dmt0; g_tradectx.dmt[1][0] = g_tradectx.dmt[1][0]; g_tradectx.dmt[2][0] = g_tradectx.dmt[2][0];
+   // ectx.g_tradectx.dmt[3][0] = g_tradectx.dmt[3][0]; g_tradectx.dmt[4][0] = g_tradectx.dmt[4][0];
 
    //--- log, so the chart can be cross-checked against the numbers
-   // if(SL_WriteLog)
-   // {
-   //    Print("[LADDER",
-   //          "] L0tags:[", (l0tags == "" ? "-" : l0tags),
-   //          "] L1tags:[", (l1tags == "" ? "-" : l1tags),
-   //          "] L2tags:[", (l2tags == "" ? "-" : l2tags),
-   //          "] L3tags:[", (l3tags == "" ? "-" : l3tags),
-   //          "] L4tags:[", (l4tags == "" ? "-" : l4tags),
-   //          "] state:[", SL_state[LA],
-   //          "] prev:[", prev,
-   //          "] r0:[", r0,
-   //          "] r1:[", r1,
-   //          "] r2:[", r2,
-   //          "] r3:[", r3,
-   //          "] r4:[", r4,
-   //          "] brk:[", sl_brk,
-   //          "] sw:[", sl_sw_state,
-   //          "] gate:[", (gate ? "1" : "0"),
-   //          "] l2ok:[", (l2_ok ? "1" : "-"),
-   //          "] l3ok:[", (l3_ok ? "1" : "-"),
-   //          "] lbr:[", (ladder_branch ? "1" : "-"),
-   //          "] L1sw:[", (sl_sw_l1 ? "1" : "-"),
-   //          "] L2sw:[", (sl_sw_l2 ? "1" : "-"),
-   //          "] L2latch:[", (sl_sw_latch ? "1" : "-"),
-   //          "] why:[", why, "]");
-   // }
+   if(SL_WriteLog)
+   {
+      Print("[LADDER",
+            "] L0tags:[", (g_tradectx.l0tags == "" ? "-" : g_tradectx.l0tags),
+            "] L1tags:[", (g_tradectx.l1tags == "" ? "-" : g_tradectx.l1tags),
+            "] L2tags:[", (g_tradectx.l2tags == "" ? "-" : g_tradectx.l2tags),
+            "] L3tags:[", (g_tradectx.l3tags == "" ? "-" : g_tradectx.l3tags),
+            "] L4tags:[", (g_tradectx.l4tags == "" ? "-" : g_tradectx.l4tags),
+            "] state:[", SL_state[LA],
+            "] prev:[", prev,
+            "] r0:[", g_tradectx.r0,
+            "] r1:[", g_tradectx.r1,
+            "] r2:[", g_tradectx.r2,
+            "] r3:[", g_tradectx.r3,
+            "] r4:[", g_tradectx.r4,
+            "] brk:[", sl_brk,
+            "] sw:[", sl_sw_state,
+            "] gate:[", (gate ? "1" : "0"),
+            "] l2ok:[", (l2_ok ? "1" : "-"),
+            "] l3ok:[", (l3_ok ? "1" : "-"),
+            "] lbr:[", (ladder_branch ? "1" : "-"),
+            "] L1sw:[", (sl_sw_l1 ? "1" : "-"),
+            "] L2sw:[", (sl_sw_l2 ? "1" : "-"),
+            "] L2latch:[", (sl_sw_latch ? "1" : "-"),
+            "] why:[", why, "]");
+   }
    //--- Draw the label rectangles lazily. iBarShift returns -1 in OnInit during a
    //--- backtest because no history is loaded yet, so all 27 ranges were skipped.
    //--- Called here, each range appears as soon as its bars exist. The ObjectFind
@@ -2428,10 +2427,10 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
                     + "] dmt_cur:[" + IntegerToString(g_tradectx.dmt_cur)
                     + "] swconfirm:[" + (g_tradectx.swconfirm ? "1" : "0")
                     + "] sw_sl_state:[" + IntegerToString(g_tradectx.sw_sl_state) + "]"
-                    + "] dmt0:[" + DoubleToString(g_tradectx.dmt0,1)
-                    + "] dmt1:[" + DoubleToString(g_tradectx.dmt1,1)
-                    + "] dmt2:[" + DoubleToString(g_tradectx.dmt2,1)
-                    + "] dmt3:[" + DoubleToString(g_tradectx.dmt3,1)
+                    + "] dmt0:[" + DoubleToString(g_tradectx.dmt[0][0],1)
+                    + "] dmt[1][0]:[" + DoubleToString(g_tradectx.dmt[1][0],1)
+                    + "] dmt[2][0]:[" + DoubleToString(g_tradectx.dmt[2][0],1)
+                    + "] dmt[3][0]:[" + DoubleToString(g_tradectx.dmt[3][0],1)
                     + "] r0:[" + (g_tradectx.r0 ? "1" : "0")
                     + "] r1:[" + (g_tradectx.r1 ? "1" : "0")
                     + "] user:[" + (sw_user ? "SW" : "--")
@@ -2550,12 +2549,12 @@ void Trade_Strategy(
    bool inShort = (SELLS > 0);
    bool flat    = (!inLong && !inShort);
 
-   // Trade_info = "[LADTRADE] dm1:" + DoubleToString(dm1,1)
-   //            + " LAD:"   + IntegerToString(ladder)
-   //            + " S_:"    + IntegerToString(sflag)
-   //            + " XM:"    + IntegerToString(SL_ExitMode)
-   //            + " BUYS:"  + IntegerToString(BUYS)
-   //            + " SELLS:" + IntegerToString(SELLS);
+   Trade_info = "[LADTRADE] dm1:" + DoubleToString(dm1,1)
+              + " LAD:"   + IntegerToString(ladder)
+              + " S_:"    + IntegerToString(sflag)
+              + " XM:"    + IntegerToString(SL_ExitMode)
+              + " BUYS:"  + IntegerToString(BUYS)
+              + " SELLS:" + IntegerToString(SELLS);
 
    //================================================================
    // SL_ExitMode 6 - TEST CASE: H1 & M30 fly, dmt_cur timeframe switch
@@ -2564,8 +2563,8 @@ void Trade_Strategy(
    //================================================================
    if(SL_ExitMode == 6)
    {
-      double dmt0c = g_tradectx.dmt0, dmt1c = g_tradectx.dmt1;
-      double dmt2c = g_tradectx.dmt2, dmt3c = g_tradectx.dmt3;
+      double dmt0c = g_tradectx.dmt[0][0], dmt1c = g_tradectx.dmt[1][0];
+      double dmt2c = g_tradectx.dmt[2][0], dmt3c = g_tradectx.dmt[3][0];
       bool   r0c = g_tradectx.r0, r1c = g_tradectx.r1;
       bool   r2c = g_tradectx.r2, r3c = g_tradectx.r3, r4c = g_tradectx.r4;
       string l0t = g_tradectx.l0tags;
@@ -2608,7 +2607,7 @@ void Trade_Strategy(
                }
                else if(dmt_cur == 0){
                                                    debug_dmt_cur += "->1";
-                                                   dmt_cur = 1;         // all fly -> M15 dmt1
+                                                   dmt_cur = 1;         // all fly -> M15 g_tradectx.dmt[1][0]
                }
 
                if(r0c && r1c && r2c && r3c) {
@@ -2643,7 +2642,7 @@ void Trade_Strategy(
                else if(bw_rev2) {
                   if(dmt_cur == 0) {
                                                    debug_dmt_cur += "->1";
-                                                   dmt_cur = 1;         // M15 shrink->fly -> M15 dmt1
+                                                   dmt_cur = 1;         // M15 shrink->fly -> M15 g_tradectx.dmt[1][0]
                   }
                }
                if(r0c && bw_rev1) {
