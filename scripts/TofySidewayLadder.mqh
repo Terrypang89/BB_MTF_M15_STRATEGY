@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "38.30"
+#property version   "38.301"
 
 #define HAS_TOFYSIDEWAY_LADDER
 //+------------------------------------------------------------------+
@@ -910,10 +910,10 @@ color    SL_TC1Color = C'80,60,20';
 color    SL_TC2Color = C'40,80,40';    // cond1: 0A+(0M||1M)  dark green (behind bars)
 color    SL_TC3Color = C'80,30,30';    // cond3: 2Y+(2M||3M)  dark red
 color    SL_TC4Color = C'80,0,80';
-datetime g_tc_from[3] = {0,0,0};
-datetime g_tc_last[3] = {0,0,0};
-int      g_tc_seq[3]  = {0,0,0};
-int      g_tc_gap[3]  = {0,0,0};   // consecutive false-bar count per condition (for gap-bridging)
+datetime g_tc_from[4] = {0,0,0,0};
+datetime g_tc_last[4] = {0,0,0,0};
+int      g_tc_seq[4]  = {0,0,0,0};
+int      g_tc_gap[4]  = {0,0,0,0};   // consecutive false-bar count per condition (for gap-bridging)
 // bool     SL_DrawSwRects  = false;
 
 //+------------------------------------------------------------------+
@@ -2645,9 +2645,9 @@ void Trade_Strategy(
       string l2t = g_tradectx.l2tags;
       string l3t = g_tradectx.l3tags;
       string l4t = g_tradectx.l4tags;
-      bool   tc[3] = {0,0,0};
-      color  tcc[3] = {SL_TC1Color, SL_TC2Color, SL_TC3Color}; 
-      string tcp[3] = {"SLTC1_", "SLTC2_", "SLTC3_"};
+      bool   tc[4] = {0,0,0,0};
+      color  tcc[4] = {SL_TC1Color, SL_TC2Color, SL_TC3Color, SL_TC4Color}; 
+      string tcp[4] = {"SLTC1_", "SLTC2_", "SLTC3_", "SLTC4_"};
 
       bool fly23 = (StringFind(l2t,"K") >= 0);  // M30 & H1 fly  (tag K in l2t)
       bool fly12 = (StringFind(l1t,"J") >= 0);  // M15 & M30 fly (tag J in l1t)
@@ -2673,6 +2673,9 @@ void Trade_Strategy(
                     && (StringFind(l2t,"Y")>=0)
                     && (StringFind(l2t,"M")>=0 && StringFind(l3t,"M")>=0);   // 2Y+(2M||3M)
          
+         tc[3] = SL_UseTC4 && g_tradectx.c[0][0] <= 25 && g_tradectx.c[1][0] <= 35 
+                    && g_tradectx.c[2][0] <= 6 && g_tradectx.c[3][0] <= 32 && (StringFind(l2t,"Y")>=0)
+                    && (StringFind(l2t,"S")>=0);
          // tc[3] = SL_UseTC4 && (!fly23)
          //            && (StringFind(l2t,"Y")>=0)
          //            && (StringFind(l2t,"M")>=0 && StringFind(l3t,"M")>=0);   // 2Y+(2M||3M)
@@ -2683,7 +2686,7 @@ void Trade_Strategy(
          // tc[0]=tc1; tc[1]=tc2; tc[2]=tc3;
          // tcc[0]=SL_TC1Color; tcc[1]=SL_TC2Color; tcc[2]=SL_TC3Color; tcc[3]=SL_TC4Color;
          // tcp[0]="SLTC1_"; tcp[1]="SLTC2_"; tcp[2]="SLTC3_"; tcp[3]="SLTC3_";
-         for(int ti=0; ti<3; ti++)
+         for(int ti=0; ti<4; ti++)
          {
             if(tc[ti])
             {
@@ -2967,8 +2970,17 @@ void Trade_Strategy(
                  + " r2:" + (r2c ? (sl_rect_phase[2]==1?"1C":"1E") : "0")
                  + " r3:" + (r3c ? (sl_rect_phase[3]==1?"1C":"1E") : "0")
                  + " dbg:[" + debug_dmt_cur + debug_sw_sl_state + "]"
+                 + " cur:" + IntegerToString(dmt_cur)
+                 + " sw_sl:" + IntegerToString(sw_sl_state)
+                 + " tc1:" + (tc[0]?"1":"0") 
+                 + " tc2:" + (tc[1]?"1":"0") 
+                 + " tc3:" + (tc[2]?"1":"0")
+                 + " tc4:" + (tc[3]?"1":"0")
+                 + " c:[" + DoubleToString(g_tradectx.c[0][0], 1) 
+                 + ", " + DoubleToString(g_tradectx.c[1][0], 1) 
+                 + ", " + DoubleToString(g_tradectx.c[2][0], 1) 
+                 + ", " + DoubleToString(g_tradectx.c[3][0], 1) + "]"
                  + " BUYS:" + IntegerToString(BUYS) + " SELLS:" + IntegerToString(SELLS);
-
       if(sw_sl_state >= 0)
       {
          if(!flat) { Trade_act = 7; Trade_info += " [LAD6]SW_EXIT(state" + IntegerToString(sw_sl_state) + ")"; }
