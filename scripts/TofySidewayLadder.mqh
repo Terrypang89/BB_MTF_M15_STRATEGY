@@ -1817,7 +1817,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
                            SL_RectL0All_A, SL_RectL0Any_A, SL_RectL0Any2_A, SL_RectL0None_A,
                            SL_RectL0All_B, SL_RectL0Any_B, SL_RectL0Any2_B, SL_RectL0None_B,
                            SL_RectL0ContAll, SL_RectL0ContAny, SL_RectL0ContAny2, SL_RectL0ContNone);
-            SL_RectStepM5(r0, PERIOD_M5, SL_RectL0Color, "SLRC0_");
+            SL_RectStepM5(g_tradectx.r0, PERIOD_M5, SL_RectL0Color, "SLRC0_");
          }
 
          if(SL_WriteLog && SL_DrawL0Tags)
@@ -2954,11 +2954,12 @@ void Trade_Strategy(
       bool up6   = (dmt_use == 1.0 || dmt_use == 5.0);
       bool down6 = (dmt_use == 2.0 || dmt_use == 4.0);
 
-      Trade_info = "[LADTRADE6]"
-                 + " dmt0:" + DoubleToString(dmt0c,1)
-                 + " dmt1:" + DoubleToString(dmt1c,1)
-                 + " dmt2:" + DoubleToString(dmt2c,1)
-                 + " dmt3:" + DoubleToString(dmt3c,1)
+      // Trade_info = "[LADTRADE6]"
+      Trade_info = ""
+                 + " dmt:[" + DoubleToString(dmt0c,1)
+                 + ", " + DoubleToString(dmt1c,1)
+                 + ", " + DoubleToString(dmt2c,1)
+                 + ", " + DoubleToString(dmt3c,1) + "]"
                  + " l0t:" + l0t
                  + " l1t:" + l1t
                  + " l2t:" + l2t
