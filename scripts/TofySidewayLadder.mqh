@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "38.301"
+#property version   "38.302"
 
 #define HAS_TOFYSIDEWAY_LADDER
 //+------------------------------------------------------------------+
@@ -176,7 +176,9 @@ double SL_diffmid_m15 = 3;
 // double SL_diffmid_H4  = 7.7;
 // double SL_diffmid_m30 = 3.5;
 double SL_diffmid_m30 = 2.5;
-double SL_diffmid_H1  = 4.5;
+// double SL_diffmid_m30 = 3.1;
+// double SL_diffmid_H1  = 4.5;
+double SL_diffmid_H1  = 6;
 double SL_diffmid_H4  = 4;
 
 //--- LEVEL 1 evidence gate. Measured (L2Mode 0, BreakoutMode 1):
@@ -600,7 +602,7 @@ void SL_DrawUserLabelRanges()
       if(!ObjectCreate(0, name, OBJ_RECTANGLE, 0, t1, lo, t2, hi)) continue;
       ObjectSetInteger(0, name, OBJPROP_COLOR,      SL_LabelColor);
       ObjectSetInteger(0, name, OBJPROP_FILL,       SL_LabelFill);
-      ObjectSetInteger(0, name, OBJPROP_WIDTH, 4);
+      ObjectSetInteger(0, name, OBJPROP_WIDTH,      7);
       ObjectSetInteger(0, name, OBJPROP_BACK,       true);
       ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
       ObjectSetString (0, name, OBJPROP_TOOLTIP,
@@ -824,7 +826,8 @@ string SL_RectL4ContAny2 = "";  string SL_RectL4ContNone = "";
  
 color    SL_RectL0Color = Aquamarine;      // L0 = M5 (outline; white = highest contrast vs cyan/yellow/orange clutter)
 // color    SL_RectL0Color = clrLightCyan;      // L0 = M5
-color    SL_RectL1Color = clrGoldenrod;   // spec: M15 = Goldenrod (was BurlyWood)
+// color    SL_RectL1Color = clrGoldenrod;   // spec: M15 = Goldenrod (was BurlyWood)
+color    SL_RectL1Color = PeachPuff;
 color    SL_RectL2Color = clrGreenYellow;
 color    SL_RectL3Color = clrRed;
 color    SL_RectL4Color = clrYellow;
@@ -898,10 +901,10 @@ datetime g_clh_last = 0;
 int      g_clh_seq  = 0;
 //--- 3 test-condition visual boxes (visual-only, no trade effect):
 bool     SL_DrawTestConds = true;
-bool     SL_UseTC1 = true;    // enable cond1: 0A+(0M||1M)
-bool     SL_UseTC2 = true;    // enable cond2: 1X+(1M||2M)
-bool     SL_UseTC3 = true;    // enable cond3: 2Y+(2M||3M)
-bool     SL_UseTC4 = true;
+bool     SL_UseTC1 = false;    // enable cond1: 0A+(0M||1M)
+bool     SL_UseTC2 = false;    // enable cond2: 1X+(1M||2M)
+bool     SL_UseTC3 = false;    // enable cond3: 2Y+(2M||3M)
+bool     SL_UseTC4 = false;
 int      SL_TagBoxMaxGap = 3;   // bridge only short flicker gaps (<=3 bars); real trends break the box
 int      SL_TagBoxPad    = 3000; // vertical padding (points) each side, so tight spans are visible (XAUUSD: 3000pt=$30)
 // color    SL_TC1Color = C'40,80,40';    // cond1: 0A+(0M||1M)  dark green (behind bars)
@@ -1957,7 +1960,8 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    g_tradectx.l3tags = "";
    if(SL_DrawL3Tags)
    {
-      if(g_tradectx.c[6][0] < CL_NEAR_H1H4 && g_tradectx.c[6][1] < CL_NEAR_H1H4)         
+      // if(g_tradectx.c[6][0] < CL_NEAR_H1H4 && g_tradectx.c[6][1] < CL_NEAR_H1H4)    
+      if(g_tradectx.c[6][0] < CL_NEAR_H1H4)     
                                                           g_tradectx.l3tags += "Z";
       if(SH1)                                             g_tradectx.l3tags += "S";
       if(g_tradectx.dm[3][0] < g_tradectx.dm[3][1] && g_tradectx.dm[3][1] < g_tradectx.dm[3][2])                       
@@ -1965,11 +1969,13 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       if(g_tradectx.dmt[3][0] >= 3.0 &&
          (g_tradectx.dmt[3][0] == 3.0 || g_tradectx.dmt[3][1] == 3.0 || g_tradectx.dmt[3][2] == 3.0))   
                                                           g_tradectx.l3tags += "C";
-      if(g_tradectx.dmt[3][0] >= 3.0 && g_tradectx.dmt[3][1] >= 3.0)                     
+      // if(g_tradectx.dmt[3][0] >= 3.0 && g_tradectx.dmt[3][1] >= 3.0)     
+      if(g_tradectx.dmt[3][0] >= 3.0)                  
                                                           g_tradectx.l3tags += "H";   // 2-bar sideway persist
       if(g_tradectx.dmt[3][0] == g_tradectx.dmt[4][0] && g_tradectx.dmt[3][0] < 3.0)                      
                                                           g_tradectx.l3tags += "L";   // fly34 (H1==H4 fly)
-      if(g_tradectx.dm[3][0] < SL_diffmid_H1 && g_tradectx.dm[3][1] < SL_diffmid_H1)     
+      // if(g_tradectx.dm[3][0] < SL_diffmid_H1 && g_tradectx.dm[3][1] < SL_diffmid_H1)
+      if(g_tradectx.dm[3][0] < SL_diffmid_H1)      
                                                           g_tradectx.l3tags += "M";
       if(WH1)                                             g_tradectx.l3tags += "W";
       //--- spec compared g_tradectx.dmt[3][0] with itself; read as M30 vs H1, matching L1D / L2D
@@ -2637,7 +2643,7 @@ void Trade_Strategy(
    if(SL_ExitMode == 6)
    {
       double dmt0c = g_tradectx.dmt[0][0], dmt1c = g_tradectx.dmt[1][0];
-      double dmt2c = g_tradectx.dmt[2][0], dmt3c = g_tradectx.dmt[3][0];
+      double dmt2c = g_tradectx.dmt[2][0], dmt3c = g_tradectx.dmt[3][0], dmt4c = g_tradectx.dmt[4][0];;
       bool   r0c = g_tradectx.r0, r1c = g_tradectx.r1;
       bool   r2c = g_tradectx.r2, r3c = g_tradectx.r3, r4c = g_tradectx.r4;
       string l0t = g_tradectx.l0tags;
@@ -2663,19 +2669,30 @@ void Trade_Strategy(
       //--- span box where it fires, so you can compare against user labels on the chart.
       if(SL_DrawTestConds)
       {
-         tc[0] = SL_UseTC1 && (!fly01)
-                    && (StringFind(l0t,"A")>=0)
+         tc[0] = SL_UseTC1 && ((!fly01) || (!fly12))
+                    && ((StringFind(l0t,"A")>=0) || g_tradectx.c[0][0] <= 25)
                     && (StringFind(l0t,"M")>=0 || StringFind(l1t,"M")>=0);   // 0A+(0M||1M)
          tc[1] = SL_UseTC2 && (!fly12)
-                    && (StringFind(l1t,"X")>=0)
+                    && ((StringFind(l1t,"X")>=0) || g_tradectx.c[1][0] <= 35)
                     && (StringFind(l1t,"M")>=0 || StringFind(l2t,"M")>=0);   // 1X+(1M||2M)
          tc[2] = SL_UseTC3 && (!fly23)
-                    && (StringFind(l2t,"Y")>=0)
+                    && ((StringFind(l2t,"Y")>=0) || g_tradectx.c[3][0] <= 32 )
                     && (StringFind(l2t,"M")>=0 && StringFind(l3t,"M")>=0);   // 2Y+(2M||3M)
          
-         tc[3] = SL_UseTC4 && g_tradectx.c[0][0] <= 25 && g_tradectx.c[1][0] <= 35 
-                    && g_tradectx.c[2][0] <= 6 && g_tradectx.c[3][0] <= 32 && (StringFind(l2t,"Y")>=0)
-                    && (StringFind(l2t,"S")>=0);
+         // tc[3] = SL_UseTC4 && g_tradectx.c[0][0] <= 25 && g_tradectx.c[1][0] <= 35 && g_tradectx.c[3][0] <= 32 
+         //          && (StringFind(l2t,"Y")>=0)  && (StringFind(l2t,"M")>=0);
+         tc[3] = SL_UseTC4 && (StringFind(l3t,"G")>=0)
+                    && (StringFind(l4t,"S")>=0)
+                    && (StringFind(l4t,"W")>=0)
+                    && (g_tradectx.c[0][0] <= 25)
+                    && (g_tradectx.c[1][0] <= 30)
+                    && (g_tradectx.c[3][0] <= 32)
+                    && (g_tradectx.c[4][0] <= 50)
+                    && (g_tradectx.c[5][0] <= 25)
+                    && (g_tradectx.c[6][0] <= 40)
+                    && (StringFind(l1t,"M")>=0)
+                    && (StringFind(l2t,"M")>=0) 
+                    && (StringFind(l3t,"M")>=0);   // 0A+(0M||1M)
          // tc[3] = SL_UseTC4 && (!fly23)
          //            && (StringFind(l2t,"Y")>=0)
          //            && (StringFind(l2t,"M")>=0 && StringFind(l3t,"M")>=0);   // 2Y+(2M||3M)
@@ -2914,7 +2931,7 @@ void Trade_Strategy(
                                                                debug_sw_sl_state += "-{A, "+ sw_sl_state + "_1}";
                                                                sw_sl_state = 1;
          }
-         else if(r2c && r1c && sw_sl_state >= 0 && sw_sl_state < 2)
+         else if(r2c && r1c && sw_sl_state >= 1 && sw_sl_state < 2)
          {
                                                                debug_sw_sl_state += "-{B, "+ sw_sl_state + "_1}";
                                                                sw_sl_state = 1;
@@ -2956,14 +2973,16 @@ void Trade_Strategy(
 
       // Trade_info = "[LADTRADE6]"
       Trade_info = ""
-                 + " dmt:[" + DoubleToString(dmt0c,1)
+                 + "dmt:[" + DoubleToString(dmt0c,1)
                  + ", " + DoubleToString(dmt1c,1)
                  + ", " + DoubleToString(dmt2c,1)
-                 + ", " + DoubleToString(dmt3c,1) + "]"
+                 + ", " + DoubleToString(dmt3c,1) 
+                 + ", " + DoubleToString(dmt4c,1) + "]"
                  + " l0t:" + l0t
                  + " l1t:" + l1t
                  + " l2t:" + l2t
                  + " l3t:" + l3t
+                 + " l4t:" + l4t
                  + " cur:" + IntegerToString(dmt_cur)
                  + " sw_sl:" + IntegerToString(sw_sl_state)
                  + " r0:" + (r0c ? (sl_rect_phase[0]==1?"1C":"1E") : "0")
@@ -2980,7 +2999,11 @@ void Trade_Strategy(
                  + " c:[" + DoubleToString(g_tradectx.c[0][0], 1) 
                  + ", " + DoubleToString(g_tradectx.c[1][0], 1) 
                  + ", " + DoubleToString(g_tradectx.c[2][0], 1) 
-                 + ", " + DoubleToString(g_tradectx.c[3][0], 1) + "]"
+                 + ", " + DoubleToString(g_tradectx.c[3][0], 1) 
+                 + ", " + DoubleToString(g_tradectx.c[4][0], 1) 
+                 + ", " + DoubleToString(g_tradectx.c[5][0], 1) 
+                 + ", " + DoubleToString(g_tradectx.c[6][0], 1) 
+                 + "]"
                  + " BUYS:" + IntegerToString(BUYS) + " SELLS:" + IntegerToString(SELLS);
       if(sw_sl_state >= 0)
       {
