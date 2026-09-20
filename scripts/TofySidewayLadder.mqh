@@ -2732,7 +2732,7 @@ void Trade_Strategy(
       static int sw_sl_state = -1;
       
       string debug_sw_sl_state = "_";
-      string debug_dmt_cur = dmt_cur;
+      string debug_dmt_cur = IntegerToString(dmt_cur);
       
       if(fly23) {
          debug_sw_sl_state += "-23";
@@ -2754,14 +2754,14 @@ void Trade_Strategy(
 
                if(r0c && r1c && r2c && r3c) {
                   if(sw_sl_state == -1) {
-                                                   debug_sw_sl_state += "-{S1, "+ sw_sl_state + "_0}";
+                                                   debug_sw_sl_state += "-{S1, " + IntegerToString(sw_sl_state) + "_0}";
                                                    sw_sl_state = 0;
                   }   
                }
                else if(!r0c && !r1c) {
                   if(sw_sl_state >= 0)
                   {
-                                                   debug_sw_sl_state += "-{R1, "+ sw_sl_state + "_-1}";
+                                                   debug_sw_sl_state += "-{R1, " + IntegerToString(sw_sl_state) + "_-1}";
                                                    sw_sl_state = -1;
                   }
                }
@@ -2790,21 +2790,21 @@ void Trade_Strategy(
                if(r0c && bw_rev1) {
                   debug_sw_sl_state += "-A";
                   if(sw_sl_state == -1) {
-                                                   debug_sw_sl_state += "-{S1, "+ sw_sl_state + "_0}";
+                                                   debug_sw_sl_state += "-{S1, " + IntegerToString(sw_sl_state) + "_0}";
                                                    sw_sl_state = 0;
                   }  
                }
                else if(r0c && r1c && r2c && r3c) {
                   debug_sw_sl_state += "-B";
                   if(sw_sl_state == -1) {
-                                                   debug_sw_sl_state += "-{S1, "+ sw_sl_state + "_0}";
+                                                   debug_sw_sl_state += "-{S1, " + IntegerToString(sw_sl_state) + "_0}";
                                                    sw_sl_state = 0;
                   }   
                }
                else if(!r0c && !r1c && !r2c) {
                   debug_sw_sl_state += "-D";
                   if(sw_sl_state >= 0) {
-                                                   debug_sw_sl_state += "-{R2, "+ sw_sl_state + "_-1}";
+                                                   debug_sw_sl_state += "-{R2, " + IntegerToString(sw_sl_state) + "_-1}";
                                                    sw_sl_state = -1;
                   }
                }
@@ -2828,7 +2828,7 @@ void Trade_Strategy(
                debug_sw_sl_state += "-01";
                if(!r0c && !r1c) {
                   if(sw_sl_state >= 0) {
-                                                   debug_sw_sl_state += "-{R3, "+ sw_sl_state + "_-1}";
+                                                   debug_sw_sl_state += "-{R3, " + IntegerToString(sw_sl_state) + "_-1}";
                                                    sw_sl_state = -1;
                   }
                }
@@ -2844,13 +2844,13 @@ void Trade_Strategy(
                }
                if(r0c) {
                   if(sw_sl_state == -1) {
-                                                   debug_sw_sl_state += "-{S2, "+ sw_sl_state + "_0}";
+                                                   debug_sw_sl_state += "-{S2, " + IntegerToString(sw_sl_state) + "_0}";
                                                    sw_sl_state = 0;
                   }
                }
                if(!r0c && !r1c) {
                   if(sw_sl_state >= 0) {
-                                                   debug_sw_sl_state += "-{R4, "+ sw_sl_state + "_-1}";
+                                                   debug_sw_sl_state += "-{R4, " + IntegerToString(sw_sl_state) + "_-1}";
                                                    sw_sl_state = -1;
                   }     
                }
@@ -2876,7 +2876,7 @@ void Trade_Strategy(
             if(fly01) { // M30&H1 not fly, M5&M15&M30 fly
                debug_sw_sl_state += "-01";
                if(sw_sl_state >= 0) {
-                                                   debug_sw_sl_state += "-{R7, "+ sw_sl_state + "_-1}";
+                                                   debug_sw_sl_state += "-{R7, " + IntegerToString(sw_sl_state) + "_-1}";
                                                    sw_sl_state = -1;
                }
             }
@@ -2884,7 +2884,7 @@ void Trade_Strategy(
                debug_sw_sl_state += "-!01";
                if(r0c && r3c) {
                   if(sw_sl_state == -1) {
-                                                   debug_sw_sl_state += "-{S2, "+ sw_sl_state + "_0}";
+                                                   debug_sw_sl_state += "-{S2, " + IntegerToString(sw_sl_state) + "_0}";
                                                    sw_sl_state = 0;
                   }
                }
@@ -2908,7 +2908,7 @@ void Trade_Strategy(
                debug_sw_sl_state += "-01";
                if( !r1c && !r2c) {
                   if(sw_sl_state >= 0) {
-                                                   debug_sw_sl_state += "-{R9, "+ sw_sl_state + "_-1}";
+                                                   debug_sw_sl_state += "-{R9, " + IntegerToString(sw_sl_state) + "_-1}";
                                                    sw_sl_state = -1;
                   }                          
                }
@@ -2916,7 +2916,7 @@ void Trade_Strategy(
             if(!fly01) { // M5&M15&M30&H1 not fly
                debug_sw_sl_state += "-!01";
                if(r0c && sw_sl_state == -1) {
-                                                   debug_sw_sl_state += "-{S3, "+ sw_sl_state + "_0}";
+                                                   debug_sw_sl_state += "-{S3, " + IntegerToString(sw_sl_state) + "_0}";
                                                    sw_sl_state = 0;
                }
             }
@@ -2928,22 +2928,22 @@ void Trade_Strategy(
       {
          if(r1c && sw_sl_state == 0)
          {
-                                                               debug_sw_sl_state += "-{A, "+ sw_sl_state + "_1}";
+                                                               debug_sw_sl_state += "-{A, " + IntegerToString(sw_sl_state) + "_1}";
                                                                sw_sl_state = 1;
          }
          else if(r2c && r1c && sw_sl_state >= 1 && sw_sl_state < 2)
          {
-                                                               debug_sw_sl_state += "-{B, "+ sw_sl_state + "_1}";
+                                                               debug_sw_sl_state += "-{B, " + IntegerToString(sw_sl_state) + "_1}";
                                                                sw_sl_state = 1;
          }
          else if(r2c && r3c && sw_sl_state >= 1 && sw_sl_state < 3)
          {
-                                                               debug_sw_sl_state += "-{C, "+ sw_sl_state + "_2}";
+                                                               debug_sw_sl_state += "-{C, " + IntegerToString(sw_sl_state) + "_2}";
                                                                sw_sl_state = 2;
          }
          else if(!r0c && !r1c && !r2c && sw_sl_state >= 0)
          {
-                                                               debug_sw_sl_state += "-{Z, "+ sw_sl_state + "_-1}";
+                                                               debug_sw_sl_state += "-{Z, " + IntegerToString(sw_sl_state) + "_-1}";
                                                                sw_sl_state = -1;
          }
       } 
