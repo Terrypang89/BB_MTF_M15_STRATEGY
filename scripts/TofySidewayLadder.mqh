@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "38.302"
+#property version   "38.304"
 
 #define HAS_TOFYSIDEWAY_LADDER
 //+------------------------------------------------------------------+
@@ -178,7 +178,8 @@ double SL_diffmid_m15 = 3;
 double SL_diffmid_m30 = 2.5;
 // double SL_diffmid_m30 = 3.1;
 // double SL_diffmid_H1  = 4.5;
-double SL_diffmid_H1  = 6;
+// double SL_diffmid_H1  = 6;
+double SL_diffmid_H1  = 2;
 double SL_diffmid_H4  = 4;
 
 //--- LEVEL 1 evidence gate. Measured (L2Mode 0, BreakoutMode 1):
@@ -1991,12 +1992,12 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    {
       //--- no A tag: c3 is used by L2A, and no wider pair is available
       if(SH4)                                             g_tradectx.l4tags += "S";
-      if(g_tradectx.dm[1][0] < g_tradectx.dm[1][1] )      g_tradectx.l4tags += "B";
+      if(g_tradectx.dm[4][0] < g_tradectx.dm[1][1] )      g_tradectx.l4tags += "B";
       if(g_tradectx.dmt[4][0] >= 3.0 &&
          (g_tradectx.dmt[4][0] == 3.0 || g_tradectx.dmt[4][1] == 3.0 || g_tradectx.dmt[4][2] == 3.0))   
                                                           g_tradectx.l4tags += "C";
       if(g_tradectx.dmt[4][0] >= 3.0)                     g_tradectx.l4tags += "H";   // 2-bar sideway persist
-      if(g_tradectx.dm[1][0] < SL_diffmid_H4)             g_tradectx.l4tags += "M";
+      if(g_tradectx.dm[4][0] < SL_diffmid_H4)             g_tradectx.l4tags += "M";
       if(WH4)                                             g_tradectx.l4tags += "W";
    }
 
@@ -2658,6 +2659,7 @@ void Trade_Strategy(
       bool fly23 = (StringFind(l2t,"K") >= 0);  // M30 & H1 fly  (tag K in l2t)
       bool fly12 = (StringFind(l1t,"J") >= 0);  // M15 & M30 fly (tag J in l1t)
       bool fly01 = (StringFind(l0t,"I") >= 0);  // M5 & M15 fly  (tag I in l0t)
+      bool fly34 = (StringFind(l3t,"L") >= 0);  // H1 & H4 fly   (tag L in l3t, verified = fly34)
       bool fly02 = (dmt0c == dmt2c && dmt0c < 3.0);  // M5 & M30 fly (no tag - kept as dmt)
 
       bool bw_rev1 = (StringFind(l1t,"B")>=0 && StringFind(l1t,"W")>=0 &&
@@ -2738,21 +2740,15 @@ void Trade_Strategy(
          debug_sw_sl_state += "-23";
          if(fly12) {
             debug_sw_sl_state += "-12";
+            //--- (a) trust trend: fly34 (H1&H4 fly) -> M15, else M5. r4c does NOT override here.
+            {
+               int _new = fly34 ? 1 : 0;
+               if(dmt_cur != _new) { debug_dmt_cur += (_new==1?"->1":"->0"); dmt_cur = _new; }
+            }
             if(fly01) { // M5&M15&M30&H1 fly
                debug_sw_sl_state += "-01";
-               if(r4c) { 
-                  debug_sw_sl_state += "-S4";
-                  if(dmt_cur == 1) {
-                                                   debug_dmt_cur += "->0";
-                                                   dmt_cur = 0; 
-                  }                                  
-               }
-               else if(dmt_cur == 0){
-                                                   debug_dmt_cur += "->1";
-                                                   dmt_cur = 1;         // all fly -> M15 g_tradectx.dmt[1][0]
-               }
-
-               if(r0c && r1c && r2c && r3c) {
+               // dmt_cur set by fly34 rule at fly12 level (trust trend); r4c no longer forces M5 here
+               if(r0c && r1c) {
                   if(sw_sl_state == -1) {
                                                    debug_sw_sl_state += "-{S1, " + IntegerToString(sw_sl_state) + "_0}";
                                                    sw_sl_state = 0;
@@ -2768,25 +2764,12 @@ void Trade_Strategy(
             }
             else if(!fly01) { // M15&M30&H1 fly, M5&M15 not fly
                debug_sw_sl_state += "-!01";
-               if(r4c) { 
-                  debug_sw_sl_state += "-S4";
-                  if(dmt_cur == 1) {
-                                                   debug_dmt_cur += "->0";
-                                                   dmt_cur = 0; 
-                  }                                  
-               }
-               else if(r0c && bw_rev1) {
-                  if(dmt_cur == 1) {
+               // during all fly, but m5 trend reversal 
+               if(r0c && bw_rev1 && dmt_cur == 1) {
                                                    debug_dmt_cur += "->0";
                                                    dmt_cur = 0;
-                  }
                }
-               else if(bw_rev2) {
-                  if(dmt_cur == 0) {
-                                                   debug_dmt_cur += "->1";
-                                                   dmt_cur = 1;         // M15 shrink->fly -> M15 g_tradectx.dmt[1][0]
-                  }
-               }
+               // dmt_cur set by fly34 rule at fly12 level (trust trend)
                if(r0c && bw_rev1) {
                   debug_sw_sl_state += "-A";
                   if(sw_sl_state == -1) {
@@ -2794,7 +2777,7 @@ void Trade_Strategy(
                                                    sw_sl_state = 0;
                   }  
                }
-               else if(r0c && r1c && r2c && r3c) {
+               else if(r0c && r1c) {
                   debug_sw_sl_state += "-B";
                   if(sw_sl_state == -1) {
                                                    debug_sw_sl_state += "-{S1, " + IntegerToString(sw_sl_state) + "_0}";
@@ -2989,6 +2972,7 @@ void Trade_Strategy(
                  + " r1:" + (r1c ? (sl_rect_phase[1]==1?"1C":"1E") : "0")
                  + " r2:" + (r2c ? (sl_rect_phase[2]==1?"1C":"1E") : "0")
                  + " r3:" + (r3c ? (sl_rect_phase[3]==1?"1C":"1E") : "0")
+                 + " r4:" + (r4c ? (sl_rect_phase[4]==1?"1C":"1E") : "0")
                  + " dbg:[" + debug_dmt_cur + debug_sw_sl_state + "]"
                  + " cur:" + IntegerToString(dmt_cur)
                  + " sw_sl:" + IntegerToString(sw_sl_state)
