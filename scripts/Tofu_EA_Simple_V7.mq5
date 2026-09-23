@@ -1,6 +1,6 @@
 #property copyright "Copyright 2025, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "37.04                         "
+#property version   "38.01"
 
 #ifdef __MQL4__
 #else
@@ -122,10 +122,10 @@ input bool               Cluster_Label_Ena        = false;
 input bool               Verify_Label_Ena         = false;
 input bool               Verify_Log_Ena           = true;
 input group "=== Ladder: core trade settings ==="
-input bool               Ladder_UseTrade_Ena      = true;   // master switch for Trade_Strategy
-input int                Ladder_Exit_Mode         = 5;   // 0=ladder 1=S_flag 2=both 3=either 4=hand-labels(hindsight) 5=SwState(hindsight)
-input int                Ladder_TrendTF           = 0;   // 0 = M5, 1 = M15
-input int                Ladder_TradeTF           = 1;   // 0 = M5, 1 = M15
+input bool               Ladder_UseTrade_Ena      = true;   // Ladder_UseTrade_Ena, master switch for Trade_Strategy
+input int                Ladder_Exit_Mode         = 5;   // Ladder_Exit_Mode, 0=ladder 1=S_flag 2=both 3=either 4=hand-labels(hindsight) 5=SwState(hindsight)
+input int                Ladder_TrendTF           = 0;   // Ladder_TrendTF, 0 = M5, 1 = M15
+input int                Ladder_TradeTF           = 0;   // Ladder_TradeTF, 0 = M5, 1 = M15  (M5: mode-6 decides every M5 bar)
 
 input group "=== Ladder: state-machine tuning ==="
 input int                Ladder_L1_Mode           = 5;
@@ -139,9 +139,9 @@ input bool               Ladder_Label_Ena         = false;
 input bool               Ladder_Log_Ena           = true;
 input bool               Ladder_UserLabel_Ena     = true;
 input bool               Ladder_Trade_Draw_Ena    = true;
-input bool               Ladder_Virtual_User_Ena  = true;   // Magenta - user labels
-input bool               Ladder_Virtual_Ladd_Ena  = false;   // blue   - ladder
-input int                Ladder_LabelSource       = 1;   // 0 = HAND LABELS (ground truth), 1 = FITTED boundaries (hindsight - measurement only)
+input bool               Ladder_Virtual_User_Ena  = true;   // Ladder_Virtual_User_Ena, Magenta - user labels
+input bool               Ladder_Virtual_Ladd_Ena  = false;   // Ladder_Virtual_Ladd_Ena, blue   - ladder
+input int                Ladder_LabelSource       = 1;   // Ladder_LabelSource, 0 = HAND LABELS (ground truth), 1 = FITTED boundaries (hindsight - measurement only)
 
 // #define TF_ANUM 7 // timeframe array number, 0,1,2,3,4,5,6,7
 // #define LA 4 // latest array number
@@ -269,7 +269,7 @@ int OnInit()
    
    TesterHideIndicators(false);
 
-   for(int i=0; i<(TF_ANUM+1); i++)
+   for(int i=TF2arraynum(_Period); i<(TF_ANUM+1); i++)
    {
       BBTFData_init(BB_datas[i], timeframe_list[i], color_list[i]);
       BBThres_assign(timeframe_list[i], BBThres[i]);
@@ -407,7 +407,7 @@ void OnTick()
       string M15_MidTrend_log = "";
 
       // M5 to W1
-      for (int r = 0; r < TF_ANUM; r++)
+      for (int r = TF2arraynum(_Period); r < TF_ANUM; r++)
       {
          comb_stage_log = "";
          if(BB_datas[r].handle_BB_TEMA_MTF >= 0)
@@ -1373,19 +1373,6 @@ void print_BBdata(BB_MTF_Data_struct &BB_data, BB_MTF_Impact_struct &BBTFImpact,
       BB_strategy_info += NormalizeDouble(BB_data.BB_diffMid_Trend[LA_1], Digits)  + ", ";
       BB_strategy_info += NormalizeDouble(BB_data.BB_diffMid_Trend[LA_2], Digits);
       BB_strategy_info += "], ";
-      
-      BB_strategy_info += "BBUpDn_" + arraynum_2_string(arraynum) + ":[" + BB_data.BBUpDn_state[LA] + ", ";
-      BB_strategy_info += BB_data.BBUpDn_state[LA_1] + ", ";
-      BB_strategy_info += BB_data.BBUpDn_state[LA_2];
-      BB_strategy_info += "], ";
-
-      BB_strategy_info += "trend_" + arraynum_2_string(arraynum) + ":[" + BB_data.BB_trend[LA] + ", ";
-      BB_strategy_info += BB_data.BB_trend[LA_1] + ", ";
-      BB_strategy_info += BB_data.BB_trend[LA_2] + ", ";
-      BB_strategy_info += "], ";
-
-      BB_strategy_info += "prev_trend_" + arraynum_2_string(arraynum) + ":" + BB_data.prev_BB_trend;
-      BB_strategy_info += ", ";
 
       BB_strategy_info += "diffMid_"+ arraynum_2_string(arraynum) +":[" + NormalizeDouble(BB_data.BB_diffMid[LA], Digits) + ", ";
       BB_strategy_info += NormalizeDouble(BB_data.BB_diffMid[LA_1], Digits) + ", ";
@@ -1396,6 +1383,22 @@ void print_BBdata(BB_MTF_Data_struct &BB_data, BB_MTF_Impact_struct &BBTFImpact,
       BB_strategy_info += NormalizeDouble(BB_data.BB_diffBBW[LA_1], Digits) + ", ";
       BB_strategy_info += NormalizeDouble(BB_data.BB_diffBBW[LA_2], Digits);
       BB_strategy_info += "], ";
+
+      if(BB_data.BB_diffUpp[LA])
+      {
+         BB_strategy_info += "diffUpp_"+ arraynum_2_string(arraynum) +":[" + NormalizeDouble(BB_data.BB_diffUpp[LA], Digits) + ", ";
+         BB_strategy_info += NormalizeDouble(BB_data.BB_diffUpp[LA_1], Digits) + ", ";
+         BB_strategy_info += NormalizeDouble(BB_data.BB_diffUpp[LA_2], Digits);
+         BB_strategy_info += "], ";
+      }
+
+      if(BB_data.BB_diffLow[LA])
+      {
+         BB_strategy_info += "diffLow_"+ arraynum_2_string(arraynum) +":[" + NormalizeDouble(BB_data.BB_diffLow[LA], Digits) + ", ";
+         BB_strategy_info += NormalizeDouble(BB_data.BB_diffLow[LA_1], Digits) + ", ";
+         BB_strategy_info += NormalizeDouble(BB_data.BB_diffLow[LA_2], Digits);
+         BB_strategy_info += "], ";
+      }
 
       BB_strategy_info += "WLV_"+ arraynum_2_string(arraynum) +":[" + NormalizeDouble(BB_data.BBWLV[LA], Digits) + ",";
       BB_strategy_info += NormalizeDouble(BB_data.BBWLV[LA_1], Digits) + ", ";
@@ -1416,6 +1419,19 @@ void print_BBdata(BB_MTF_Data_struct &BB_data, BB_MTF_Impact_struct &BBTFImpact,
       BB_strategy_info += NormalizeDouble(BB_data.BBLowLV[LA_1], Digits) + ", ";
       BB_strategy_info += NormalizeDouble(BB_data.BBLowLV[LA_2], Digits);
       BB_strategy_info += "], ";
+
+      BB_strategy_info += "BBUpDn_" + arraynum_2_string(arraynum) + ":[" + BB_data.BBUpDn_state[LA] + ", ";
+      BB_strategy_info += BB_data.BBUpDn_state[LA_1] + ", ";
+      BB_strategy_info += BB_data.BBUpDn_state[LA_2];
+      BB_strategy_info += "], ";
+
+      BB_strategy_info += "trend_" + arraynum_2_string(arraynum) + ":[" + BB_data.BB_trend[LA] + ", ";
+      BB_strategy_info += BB_data.BB_trend[LA_1] + ", ";
+      BB_strategy_info += BB_data.BB_trend[LA_2] + ", ";
+      BB_strategy_info += "], ";
+
+      BB_strategy_info += "prev_trend_" + arraynum_2_string(arraynum) + ":" + BB_data.prev_BB_trend;
+      BB_strategy_info += ", ";
 
       if(arraynum_2_string(arraynum) == "M5" || arraynum_2_string(arraynum) == "M15")
       {
