@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "38.304"
+#property version   "38.305"
 
 #define HAS_TOFYSIDEWAY_LADDER
 //+------------------------------------------------------------------+
@@ -178,7 +178,6 @@ double SL_diffmid_m15 = 3;
 double SL_diffmid_m30 = 2.5;
 // double SL_diffmid_m30 = 3.1;
 // double SL_diffmid_H1  = 4.5;
-// double SL_diffmid_H1  = 6;
 double SL_diffmid_H1  = 2;
 double SL_diffmid_H4  = 4;
 
@@ -788,9 +787,10 @@ string SL_RectL0All_B  = "MW";  string SL_RectL0Any_B  = "";     // slot B: M &&
 string SL_RectL0Any2_B = "";    string SL_RectL0None_B = "";
 
 //--- L1 entry: (S && B && D) || (M && W)
-string SL_RectL1All_A  = "S";   string SL_RectL1Any_A  = "MWC"; // slot A: S && (M||W||C)
+// during fly, even if S detected, must confirm dmt < 3
+string SL_RectL1All_A  = "C";   string SL_RectL1Any_A  = "WHS"; // slot A: S && (M||W||C)
 string SL_RectL1Any2_A = "";    string SL_RectL1None_A = "";
-string SL_RectL1All_B  = "M";   string SL_RectL1Any_B  = "WC";  // slot B: M && (W||C)
+string SL_RectL1All_B  = "H";   string SL_RectL1Any_B  = "WCS";  // slot B: M && (W||C)
 string SL_RectL1Any2_B = "";    string SL_RectL1None_B = "";
 string SL_RectL1All_C  = "WC";  string SL_RectL1Any_C  = "";     // slot C: W && C ; A||B||C = "any 2 of S,M,W,C"
 string SL_RectL1Any2_C = "";    string SL_RectL1None_C = "";
@@ -805,7 +805,7 @@ string SL_RectL3Any2_A = "";    string SL_RectL3None_A = "";
 string SL_RectL3All_B  = "";    string SL_RectL3Any_B  = "";
 string SL_RectL3Any2_B = "";    string SL_RectL3None_B = "";
 
-string SL_RectL4All_A  = "";    string SL_RectL4Any_A  = "MSCW";
+string SL_RectL4All_A  = "";    string SL_RectL4Any_A  = "MSC";
 string SL_RectL4Any2_A = "";    string SL_RectL4None_A = "";
 string SL_RectL4All_B  = "";    string SL_RectL4Any_B  = "";
 string SL_RectL4Any2_B = "";    string SL_RectL4None_B = "";
@@ -896,6 +896,10 @@ bool     SL_ClusterUseX        = true;    // X = M15+M30 (sep 4.5)
 bool     SL_ClusterUseY        = true;    // Y = M15+H1  (sep 10.6, STRONGEST)
 bool     SL_ClusterUseZ        = false;   // Z = M15+H4  (sep -0.7, useless - off)
 bool     SL_DrawClusterHold    = true;    // draw an M5 outline box over cluster-hold (CLHOLD) spans
+bool     SL_DrawCurFlip        = true;    // label the bar where dmt_cur flips (regime switch)
+bool     SL_DrawRevM5          = true;    // pink marker at M5 expand->shrink reversal candidate
+int      g_srev_m5 = 0;                   // M5 reversal detector state (0..4)
+int      g_srev_trend_before = 0;
 color    SL_ClusterHoldColor   = clrDeepPink;  // distinct; unfilled so it reads over SwConfirm6
 datetime g_clh_from = 0;   // cluster-hold span start (file scope so run-end can flush it)
 datetime g_clh_last = 0;
@@ -1781,6 +1785,90 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
          g_tradectx.c[0][1] = BBTFImpact.BB_midline_Cluster[0][LA_1];
          g_tradectx.c[0][2] = BBTFImpact.BB_midline_Cluster[0][LA_2];
 
+         // detect the strong shrink so trend reversal will drive m5 dmt_cur to 0 until next m5 dmt sideway
+         // double Strong_Shrink_diffbbw_m5 = -20;
+         // double Strong_BBW_m5 = 2;
+         // static int strong_trend_reversal_m5_detector = 0;
+         // // verify width during fly 
+         // if(((BB_datas[0].BBW_stage[LA] == 511 || BB_datas[0].BBW_stage[LA] == 512) && (BB_datas[0].BBW_stage[LA_1] == 511 || BB_datas[0].BBW_stage[LA_1] == 512)) || \
+         //    ((BB_datas[0].BBW_stage[LA] == 521 || BB_datas[0].BBW_stage[LA] == 522) && (BB_datas[0].BBW_stage[LA_1] == 521 || BB_datas[0].BBW_stage[LA_1] == 522)) && \
+         //    BB_datas[0].BBWLV[LA] > Strong_BBW_m5 && BB_datas[0].BBWLV[LA_1] > Strong_BBW_m5 && strong_trend_reversal_m5_detector == 0)
+         // {
+         //    strong_trend_reversal_m5_detector = 1;
+         // }
+         // // verify shrink 
+         // else if(strong_trend_reversal_m5_detector == 1 && BB_datas[0].BB_diffBBW[LA]   < Strong_Shrink_diffbbw_m5 && \
+         //     BB_datas[0].BB_diffBBW[LA_1] < Strong_Shrink_diffbbw_m5)
+         // {
+         //    strong_trend_reversal_m5_detector = 2;
+         // }
+         // else if(strong_trend_reversal_m5_detector == 2 && g_tradectx.dm[0][1] == 3 && g_tradectx.dm[0][0] != 3)
+         // {
+         //    strong_trend_reversal_m5_detector = 3;
+         // }
+         // else if(strong_trend_reversal_m5_detector == 3 && g_tradectx.dm[0][0] < 3 && g_tradectx.dm[0][1] < 3)
+         // {
+         //    strong_trend_reversal_m5_detector = 4;
+         // }
+         // else if(strong_trend_reversal_m5_detector == 4 && g_tradectx.dm[0][0] == 3)
+         // {
+         //    strong_trend_reversal_m5_detector = 0;
+         // }
+         // if(strong_trend_reversal_m5_detector > 0)
+         //    Print("strong_trend_reversal_m5_detector:", strong_trend_reversal_m5_detector);
+
+         //--- M5 strong-fly expand-then-shrink reversal detector (state machine).
+         //--- NOTE: measured ~5% reversal-follow rate - weak signal, for visual eval.
+         //--- Fixes vs draft: parens on stage groups, BB_diffBBW (BBWLV doesn't exist),
+         //--- dmt (trend code) not dm (magnitude) for ==3 checks.
+         {
+            // double Strong_Shrink_diffbbw_m5 = -20;
+            // double Strong_Expand_diffbbw_m5 = 2;   // was Strong_BBW_m5; now a diffBBW (change) threshold
+            double Strong_Shrink_diffbbw_m5 = -10;
+            double Strong_Expand_diffbbw_m5 = 15;   // was Strong_BBW_m5; now a diffBBW (change) threshold
+            int stg  = (int)BB_datas[0].BBW_stage[LA];
+            int stga = (int)BB_datas[0].BBW_stage[LA_1];
+            bool fly_pair = ((stg==511||stg==512) && (stga==511||stga==512))
+                         || ((stg==521||stg==522) && (stga==521||stga==522));
+            double bbw  = BB_datas[0].BB_diffBBW[LA];
+            double bbwa = BB_datas[0].BB_diffBBW[LA_1];
+            // state 0 -> 1: strong fly AND expanding (diffBBW rising above threshold)
+            if(g_srev_m5 == 0 && fly_pair && bbw > Strong_Expand_diffbbw_m5)
+            {
+               g_srev_m5 = 1;
+               g_srev_trend_before = (int)g_tradectx.dmt[0][0];
+            }
+            // 1 -> 2: strong shrink (diffBBW deeply negative)
+            else if(g_srev_m5 == 1 && bbw < Strong_Shrink_diffbbw_m5 && bbwa < Strong_Shrink_diffbbw_m5)
+            {
+               g_srev_m5 = 2;
+               //--- pink marker at the shrink bar (candidate reversal point)
+               if(SL_DrawRevM5)
+               {
+                  static int srevseq=0; srevseq++;
+                  string rn="SLREVM5_"+IntegerToString(srevseq);
+                  if(ObjectCreate(0,rn,OBJ_ARROW,0,iTime(_Symbol,PERIOD_M5,0),iClose(_Symbol,PERIOD_M5,0)))
+                  {
+                     ObjectSetInteger(0,rn,OBJPROP_ARROWCODE,159);
+                     ObjectSetInteger(0,rn,OBJPROP_COLOR,clrMagenta);
+                     ObjectSetInteger(0,rn,OBJPROP_WIDTH,10);
+                     ObjectSetInteger(0,rn,OBJPROP_SELECTABLE,false);
+                     ObjectSetString (0,rn,OBJPROP_TOOLTIP,"M5 expand->shrink (rev candidate)");
+                  }
+               }
+            }
+            // 2 -> 3: M5 was sideway (dmt prev ==3) and now not (dmt now !=3) = coming out of sideway
+            else if(g_srev_m5 == 2 && g_tradectx.dmt[0][1] == 3.0 && g_tradectx.dmt[0][0] != 3.0)
+               g_srev_m5 = 3;
+            // 3 -> 4: two bars trending
+            else if(g_srev_m5 == 3 && g_tradectx.dmt[0][0] < 3.0 && g_tradectx.dmt[0][1] < 3.0)
+               g_srev_m5 = 4;
+            // 4 -> 0: back to sideway = cycle done
+            else if(g_srev_m5 == 4 && g_tradectx.dmt[0][0] == 3.0)
+               g_srev_m5 = 0;
+            if(g_srev_m5>0) Print("g_srev_m5:", g_srev_m5);
+         }
+
          if(SL_DrawL0Tags)
          {
             if(g_tradectx.c[0][0] < CL_NEAR_M5M15 && g_tradectx.c[0][1] < CL_NEAR_M5M15)
@@ -1791,6 +1879,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
                                                                   g_tradectx.l0tags += "B";
              if(g_tradectx.dm[0][0] < SL_diffmid_m5 && g_tradectx.dm[0][1] < SL_diffmid_m5)     
                                                                   g_tradectx.l0tags += "M";
+            if(g_srev_m5 >= 3)                                    g_tradectx.l0tags += "V";
             if(BB_datas[0].BB_diffBBW[LA]   < SL_diffbbw_m5
              && BB_datas[0].BB_diffBBW[LA_1] < SL_diffbbw_m5)     g_tradectx.l0tags += "W";
             if(g_tradectx.dmt[0][0] >= 3.0 &&
@@ -1992,7 +2081,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    {
       //--- no A tag: c3 is used by L2A, and no wider pair is available
       if(SH4)                                             g_tradectx.l4tags += "S";
-      if(g_tradectx.dm[4][0] < g_tradectx.dm[1][1] )      g_tradectx.l4tags += "B";
+      if(g_tradectx.dm[4][0] < g_tradectx.dm[4][1] )      g_tradectx.l4tags += "B";
       if(g_tradectx.dmt[4][0] >= 3.0 &&
          (g_tradectx.dmt[4][0] == 3.0 || g_tradectx.dmt[4][1] == 3.0 || g_tradectx.dmt[4][2] == 3.0))   
                                                           g_tradectx.l4tags += "C";
@@ -2662,8 +2751,16 @@ void Trade_Strategy(
       bool fly34 = (StringFind(l3t,"L") >= 0);  // H1 & H4 fly   (tag L in l3t, verified = fly34)
       bool fly02 = (dmt0c == dmt2c && dmt0c < 3.0);  // M5 & M30 fly (no tag - kept as dmt)
 
-      bool bw_rev1 = (StringFind(l1t,"B")>=0 && StringFind(l1t,"W")>=0 &&
-                        StringFind(l2t,"B")>=0); // during fly . r0 appear 
+      // bw_rev1 is when detect r0 as sw when fly12 and fly23
+      bool bw_rev1 = (StringFind(l1t,"B")>=0 && StringFind(l1t,"W")>=0 && StringFind(l1t,"M")>=0 &&
+                        StringFind(l2t,"B")>=0);
+
+      // bw_rev3 is when detect r0 as sw when fly12 and fly23
+      bool bw_rev3 = (  StringFind(l1t,"A")>=0 && StringFind(l1t,"S")>=0 && StringFind(l1t,"W")>=0 && StringFind(l1t,"M")>=0 && StringFind(l1t,"D")>=0 &&
+                        StringFind(l2t,"B")>=0 && StringFind(l2t,"W")>=0);
+
+      // dmt1 
+      //bool bw_rev4 = ( StringFind(l0t,"A")>=0 && );
 
       bool bw_rev2 = (StringFind(l1t,"B")<0 || StringFind(l1t,"W")<0 || StringFind(l1t,"D")<0);
       
@@ -2741,14 +2838,27 @@ void Trade_Strategy(
          if(fly12) {
             debug_sw_sl_state += "-12";
             //--- (a) trust trend: fly34 (H1&H4 fly) -> M15, else M5. r4c does NOT override here.
-            {
-               int _new = fly34 ? 1 : 0;
-               if(dmt_cur != _new) { debug_dmt_cur += (_new==1?"->1":"->0"); dmt_cur = _new; }
-            }
+            // {
+            //    // int _new = fly34 ? 1 : 0;
+            //    // if(dmt_cur != _new) { debug_dmt_cur += (_new==1?"->1":"->0"); dmt_cur = _new; }
+            //    if(dmt_cur != 1) { debug_dmt_cur += "->1"; dmt_cur = 1; }
+            // }
             if(fly01) { // M5&M15&M30&H1 fly
                debug_sw_sl_state += "-01";
+               if(r4c) {
+                  if(dmt_cur == 1) { 
+                                             debug_dmt_cur += "->0A"; 
+                                             dmt_cur = 0;
+                  }
+               }
+               else {
+                  if(dmt_cur == 0) { 
+                                             debug_dmt_cur += "->1A"; 
+                                             dmt_cur = 1;
+                  }
+               }
                // dmt_cur set by fly34 rule at fly12 level (trust trend); r4c no longer forces M5 here
-               if(r0c && r1c) {
+               if(r0c && r1c && r2c && r3c) {
                   if(sw_sl_state == -1) {
                                                    debug_sw_sl_state += "-{S1, " + IntegerToString(sw_sl_state) + "_0}";
                                                    sw_sl_state = 0;
@@ -2765,9 +2875,23 @@ void Trade_Strategy(
             else if(!fly01) { // M15&M30&H1 fly, M5&M15 not fly
                debug_sw_sl_state += "-!01";
                // during all fly, but m5 trend reversal 
-               if(r0c && bw_rev1 && dmt_cur == 1) {
-                                                   debug_dmt_cur += "->0";
-                                                   dmt_cur = 0;
+               if(r4c) {
+                  if(dmt_cur == 1) { 
+                                             debug_dmt_cur += "->0A"; 
+                                             dmt_cur = 0;
+                  }
+               }
+               else if(bw_rev1 || bw_rev3) {
+                  if(dmt_cur == 1) {
+                                          debug_dmt_cur += "->0B";
+                                          dmt_cur = 0;
+                  }
+               }
+               else{
+                  if(dmt_cur == 0) {
+                                          debug_dmt_cur += "->1B";
+                                          dmt_cur = 1;
+                  }
                }
                // dmt_cur set by fly34 rule at fly12 level (trust trend)
                if(r0c && bw_rev1) {
@@ -2777,7 +2901,7 @@ void Trade_Strategy(
                                                    sw_sl_state = 0;
                   }  
                }
-               else if(r0c && r1c) {
+               else if(r0c && r1c && r2c && r3c) {
                   debug_sw_sl_state += "-B";
                   if(sw_sl_state == -1) {
                                                    debug_sw_sl_state += "-{S1, " + IntegerToString(sw_sl_state) + "_0}";
@@ -2907,7 +3031,7 @@ void Trade_Strategy(
       }
 
       // final ladder (authoritative)
-      if( !fly23 || !fly12)
+      if( !fly23 && !fly12)
       {
          if(r1c && sw_sl_state == 0)
          {
