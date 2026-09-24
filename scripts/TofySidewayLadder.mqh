@@ -1786,25 +1786,28 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
          g_tradectx.c[0][2] = BBTFImpact.BB_midline_Cluster[0][LA_2];
 
          
-         //--- M5 strong-fly expand-then-shrink reversal detector (state machine).
-         //--- NOTE: measured ~5% reversal-follow rate - weak signal, for visual eval.
-         //--- Fixes vs draft: parens on stage groups, BB_diffBBW (BBWLV doesn't exist),
-         //--- dmt (trend code) not dm (magnitude) for ==3 checks.
+         // double Strong_Shrink_diffbbw_m5 = -20;
+         // double Strong_Expand_diffbbw_m5 = 2;   // was Strong_BBW_m5; now a diffBBW (change) threshold
+         double Strong_Shrink_diffbbw_m5 = -10;
+         double Strong_Expand_diffbbw_m5 = 15;   // was Strong_BBW_m5; now a diffBBW (change) threshold
+         double Strong_Shrink_diffUppLow_m5 = 2;
+         int stg  = (int)BB_datas[0].BBW_stage[LA];
+         int stga = (int)BB_datas[0].BBW_stage[LA_1];
+         bool fly_pair = ((stg==511||stg==512) && (stga==511||stga==512))
+                        || ((stg==521||stg==522) && (stga==521||stga==522));
+         bool fly_shrink = ((stg==513) && (stga==513))
+                        || ((stg==523) && (stga==523));
+         double bbw  = floor(BB_datas[0].BB_diffBBW[LA]);
+         double bbwa = floor(BB_datas[0].BB_diffBBW[LA_1]);
+         double bbwb = floor(BB_datas[0].BB_diffBBW[LA_2]);
+         bool strong_shrink_diffUppLow = (BB_datas[0].BB_diffUpp[LA] < -Strong_Shrink_diffUppLow_m5 && BB_datas[0].BB_diffUpp[LA_1] < -Strong_Shrink_diffUppLow_m5) 
+                     && (BB_datas[0].BB_diffLow[LA] > Strong_Shrink_diffUppLow_m5 && BB_datas[0].BB_diffLow[LA_1] > Strong_Shrink_diffUppLow_m5);
+         static double shrink_dmt = 0;
+         bool reversal_shrink_dmt = ((shrink_dmt == 1 && g_tradectx.dmt[0][0] == 2 && g_tradectx.dmt[0][1] == 2) \
+                        || (shrink_dmt == 2 && g_tradectx.dmt[0][0] == 1 && g_tradectx.dmt[0][1] == 1));
+
+         // detect fly_shrink by diffbbw 
          {
-            // double Strong_Shrink_diffbbw_m5 = -20;
-            // double Strong_Expand_diffbbw_m5 = 2;   // was Strong_BBW_m5; now a diffBBW (change) threshold
-            double Strong_Shrink_diffbbw_m5 = -10;
-            double Strong_Expand_diffbbw_m5 = 15;   // was Strong_BBW_m5; now a diffBBW (change) threshold
-            int stg  = (int)BB_datas[0].BBW_stage[LA];
-            int stga = (int)BB_datas[0].BBW_stage[LA_1];
-            bool fly_pair = ((stg==511||stg==512) && (stga==511||stga==512))
-                         || ((stg==521||stg==522) && (stga==521||stga==522));
-            bool fly_shrink = ((stg==513) && (stga==513))
-                         || ((stg==523) && (stga==523));
-            double bbw  = BB_datas[0].BB_diffBBW[LA];
-            double bbwa = BB_datas[0].BB_diffBBW[LA_1];
-            double bbwb = BB_datas[0].BB_diffBBW[LA_2];
-            static double shrink_dmt = 0;
             // state 0 -> 1: strong fly AND expanding (diffBBW rising above threshold)
             if((g_srev_m5 == 0 || g_srev_m5 >= 3) && fly_pair && bbw > Strong_Expand_diffbbw_m5)
             {
@@ -1823,7 +1826,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
             // 2 -> 3: M5 was sideway (dmt prev ==3) and now not (dmt now !=3) = coming out of sideway
             // else if(g_srev_m5 == 2 && g_tradectx.dmt[0][1] == 3.0 && g_tradectx.dmt[0][0] != 3.0)
             //    g_srev_m5 = 3;
-            else if(g_srev_m5 == 2 && g_tradectx.dmt[0][0] == 3.0)
+            else if(g_srev_m5 == 2 && g_tradectx.dmt[0][0] >= 3.0 && g_tradectx.dmt[0][1] >= 3.0)
             {
                g_srev_m5 = 3;
                if(SL_DrawRevM5)
@@ -1836,6 +1839,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
                      ObjectSetInteger(0,rn,OBJPROP_COLOR,clrMagenta);
                      ObjectSetInteger(0,rn,OBJPROP_WIDTH,10);
                      ObjectSetInteger(0,rn,OBJPROP_SELECTABLE,false);
+                     ObjectSetInteger(0,rn,OBJPROP_BACK,false);
                      ObjectSetString (0,rn,OBJPROP_TOOLTIP,"M5 expand->shrink (rev candidate)");
                   }
                }
@@ -1844,13 +1848,13 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
             else if(g_srev_m5 == 3 && fly_pair && ((shrink_dmt == 1 && g_tradectx.dmt[0][0] == 2 && g_tradectx.dmt[0][1] == 2) || (shrink_dmt == 2 && g_tradectx.dmt[0][0] == 1 && g_tradectx.dmt[0][1] == 1)))
                g_srev_m5 = 4;
             // 4 -> 0: back to sideway = cycle done
-            else if(g_srev_m5 == 4 && g_tradectx.dmt[0][0] == 3.0)
+            else if(g_srev_m5 == 4 && g_tradectx.dmt[0][0] >= 3.0 && g_tradectx.dmt[0][1] >= 3.0)
             {
                g_srev_m5 = 0;
                shrink_dmt = 0;
             }
-            if(g_srev_m5 > 1) Print("g_srev_m5:", g_srev_m5, ", shrink_dmt:", shrink_dmt);
-            else if(g_srev_m5>0) Print("g_srev_m5:", g_srev_m5);
+            // if(g_srev_m5 > 1) Print("g_srev_m5:", g_srev_m5, ", shrink_dmt:", shrink_dmt);
+            // else if(g_srev_m5>0) Print("g_srev_m5:", g_srev_m5);
          }
          // {
          //    // double Strong_Shrink_diffbbw_m5 = -20;
