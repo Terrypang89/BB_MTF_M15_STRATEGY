@@ -53,22 +53,9 @@ void BBDatas_Midline_Cluster(BB_MTF_Impact_struct &BBTFImpact, BB_MTF_Data_struc
    maxMid[4] = MathMax(m15Mid, h4Mid);    minMid[4] = MathMin(m15Mid, h4Mid);    // M15+H4
    maxMid[5] = MathMax(m30Mid, h4Mid);    minMid[5] = MathMin(m30Mid, h4Mid);    // M30+H4
    maxMid[6] = MathMax(h1Mid,  h4Mid);    minMid[6] = MathMin(h1Mid,  h4Mid);    // H1+H4
-   maxMid[7] = MathMax(m30Mid, m5Mid);    minMid[7] = MathMin(m30Mid, m5Mid);    // M5+M30
-   maxMid[8] = MathMax(h1Mid, m5Mid);     minMid[8] = MathMin(h1Mid, m5Mid);    // M5+H1
-   maxMid[9] = MathMax(h4Mid, m5Mid);     minMid[9] = MathMin(h4Mid, m5Mid);    // M5+H4
-
-
-   // maxMid[0] = MathMax(m15Mid, m5Mid);    minMid[0] = MathMin(m15Mid, m5Mid);    // M15+M5
-   // maxMid[1] = MathMax(m30Mid, m5Mid);    minMid[1] = MathMin(m30Mid, m5Mid);    // M15+M5
-   // maxMid[2] = MathMax(h1Mid, m5Mid);     minMid[2] = MathMin(h1Mid, m5Mid);    // M15+M5
-   // maxMid[3] = MathMax(h4Mid, m5Mid);     minMid[3] = MathMin(h4Mid, m5Mid);    // M15+M5
-
-   // maxMid[4] = MathMax(m15Mid, m30Mid);   minMid[4] = MathMin(m15Mid, m30Mid);   // M15+M30
-   // maxMid[5] = MathMax(m15Mid, h1Mid);    minMid[5] = MathMin(m15Mid, h1Mid);    // M15+H1
-   // maxMid[6] = MathMax(m30Mid, h1Mid);    minMid[6] = MathMin(m30Mid, h1Mid);    // M30+H1
-   // maxMid[7] = MathMax(m15Mid, h4Mid);    minMid[7] = MathMin(m15Mid, h4Mid);    // M15+H4
-   // maxMid[8] = MathMax(m30Mid, h4Mid);    minMid[8] = MathMin(m30Mid, h4Mid);    // M30+H4
-   // maxMid[9] = MathMax(h1Mid,  h4Mid);    minMid[9] = MathMin(h1Mid,  h4Mid);    // H1+H4
+   maxMid[7] = MathMax(m30Mid, m5Mid);    minMid[7] = MathMin(m30Mid, m5Mid);    // M15+M5
+   maxMid[8] = MathMax(h1Mid, m5Mid);     minMid[8] = MathMin(h1Mid, m5Mid);    // M15+M5
+   maxMid[9] = MathMax(h4Mid, m5Mid);     minMid[9] = MathMin(h4Mid, m5Mid);    // M15+M5
 
    for(int i = 0; i < 10; i++)
    {

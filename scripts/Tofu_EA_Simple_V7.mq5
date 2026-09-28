@@ -1373,6 +1373,19 @@ void print_BBdata(BB_MTF_Data_struct &BB_data, BB_MTF_Impact_struct &BBTFImpact,
       BB_strategy_info += NormalizeDouble(BB_data.BB_diffMid_Trend[LA_1], Digits)  + ", ";
       BB_strategy_info += NormalizeDouble(BB_data.BB_diffMid_Trend[LA_2], Digits);
       BB_strategy_info += "], ";
+      
+      BB_strategy_info += "BBUpDn_" + arraynum_2_string(arraynum) + ":[" + BB_data.BBUpDn_state[LA] + ", ";
+      BB_strategy_info += BB_data.BBUpDn_state[LA_1] + ", ";
+      BB_strategy_info += BB_data.BBUpDn_state[LA_2];
+      BB_strategy_info += "], ";
+
+      // BB_strategy_info += "trend_" + arraynum_2_string(arraynum) + ":[" + BB_data.BB_trend[LA] + ", ";
+      // BB_strategy_info += BB_data.BB_trend[LA_1] + ", ";
+      // BB_strategy_info += BB_data.BB_trend[LA_2] + ", ";
+      // BB_strategy_info += "], ";
+
+      // BB_strategy_info += "prev_trend_" + arraynum_2_string(arraynum) + ":" + BB_data.prev_BB_trend;
+      // BB_strategy_info += ", ";
 
       BB_strategy_info += "diffMid_"+ arraynum_2_string(arraynum) +":[" + NormalizeDouble(BB_data.BB_diffMid[LA], Digits) + ", ";
       BB_strategy_info += NormalizeDouble(BB_data.BB_diffMid[LA_1], Digits) + ", ";
@@ -1384,13 +1397,10 @@ void print_BBdata(BB_MTF_Data_struct &BB_data, BB_MTF_Impact_struct &BBTFImpact,
       BB_strategy_info += NormalizeDouble(BB_data.BB_diffBBW[LA_2], Digits);
       BB_strategy_info += "], ";
 
-      if(BB_data.BB_diffUpp[LA])
-      {
-         BB_strategy_info += "diffUpp_"+ arraynum_2_string(arraynum) +":[" + NormalizeDouble(BB_data.BB_diffUpp[LA], Digits) + ", ";
-         BB_strategy_info += NormalizeDouble(BB_data.BB_diffUpp[LA_1], Digits) + ", ";
-         BB_strategy_info += NormalizeDouble(BB_data.BB_diffUpp[LA_2], Digits);
-         BB_strategy_info += "], ";
-      }
+      BB_strategy_info += "diffUpp_"+ arraynum_2_string(arraynum) +":[" + NormalizeDouble(BB_data.BB_diffUpp[LA], Digits) + ", ";
+      BB_strategy_info += NormalizeDouble(BB_data.BB_diffUpp[LA_1], Digits) + ", ";
+      BB_strategy_info += NormalizeDouble(BB_data.BB_diffUpp[LA_2], Digits);
+      BB_strategy_info += "], ";
 
       if(BB_data.BB_diffLow[LA])
       {
@@ -1419,19 +1429,6 @@ void print_BBdata(BB_MTF_Data_struct &BB_data, BB_MTF_Impact_struct &BBTFImpact,
       BB_strategy_info += NormalizeDouble(BB_data.BBLowLV[LA_1], Digits) + ", ";
       BB_strategy_info += NormalizeDouble(BB_data.BBLowLV[LA_2], Digits);
       BB_strategy_info += "], ";
-
-      BB_strategy_info += "BBUpDn_" + arraynum_2_string(arraynum) + ":[" + BB_data.BBUpDn_state[LA] + ", ";
-      BB_strategy_info += BB_data.BBUpDn_state[LA_1] + ", ";
-      BB_strategy_info += BB_data.BBUpDn_state[LA_2];
-      BB_strategy_info += "], ";
-
-      BB_strategy_info += "trend_" + arraynum_2_string(arraynum) + ":[" + BB_data.BB_trend[LA] + ", ";
-      BB_strategy_info += BB_data.BB_trend[LA_1] + ", ";
-      BB_strategy_info += BB_data.BB_trend[LA_2] + ", ";
-      BB_strategy_info += "], ";
-
-      BB_strategy_info += "prev_trend_" + arraynum_2_string(arraynum) + ":" + BB_data.prev_BB_trend;
-      BB_strategy_info += ", ";
 
       if(arraynum_2_string(arraynum) == "M5" || arraynum_2_string(arraynum) == "M15")
       {
