@@ -1,6 +1,6 @@
 #property copyright "Copyright 2024, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "34"
+#property version   "35"
 #include <TofyIncludeSimple.mqh>
 #define HAS_TOFYSIDEWAY
 
@@ -53,9 +53,22 @@ void BBDatas_Midline_Cluster(BB_MTF_Impact_struct &BBTFImpact, BB_MTF_Data_struc
    maxMid[4] = MathMax(m15Mid, h4Mid);    minMid[4] = MathMin(m15Mid, h4Mid);    // M15+H4
    maxMid[5] = MathMax(m30Mid, h4Mid);    minMid[5] = MathMin(m30Mid, h4Mid);    // M30+H4
    maxMid[6] = MathMax(h1Mid,  h4Mid);    minMid[6] = MathMin(h1Mid,  h4Mid);    // H1+H4
-   maxMid[7] = MathMax(m30Mid, m5Mid);    minMid[7] = MathMin(m30Mid, m5Mid);    // M15+M5
-   maxMid[8] = MathMax(h1Mid, m5Mid);     minMid[8] = MathMin(h1Mid, m5Mid);    // M15+M5
-   maxMid[9] = MathMax(h4Mid, m5Mid);     minMid[9] = MathMin(h4Mid, m5Mid);    // M15+M5
+   maxMid[7] = MathMax(m30Mid, m5Mid);    minMid[7] = MathMin(m30Mid, m5Mid);    // M5+M30
+   maxMid[8] = MathMax(h1Mid, m5Mid);     minMid[8] = MathMin(h1Mid, m5Mid);    // M5+H1
+   maxMid[9] = MathMax(h4Mid, m5Mid);     minMid[9] = MathMin(h4Mid, m5Mid);    // M5+H4
+
+
+   // maxMid[0] = MathMax(m15Mid, m5Mid);    minMid[0] = MathMin(m15Mid, m5Mid);    // M15+M5
+   // maxMid[1] = MathMax(m30Mid, m5Mid);    minMid[1] = MathMin(m30Mid, m5Mid);    // M15+M5
+   // maxMid[2] = MathMax(h1Mid, m5Mid);     minMid[2] = MathMin(h1Mid, m5Mid);    // M15+M5
+   // maxMid[3] = MathMax(h4Mid, m5Mid);     minMid[3] = MathMin(h4Mid, m5Mid);    // M15+M5
+
+   // maxMid[4] = MathMax(m15Mid, m30Mid);   minMid[4] = MathMin(m15Mid, m30Mid);   // M15+M30
+   // maxMid[5] = MathMax(m15Mid, h1Mid);    minMid[5] = MathMin(m15Mid, h1Mid);    // M15+H1
+   // maxMid[6] = MathMax(m30Mid, h1Mid);    minMid[6] = MathMin(m30Mid, h1Mid);    // M30+H1
+   // maxMid[7] = MathMax(m15Mid, h4Mid);    minMid[7] = MathMin(m15Mid, h4Mid);    // M15+H4
+   // maxMid[8] = MathMax(m30Mid, h4Mid);    minMid[8] = MathMin(m30Mid, h4Mid);    // M30+H4
+   // maxMid[9] = MathMax(h1Mid,  h4Mid);    minMid[9] = MathMin(h1Mid,  h4Mid);    // H1+H4
 
    for(int i = 0; i < 10; i++)
    {
@@ -68,6 +81,74 @@ void BBDatas_Midline_Cluster(BB_MTF_Impact_struct &BBTFImpact, BB_MTF_Data_struc
          BBTFImpact.BB_midline_Cluster[i][LA_1] = BBTFImpact.BB_midline_Cluster[i][LA];
          BBTFImpact.BB_midline_Cluster[i][LA] = tempval[i];
       }
+   }
+}
+
+void BBDatas_Midline_Distance(BB_MTF_Impact_struct &BBTFImpact, BB_MTF_Data_struct &BB_datas[])
+{
+   static datetime last_tm15=0, last_tm30=0, last_th1=0, last_th4=0;
+   datetime tm15 = iTime(_Symbol, PERIOD_M15, 0);
+   datetime tm30 = iTime(_Symbol, PERIOD_M30, 0);
+   datetime th1 = iTime(_Symbol, PERIOD_H1,  0);
+   datetime th4 = iTime(_Symbol, PERIOD_H4,  0);
+   // in m15 period
+   if(tm15 != last_tm15)
+   {
+      last_tm15 = tm15;
+      int i = 0;
+      BBTFImpact.BB_midline_Distance[i][LA_4] = BBTFImpact.BB_midline_Distance[i][LA_3];
+      BBTFImpact.BB_midline_Distance[i][LA_3] = BBTFImpact.BB_midline_Distance[i][LA_2];
+      BBTFImpact.BB_midline_Distance[i][LA_2] = BBTFImpact.BB_midline_Distance[i][LA_1];
+      BBTFImpact.BB_midline_Distance[i][LA_1] = BBTFImpact.BB_midline_Distance[i][LA];
+      BBTFImpact.BB_midline_Distance[0][LA] = MathAbs(BB_datas[1].BBMidLV[LA] - BB_datas[0].BBMidLV[LA]);  // both current, sampled once per M15 bar
+   }
+
+   // in m30 period 
+   if(tm30 != last_tm30)
+   {  
+      last_tm30 = tm30;
+      for(int i = 1; i < 3; i++)
+      {
+         BBTFImpact.BB_midline_Distance[i][LA_4] = BBTFImpact.BB_midline_Distance[i][LA_3];
+         BBTFImpact.BB_midline_Distance[i][LA_3] = BBTFImpact.BB_midline_Distance[i][LA_2];
+         BBTFImpact.BB_midline_Distance[i][LA_2] = BBTFImpact.BB_midline_Distance[i][LA_1];
+         BBTFImpact.BB_midline_Distance[i][LA_1] = BBTFImpact.BB_midline_Distance[i][LA];
+      }
+      BBTFImpact.BB_midline_Distance[1][LA] = MathAbs(BB_datas[2].BBMidLV[LA] - BB_datas[0].BBMidLV[LA]);
+      BBTFImpact.BB_midline_Distance[2][LA] = MathAbs(BB_datas[2].BBMidLV[LA] - BB_datas[1].BBMidLV[LA]);
+   }
+   
+   // in h1 period 
+   if(th1 != last_th1)
+   {
+      last_th1 = th1;
+      for(int i = 3; i < 6; i++)
+      {
+         BBTFImpact.BB_midline_Distance[i][LA_4] = BBTFImpact.BB_midline_Distance[i][LA_3];
+         BBTFImpact.BB_midline_Distance[i][LA_3] = BBTFImpact.BB_midline_Distance[i][LA_2];
+         BBTFImpact.BB_midline_Distance[i][LA_2] = BBTFImpact.BB_midline_Distance[i][LA_1];
+         BBTFImpact.BB_midline_Distance[i][LA_1] = BBTFImpact.BB_midline_Distance[i][LA];
+      }
+      BBTFImpact.BB_midline_Distance[3][LA] = MathAbs(BB_datas[3].BBMidLV[LA] - BB_datas[0].BBMidLV[LA]);
+      BBTFImpact.BB_midline_Distance[4][LA] = MathAbs(BB_datas[3].BBMidLV[LA] - BB_datas[1].BBMidLV[LA]);
+      BBTFImpact.BB_midline_Distance[5][LA] = MathAbs(BB_datas[3].BBMidLV[LA] - BB_datas[2].BBMidLV[LA]);
+   }
+   
+   // in h4 period 
+   if(th4 != last_th4)
+   {
+      last_th4 = th4;
+      for(int i = 6; i < 10; i++)
+      {
+         BBTFImpact.BB_midline_Distance[i][LA_4] = BBTFImpact.BB_midline_Distance[i][LA_3];
+         BBTFImpact.BB_midline_Distance[i][LA_3] = BBTFImpact.BB_midline_Distance[i][LA_2];
+         BBTFImpact.BB_midline_Distance[i][LA_2] = BBTFImpact.BB_midline_Distance[i][LA_1];
+         BBTFImpact.BB_midline_Distance[i][LA_1] = BBTFImpact.BB_midline_Distance[i][LA];
+      }
+      BBTFImpact.BB_midline_Distance[6][LA] = MathAbs(BB_datas[4].BBMidLV[LA] - BB_datas[0].BBMidLV[LA]);
+      BBTFImpact.BB_midline_Distance[7][LA] = MathAbs(BB_datas[4].BBMidLV[LA] - BB_datas[1].BBMidLV[LA]);
+      BBTFImpact.BB_midline_Distance[8][LA] = MathAbs(BB_datas[4].BBMidLV[LA] - BB_datas[2].BBMidLV[LA]);
+      BBTFImpact.BB_midline_Distance[9][LA] = MathAbs(BB_datas[4].BBMidLV[LA] - BB_datas[3].BBMidLV[LA]);
    }
 }
 
