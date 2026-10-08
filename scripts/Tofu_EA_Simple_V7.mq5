@@ -1,6 +1,6 @@
 #property copyright "Copyright 2025, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "38.01"
+#property version   "38.35"
 
 #ifdef __MQL4__
 #else
@@ -447,6 +447,7 @@ void OnTick()
 #endif
 #ifdef HAS_TOFYSIDEWAY
       BBDatas_Midline_Cluster(BBTFImpact, BB_datas);
+      BBDatas_Midline_Distance(BBTFImpact, BB_datas);
 #endif
       if(InpInnerATRSLEna)
       {
@@ -1468,6 +1469,7 @@ void print_BBTFImpact(bool debug_info, BB_MTF_Impact_struct &BBTFImpact, double 
    string untouch_val_info = "";
    // string Price_Act_info = "";
    string BB_midline_Cluster_info = "";
+   string BB_midline_Distance_info = "";
    int TFnum = TF2arraynum(_Period);
 
    // if(BBTFImpact.BB_midline_Cluster[0][LA] != 0)
@@ -1495,6 +1497,21 @@ void print_BBTFImpact(bool debug_info, BB_MTF_Impact_struct &BBTFImpact, double 
       if(BB_midline_Cluster_info != "")
       {
          STRATEGY_info += "midline_Cluster:[" + BB_midline_Cluster_info + "], ";
+      }
+   }
+
+   if(BBTFImpact.BB_midline_Distance[0][LA] != 0)
+   {
+      for(int ci = 0; ci < ArrayRange(BBTFImpact.BB_midline_Distance, 0); ci++)
+      {
+         if(ci > 0) BB_midline_Distance_info += ", ";
+         BB_midline_Distance_info +=
+            DoubleToString(BBTFImpact.BB_midline_Distance[ci][LA], 2);
+      }
+
+      if(BB_midline_Distance_info != "")
+      {
+         STRATEGY_info += "midline_Dist:[" + BB_midline_Distance_info + "], ";
       }
    }
 
