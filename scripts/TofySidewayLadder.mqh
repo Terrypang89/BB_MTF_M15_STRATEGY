@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "38.310"
+#property version   "38.35.01"
 
 #define HAS_TOFYSIDEWAY_LADDER
 //+------------------------------------------------------------------+
@@ -90,15 +90,23 @@ double SL_Angle     = 90.0;     // OBJPROP_ANGLE is a DOUBLE property
 //--- Cluster thresholds, named by the PAIR they measure rather than by a timeframe,
 //--- because the pairs sit on different scales. February medians: c0 8.1, c1 9.3,
 //--- c2 19.8. c3 is not present in the V36.15 log, so its value is unverified.
-// double CL_NEAR_M5M15  = 12;   // c0 = M5 + M15   - best single field in the log, F1 72.4
-double CL_NEAR_M5M15  = 10.5;
+double CL_NEAR_M5M15  = 1;   // c0 = M5 + M15   - best single field in the log, F1 72.4
 double CL_NEAR_M15M30 = 15;      // c1 = M15 + M30  - +$17 median over 10.5 (paired, 216 cfg)
 double CL_NEAR_M15H1  = 30;     // c2 = M15 + H1   - median 19.8, needs ~3x the c0 value
+double CL_NEAR_M5M30  = 15; 
+double CL_NEAR_M5H4   = 20; // 20
 double CL_NEAR_M30H1  = 32;      // c3 = M30 + H1   - UNVERIFIED, not in the measured log
 double CL_NEAR_M15H4  = 60;     // c4 = M15 + H4   - UNVERIFIED. Widest pairs measured so
 double CL_NEAR_M30H4  = 60;     // c5 = M30 + H4     far run 2-3x the pair below them, so
 double CL_NEAR_H1H4   = 60;     // c6 = H1  + H4     these start wide. Check the fire rate.
-double CL_NEAR_M5H4  = 11; // 20
+
+// cluster distance 
+double CD_NEAR_M15M5 = 20;
+double CD_NEAR_M30M5 = 40;
+double CD_NEAR_M30M15= 26;
+double CD_NEAR_H1M5  = 61;
+double CD_NEAR_H1M15 = 50;
+double CD_NEAR_H1M30 = 30;
 //+------------------------------------------------------------------+
 //| TRADE STRATEGY (optional)                                        |
 //|                                                                  |
@@ -169,11 +177,11 @@ int    SL_TrendTF = 0;
 bool   SL_ExitOnDm3 = true;
 
 bool   SL_UseH1     = false;    // measured to DEGRADE the ladder; off by default
-// double SL_diffmid_m15 = 3;
 // double SL_diffmid_m30 = 1.5;
 double SL_diffmid_m5 = 1.5;
+// double SL_diffmid_m15 = 3;
 // double SL_diffmid_m15 = 1.5;
-double SL_diffmid_m15 = 3;
+double SL_diffmid_m15 = 2;
 // double SL_diffmid_H1  = 3.4;
 // double SL_diffmid_H4  = 7.7;
 // double SL_diffmid_m30 = 3.5;
@@ -787,24 +795,45 @@ bool     SL_DrawRectL4 = true;
 // string SL_RectL0Any2_A = "";    string SL_RectL0None_A = "";
 // string SL_RectL0All_B  = "MW";  string SL_RectL0Any_B  = "";     // slot B: M && W ; A||B = (M&C)||(C&S)||(C&W)||(M&W)
 // string SL_RectL0Any2_B = "";    string SL_RectL0None_B = "";
-string SL_RectL0All_A  = "C";   string SL_RectL0Any_A  = "MSWM"; // slot A: C && (M||S||W) = (M&C)||(C&S)||(C&W)
+
+// string SL_RectL0All_A  = "C";   string SL_RectL0Any_A  = "MSWM"; // slot A: C && (M||S||W) = (M&C)||(C&S)||(C&W)
+// string SL_RectL0Any2_A = "";    string SL_RectL0None_A = "";
+// string SL_RectL0All_B  = "H";  string SL_RectL0Any_B  = "WCSM";     // slot B: M && W ; A||B = (M&C)||(C&S)||(C&W)||(M&W)
+// string SL_RectL0Any2_B = "";    string SL_RectL0None_B = "";
+
+// (S & (M || H || W || C)) && (M & C)
+string SL_RectL0All_A  = "S";   string SL_RectL0Any_A  = "MHWC"; // slot A: C && (M||S||W) = (M&C)||(C&S)||(C&W)
 string SL_RectL0Any2_A = "";    string SL_RectL0None_A = "";
-string SL_RectL0All_B  = "H";  string SL_RectL0Any_B  = "WCSM";     // slot B: M && W ; A||B = (M&C)||(C&S)||(C&W)||(M&W)
+string SL_RectL0All_B  = "MW";  string SL_RectL0Any_B  = "";     // slot B: M && W ; A||B = (M&C)||(C&S)||(C&W)||(M&W)
 string SL_RectL0Any2_B = "";    string SL_RectL0None_B = "";
+
+// string SL_RectL0All_A  = "S";   string SL_RectL0Any_A  = "MHWC"; // slot A: C && (M||S||W) = (M&C)||(C&S)||(C&W)
+// string SL_RectL0Any2_A = "";    string SL_RectL0None_A = "";
+// string SL_RectL0All_B  = "";     string SL_RectL0Any_B  = "";     // slot B: M && W ; A||B = (M&C)||(C&S)||(C&W)||(M&W)
+// string SL_RectL0Any2_B = "";    string SL_RectL0None_B = "";
 
 //--- L1 entry: (S && B && D) || (M && W)
 // during fly, even if S detected, must confirm dmt < 3
-string SL_RectL1All_A  = "C";   string SL_RectL1Any_A  = "WHSM"; // slot A: S && (M||W||C)
+// string SL_RectL1All_A  = "C";   string SL_RectL1Any_A  = "WHSM"; // slot A: S && (M||W||C)
+// string SL_RectL1Any2_A = "";    string SL_RectL1None_A = "";
+// string SL_RectL1All_B  = "H";   string SL_RectL1Any_B  = "WCS";  // slot B: M && (W||C)
+// string SL_RectL1Any2_B = "";    string SL_RectL1None_B = "";
+// string SL_RectL1All_C  = "WC";  string SL_RectL1Any_C  = "";     // slot C: W && C ; A||B||C = "any 2 of S,M,W,C"
+// string SL_RectL1Any2_C = "";    string SL_RectL1None_C = "";
+
+string SL_RectL1All_A  = "S";   string SL_RectL1Any_A  = "MWC"; // slot A: S && (M||W||C)
 string SL_RectL1Any2_A = "";    string SL_RectL1None_A = "";
-string SL_RectL1All_B  = "H";   string SL_RectL1Any_B  = "WCS";  // slot B: M && (W||C)
+string SL_RectL1All_B  = "M";   string SL_RectL1Any_B  = "WC";  // slot B: M && (W||C)
 string SL_RectL1Any2_B = "";    string SL_RectL1None_B = "";
-string SL_RectL1All_C  = "WC";  string SL_RectL1Any_C  = "";     // slot C: W && C ; A||B||C = "any 2 of S,M,W,C"
+string SL_RectL1All_C  = "OW";  string SL_RectL1Any_C  = "";     // slot C: W && C ; A||B||C = "any 2 of S,M,W,C"
 string SL_RectL1Any2_C = "";    string SL_RectL1None_C = "";
 
 string SL_RectL2All_A  = "";    string SL_RectL2Any_A  = "SCM";
-string SL_RectL2Any2_A = "";    string SL_RectL2None_A = "";
+string SL_RectL2Any2_A = "YO";    string SL_RectL2None_A = "";
 string SL_RectL2All_B  = "";    string SL_RectL2Any_B  = "";
 string SL_RectL2Any2_B = "";    string SL_RectL2None_B = "";
+string SL_RectL2All_C  = "";    string SL_RectL2Any_C  = "";
+string SL_RectL2Any2_C = "";    string SL_RectL2None_C = "";
 
 string SL_RectL3All_A  = "";    string SL_RectL3Any_A  = "SCM";
 string SL_RectL3Any2_A = "";    string SL_RectL3None_A = "";
@@ -820,11 +849,11 @@ string SL_RectL4Any2_B = "";    string SL_RectL4None_B = "";
 //--- One slot each. Normally looser than the entry rule: harder to start, easier
 //--- to stay in. Leave all four fields empty to reuse the entry rule instead.
 //--- L1 continue: S || C || D || M
-string SL_RectL0ContAll  = "";  string SL_RectL0ContAny  = "SC"; // continue while S || C
+string SL_RectL0ContAll  = "";  string SL_RectL0ContAny  = "MHCS"; // continue while S || C
 string SL_RectL0ContAny2 = "";  string SL_RectL0ContNone = "";
-string SL_RectL1ContAll  = "";  string SL_RectL1ContAny  = "SC";
-string SL_RectL1ContAny2 = "";  string SL_RectL1ContNone = "";
-string SL_RectL2ContAll  = "";  string SL_RectL2ContAny  = "SCM";
+string SL_RectL1ContAll  = "";  string SL_RectL1ContAny  = "MHCS";
+string SL_RectL1ContAny2 = "NW";  string SL_RectL1ContNone = "";
+string SL_RectL2ContAll  = "";  string SL_RectL2ContAny  = "SCMO";
 string SL_RectL2ContAny2 = "";  string SL_RectL2ContNone = "";
 string SL_RectL3ContAll  = "";  string SL_RectL3ContAny  = "SCM";
 string SL_RectL3ContAny2 = "";  string SL_RectL3ContNone = "";
@@ -1295,6 +1324,7 @@ bool SL_Has(string tags, string need)
       if(StringFind(tags, StringSubstr(need, i, 1)) < 0) return false;
    return true;
 }
+
 bool SL_HasNone(string tags, string none)
 {
    int n = StringLen(none);
@@ -1367,9 +1397,9 @@ bool SL_RectRule3(int lvl, string tags,
 
 //+------------------------------------------------------------------+
 //| Pick the rule for this bar: ENTRY while no run is open,          |
-//| CONTINUATION once one is. If the continuation fields are all      |
-//| empty the entry rule is reused, so the two-phase behaviour is     |
-//| opt-in per level.                                                 |
+//| CONTINUATION once one is. If the continuation fields are all     |
+//| empty the entry rule is reused, so the two-phase behaviour is    |
+//| opt-in per level.                                                |
 //+------------------------------------------------------------------+
 //--- L0 (M5) rectangle state - file scope so both the M5 rule and the M5
 //--- stepper share the run-open flag, mirroring how L1-L4 use sl_rect_start[lvl].
@@ -1753,6 +1783,13 @@ void SL_TagBox(string tag, int seq, datetime from, datetime to, color col, doubl
    ObjectSetString (0, name, OBJPROP_TOOLTIP, name);
 }
 
+double MathFloorDecimal(double value, int digits)
+{
+   double multiplier = MathPow(10, digits);
+   double floored = MathFloor(value * multiplier) / multiplier;
+   return NormalizeDouble(floored, digits);
+}
+
 //+------------------------------------------------------------------+
 //| Compute the ladder for the current bar. Call ONCE per M15 bar,   |
 //| AFTER BBDatas_Midline_Cluster has updated BB_midline_Cluster.    |
@@ -1771,7 +1808,7 @@ struct SL_TradeCtx_struct
    bool     swconfirm;    // mode-6: swconfirm flag - for SWCMP log
    int      sw_sl_state;  // mode-6: graded sideway state (-1 trade, 0/1/2 exit)
    double   dmt[5][3];
-   double   c[7][3];
+   double   c[10][3];
    double   dm[5][3];
 };
 SL_TradeCtx_struct g_tradectx;
@@ -1812,6 +1849,12 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
          g_tradectx.c[0][0] = BBTFImpact.BB_midline_Cluster[0][LA];
          g_tradectx.c[0][1] = BBTFImpact.BB_midline_Cluster[0][LA_1];
          g_tradectx.c[0][2] = BBTFImpact.BB_midline_Cluster[0][LA_2];
+         g_tradectx.c[7][0] = BBTFImpact.BB_midline_Cluster[7][LA];
+         g_tradectx.c[7][1] = BBTFImpact.BB_midline_Cluster[7][LA_1];
+         g_tradectx.c[7][2] = BBTFImpact.BB_midline_Cluster[7][LA_2];
+         g_tradectx.c[8][0] = BBTFImpact.BB_midline_Cluster[8][LA];
+         g_tradectx.c[8][1] = BBTFImpact.BB_midline_Cluster[8][LA_1];
+         g_tradectx.c[8][2] = BBTFImpact.BB_midline_Cluster[8][LA_2];
 
          //--- M5 strong-fly expand-then-shrink reversal detector (state machine).
          //--- NOTE: measured ~5% reversal-follow rate - weak signal, for visual eval.
@@ -1936,13 +1979,25 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
 
          if(SL_DrawL0Tags)
          {
-            if(g_tradectx.c[0][0] < CL_NEAR_M5M15 && g_tradectx.c[0][1] < CL_NEAR_M5M15)
+            if(MathFloor(g_tradectx.c[0][0]) <= CL_NEAR_M5M15 && MathFloor(g_tradectx.c[0][1]) <= CL_NEAR_M5M15)
                                                                   g_tradectx.l0tags += "A";   // M5+M15 midline cluster
-            
+            if(MathFloor(g_tradectx.c[8][0]) <= CL_NEAR_M5H4 && MathFloor(g_tradectx.c[8][1]) <= CL_NEAR_M5H4)
+                                                                  g_tradectx.l0tags += "N";
+            if(MathFloor(g_tradectx.c[7][0]) <= CL_NEAR_M5M30 && MathFloor(g_tradectx.c[7][1]) <= CL_NEAR_M5M30)
+                                                                  g_tradectx.l0tags += "P";
+            if((g_tradectx.c[0][0] < g_tradectx.c[0][1]) && (g_tradectx.c[0][1] < g_tradectx.c[0][2]) &&
+               MathFloor(g_tradectx.c[0][0]) <= CD_NEAR_M15M5 && MathFloor(g_tradectx.c[0][1]) <= CD_NEAR_M15M5)
+                                                               g_tradectx.l1tags += "O";
+            if((g_tradectx.c[7][0] < g_tradectx.c[7][1]) &&
+               MathFloor(g_tradectx.c[7][0]) <= CD_NEAR_M30M5 && MathFloor(g_tradectx.c[7][1]) <= CD_NEAR_M30M5)
+                                                               g_tradectx.l1tags += "Q";
+            if((g_tradectx.c[8][0] < g_tradectx.c[8][1]) &&
+               MathFloor(g_tradectx.c[8][0]) <= CD_NEAR_H1M5 && MathFloor(g_tradectx.c[8][1]) <= CD_NEAR_H1M5)
+                                                               g_tradectx.l1tags += "R";
             if(SL_StageOK((int)BB_datas[0].BBW_stage[LA]))        g_tradectx.l0tags += "S";
             if(g_tradectx.dm[0][0] < g_tradectx.dm[0][1] && g_tradectx.dm[0][1] < g_tradectx.dm[0][2])                     
                                                                   g_tradectx.l0tags += "B";
-             if(g_tradectx.dm[0][0] < SL_diffmid_m5 && g_tradectx.dm[0][1] < SL_diffmid_m5)     
+             if(MathFloorDecimal(g_tradectx.dm[0][0], 1) < SL_diffmid_m5 && MathFloorDecimal(g_tradectx.dm[0][1], 1) < SL_diffmid_m5)     
                                                                   g_tradectx.l0tags += "M";
             if(g_srev_m5 >= 1)                                    g_tradectx.l0tags += "V" + g_srev_m5;
             if(BB_datas[0].BB_diffBBW[LA]   < SL_diffbbw_m5
@@ -2021,10 +2076,12 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    //--- LEVEL 1 predicates, named individually (lift measured alone)
    bool A15 = ((g_tradectx.c[0][0] < g_tradectx.c[0][1] && g_tradectx.c[0][1] < g_tradectx.c[0][2]) || (g_tradectx.c[0][0] < CL_NEAR_M5M15 && g_tradectx.c[0][1] < CL_NEAR_M5M15));  // +4.5
    bool S15 = SL_StageOK((int)BB_datas[1].BBW_stage[LA]);                    // +3.3
-   bool C15 = (g_tradectx.dm[1][0] < SL_diffmid_m15 && g_tradectx.dm[1][1] < SL_diffmid_m15);               // +5.3
+   bool C15 = (MathFloorDecimal(g_tradectx.dm[1][0], 1) < SL_diffmid_m15 && MathFloorDecimal(g_tradectx.dm[1][1], 1) < SL_diffmid_m15);               // +5.3
    bool D15 = (g_tradectx.dm[1][0] < g_tradectx.dm[1][1] && g_tradectx.dm[1][1] < g_tradectx.dm[1][2]);                                   // no use
-   bool W15 = (BB_datas[1].BB_diffBBW[LA]   < SL_diffbbw_m15
+   bool W15 = (BB_datas[1].BB_diffBBW[LA] < SL_diffbbw_m15
             && BB_datas[1].BB_diffBBW[LA_1] < SL_diffbbw_m15);  
+
+   // Print("dm1:",MathFloor(g_tradectx.dm[1][0]), ", ", MathFloor(g_tradectx.dm[1][1]), ". SL_diffmid_m15:", SL_diffmid_m15);
 
    //--- carry each level's tags to _prev ONLY when that timeframe's bar actually
    //--- advances (L2=M30, L3=H1, L4=H4). Capturing every M15 bar would make
@@ -2041,6 +2098,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       if(t4h != last_h4)  { g_tradectx.l4tags_prev = g_tradectx.l4tags; last_h4  = t4h; }
    }
 
+   // Print("BB_midline_Distance[0]:", BBTFImpact.BB_midline_Distance[0][LA], ", ", BBTFImpact.BB_midline_Distance[0][LA_1], ", ", BBTFImpact.BB_midline_Distance[0][LA_2]);
    //--- LEVEL-1 DIAGNOSTIC TAGS - reporting only, no effect on any decision.
    g_tradectx.l1tags = "";
    if(SL_DrawL1Tags)
@@ -2051,8 +2109,17 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
                                                           g_tradectx.l1tags += "X";
       if(g_tradectx.c[2][0] < CL_NEAR_M15H1  && g_tradectx.c[2][1] < CL_NEAR_M15H1)      
                                                           g_tradectx.l1tags += "Y";
-      if(g_tradectx.c[4][0] < CL_NEAR_M15H4  && g_tradectx.c[4][1] < CL_NEAR_M15H4)      
-                                                          g_tradectx.l1tags += "Z";
+      if(g_tradectx.c[3][0] < CL_NEAR_M15H4  && g_tradectx.c[3][1] < CL_NEAR_M15H4)      
+                                                          g_tradectx.l1tags += "Z";                                          
+      if((BBTFImpact.BB_midline_Distance[0][LA] < BBTFImpact.BB_midline_Distance[0][LA_1]) &&
+         MathFloor(BBTFImpact.BB_midline_Distance[0][LA]) <= CD_NEAR_M15M5 && MathFloor(BBTFImpact.BB_midline_Distance[0][LA_1]) <= CD_NEAR_M15M5)
+                                                          g_tradectx.l1tags += "O";
+      if((g_tradectx.c[1][0] < g_tradectx.c[1][1]) &&
+         MathFloor(g_tradectx.c[1][0]) <= CD_NEAR_M30M15 && MathFloor(g_tradectx.c[1][1]) <= CD_NEAR_M30M15)
+                                                          g_tradectx.l1tags += "Q";
+      if((g_tradectx.c[2][0] < g_tradectx.c[2][1]) &&
+         MathFloor(g_tradectx.c[2][0]) <= CD_NEAR_H1M15 && MathFloor(g_tradectx.c[2][1]) <= CD_NEAR_H1M15)
+                                                          g_tradectx.l1tags += "R";
       if(S15)                                             g_tradectx.l1tags += "S";
       if(g_tradectx.dm[1][0] < g_tradectx.dm[1][1] && g_tradectx.dm[1][1] < g_tradectx.dm[1][2])
                                                           g_tradectx.l1tags += "B";
@@ -2064,7 +2131,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       if(g_tradectx.dmt[1][0] == g_tradectx.dmt[2][0] && g_tradectx.dmt[1][0] < 3.0)
                                                           g_tradectx.l1tags += "J";   // fly12 (M15==M30 fly)
       if(W15)                                             g_tradectx.l1tags += "W";
-      if(g_tradectx.dmt[1][0] < SL_diffmid_m15 && g_tradectx.dmt[1][1] < SL_diffmid_m15)   
+      if(MathFloorDecimal(g_tradectx.dm[1][0],1) < SL_diffmid_m15 && MathFloorDecimal(g_tradectx.dm[1][1],1) < SL_diffmid_m15)   
                                                           g_tradectx.l1tags += "M";
       if(((g_tradectx.dmt[0][0] == 1.0 || g_tradectx.dmt[0][0] == 5.0) && (g_tradectx.dmt[1][0] == 2.0 || g_tradectx.dmt[1][0] == 4.0)) ||
          ((g_tradectx.dmt[0][0] == 2.0 || g_tradectx.dmt[0][0] == 4.0) && (g_tradectx.dmt[1][0] == 1.0 || g_tradectx.dmt[1][0] == 5.0)))
@@ -2101,10 +2168,17 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
    g_tradectx.l2tags = "";
    if(SL_DrawL2Tags)
    {
-      if(g_tradectx.c[3][0] < CL_NEAR_M30H1 && g_tradectx.c[3][1] < CL_NEAR_M30H1)       
+      if(g_tradectx.c[4][0] < CL_NEAR_M30H1 && g_tradectx.c[4][1] < CL_NEAR_M30H1)       
                                                           g_tradectx.l2tags += "Y";
       if(g_tradectx.c[5][0] < CL_NEAR_M30H4 && g_tradectx.c[5][1] < CL_NEAR_M30H4)       
                                                           g_tradectx.l2tags += "Z";
+      if((BBTFImpact.BB_midline_Distance[1][LA] < BBTFImpact.BB_midline_Distance[1][LA_1]) &&
+         (MathFloor(BBTFImpact.BB_midline_Distance[1][LA]) <= CD_NEAR_M30M5) && (MathFloor(BBTFImpact.BB_midline_Distance[1][LA_1]) <= CD_NEAR_M30M5))
+                                                          g_tradectx.l2tags += "O";
+
+      if((BBTFImpact.BB_midline_Distance[2][LA] < BBTFImpact.BB_midline_Distance[2][LA_1]) &&
+         MathFloor(BBTFImpact.BB_midline_Distance[2][LA]) <= CD_NEAR_M30M15 && MathFloor(BBTFImpact.BB_midline_Distance[2][LA_1]) <= CD_NEAR_M30M15)
+                                                          g_tradectx.l2tags += "Q";                                                                     
       if(S30)                                             g_tradectx.l2tags += "S";
       if(g_tradectx.dm[2][0] < g_tradectx.dm[2][1] && g_tradectx.dm[2][1] < g_tradectx.dm[2][2])                       
                                                           g_tradectx.l2tags += "B";
@@ -2133,6 +2207,15 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
       // if(g_tradectx.c[6][0] < CL_NEAR_H1H4 && g_tradectx.c[6][1] < CL_NEAR_H1H4)    
       if(g_tradectx.c[6][0] < CL_NEAR_H1H4)     
                                                           g_tradectx.l3tags += "Z";
+      if((BBTFImpact.BB_midline_Distance[3][LA] < BBTFImpact.BB_midline_Distance[3][LA_1]) && 
+         MathFloor(BBTFImpact.BB_midline_Distance[3][LA]) <= CD_NEAR_H1M5 && MathFloor(BBTFImpact.BB_midline_Distance[3][LA_1]) <= CD_NEAR_H1M5)
+                                                          g_tradectx.l3tags += "O";
+      if((BBTFImpact.BB_midline_Distance[4][LA] < BBTFImpact.BB_midline_Distance[4][LA_1]) && 
+         MathFloor(BBTFImpact.BB_midline_Distance[4][LA]) <= CD_NEAR_H1M15 && MathFloor(BBTFImpact.BB_midline_Distance[4][LA_1]) <= CD_NEAR_H1M15)
+                                                          g_tradectx.l3tags += "Q";                                                     
+      if((BBTFImpact.BB_midline_Distance[5][LA] < BBTFImpact.BB_midline_Distance[5][LA_1]) && 
+         MathFloor(BBTFImpact.BB_midline_Distance[5][LA]) <= CD_NEAR_H1M30 && MathFloor(BBTFImpact.BB_midline_Distance[5][LA_1]) <= CD_NEAR_H1M30)
+                                                          g_tradectx.l3tags += "R";  
       if(SH1)                                             g_tradectx.l3tags += "S";
       if(g_tradectx.dm[3][0] < g_tradectx.dm[3][1] && g_tradectx.dm[3][1] < g_tradectx.dm[3][2])                       
                                                           g_tradectx.l3tags += "B";
@@ -2939,6 +3022,8 @@ void Trade_Strategy(
       }
 
       // final ladder (authoritative)
+      sw_sl_state = -1;
+
       // H4 sideway 
       if(r4c)
       {
@@ -2956,10 +3041,10 @@ void Trade_Strategy(
                   debug_sw_sl_state += "2";
                   if(SL_Has(l1t,"AXYZW"))
                   {
-                     debug_sw_sl_state += "Z1, " + IntegerToString(sw_sl_state) + "_4";
+                     debug_sw_sl_state += "1-" + IntegerToString(sw_sl_state) + "_4";
                      sw_sl_state = 4;
                      static int h4seq=0; h4seq++;
-                     string h4gn="SLREVG_"+IntegerToString(h4seq);
+                     string h4gn="SL4Z_"+IntegerToString(h4seq);
                      color h4gc = White;
                      if(ObjectCreate(0,h4gn,OBJ_ARROW,0,iTime(_Symbol,PERIOD_M5,0),iClose(_Symbol,PERIOD_M5,0)))
                      {
@@ -2975,37 +3060,118 @@ void Trade_Strategy(
          }
          debug_sw_sl_state += "}";
       }
-      // H1 sideway 
-      else if( !fly23 && !fly12)
+      // H1 sideway while H4 fly
+      if(r3c && sw_sl_state == -1)
       {
-         if(r1c && sw_sl_state == 0)
+         debug_sw_sl_state += "-{K";
+         // if(SL_Has(l3t,"HMW") || SL_Has(l3t,"SW") || SL_Has(l3t,"MWG") || SL_Has(l3t,"ZMW"))
+         // H1 must have M else verify from M30 has M
+         if(SL_Has(l3t,"MW") || SL_Has(l3t,"ZM") || (SL_Has(l3t,"SW") && SL_Has(l2t,"YM")))
          {
-                                                               debug_sw_sl_state += "-{A, " + IntegerToString(sw_sl_state) + "_1}";
-                                                               sw_sl_state = 1;
+            debug_sw_sl_state += "3";
+            // M30 must have M else use from M15 
+            if(SL_Has(l2t,"YKM") || SL_Has(l2t,"YWM") || SL_Has(l2t,"YSCM") || (SL_Has(l2t,"YSW") && (SL_Has(l1t,"AXYW") || SL_Has(l1t,"XYSW") || SL_Has(l1t,"XYM") || SL_Has(l1t,"YSM") || SL_Has(l1t,"YSC") || SL_Has(l1t,"YSH"))))
+            {
+               debug_sw_sl_state += "2";
+               // if(SL_Has(l1t,"AXWM") || SL_Has(l1t,"AYSWM") || SL_Has(l1t,"AXYM") || SL_Has(l1t,"XYWM"))
+               if(SL_Has(l1t,"AXWM") || SL_Has(l1t,"YSWM") || SL_Has(l1t,"YSCW") || SL_Has(l1t,"XYM") || SL_Has(l1t,"XYW"))
+               {
+                  debug_sw_sl_state += "1";
+                  if(SL_Has(l0t,"N"))
+                  {
+                     debug_sw_sl_state += "0-" + IntegerToString(sw_sl_state) + "_3";
+                     sw_sl_state = 3;
+                     static int h1seq=0; h1seq++;
+                     string h1gn="SL3K_"+IntegerToString(h1seq);
+                     color h1gc = Red;
+                     if(ObjectCreate(0,h1gn,OBJ_ARROW,0,iTime(_Symbol,PERIOD_M5,0),iClose(_Symbol,PERIOD_M5,0)))
+                     {
+                        ObjectSetInteger(0,h1gn,OBJPROP_ARROWCODE,159); // down/up arrow
+                        ObjectSetInteger(0,h1gn,OBJPROP_COLOR,h1gc);
+                        ObjectSetInteger(0,h1gn,OBJPROP_WIDTH,10);
+                        ObjectSetInteger(0,h1gn,OBJPROP_SELECTABLE,false);
+                        ObjectSetString (0,h1gn,OBJPROP_TOOLTIP,h1gn);
+                     }
+                  }
+               }
+            }
          }
-         else if(r2c && r1c && sw_sl_state >= 1 && sw_sl_state < 2)
-         {
-                                                               debug_sw_sl_state += "-{B, " + IntegerToString(sw_sl_state) + "_1}";
-                                                               sw_sl_state = 1;
-         }
-         else if(r2c && r3c && sw_sl_state >= 1 && sw_sl_state < 3)
-         {
-                                                               debug_sw_sl_state += "-{C, " + IntegerToString(sw_sl_state) + "_2}";
-                                                               sw_sl_state = 2;
-         }
-         // when breakout from sideway 
-         else if(!r0c && r2c && r3c && sw_sl_state >= 0)
-         {
-                                                               debug_sw_sl_state += "-{X, " + IntegerToString(sw_sl_state) + "_-1}";
-                                                               sw_sl_state = -1;
-         }
-         else if(!r0c && !r1c && !r2c && sw_sl_state >= 0)
-         {
-                                                               debug_sw_sl_state += "-{Y, " + IntegerToString(sw_sl_state) + "_-1}";
-                                                               sw_sl_state = -1;
-         }
+         debug_sw_sl_state += "}";
       }
-      
+      // M30 sideway with all focus on M30 bbmid 
+      if(r2c && sw_sl_state == -1)
+      {
+         debug_sw_sl_state += "-{Q";
+         if(SL_Has(l2t,"SM") || SL_Has(l2t,"SW") || SL_Has(l2t,"WM") )
+         {
+            debug_sw_sl_state += "A";
+            debug_sw_sl_state += "2";
+            if(SL_Has(l1t,"XW") || SL_Has(l1t,"XM"))
+            {
+               debug_sw_sl_state += "1";
+               if(SL_Has(l0t,"P"))
+               {
+                  debug_sw_sl_state += "0-" + IntegerToString(sw_sl_state) + "_3";
+                  sw_sl_state = 3;
+                  static int m30seq=0; m30seq++;
+                  string m30gn="SL2Q_"+IntegerToString(m30seq);
+                  color m30gc = YellowGreen;
+                  if(ObjectCreate(0,m30gn,OBJ_ARROW,0,iTime(_Symbol,PERIOD_M5,0),iClose(_Symbol,PERIOD_M5,0)))
+                  {
+                     ObjectSetInteger(0,m30gn,OBJPROP_ARROWCODE,159); // down/up arrow
+                     ObjectSetInteger(0,m30gn,OBJPROP_COLOR,m30gc);
+                     ObjectSetInteger(0,m30gn,OBJPROP_WIDTH,10);
+                     ObjectSetInteger(0,m30gn,OBJPROP_SELECTABLE,false);
+                     ObjectSetString (0,m30gn,OBJPROP_TOOLTIP,m30gn);
+                  }
+               }
+            }
+         }
+         if(sw_sl_state == -1 && (SL_Has(l2t,"YZM") || SL_Has(l2t,"YZSBW") || SL_Has(l2t,"YZO")))
+         {
+            debug_sw_sl_state += "B";
+            debug_sw_sl_state += "2";
+            if(SL_Has(l1t,"XZW") || (SL_Has(l1t,"ZOW") && (SL_Has(l0t,"D") || SL_Has(l0t,"M"))))
+            {
+
+            // } 
+            // if(SL_Has(l1t,"ZSW") || SL_Has(l1t,"XZW") || SL_Has(l1t,"YZM"))
+            // {
+               debug_sw_sl_state += "1";
+               // if(SL_Has(l0t,"P") || SL_Has(l0t,"W") || SL_Has(l0t,"ZOW"))
+               // {
+                  debug_sw_sl_state += "0-" + IntegerToString(sw_sl_state) + "_3";
+                  sw_sl_state = 3;
+                  static int m30seq=0; m30seq++;
+                  string m30gn="SL2Q_"+IntegerToString(m30seq);
+                  color m30gc = LimeGreen;
+                  if(ObjectCreate(0,m30gn,OBJ_ARROW,0,iTime(_Symbol,PERIOD_M5,0),iClose(_Symbol,PERIOD_M5,0)))
+                  {
+                     ObjectSetInteger(0,m30gn,OBJPROP_ARROWCODE,159); // down/up arrow
+                     ObjectSetInteger(0,m30gn,OBJPROP_COLOR,m30gc);
+                     ObjectSetInteger(0,m30gn,OBJPROP_WIDTH,10);
+                     ObjectSetInteger(0,m30gn,OBJPROP_SELECTABLE,false);
+                     ObjectSetString (0,m30gn,OBJPROP_TOOLTIP,m30gn);
+                  }
+               // }
+            }
+         }
+         debug_sw_sl_state += "}";
+      }
+      // M15 sideway 
+      // if(r1c && sw_sl_state == -1)
+      // {
+      //    debug_sw_sl_state += "-{J";
+      //    if(SL_Has(l1t,"SM") || SL_Has(l1t,"ZNW") || SL_Has(l1t,"ZWM") || (SL_Has(l1t,"ZW") && SL_Has(l0t,"M")))
+      //    {
+      //       debug_sw_sl_state += "1";
+      //       // if(SL_Has(l0t,"M"))
+      //       // {
+               
+      //       // }
+      //    }
+      //    debug_sw_sl_state += "}";
+      // }
 
       //--- track sw_sl_state>=0 spans and draw them (same look as SwConfirm)
       static datetime sw6_from = 0;
