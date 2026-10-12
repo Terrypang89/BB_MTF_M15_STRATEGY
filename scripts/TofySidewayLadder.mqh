@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "38.35.02"
+#property version   "38.35.03"
 
 #define HAS_TOFYSIDEWAY_LADDER
 //+------------------------------------------------------------------+
@@ -447,6 +447,42 @@ string SL_FitEnd[SL_LABEL_COUNT] = {
    "2026.02.25 17:45",   // F26 end +0
    "2026.02.27 14:30"    // F27 end -2
 };
+
+//+------------------------------------------------------------------+
+//| Compute the ladder for the current bar. Call ONCE per M15 bar,   |
+//| AFTER BBDatas_Midline_Cluster has updated BB_midline_Cluster.    |
+//+------------------------------------------------------------------+
+//--- Context passed from SL_Update to Trade_Strategy for SL_ExitMode 6.
+//--- Filled every bar in SL_Update (where r0/r1/l1tags/dmt* are live); read by
+//--- the mode-6 branch. File-scope global, matching the SL_state pattern - no
+//--- signature change, no .mq5 edit.
+struct SL_TradeCtx_struct
+{
+   bool     r0, r1, r2, r3, r4;
+   string   l1tags, l0tags, l2tags, l3tags, l4tags;
+   string   l1tags_prev, l2tags_prev, l3tags_prev, l4tags_prev;  // previous M15 bar's tags
+   // double   dmt0, dmt1, dmt2, dmt3, dmt4;
+   int      dmt_cur;      // mode-6: which TF is trading (0=M5,1=M15) - for SWCMP log
+   bool     swconfirm;    // mode-6: swconfirm flag - for SWCMP log
+   int      sw_sl_state;  // mode-6: graded sideway state (-1 trade, 0/1/2 exit)
+   double   dmt[5][3];
+   double   c[10][3];
+   double   dm[5][3];
+   double   brkout[5][3];
+   double   trendrev[5][3];
+   double      revtrend[2];
+
+   SL_TradeCtx_struct()          // constructor - runs once when g_tradectx is declared
+   {
+      for(int i=0; i<5; i++)
+         for(int j=0; j<3; j++)
+            brkout[i][j] = -1;
+      // revtrend[2] = [0,0];
+      revtrend[0] = 0;
+      revtrend[1] = 0;
+   }
+};
+SL_TradeCtx_struct g_tradectx;
 
 //+------------------------------------------------------------------+
 //| Is this bar inside a hand-labelled range?                        |
@@ -1790,12 +1826,105 @@ double MathFloorDecimal(double value, int digits)
    return NormalizeDouble(floored, digits);
 }
 
+void SL_TrendReversal(BB_MTF_Data_struct &BB_datas[], SL_TradeCtx_struct &tradectx, string &debugrev) 
+{
+   bool fly23 = tradectx.dmt[2][0] == tradectx.dmt[3][0] && tradectx.dmt[3][0] < 3.0;
+   bool fly12 = tradectx.dmt[1][0] == tradectx.dmt[2][0] && tradectx.dmt[2][0] < 3.0;
+   bool fly01 = tradectx.dmt[0][0] == tradectx.dmt[1][0] && tradectx.dmt[1][0] < 3.0;
+   // need verify the fly direction 
+   if(fly01 && (fly12 || fly23) && SL_StageFly((int)BB_datas[2].BBW_stage[LA])
+      && BB_datas[2].BB_diffMid_Trend[LA] < 3 && BB_datas[3].BB_diffMid_Trend[LA] < 3 
+      && tradectx.revtrend[0] == 0)
+   {
+      if(BB_datas[1].BB_diffMid_Trend[LA] < 3)
+      {
+         tradectx.revtrend[0] = BB_datas[1].BB_diffMid_Trend[LA];
+         debugrev += "rev(" + tradectx.revtrend[0] + ", " + tradectx.revtrend[1] + ")";
+      }
+   }
+
+   // detect, make sure m15 in fly 
+   // if(tradectx.revtrend[0] >= 1 && tradectx.brkout[0][0] > 0)
+   if(tradectx.revtrend[0] >= 1 && tradectx.brkout[0][0] > 0)
+   {
+      // m5 fly reverse with fly trend
+      if(tradectx.revtrend[0] == 1 && BB_datas[0].BB_diffMid_Trend[LA] == 2 && 
+         (BB_datas[1].BB_diffMid_Trend[LA] == 1 || BB_datas[1].BB_diffMid_Trend[LA] == 5 || BB_datas[1].BB_diffMid_Trend[LA] == 3))
+      {
+         if(tradectx.revtrend[1] == 0)
+            debugrev += "rev(" + tradectx.revtrend[0] + ", " + 2 + ")";
+         tradectx.revtrend[1] = 2;
+      }
+      else if(tradectx.revtrend[0] == 2 && BB_datas[0].BB_diffMid_Trend[LA] == 1 && 
+         (BB_datas[1].BB_diffMid_Trend[LA] == 2 || BB_datas[1].BB_diffMid_Trend[LA] == 4 || BB_datas[1].BB_diffMid_Trend[LA] == 3))
+      {
+         if(tradectx.revtrend[1] == 0)
+            debugrev += "rev(" + tradectx.revtrend[0] + ", " + 1 + ")";
+         tradectx.revtrend[1] = 1;
+      }
+   }
+
+   // m15 sideway and m5 in fly with 
+   // if(tradectx.r1)
+   // {
+   //    if(BB_datas[0].BB_diffMid_Trend[LA] == tradectx.revtrend[1])
+   //    {
+   //       tradectx.r1 = 0;
+   //       debugrev += "rev(" + tradectx.revtrend[0] + ", " + tradectx.revtrend[1] + ")";
+   //    }
+   // }
+   // reset when m15 trend is reversed
+   if(tradectx.revtrend[0] > 0 && tradectx.revtrend[1] > 0 && 
+      BB_datas[1].BB_diffMid_Trend[LA] == tradectx.revtrend[1])
+   {
+      tradectx.revtrend[0] = 0;
+      tradectx.revtrend[1] = 0;
+      debugrev += "m15okrev_rst";
+   }
+   // reset when m5 resume fly same trend with m15 and m30
+   else if(tradectx.revtrend[0] > 0 && tradectx.revtrend[1] > 0 && fly01 && SL_StageFly((int)BB_datas[0].BBW_stage[LA]) && 
+      BB_datas[0].BB_diffMid_Trend[LA] == tradectx.revtrend[0])
+   {
+      tradectx.revtrend[0] = 0;
+      tradectx.revtrend[1] = 0;
+      debugrev += "m5resume_rst";
+   }
+   // reset when m5 revtrend but sideway 
+   else if(tradectx.revtrend[0] > 0 && tradectx.revtrend[1] > 0 && BB_datas[0].BB_diffMid_Trend[LA] == 3)
+   {
+      tradectx.revtrend[0] = 0;
+      tradectx.revtrend[1] = 0;
+      debugrev += "m5sw_rst";
+   }
+   // reset when m30 sideway 
+   // else if(tradectx.revtrend[0] > 0 && (BB_datas[2].BB_diffMid_Trend[LA] >= 3 || BB_datas[3].BB_diffMid_Trend[LA] >= 3))
+   else if(tradectx.revtrend[0] > 0 && (BB_datas[2].BB_diffMid_Trend[LA] >= 3))
+   {
+      // verify midline of m5, m15, m30, h1
+      if(tradectx.c[2][0] < CL_NEAR_M15H1 && tradectx.c[2][1] < CL_NEAR_M15H1 && 
+         tradectx.c[4][0] < CL_NEAR_M30H1 && tradectx.c[4][1] < CL_NEAR_M30H1)
+      {
+         tradectx.revtrend[0] = 0;
+         tradectx.revtrend[1] = 0;
+         if(BB_datas[2].BB_diffMid_Trend[LA] >= 3)
+            debugrev += "m30sw_rst";
+         // if(BB_datas[3].BB_diffMid_Trend[LA] >= 3)
+         //    debugrev += "h1sw_rst";
+      }
+      else if(BB_datas[2].BB_diffMid_Trend[LA] >= 3)
+      {
+         debugrev += "m30sw2_rst";
+      }
+   }
+   
+}
+
 void SL_Breakout(BB_MTF_Data_struct &BB_datas[], int tf_num, double &breakout_cond[][3])
 {
    breakout_cond[tf_num][2] = breakout_cond[tf_num][1];
    breakout_cond[tf_num][1] = breakout_cond[tf_num][0];
    // verify prev has sideway
-   if(breakout_cond[tf_num][0] == -1 || breakout_cond[tf_num][0] >= 1)
+   if(breakout_cond[tf_num][0] == -1)
    {
       if((BB_datas[tf_num].BB_diffBBW[LA] < 0) && (BB_datas[tf_num].BBW_stage[LA] < 500 || BB_datas[tf_num].BBW_stage[LA] == 513 || BB_datas[tf_num].BBW_stage[LA] == 523))
       {
@@ -1807,82 +1936,62 @@ void SL_Breakout(BB_MTF_Data_struct &BB_datas[], int tf_num, double &breakout_co
       }
    }
 
-   // verify stage is fly and midtrend is fly 
+   // verify breakout fly with stage and using diffupp and difflow and diffbbw
    if(breakout_cond[tf_num][0] >= 0 && breakout_cond[tf_num][0] < 1)
    {
-      // if(BB_datas[tf_num].BB_diffMid_Trend[LA] !=3 || \
-      //    (BB_datas[tf_num].BB_diffMid_Trend[LA] == 4 && BB_datas[tf_num].BB_diffMid_Trend[LA_1] == 4) || \
-      //    (BB_datas[tf_num].BB_diffMid_Trend[LA] == 5 && BB_datas[tf_num].BB_diffMid_Trend[LA_1] == 5))
-      if(BB_datas[tf_num].BB_diffMid_Trend[LA] <=3)
+      // for m5 breakout only
+      if(BB_datas[tf_num].BB_diffLow[LA] < -0.1 && BB_datas[tf_num].BB_diffUpp[LA] > 0.1 && BB_datas[tf_num].BB_diffBBW[LA] > 2 && tf_num == 0)
       {
-         // verify from ltf 
-         if((BB_datas[tf_num].BBW_stage[LA] == 511 || BB_datas[tf_num].BBW_stage[LA] == 512) && (BB_datas[tf_num-1].BBW_stage[LA] >= 511 && BB_datas[tf_num-1].BBW_stage[LA] <= 513 && BB_datas[tf_num-1].BB_diffMid_Trend[LA] == 1))
+         if((BB_datas[tf_num].BBW_stage[LA] == 511 || BB_datas[tf_num].BBW_stage[LA] == 512) && BB_datas[tf_num].BB_diffMid_Trend[LA] == 1)
             breakout_cond[tf_num][0] = 1;
-         else if((BB_datas[tf_num].BBW_stage[LA] == 521 || BB_datas[tf_num].BBW_stage[LA] == 522) && (BB_datas[tf_num-1].BBW_stage[LA] >= 521 && BB_datas[tf_num-1].BBW_stage[LA] <= 523 && BB_datas[tf_num-1].BB_diffMid_Trend[LA] == 2))
+         else if((BB_datas[tf_num].BBW_stage[LA] == 521 || BB_datas[tf_num].BBW_stage[LA] == 522) && BB_datas[tf_num].BB_diffMid_Trend[LA] == 2)
             breakout_cond[tf_num][0] = 2;
       }
-   }
-
-   if(breakout_cond[tf_num][0] >= 0 && breakout_cond[tf_num][0] < 1 && tf_num != 0)
-   {
-      // verify lower tf stage is fly
-      if((BB_datas[tf_num-1].BBW_stage[LA] == 511 || BB_datas[tf_num-1].BBW_stage[LA] == 512) && BB_datas[tf_num-1].BB_diffMid_Trend[LA] == 1)
+      
+      // for more than m5 breakout as will have m5 fly verification
+      if(breakout_cond[tf_num][0] < 1 && tf_num > 0)
       {
-         breakout_cond[tf_num][0] = 0.5; // uptrend
-      }
-      else if((BB_datas[tf_num-1].BBW_stage[LA] == 521 || BB_datas[tf_num-1].BBW_stage[LA] == 522) && BB_datas[tf_num-1].BB_diffMid_Trend[LA] == 2)
-      {
-         breakout_cond[tf_num][0] = 0.6; // dntrend
-      }
+         // lower timeframe verification 
+         if((BB_datas[tf_num-1].BBW_stage[LA] == 511 || BB_datas[tf_num-1].BBW_stage[LA] == 512) && BB_datas[tf_num-1].BB_diffMid_Trend[LA] == 1)
+         {
+            breakout_cond[tf_num][0] = 0.5; // uptrend
+         }
+         else if((BB_datas[tf_num-1].BBW_stage[LA] == 521 || BB_datas[tf_num-1].BBW_stage[LA] == 522) && BB_datas[tf_num-1].BB_diffMid_Trend[LA] == 2)
+         {
+            breakout_cond[tf_num][0] = 0.6; // dntrend
+         }
 
-      // verify current sideway is fly using diffupp and difflow and diffbbw
-      // if(BB_datas[tf_num].BBW_stage[LA] <= 500 || BB_datas[tf_num].BBW_stage[LA] == 513 || BB_datas[tf_num].BBW_stage[LA] == 523)
-      // {
          if(BB_datas[tf_num].BB_diffLow[LA] < -0.1 && BB_datas[tf_num].BB_diffUpp[LA] > 0.1 && BB_datas[tf_num].BB_diffBBW[LA] > 2)
          {
             if(breakout_cond[tf_num][0] == 0.5 && (BB_datas[tf_num].BB_diffMid[LA] > 1 || BB_datas[tf_num].BB_diffMid_Trend[LA] == 1))
             {
-               breakout_cond[tf_num][0] = 1;
+               breakout_cond[tf_num][0] = 3;
             }
             else if(breakout_cond[tf_num][0] == 0.6 && (BB_datas[tf_num].BB_diffMid[LA] < -1 || BB_datas[tf_num].BB_diffMid_Trend[LA] == 2))
             {
-               breakout_cond[tf_num][0] = 2;
+               breakout_cond[tf_num][0] = 4;
             }
-         // }
+         }
+      }
+   } // reset after breakout when detected diffbbw < 0
+   else if(breakout_cond[tf_num][0] >= 1)
+   {
+      if((breakout_cond[tf_num][0] == 1 || breakout_cond[tf_num][0] == 3) && BB_datas[tf_num].BB_diffBBW[LA] > 0 && \
+         (BB_datas[tf_num].BB_diffMid_Trend[LA] == 1 || BB_datas[tf_num].BB_diffMid_Trend[LA] == 5))
+      {
+         // unchange
+      }
+      else if((breakout_cond[tf_num][0] == 2 || breakout_cond[tf_num][0] == 4) && BB_datas[tf_num].BB_diffBBW[LA] > 0 && \
+         (BB_datas[tf_num].BB_diffMid_Trend[LA] == 2 || BB_datas[tf_num].BB_diffMid_Trend[LA] == 4))
+      {
+         // unchange
+      }
+      else 
+      {
+         breakout_cond[tf_num][0] = -1;
       }
    }
 }
-
-//+------------------------------------------------------------------+
-//| Compute the ladder for the current bar. Call ONCE per M15 bar,   |
-//| AFTER BBDatas_Midline_Cluster has updated BB_midline_Cluster.    |
-//+------------------------------------------------------------------+
-//--- Context passed from SL_Update to Trade_Strategy for SL_ExitMode 6.
-//--- Filled every bar in SL_Update (where r0/r1/l1tags/dmt* are live); read by
-//--- the mode-6 branch. File-scope global, matching the SL_state pattern - no
-//--- signature change, no .mq5 edit.
-struct SL_TradeCtx_struct
-{
-   bool     r0, r1, r2, r3, r4;
-   string   l1tags, l0tags, l2tags, l3tags, l4tags;
-   string   l1tags_prev, l2tags_prev, l3tags_prev, l4tags_prev;  // previous M15 bar's tags
-   // double   dmt0, dmt1, dmt2, dmt3, dmt4;
-   int      dmt_cur;      // mode-6: which TF is trading (0=M5,1=M15) - for SWCMP log
-   bool     swconfirm;    // mode-6: swconfirm flag - for SWCMP log
-   int      sw_sl_state;  // mode-6: graded sideway state (-1 trade, 0/1/2 exit)
-   double   dmt[5][3];
-   double   c[10][3];
-   double   dm[5][3];
-   double   brkout[5][3];
-
-   SL_TradeCtx_struct()          // constructor - runs once when g_tradectx is declared
-   {
-      for(int i=0; i<5; i++)
-         for(int j=0; j<3; j++)
-            brkout[i][j] = -1;
-   }
-};
-SL_TradeCtx_struct g_tradectx;
 
 void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
                BB_MTF_Data_struct   &BB_datas[])
@@ -1968,7 +2077,11 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
          static double shrink_dmt = 0;
          bool reversal_shrink_dmt = ((shrink_dmt == 1 && g_tradectx.dmt[0][0] == 2 && g_tradectx.dmt[0][1] == 2) \
                         || (shrink_dmt == 2 && g_tradectx.dmt[0][0] == 1 && g_tradectx.dmt[0][1] == 1));
+         SL_Breakout(BB_datas, 0, g_tradectx.brkout);
 
+         string debug_rev = "";
+         SL_TrendReversal(BB_datas, g_tradectx, debug_rev);
+         if(debug_rev != "") Print("[REVTREND] ", debug_rev);
          // detected fly_shrink by diffUpp and diffLow
          {
             // state 0 -> 1: strong fly AND expanding (diffBBW rising above threshold)
@@ -2067,7 +2180,8 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
             if(SL_StageOK((int)BB_datas[0].BBW_stage[LA]))        g_tradectx.l0tags += "S";
             if(g_tradectx.dm[0][0] < g_tradectx.dm[0][1] && g_tradectx.dm[0][1] < g_tradectx.dm[0][2])                     
                                                                   g_tradectx.l0tags += "T";
-             if(MathFloorDecimal(g_tradectx.dm[0][0], 1) < SL_diffmid_m5 && MathFloorDecimal(g_tradectx.dm[0][1], 1) < SL_diffmid_m5)     
+            if(g_tradectx.brkout[0][0] >= 0)                      g_tradectx.l0tags += "B" + g_tradectx.brkout[0][0];
+            if(MathFloorDecimal(g_tradectx.dm[0][0], 1) < SL_diffmid_m5 && MathFloorDecimal(g_tradectx.dm[0][1], 1) < SL_diffmid_m5)     
                                                                   g_tradectx.l0tags += "M";
             if(g_srev_m5 >= 1)                                    g_tradectx.l0tags += "V" + g_srev_m5;
             if(BB_datas[0].BB_diffBBW[LA]   < SL_diffbbw_m5
@@ -2156,6 +2270,10 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
             && BB_datas[1].BB_diffBBW[LA_1] < SL_diffbbw_m15);
    // SL_Breakout(BB_datas, 1, breakout_m15);
    SL_Breakout(BB_datas, 1, g_tradectx.brkout);
+   // string debug_rev = "";
+   // SL_TrendReversal(BB_datas, g_tradectx, debug_rev);
+   // if(debug_rev != "") Print("[REVTREND] ", debug_rev);
+   
 
    // Print("dm1:",MathFloor(g_tradectx.dm[1][0]), ", ", MathFloor(g_tradectx.dm[1][1]), ". SL_diffmid_m15:", SL_diffmid_m15);
 
@@ -2184,6 +2302,8 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
          MathFloor(g_tradectx.c[2][0]) <= CD_NEAR_H1M15 && MathFloor(g_tradectx.c[2][1]) <= CD_NEAR_H1M15)
                                                           g_tradectx.l1tags += "R";
       if(S15)                                             g_tradectx.l1tags += "S";
+      if(g_tradectx.revtrend[0] > 0 && g_tradectx.revtrend[1] > 0)
+                                                          g_tradectx.l1tags += "U";
       if(g_tradectx.dm[1][0] < g_tradectx.dm[1][1] && g_tradectx.dm[1][1] < g_tradectx.dm[1][2])
                                                           g_tradectx.l1tags += "T";
       if(g_tradectx.brkout[1][0] >= 0)                    g_tradectx.l1tags += "B" + g_tradectx.brkout[1][0];
@@ -2749,6 +2869,14 @@ void Trade_Strategy(
    double                   baseLot = 0.01
 )
 {
+
+   //================= Set sw_sl_state =================
+   static int dmt_cur = 0;         // [ASSUMPTION] first-bar default 0 = trade M5 (dm0)
+   static int sw_sl_state = -1;
+   
+   string debug_sw_sl_state = "_";
+   string debug_dmt_cur = IntegerToString(dmt_cur);
+
    //--- Defaults: HOLD, no stop, base lot
    Trade_act = 0; Trade_info = ""; Trade_lots = baseLot; Trade_sl = 0.0;
 
@@ -2897,13 +3025,6 @@ void Trade_Strategy(
             }
          }
       }
-
-      //================= Set sw_sl_state =================
-      static int dmt_cur = 0;         // [ASSUMPTION] first-bar default 0 = trade M5 (dm0)
-      static int sw_sl_state = -1;
-      
-      string debug_sw_sl_state = "_";
-      string debug_dmt_cur = IntegerToString(dmt_cur);
       
       if(fly23) {
          debug_sw_sl_state += "-23";
@@ -3199,9 +3320,9 @@ void Trade_Strategy(
                if(SL_Has(l0t,"P"))
                {
                   debug_sw_sl_state += "0-" + IntegerToString(sw_sl_state) + "_3";
-                  sw_sl_state = 3;
+                  sw_sl_state = 2;
                   static int m30seq=0; m30seq++;
-                  string m30gn="SL2Q_"+IntegerToString(m30seq);
+                  string m30gn="SL2QA_"+IntegerToString(m30seq);
                   color m30gc = YellowGreen;
                   if(ObjectCreate(0,m30gn,OBJ_ARROW,0,iTime(_Symbol,PERIOD_M5,0),iClose(_Symbol,PERIOD_M5,0)))
                   {
@@ -3229,9 +3350,9 @@ void Trade_Strategy(
                // if(SL_Has(l0t,"P") || SL_Has(l0t,"W") || SL_Has(l0t,"ZOW"))
                // {
                   debug_sw_sl_state += "0-" + IntegerToString(sw_sl_state) + "_3";
-                  sw_sl_state = 3;
+                  sw_sl_state = 2;
                   static int m30seq=0; m30seq++;
-                  string m30gn="SL2Q_"+IntegerToString(m30seq);
+                  string m30gn="SL2QB_"+IntegerToString(m30seq);
                   color m30gc = LimeGreen;
                   if(ObjectCreate(0,m30gn,OBJ_ARROW,0,iTime(_Symbol,PERIOD_M5,0),iClose(_Symbol,PERIOD_M5,0)))
                   {
@@ -3246,26 +3367,61 @@ void Trade_Strategy(
          }
          debug_sw_sl_state += "}";
       }
-      // M15 sideway 
-      // if(r1c && sw_sl_state == -1)
-      // {
-      //    debug_sw_sl_state += "-{J";
-      //    if(SL_Has(l1t,"SM") || SL_Has(l1t,"ZNW") || SL_Has(l1t,"ZWM") || (SL_Has(l1t,"ZW") && SL_Has(l0t,"M")))
-      //    {
-      //       debug_sw_sl_state += "1";
-      //       // if(SL_Has(l0t,"M"))
-      //       // {
-               
-      //       // }
-      //    }
-      //    debug_sw_sl_state += "}";
-      // }
 
-      // during fly 
-      // if(sw_sl_state == -1 && )
-      // {
+      if(sw_sl_state == -1)
+      {
+         debug_sw_sl_state += "-{J";
+         // if(SL_Has(l3t,"L")) { // fly34 
+         //    debug_sw_sl_state += "3";
+            if(SL_Has(l2t,"WK") || SL_Has(l2t,"TK")) { // fly23 
+               debug_sw_sl_state += "A";
+               debug_sw_sl_state += "2";
+               if(r1c && (SL_Has(l1t,"SWJ") || SL_Has(l1t,"SWM") || SL_Has(l1t,"ZJWM") || SL_Has(l1t,"HWM") || SL_Has(l1t,"XWM") || SL_Has(l1t,"QWM"))) {
+                  debug_sw_sl_state += "1";
+                  debug_sw_sl_state += "0-" + IntegerToString(sw_sl_state) + "_3";
+                  sw_sl_state = 2;
+                  static int m15seq=0; m15seq++;
+                  string m15gn="SL2JA_"+IntegerToString(m15seq);
+                  color m15gc = Chocolate;
+                  if(ObjectCreate(0,m15gn,OBJ_ARROW,0,iTime(_Symbol,PERIOD_M5,0),iClose(_Symbol,PERIOD_M5,0)))
+                  {
+                     ObjectSetInteger(0,m15gn,OBJPROP_ARROWCODE,159); // down/up arrow
+                     ObjectSetInteger(0,m15gn,OBJPROP_COLOR,m15gc);
+                     ObjectSetInteger(0,m15gn,OBJPROP_WIDTH,10);
+                     ObjectSetInteger(0,m15gn,OBJPROP_SELECTABLE,false);
+                     ObjectSetString (0,m15gn,OBJPROP_TOOLTIP,m15gn);
+                  }
+               }
+            }
 
-      // } 
+            if(sw_sl_state == -1)
+            {
+               if((SL_Has(l3t,"MWQR") || SL_Has(l3t,"MWSR")) && r3c) {
+                  debug_sw_sl_state += "B";
+                  debug_sw_sl_state += "3";
+                  if((SL_Has(l2t,"YQM") || SL_Has(l2t,"YM") || SL_Has(l2t,"YOQW")) && r2c) {
+                     debug_sw_sl_state += "2";
+                     if(SL_Has(l1t,"XQR") || SL_Has(l1t,"XYRW") || SL_Has(l1t,"YOSW") || SL_Has(l1t,"YSWM")) {
+                        debug_sw_sl_state += "1";
+                        debug_sw_sl_state += "0-" + IntegerToString(sw_sl_state) + "_3";
+                        sw_sl_state = 2;
+                        static int m15seq=0; m15seq++;
+                        string m15gn="SL2JB_"+IntegerToString(m15seq);
+                        color m15gc = Orange;
+                        if(ObjectCreate(0,m15gn,OBJ_ARROW,0,iTime(_Symbol,PERIOD_M5,0),iClose(_Symbol,PERIOD_M5,0)))
+                        {
+                           ObjectSetInteger(0,m15gn,OBJPROP_ARROWCODE,159); // down/up arrow
+                           ObjectSetInteger(0,m15gn,OBJPROP_COLOR,m15gc);
+                           ObjectSetInteger(0,m15gn,OBJPROP_WIDTH,10);
+                           ObjectSetInteger(0,m15gn,OBJPROP_SELECTABLE,false);
+                           ObjectSetString (0,m15gn,OBJPROP_TOOLTIP,m15gn);
+                        }
+                     }
+                  }
+               }
+            }
+         debug_sw_sl_state += "}";
+      }
 
       //--- track sw_sl_state>=0 spans and draw them (same look as SwConfirm)
       static datetime sw6_from = 0;
