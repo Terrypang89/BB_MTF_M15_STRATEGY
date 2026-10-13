@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "38.35.03"
+#property version   "38.35.05"
 
 #define HAS_TOFYSIDEWAY_LADDER
 //+------------------------------------------------------------------+
@@ -679,6 +679,8 @@ void SL_DrawUserLabelRanges()
 //|   ladder + M30 latch       1072 bars, 60 ranges, 68 trades, +57  |
 //+------------------------------------------------------------------+
 bool   SL_DrawLadderLabels = true;      // aqua marks where the ladder says sideway
+bool   SL_DrawRegimeBrk = true;         // STAGE1 diagnostic: arrow where regime==BREAKOUT
+bool   SL_DrawRegimeRev = true;         // STAGE1 diagnostic: TREND_REVERSAL span line on M5 BBmid
 color  SL_LadderColor     = MistyRose;
 int    SL_LadderFont      = 7;
 
@@ -1368,6 +1370,74 @@ bool SL_HasNone(string tags, string none)
       if(StringFind(tags, StringSubstr(none, i, 1)) >= 0) return false;
    return true;
 }
+//+------------------------------------------------------------------+
+//| SL_ClassifyRegime  -  STAGE 1: pure labeller, changes NO trades.  |
+//|                                                                    |
+//| Returns exactly ONE regime for the bar, by priority. It only      |
+//| READS state already computed this bar (sw_sl_state, fly flags,    |
+//| brkout[][], revtrend[]). It writes nothing except its return.     |
+//|                                                                    |
+//| Priority (highest first) - this is the ONLY design choice here;   |
+//| change the order to change which label wins when several apply:   |
+//|   1 TREND_REVERSAL : revtrend fully formed (both legs set)         |
+//|   2 BREAKOUT       : any TF brkout confirmed (1/2/3/4)             |
+//|   3 SIDEWAY        : sw_sl_state >= 0 (the ladder said sideway)    |
+//|   4 FLY01/12/23    : timeframe-pair fly (trending), finest first   |
+//|   5 NONE           : nothing matched                              |
+//+------------------------------------------------------------------+
+enum SL_Regime
+{
+   REG_NONE          = 0,
+   REG_SIDEWAY       = 1,
+   REG_FLY01         = 2,
+   REG_FLY12         = 3,
+   REG_FLY23         = 4,
+   REG_BREAKOUT      = 5,
+   REG_TREND_REVERSAL= 6
+};
+
+string SL_RegimeName(SL_Regime r)
+{
+   switch(r)
+   {
+      case REG_SIDEWAY:        return "SIDEWAY";
+      case REG_FLY01:          return "FLY01";
+      case REG_FLY12:          return "FLY12";
+      case REG_FLY23:          return "FLY23";
+      case REG_BREAKOUT:       return "BREAKOUT";
+      case REG_TREND_REVERSAL: return "TREND_REV";
+      default:                 return "NONE";
+   }
+}
+
+//--- Pure read. sw_sl_state/fly01/fly12/fly23 are passed in (locals in
+//--- the dispatch); brkout/revtrend are read from the ctx struct.
+SL_Regime SL_ClassifyRegime(SL_TradeCtx_struct &ctx,
+                            int    sw_sl_state,
+                            bool   fly01, bool fly12, bool fly23)
+{
+   // 1 - trend reversal: both legs of revtrend set = a reversal has fully formed
+   if(ctx.revtrend[0] >= 1 && ctx.revtrend[1] >= 1)
+      return REG_TREND_REVERSAL;
+
+   // 2 - breakout: any timeframe shows a CONFIRMED break (1/2 = M5-style, 3/4 = HTF)
+   //     pending states (0.5/0.6) and -1/0 do NOT count as breakout here.
+   for(int i = 0; i < 5; i++)
+      if(ctx.brkout[i][0] >= 1)
+         return REG_BREAKOUT;
+
+   // 3 - sideway: the ladder's verdict (>=0 means it flagged sideway)
+   if(sw_sl_state >= 0)
+      return REG_SIDEWAY;
+
+   // 4 - fly (trending), finest timeframe pair first
+   if(fly01) return REG_FLY01;
+   if(fly12) return REG_FLY12;
+   if(fly23) return REG_FLY23;
+
+   // 5 - nothing matched
+   return REG_NONE;
+}
 
 //--- One slot:  All  &&  Any  &&  Any2  &&  !None
 //--- Two Any groups so rules like  A && (X||Y) && (W||S||M||C)  fit in one slot.
@@ -1826,6 +1896,7 @@ double MathFloorDecimal(double value, int digits)
    return NormalizeDouble(floored, digits);
 }
 
+
 void SL_TrendReversal(BB_MTF_Data_struct &BB_datas[], SL_TradeCtx_struct &tradectx, string &debugrev) 
 {
    bool fly23 = tradectx.dmt[2][0] == tradectx.dmt[3][0] && tradectx.dmt[3][0] < 3.0;
@@ -1864,15 +1935,6 @@ void SL_TrendReversal(BB_MTF_Data_struct &BB_datas[], SL_TradeCtx_struct &tradec
       }
    }
 
-   // m15 sideway and m5 in fly with 
-   // if(tradectx.r1)
-   // {
-   //    if(BB_datas[0].BB_diffMid_Trend[LA] == tradectx.revtrend[1])
-   //    {
-   //       tradectx.r1 = 0;
-   //       debugrev += "rev(" + tradectx.revtrend[0] + ", " + tradectx.revtrend[1] + ")";
-   //    }
-   // }
    // reset when m15 trend is reversed
    if(tradectx.revtrend[0] > 0 && tradectx.revtrend[1] > 0 && 
       BB_datas[1].BB_diffMid_Trend[LA] == tradectx.revtrend[1])
@@ -1917,8 +1979,8 @@ void SL_TrendReversal(BB_MTF_Data_struct &BB_datas[], SL_TradeCtx_struct &tradec
          debugrev += "m30sw2_rst";
       }
    }
-   
 }
+
 
 void SL_Breakout(BB_MTF_Data_struct &BB_datas[], int tf_num, double &breakout_cond[][3])
 {
@@ -3311,10 +3373,8 @@ void Trade_Strategy(
       if(r2c && sw_sl_state == -1)
       {
          debug_sw_sl_state += "-{Q";
-         if(SL_Has(l2t,"SM") || SL_Has(l2t,"SW") || SL_Has(l2t,"WM") )
-         {
-            debug_sw_sl_state += "A";
-            debug_sw_sl_state += "2";
+         if(SL_Has(l2t,"SM") || SL_Has(l2t,"SW") || SL_Has(l2t,"WM") ){
+            debug_sw_sl_state += "A2";
             if((SL_Has(l1t,"XW") || SL_Has(l1t,"XM")))
             {
                debug_sw_sl_state += "1";
@@ -3447,6 +3507,40 @@ void Trade_Strategy(
       bool up6   = (dmt_use == 1.0 || dmt_use == 5.0);
       bool down6 = (dmt_use == 2.0 || dmt_use == 4.0);
 
+      //--- STAGE 1: regime label (diagnostic only, drives NO trade this stage) ---
+      SL_Regime regime = SL_ClassifyRegime(g_tradectx, sw_sl_state, fly01, fly12, fly23);
+
+      //--- TREND_REVERSAL span line on the M5 BBmid:
+      //--- opens on the bar revtrend[1] first goes >0 (reversal CONFIRMED),
+      //--- closes (draws one OBJ_TREND) on the bar revtrend[0] returns to 0.
+      {
+         static datetime rev_from  = 0;      // start-bar time (0 = no open span)
+         static double   rev_pfrom = 0.0;    // M5 BBmid at start bar
+         double m5mid = BB_datas[0].BBMidLV[LA];
+         if(rev_from == 0 && g_tradectx.revtrend[1] > 0)   // span opens
+         {
+            rev_from  = cur;
+            rev_pfrom = m5mid;
+         }
+         else if(rev_from != 0 && g_tradectx.revtrend[0] == 0)  // span closes -> draw
+         {
+            if(SL_DrawRegimeRev)
+            {
+               static int revlnseq = 0; revlnseq++;
+               string ln = "SLREVLN_" + IntegerToString(revlnseq);
+               if(ObjectCreate(0, ln, OBJ_TREND, 0, rev_from, rev_pfrom, cur, m5mid))
+               {
+                  ObjectSetInteger(0, ln, OBJPROP_COLOR,      LightBlue);
+                  ObjectSetInteger(0, ln, OBJPROP_WIDTH,      5);
+                  ObjectSetInteger(0, ln, OBJPROP_RAY_RIGHT,  false);
+                  ObjectSetInteger(0, ln, OBJPROP_SELECTABLE, false);
+                  ObjectSetString (0, ln, OBJPROP_TOOLTIP,    "TREND_REVERSAL span");
+               }
+            }
+            rev_from = 0;   // reset for next episode
+         }
+      }
+
       // Trade_info = "[LADTRADE6]"
       Trade_info = "dmt:[" + DoubleToString(dmt0c,1)
                  + ", " + DoubleToString(dmt1c,1)
@@ -3466,6 +3560,7 @@ void Trade_Strategy(
                  + " r3:" + (r3c ? (sl_rect_phase[3]==1?"1C":"1E") : "0")
                  + " r4:" + (r4c ? (sl_rect_phase[4]==1?"1C":"1E") : "0")
                  + " dbg:[" + debug_dmt_cur + debug_sw_sl_state + "]"
+                 + " regime:[" + SL_RegimeName(regime) + "]"
                  + " cur:" + IntegerToString(dmt_cur)
                  + " sw_sl:" + IntegerToString(sw_sl_state)
                  + " tc1:" + (tc[0]?"1":"0") 
