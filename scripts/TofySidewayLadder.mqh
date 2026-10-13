@@ -3591,7 +3591,7 @@ void Trade_Strategy(
                  + " dbg:[" + debug_dmt_cur + debug_sw_sl_state + "]"
                  + " brkout:[" + g_tradectx.brkout[0][0] + ", " + g_tradectx.brkout[1][0] + ", " + g_tradectx.brkout[2][0] + ", " + g_tradectx.brkout[3][0] + ", " + g_tradectx.brkout[4][0] + "]"
                  + " revtrend:[" + g_tradectx.revtrend[0] + ", " + g_tradectx.revtrend[1] + ", " + g_tradectx.revcode + "]"
-                 + " srev:[" + g_tradectx.g_srev_m5 + "," + g_tradectx.shrink_dmt + "]"
+                 + " srev:[" + g_tradectx.g_srev_m5 + ", " + g_tradectx.shrink_dmt + ", " + g_tradectx.shrink_strength + "]"
                  + " regime:[" + SL_RegimeName(regime) + "]"
                  + " cur:" + IntegerToString(dmt_cur)
                  + " sw_sl:" + IntegerToString(sw_sl_state)
