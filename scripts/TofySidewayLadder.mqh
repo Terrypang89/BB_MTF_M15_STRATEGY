@@ -1833,10 +1833,10 @@ void SL_TrendReversal(BB_MTF_Data_struct &BB_datas[], SL_TradeCtx_struct &tradec
    bool fly01 = tradectx.dmt[0][0] == tradectx.dmt[1][0] && tradectx.dmt[1][0] < 3.0;
    // need verify the fly direction 
    if(fly01 && (fly12 || fly23) && SL_StageFly((int)BB_datas[2].BBW_stage[LA])
-      && BB_datas[2].BB_diffMid_Trend[LA] < 3 && BB_datas[3].BB_diffMid_Trend[LA] < 3 
-      && tradectx.revtrend[0] == 0)
+      && BB_datas[2].BB_diffMid_Trend[LA] < 3 && BB_datas[3].BB_diffMid_Trend[LA] < 3)
    {
-      if(BB_datas[1].BB_diffMid_Trend[LA] < 3)
+      // when revtrend diffrent from m15
+      if(BB_datas[1].BB_diffMid_Trend[LA] < 3 && (tradectx.revtrend[0] == 0 || tradectx.revtrend[0] != BB_datas[1].BB_diffMid_Trend[LA]))
       {
          tradectx.revtrend[0] = BB_datas[1].BB_diffMid_Trend[LA];
          debugrev += "rev(" + tradectx.revtrend[0] + ", " + tradectx.revtrend[1] + ")";
@@ -1889,8 +1889,9 @@ void SL_TrendReversal(BB_MTF_Data_struct &BB_datas[], SL_TradeCtx_struct &tradec
       tradectx.revtrend[1] = 0;
       debugrev += "m5resume_rst";
    }
-   // reset when m5 revtrend but sideway 
-   else if(tradectx.revtrend[0] > 0 && tradectx.revtrend[1] > 0 && BB_datas[0].BB_diffMid_Trend[LA] == 3)
+   // reset when m5 revtrend but sideway, need double confirmed with diffmid 
+   else if(tradectx.revtrend[0] > 0 && tradectx.revtrend[1] > 0 && BB_datas[0].BB_diffMid_Trend[LA] == 3 && 
+      ((tradectx.revtrend[1] == 1 && BB_datas[0].BB_diffMid[LA] < 0) || (tradectx.revtrend[1] == 2 && BB_datas[0].BB_diffMid[LA] > 0)))
    {
       tradectx.revtrend[0] = 0;
       tradectx.revtrend[1] = 0;
