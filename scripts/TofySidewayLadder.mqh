@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "38.35.05"
+#property version   "38.35.06"
 
 #define HAS_TOFYSIDEWAY_LADDER
 //+------------------------------------------------------------------+
@@ -486,18 +486,20 @@ struct SL_TradeCtx_struct
    int      g_srev_m5;                   // M5 reversal detector state (0..4)
    int      g_srev_trend_before;
    double   shrink_dmt;
+   int      shrink_strength;
 
    SL_TradeCtx_struct()          // constructor - runs once when g_tradectx is declared
    {
       for(int i=0; i<5; i++)
          for(int j=0; j<3; j++)
             brkout[i][j] = -1;
-      revcode = 0;
+      revcode = nonerev_rst;
       revtrend[0] = 0;
       revtrend[1] = 0;
       shrink_dmt = 0;
       g_srev_m5 = 0;
       g_srev_trend_before = 0;
+      shrink_strength = 0;
    }
 };
 SL_TradeCtx_struct g_tradectx;
@@ -989,8 +991,10 @@ bool     SL_ClusterUseZ        = false;   // Z = M15+H4  (sep -0.7, useless - of
 bool     SL_DrawClusterHold    = true;    // draw an M5 outline box over cluster-hold (CLHOLD) spans
 bool     SL_DrawCurFlip        = true;    // label the bar where dmt_cur flips (regime switch)
 bool     SL_DrawRevM5          = true;    // pink marker at M5 expand->shrink reversal candidate
-int      g_srev_m5 = 0;                   // M5 reversal detector state (0..4)
-int      g_srev_trend_before = 0;
+//--- g_srev_m5 / g_srev_trend_before now live in SL_TradeCtx_struct (see the struct).
+//--- The old file-scope globals were removed: they were never written after the
+//--- state machine moved into SL_ShrinkReversal(ctx), so anything reading them
+//--- silently saw 0 forever (that is what disabled the "V" tag).
 color    SL_ClusterHoldColor   = clrDeepPink;  // distinct; unfilled so it reads over SwConfirm6
 datetime g_clh_from = 0;   // cluster-hold span start (file scope so run-end can flush it)
 datetime g_clh_last = 0;
@@ -1914,9 +1918,12 @@ double MathFloorDecimal(double value, int digits)
    return NormalizeDouble(floored, digits);
 }
 
-
-void SL_TrendReversal(BB_MTF_Data_struct &BB_datas[], SL_TradeCtx_struct &tradectx) 
+void SL_TrendReversal(BB_MTF_Data_struct &BB_datas[], SL_TradeCtx_struct &tradectx)
 {
+   //--- revcode is a PER-BAR reason code: clear it each call, otherwise the last
+   //--- reset's code sticks on every following bar and the log cannot tell you
+   //--- which bar actually reset.
+   tradectx.revcode = nonerev_rst;
    bool fly23 = tradectx.dmt[2][0] == tradectx.dmt[3][0] && tradectx.dmt[3][0] < 3.0;
    bool fly12 = tradectx.dmt[1][0] == tradectx.dmt[2][0] && tradectx.dmt[2][0] < 3.0;
    bool fly01 = tradectx.dmt[0][0] == tradectx.dmt[1][0] && tradectx.dmt[1][0] < 3.0;
@@ -2106,16 +2113,15 @@ void SL_ShrinkReversal(BB_MTF_Data_struct &BB_datas[], SL_TradeCtx_struct &ctx)
    double dU_now = BB_datas[0].BB_diffUpp[LA];
    double dL_now = BB_datas[0].BB_diffLow[LA];
    // strength tiers (diffBBW is x100-scaled; tune these):
-   int shrink_strength = 0;                            // 0=none 1=weak 2=normal 3=strong
-   if     (shrink_mag > 30.0) shrink_strength = 3;
-   else if(shrink_mag > 15.0) shrink_strength = 2;
-   else if(shrink_mag >  5.0) shrink_strength = 1;
+   // int shrink_strength = 0;                            // 0=none 1=weak 2=normal 3=strong
+   if     (shrink_mag > 30.0) ctx.shrink_strength = 3;
+   else if(shrink_mag > 15.0) ctx.shrink_strength = 2;
+   else if(shrink_mag >  5.0) ctx.shrink_strength = 1;
    // direction: lower rising faster than upper falling -> downward pressure; mirror for up
    int shrink_dir = 0;                                 // 0=none 1=down-bias 2=up-bias
    if     (dL_now > dU_now && dL_now > 0.0) shrink_dir = 1;   // lower leading -> down
    else if(dU_now > dL_now && dU_now > 0.0) shrink_dir = 2;   // upper leading -> up
 
-   // static double ctx.shrink_dmt = 0;
    bool reversal_shrink_dmt = ((ctx.shrink_dmt == 1 && ctx.dmt[0][0] == 2 && ctx.dmt[0][1] == 2) \
                   || (ctx.shrink_dmt == 2 && ctx.dmt[0][0] == 1 && ctx.dmt[0][1] == 1));
    
@@ -2131,14 +2137,14 @@ void SL_ShrinkReversal(BB_MTF_Data_struct &BB_datas[], SL_TradeCtx_struct &ctx)
    // 1 -> 2: strong shrink (diffBBW deeply negative)
    // else if(g_srev_m5 == 1 && fly_shrink && bbw < Strong_Shrink_diffbbw_m5 && bbwa < Strong_Shrink_diffbbw_m5 && bbwb < Strong_Shrink_diffbbw_m5)
    // else if(g_srev_m5 == 1 && fly_shrink && strong_shrink_diffUppLow)
-   else if(ctx.g_srev_m5 == 1 && fly_shrink && shrink_strength >= 1)
+   else if(ctx.g_srev_m5 == 1 && fly_shrink && ctx.shrink_strength >= 1)
    {
       ctx.g_srev_m5 = 2;
       if(SL_DrawRevM5)
       {
          static int sgseq=0; sgseq++;
          string gn="SLREVG_"+IntegerToString(sgseq);
-         color gc = (shrink_strength==3)?clrRed:(shrink_strength==2)?clrOrange:clrYellow;
+         color gc = (ctx.shrink_strength==3)?clrRed:(ctx.shrink_strength==2)?clrOrange:clrYellow;
          if(ObjectCreate(0,gn,OBJ_ARROW,0,iTime(_Symbol,PERIOD_M5,0),iClose(_Symbol,PERIOD_M5,0)))
          {
             ObjectSetInteger(0,gn,OBJPROP_ARROWCODE,(shrink_dir==1)?234:(shrink_dir==2)?233:159); // down/up arrow
@@ -2146,7 +2152,7 @@ void SL_ShrinkReversal(BB_MTF_Data_struct &BB_datas[], SL_TradeCtx_struct &ctx)
             ObjectSetInteger(0,gn,OBJPROP_WIDTH,3);
             ObjectSetInteger(0,gn,OBJPROP_SELECTABLE,false);
             ObjectSetString (0,gn,OBJPROP_TOOLTIP,
-               "shrink str="+IntegerToString(shrink_strength)+" dir="+IntegerToString(shrink_dir)
+               "shrink str="+IntegerToString(ctx.shrink_strength)+" dir="+IntegerToString(shrink_dir)
                +" mag="+DoubleToString(shrink_mag,1));
          }
          // Print("[SHRINKG] str:",shrink_strength," dir:",shrink_dir," mag:",DoubleToString(shrink_mag,1),
@@ -2269,7 +2275,7 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
             if(g_tradectx.brkout[0][0] >= 0)                      g_tradectx.l0tags += "B" + g_tradectx.brkout[0][0];
             if(MathFloorDecimal(g_tradectx.dm[0][0], 1) < SL_diffmid_m5 && MathFloorDecimal(g_tradectx.dm[0][1], 1) < SL_diffmid_m5)     
                                                                   g_tradectx.l0tags += "M";
-            if(g_srev_m5 >= 1)                                    g_tradectx.l0tags += "V" + g_srev_m5;
+            if(g_tradectx.g_srev_m5 >= 1)                         g_tradectx.l0tags += "V" + IntegerToString(g_tradectx.g_srev_m5);
             if(BB_datas[0].BB_diffBBW[LA]   < SL_diffbbw_m5
              && BB_datas[0].BB_diffBBW[LA_1] < SL_diffbbw_m5)     g_tradectx.l0tags += "W";
             if(g_tradectx.dmt[0][0] >= 3.0 &&
@@ -3583,6 +3589,7 @@ void Trade_Strategy(
                  + " r3:" + (r3c ? (sl_rect_phase[3]==1?"1C":"1E") : "0")
                  + " r4:" + (r4c ? (sl_rect_phase[4]==1?"1C":"1E") : "0")
                  + " dbg:[" + debug_dmt_cur + debug_sw_sl_state + "]"
+                 + " brkout:[" + g_tradectx.brkout[0][0] + ", " + g_tradectx.brkout[1][0] + ", " + g_tradectx.brkout[2][0] + ", " + g_tradectx.brkout[3][0] + ", " + g_tradectx.brkout[4][0] + "]"
                  + " revtrend:[" + g_tradectx.revtrend[0] + ", " + g_tradectx.revtrend[1] + ", " + g_tradectx.revcode + "]"
                  + " srev:[" + g_tradectx.g_srev_m5 + "," + g_tradectx.shrink_dmt + "]"
                  + " regime:[" + SL_RegimeName(regime) + "]"
