@@ -1,6 +1,6 @@
 #property copyright "Copyright 2026, terrypang."
 #property link      "https://www.mql5.com/en/users/terrypang/"
-#property version   "38.35.06"
+#property version   "38.35.07"
 
 #define HAS_TOFYSIDEWAY_LADDER
 //+------------------------------------------------------------------+
@@ -101,6 +101,24 @@ double CL_NEAR_M30H4  = 60;     // c5 = M30 + H4     far run 2-3x the pair below
 double CL_NEAR_H1H4   = 60;     // c6 = H1  + H4     these start wide. Check the fire rate.
 
 // cluster distance 
+//--- REVERSAL CONFIRMATION (used in SL_TrendReversal).
+//--- A real M15 reversal needs TWO things, and sideway chop has neither:
+//---   1. midlines SPREAD  - c0 (M5+M15) and c1 (M15+M30) both wide. Both tight
+//---      means the timeframes agree "no trend", which IS sideway.
+//---   2. bands COLLAPSING - shrink_strength >= REV_MIN_SHRINK (momentum dying).
+//--- MEASURED on Feb v38.35.06, 179 revtrend firings, 76 false (42.5% baseline),
+//--- with shrink_strength RECOMPUTED without the latch bug:
+//---    gate off                            179 kept, 42.5% false
+//---    spread only (c0>8 && c1>8)           74 kept, 25.7% false
+//---    spread && shrink>=1                  19 kept, 10.5% false   <-- default
+//---    spread && shrink>=2                   8 kept,  0.0% false (n too small)
+//--- CAUTION: n=19 at the default. Direction is solid, the exact rate is not.
+//--- One month, thresholds chosen on the same data - expect worse live.
+double REV_SPREAD_M5M15  = 8;    // c0 must EXCEED this
+double REV_SPREAD_M15M30 = 8;    // c1 must EXCEED this
+int    REV_MIN_SHRINK    = 1;    // shrink_strength must be >= this (0 disables)
+bool   SL_RevUseSpread   = true; // false = old behaviour (no confirmation gate)
+
 double CD_NEAR_M15M5 = 20;
 double CD_NEAR_M30M5 = 40;
 double CD_NEAR_M30M15= 26;
@@ -1941,7 +1959,14 @@ void SL_TrendReversal(BB_MTF_Data_struct &BB_datas[], SL_TradeCtx_struct &tradec
 
    // detect, make sure m15 in fly 
    // if(tradectx.revtrend[0] >= 1 && tradectx.brkout[0][0] > 0)
-   if(tradectx.revtrend[0] >= 1 && tradectx.brkout[0][0] > 0)
+   //--- Reversal confirmation: midlines SPREAD (not clustered = not sideway) AND
+   //--- bands COLLAPSING hard. 42.5% -> 25.7% (spread) -> 10.5% (spread+shrink).
+   bool rev_spread_ok = (!SL_RevUseSpread)
+                     || (   tradectx.c[0][0] > REV_SPREAD_M5M15
+                         && tradectx.c[1][0] > REV_SPREAD_M15M30
+                         && tradectx.shrink_strength >= REV_MIN_SHRINK);
+
+   if(tradectx.revtrend[0] >= 1 && tradectx.brkout[0][0] > 0 && rev_spread_ok)
    {
       // m5 fly reverse with fly trend
       if(tradectx.revtrend[0] == 1 && BB_datas[0].BB_diffMid_Trend[LA] == 2 && 
@@ -2010,7 +2035,6 @@ void SL_TrendReversal(BB_MTF_Data_struct &BB_datas[], SL_TradeCtx_struct &tradec
       }
    }
 }
-
 
 void SL_Breakout(BB_MTF_Data_struct &BB_datas[], int tf_num, double &breakout_cond[][3])
 {
@@ -2117,6 +2141,9 @@ void SL_ShrinkReversal(BB_MTF_Data_struct &BB_datas[], SL_TradeCtx_struct &ctx)
    if     (shrink_mag > 30.0) ctx.shrink_strength = 3;
    else if(shrink_mag > 15.0) ctx.shrink_strength = 2;
    else if(shrink_mag >  5.0) ctx.shrink_strength = 1;
+   else                       ctx.shrink_strength = 0;   // LATCH FIX: without this the
+   //--- field kept its previous value on every non-shrinking bar. Measured effect:
+   //--- 148 of 179 reversal firings reported strength 1 when the truth was 0.
    // direction: lower rising faster than upper falling -> downward pressure; mirror for up
    int shrink_dir = 0;                                 // 0=none 1=down-bias 2=up-bias
    if     (dL_now > dU_now && dL_now > 0.0) shrink_dir = 1;   // lower leading -> down
@@ -2947,177 +2974,29 @@ void SL_Update(BB_MTF_Impact_struct &BBTFImpact,
 //| side (so exit_all and exit_<side> close the same thing). The codes  |
 //| below are the precise ones - same behaviour, self-documenting.      |
 //+------------------------------------------------------------------+
-void Trade_Strategy(
-   BB_MTF_Data_struct      &BB_datas[],
-   ATRSLBUF_struct         &ATRSL1BUF,
-   BB_MTF_Impact_struct    &BBTFImpact,
-   ENUM_Trade_Act          &Trade_act,   // OUT: 0=hold 1=BUY 2=SELL 7=exit_all
-   string                  &Trade_info,
-   double                  &Trade_lots,
-   double                  &Trade_sl,
-   int                      BUYS,
-   int                      SELLS,
-   double                  &close_prices[],
-   double                   baseLot = 0.01
-)
+//+------------------------------------------------------------------+
+//| SL_SelectTradeTF  -  the fly23/fly12/fly01 cascade (M15 rate).    |
+//| Extracted VERBATIM from the Trade_Strategy dispatch.               |
+//|                                                                    |
+//| WHAT IT ACTUALLY DOES: picks the trading timeframe (dmt_cur:       |
+//| 0 = M5, 1 = M15) from the fly pattern across M5/M15/M30/H1/H4.     |
+//|                                                                    |
+//| WARNING - the sw_sl_state writes in here are DEAD CODE. The caller |
+//| runs "sw_sl_state = -1;" immediately after this returns (the start |
+//| of the final ladder), which overwrites every S1/R1/R2/S2/R3/R4/    |
+//| R7/R9/S3 assignment below. They are kept verbatim so behaviour is  |
+//| identical and so they come back to life if that reset is ever      |
+//| removed - but today only dmt_cur (and the debug strings) survive.  |
+//|                                                                    |
+//| dmt_cur is a caller-side static: it PERSISTS across bars, so it is |
+//| passed by reference and read as well as written.                   |
+//+------------------------------------------------------------------+
+void SL_SelectTradeTF(bool fly01, bool fly12, bool fly23,
+                      bool r0c, bool r1c, bool r2c, bool r3c, bool r4c,
+                      bool bw_rev1, bool bw_rev3, string l0t,
+                      int &dmt_cur, int &sw_sl_state,
+                      string &debug_dmt_cur, string &debug_sw_sl_state)
 {
-
-   //================= Set sw_sl_state =================
-   static int dmt_cur = 0;         // [ASSUMPTION] first-bar default 0 = trade M5 (dm0)
-   static int sw_sl_state = -1;
-   
-   string debug_sw_sl_state = "_";
-   string debug_dmt_cur = IntegerToString(dmt_cur);
-
-   //--- Defaults: HOLD, no stop, base lot
-   Trade_act = 0; Trade_info = ""; Trade_lots = baseLot; Trade_sl = 0.0;
-
-   //--- master switch: do nothing at all unless explicitly enabled
-   if(!SL_UseTradeStrategy) return;
-
-   //--- Once-per-bar guard
-   static datetime sl_lastBar = 0;
-   datetime cur = iTime(_Symbol, (SL_TradeTF == 0) ? PERIOD_M5 : PERIOD_M15, 0);
-   if(cur == sl_lastBar) { Trade_info = ""; return; }
-   sl_lastBar = cur;
-
-   //--- inputs
-   double px_now  = iClose(_Symbol, PERIOD_M5, 0);         // same basis as the report
-   double dm0     = BB_datas[0].BB_diffMid_Trend[LA];        // M5
-   double dm1     = BB_datas[1].BB_diffMid_Trend[LA];        // M15
-   double dm      = (SL_TrendTF == 0) ? dm0 : dm1;           // the one that decides
-   int    sflag   = (int)BBTFImpact.sideway_selected[LA];  // TofySideway S_ (LA = current)
-   int    ladder  = SL_state[LA];                          // ladder state for this bar
-
-   bool sw_flag   = (sflag  > 0);
-   bool sw_ladder = (ladder >= 2);
-
-   bool sw = false;
-   if(SL_ExitMode == 0)      sw = sw_ladder;
-   else if(SL_ExitMode == 1) sw = sw_flag;
-   else if(SL_ExitMode == 2) sw = (sw_flag && sw_ladder);
-   else if(SL_ExitMode == 3) sw = (sw_flag || sw_ladder);
-   else if(SL_ExitMode == 4) sw = SL_InUserLabel(cur);
-   //--- 5 = the sideway STATE MACHINE. Needs SL_UseSwState = true, and SL_Update
-   //--- must have run for this bar - it does, the EA calls it before the dispatch.
-   else if(SL_ExitMode == 5) sw = (sl_sw_state >= 1);   // HINDSIGHT - ceiling only
-
-   bool dm1_up   = (dm == 1.0 || dm == 5.0);
-   bool dm1_down = (dm == 2.0 || dm == 4.0);
-
-   bool inLong  = (BUYS  > 0);
-   bool inShort = (SELLS > 0);
-   bool flat    = (!inLong && !inShort);
-
-   // Trade_info = "[LADTRADE] dm1:" + DoubleToString(dm1,1)
-   //            + " LAD:"   + IntegerToString(ladder)
-   //            + " S_:"    + IntegerToString(sflag)
-   //            + " XM:"    + IntegerToString(SL_ExitMode)
-   //            + " BUYS:"  + IntegerToString(BUYS)
-   //            + " SELLS:" + IntegerToString(SELLS);
-
-   //================================================================
-   // SL_ExitMode 6 - TEST CASE: H1 & M30 fly, dmt_cur timeframe switch
-   //   Faithful to the posted pseudocode. swconfirm is a NEW flag owned here.
-   //   Ambiguous spots are marked [ASSUMPTION]. dmt_cur persists across bars.
-   //================================================================
-   if(SL_ExitMode == 6)
-   {
-      double dmt0c = g_tradectx.dmt[0][0], dmt1c = g_tradectx.dmt[1][0];
-      double dmt2c = g_tradectx.dmt[2][0], dmt3c = g_tradectx.dmt[3][0], dmt4c = g_tradectx.dmt[4][0];;
-      bool   r0c = g_tradectx.r0, r1c = g_tradectx.r1;
-      bool   r2c = g_tradectx.r2, r3c = g_tradectx.r3, r4c = g_tradectx.r4;
-      string l0t = g_tradectx.l0tags;
-      string l1t = g_tradectx.l1tags;
-      string l2t = g_tradectx.l2tags;
-      string l3t = g_tradectx.l3tags;
-      string l4t = g_tradectx.l4tags;
-      string l3t_prev = g_tradectx.l3tags_prev;
-      bool   tc[4] = {0,0,0,0};
-      color  tcc[4] = {SL_TC1Color, SL_TC2Color, SL_TC3Color, SL_TC4Color}; 
-      string tcp[4] = {"SLTC1_", "SLTC2_", "SLTC3_", "SLTC4_"};
-
-      bool fly23 = (StringFind(l2t,"K") >= 0);  // M30 & H1 fly  (tag K in l2t)
-      bool fly12 = (StringFind(l1t,"J") >= 0);  // M15 & M30 fly (tag J in l1t)
-      bool fly01 = (StringFind(l0t,"I") >= 0);  // M5 & M15 fly  (tag I in l0t)
-      bool fly34 = (StringFind(l3t,"L") >= 0);  // H1 & H4 fly   (tag L in l3t, verified = fly34)
-      bool fly02 = (dmt0c == dmt2c && dmt0c < 3.0);  // M5 & M30 fly (no tag - kept as dmt)
-
-      // bw_rev1 is when detect r0 as sw when fly12 and fly23
-      bool bw_rev1 = (StringFind(l1t,"T")>=0 && StringFind(l1t,"W")>=0 && StringFind(l1t,"M")>=0 &&
-                        StringFind(l2t,"T")>=0);
-
-      // bw_rev3 is when detect r0 as sw when fly12 and fly23
-      bool bw_rev3 = (  StringFind(l1t,"A")>=0 && StringFind(l1t,"S")>=0 && StringFind(l1t,"W")>=0 && StringFind(l1t,"M")>=0 && StringFind(l1t,"D")>=0 &&
-                        StringFind(l2t,"T")>=0 && StringFind(l2t,"W")>=0);
-
-      // dmt1 
-      //bool bw_rev4 = ( StringFind(l0t,"A")>=0 && );
-
-      bool bw_rev2 = (StringFind(l1t,"T")<0 || StringFind(l1t,"W")<0 || StringFind(l1t,"D")<0);
-      
-       //--- 3 TEST CONDITIONS (visual-only, no trade effect). Each draws a filled
-      //--- span box where it fires, so you can compare against user labels on the chart.
-      if(SL_DrawTestConds)
-      {
-         tc[0] = SL_UseTC1 && ((!fly01) || (!fly12))
-                    && ((StringFind(l0t,"A")>=0) || g_tradectx.c[0][0] <= 25)
-                    && (StringFind(l0t,"M")>=0 || StringFind(l1t,"M")>=0);   // 0A+(0M||1M)
-         tc[1] = SL_UseTC2 && (!fly12)
-                    && ((StringFind(l1t,"X")>=0) || g_tradectx.c[1][0] <= 35)
-                    && (StringFind(l1t,"M")>=0 || StringFind(l2t,"M")>=0);   // 1X+(1M||2M)
-         tc[2] = SL_UseTC3 && (!fly23)
-                    && ((StringFind(l2t,"Y")>=0) || g_tradectx.c[3][0] <= 32 )
-                    && (StringFind(l2t,"M")>=0 && StringFind(l3t,"M")>=0);   // 2Y+(2M||3M)
-         
-         // tc[3] = SL_UseTC4 && g_tradectx.c[0][0] <= 25 && g_tradectx.c[1][0] <= 35 && g_tradectx.c[3][0] <= 32 
-         //          && (StringFind(l2t,"Y")>=0)  && (StringFind(l2t,"M")>=0);
-         tc[3] = SL_UseTC4 && (StringFind(l3t,"G")>=0)
-                    && (StringFind(l4t,"S")>=0)
-                    && (StringFind(l4t,"W")>=0)
-                    && (g_tradectx.c[0][0] <= 25)
-                    && (g_tradectx.c[1][0] <= 30)
-                    && (g_tradectx.c[3][0] <= 32)
-                    && (g_tradectx.c[4][0] <= 50)
-                    && (g_tradectx.c[5][0] <= 25)
-                    && (g_tradectx.c[6][0] <= 40)
-                    && (StringFind(l1t,"M")>=0)
-                    && (StringFind(l2t,"M")>=0) 
-                    && (StringFind(l3t,"M")>=0);   // 0A+(0M||1M)
-         // tc[3] = SL_UseTC4 && (!fly23)
-         //            && (StringFind(l2t,"Y")>=0)
-         //            && (StringFind(l2t,"M")>=0 && StringFind(l3t,"M")>=0);   // 2Y+(2M||3M)
-         
-         // tc[2] = SL_UseTC3
-         //            && (StringFind(l2t,"Y")>=0)
-         //            && (StringFind(l2t,"M")>=0 && StringFind(l3t,"M")>=0);   // 2Y+(2M||3M)
-         // tc[0]=tc1; tc[1]=tc2; tc[2]=tc3;
-         // tcc[0]=SL_TC1Color; tcc[1]=SL_TC2Color; tcc[2]=SL_TC3Color; tcc[3]=SL_TC4Color;
-         // tcp[0]="SLTC1_"; tcp[1]="SLTC2_"; tcp[2]="SLTC3_"; tcp[3]="SLTC3_";
-         for(int ti=0; ti<4; ti++)
-         {
-            if(tc[ti])
-            {
-               if(g_tc_from[ti]==0) { g_tc_from[ti]=cur; g_tc_seq[ti]++; }
-               g_tc_last[ti]=cur;
-               g_tc_gap[ti]=0;   // reset false-bar counter
-               // tc0->M15 band(1), tc1->M30 band(2), tc2->H1 band(3)
-               int bi = ti + 1;
-               double bLo = BB_datas[bi].BBLowLV[LA];
-               double bHi = BB_datas[bi].BBUppLV[LA];
-               SL_TagBox(tcp[ti], g_tc_seq[ti], g_tc_from[ti], g_tc_last[ti], tcc[ti], bLo, bHi);
-            }
-            else if(g_tc_from[ti]!=0)
-            {
-               // condition false: bridge short gaps (<= SL_TagBoxMaxGap bars) so
-               // flicker doesn't split the box; close the span only on a sustained gap.
-               g_tc_gap[ti]++;
-               if(g_tc_gap[ti] > SL_TagBoxMaxGap) { g_tc_from[ti]=0; g_tc_gap[ti]=0; }
-               // else: keep span open (bridged), box stays drawn to g_tc_last
-            }
-         }
-      }
-      
       if(fly23) {
          debug_sw_sl_state += "-23";
          if(fly12) {
@@ -3320,8 +3199,24 @@ void Trade_Strategy(
             }
          }
       }
-
-      // final ladder (authoritative)
+}
+//+------------------------------------------------------------------+
+//| SL_DetectSideway  -  the authoritative sideway ladder (M15 rate). |
+//| Extracted VERBATIM from the Trade_Strategy dispatch so sideway is |
+//| a named peer of SL_Breakout / SL_TrendReversal / SL_ShrinkReversal|
+//| and SL_ClassifyRegime can route all four.                         |
+//|                                                                    |
+//| Reads: r1c..r4c (rect verdicts), l0t..l4t + l3t_prev (tags),      |
+//|        fly23/fly34. Writes: the returned state + debug string.    |
+//| NOTE: must run at M15 rate (the rect/tag inputs are M15-gated).   |
+//| The M5-rate detectors stay in SL_Update - do NOT move them here.  |
+//+------------------------------------------------------------------+
+int SL_DetectSideway(bool r1c, bool r2c, bool r3c, bool r4c,
+                     string l0t, string l1t, string l2t, string l3t, string l4t,
+                     string l3t_prev, bool fly23, bool fly34,
+                     string &debug_sw_sl_state)
+{
+   int sw_sl_state;
       sw_sl_state = -1;
 
       // H4 sideway 
@@ -3513,6 +3408,197 @@ void Trade_Strategy(
          debug_sw_sl_state += "}";
       }
 
+
+   return sw_sl_state;
+}
+
+void Trade_Strategy(
+   BB_MTF_Data_struct      &BB_datas[],
+   ATRSLBUF_struct         &ATRSL1BUF,
+   BB_MTF_Impact_struct    &BBTFImpact,
+   ENUM_Trade_Act          &Trade_act,   // OUT: 0=hold 1=BUY 2=SELL 7=exit_all
+   string                  &Trade_info,
+   double                  &Trade_lots,
+   double                  &Trade_sl,
+   int                      BUYS,
+   int                      SELLS,
+   double                  &close_prices[],
+   double                   baseLot = 0.01
+)
+{
+
+   //================= Set sw_sl_state =================
+   static int dmt_cur = 0;         // [ASSUMPTION] first-bar default 0 = trade M5 (dm0)
+   static int sw_sl_state = -1;
+   
+   string debug_sw_sl_state = "_";
+   string debug_dmt_cur = IntegerToString(dmt_cur);
+
+   //--- Defaults: HOLD, no stop, base lot
+   Trade_act = 0; Trade_info = ""; Trade_lots = baseLot; Trade_sl = 0.0;
+
+   //--- master switch: do nothing at all unless explicitly enabled
+   if(!SL_UseTradeStrategy) return;
+
+   //--- Once-per-bar guard
+   static datetime sl_lastBar = 0;
+   datetime cur = iTime(_Symbol, (SL_TradeTF == 0) ? PERIOD_M5 : PERIOD_M15, 0);
+   if(cur == sl_lastBar) { Trade_info = ""; return; }
+   sl_lastBar = cur;
+
+   //--- inputs
+   double px_now  = iClose(_Symbol, PERIOD_M5, 0);         // same basis as the report
+   double dm0     = BB_datas[0].BB_diffMid_Trend[LA];        // M5
+   double dm1     = BB_datas[1].BB_diffMid_Trend[LA];        // M15
+   double dm      = (SL_TrendTF == 0) ? dm0 : dm1;           // the one that decides
+   int    sflag   = (int)BBTFImpact.sideway_selected[LA];  // TofySideway S_ (LA = current)
+   int    ladder  = SL_state[LA];                          // ladder state for this bar
+
+   bool sw_flag   = (sflag  > 0);
+   bool sw_ladder = (ladder >= 2);
+
+   bool sw = false;
+   if(SL_ExitMode == 0)      sw = sw_ladder;
+   else if(SL_ExitMode == 1) sw = sw_flag;
+   else if(SL_ExitMode == 2) sw = (sw_flag && sw_ladder);
+   else if(SL_ExitMode == 3) sw = (sw_flag || sw_ladder);
+   else if(SL_ExitMode == 4) sw = SL_InUserLabel(cur);
+   //--- 5 = the sideway STATE MACHINE. Needs SL_UseSwState = true, and SL_Update
+   //--- must have run for this bar - it does, the EA calls it before the dispatch.
+   else if(SL_ExitMode == 5) sw = (sl_sw_state >= 1);   // HINDSIGHT - ceiling only
+
+   bool dm1_up   = (dm == 1.0 || dm == 5.0);
+   bool dm1_down = (dm == 2.0 || dm == 4.0);
+
+   bool inLong  = (BUYS  > 0);
+   bool inShort = (SELLS > 0);
+   bool flat    = (!inLong && !inShort);
+
+   // Trade_info = "[LADTRADE] dm1:" + DoubleToString(dm1,1)
+   //            + " LAD:"   + IntegerToString(ladder)
+   //            + " S_:"    + IntegerToString(sflag)
+   //            + " XM:"    + IntegerToString(SL_ExitMode)
+   //            + " BUYS:"  + IntegerToString(BUYS)
+   //            + " SELLS:" + IntegerToString(SELLS);
+
+   //================================================================
+   // SL_ExitMode 6 - TEST CASE: H1 & M30 fly, dmt_cur timeframe switch
+   //   Faithful to the posted pseudocode. swconfirm is a NEW flag owned here.
+   //   Ambiguous spots are marked [ASSUMPTION]. dmt_cur persists across bars.
+   //================================================================
+   if(SL_ExitMode == 6)
+   {
+      double dmt0c = g_tradectx.dmt[0][0], dmt1c = g_tradectx.dmt[1][0];
+      double dmt2c = g_tradectx.dmt[2][0], dmt3c = g_tradectx.dmt[3][0], dmt4c = g_tradectx.dmt[4][0];;
+      bool   r0c = g_tradectx.r0, r1c = g_tradectx.r1;
+      bool   r2c = g_tradectx.r2, r3c = g_tradectx.r3, r4c = g_tradectx.r4;
+      string l0t = g_tradectx.l0tags;
+      string l1t = g_tradectx.l1tags;
+      string l2t = g_tradectx.l2tags;
+      string l3t = g_tradectx.l3tags;
+      string l4t = g_tradectx.l4tags;
+      string l3t_prev = g_tradectx.l3tags_prev;
+      bool   tc[4] = {0,0,0,0};
+      color  tcc[4] = {SL_TC1Color, SL_TC2Color, SL_TC3Color, SL_TC4Color}; 
+      string tcp[4] = {"SLTC1_", "SLTC2_", "SLTC3_", "SLTC4_"};
+
+      bool fly23 = (StringFind(l2t,"K") >= 0);  // M30 & H1 fly  (tag K in l2t)
+      bool fly12 = (StringFind(l1t,"J") >= 0);  // M15 & M30 fly (tag J in l1t)
+      bool fly01 = (StringFind(l0t,"I") >= 0);  // M5 & M15 fly  (tag I in l0t)
+      bool fly34 = (StringFind(l3t,"L") >= 0);  // H1 & H4 fly   (tag L in l3t, verified = fly34)
+      bool fly02 = (dmt0c == dmt2c && dmt0c < 3.0);  // M5 & M30 fly (no tag - kept as dmt)
+
+      // bw_rev1 is when detect r0 as sw when fly12 and fly23
+      bool bw_rev1 = (StringFind(l1t,"T")>=0 && StringFind(l1t,"W")>=0 && StringFind(l1t,"M")>=0 &&
+                        StringFind(l2t,"T")>=0);
+
+      // bw_rev3 is when detect r0 as sw when fly12 and fly23
+      bool bw_rev3 = (  StringFind(l1t,"A")>=0 && StringFind(l1t,"S")>=0 && StringFind(l1t,"W")>=0 && StringFind(l1t,"M")>=0 && StringFind(l1t,"D")>=0 &&
+                        StringFind(l2t,"T")>=0 && StringFind(l2t,"W")>=0);
+
+      // dmt1 
+      //bool bw_rev4 = ( StringFind(l0t,"A")>=0 && );
+
+      bool bw_rev2 = (StringFind(l1t,"T")<0 || StringFind(l1t,"W")<0 || StringFind(l1t,"D")<0);
+      
+       //--- 3 TEST CONDITIONS (visual-only, no trade effect). Each draws a filled
+      //--- span box where it fires, so you can compare against user labels on the chart.
+      if(SL_DrawTestConds)
+      {
+         tc[0] = SL_UseTC1 && ((!fly01) || (!fly12))
+                    && ((StringFind(l0t,"A")>=0) || g_tradectx.c[0][0] <= 25)
+                    && (StringFind(l0t,"M")>=0 || StringFind(l1t,"M")>=0);   // 0A+(0M||1M)
+         tc[1] = SL_UseTC2 && (!fly12)
+                    && ((StringFind(l1t,"X")>=0) || g_tradectx.c[1][0] <= 35)
+                    && (StringFind(l1t,"M")>=0 || StringFind(l2t,"M")>=0);   // 1X+(1M||2M)
+         tc[2] = SL_UseTC3 && (!fly23)
+                    && ((StringFind(l2t,"Y")>=0) || g_tradectx.c[3][0] <= 32 )
+                    && (StringFind(l2t,"M")>=0 && StringFind(l3t,"M")>=0);   // 2Y+(2M||3M)
+         
+         // tc[3] = SL_UseTC4 && g_tradectx.c[0][0] <= 25 && g_tradectx.c[1][0] <= 35 && g_tradectx.c[3][0] <= 32 
+         //          && (StringFind(l2t,"Y")>=0)  && (StringFind(l2t,"M")>=0);
+         tc[3] = SL_UseTC4 && (StringFind(l3t,"G")>=0)
+                    && (StringFind(l4t,"S")>=0)
+                    && (StringFind(l4t,"W")>=0)
+                    && (g_tradectx.c[0][0] <= 25)
+                    && (g_tradectx.c[1][0] <= 30)
+                    && (g_tradectx.c[3][0] <= 32)
+                    && (g_tradectx.c[4][0] <= 50)
+                    && (g_tradectx.c[5][0] <= 25)
+                    && (g_tradectx.c[6][0] <= 40)
+                    && (StringFind(l1t,"M")>=0)
+                    && (StringFind(l2t,"M")>=0) 
+                    && (StringFind(l3t,"M")>=0);   // 0A+(0M||1M)
+         // tc[3] = SL_UseTC4 && (!fly23)
+         //            && (StringFind(l2t,"Y")>=0)
+         //            && (StringFind(l2t,"M")>=0 && StringFind(l3t,"M")>=0);   // 2Y+(2M||3M)
+         
+         // tc[2] = SL_UseTC3
+         //            && (StringFind(l2t,"Y")>=0)
+         //            && (StringFind(l2t,"M")>=0 && StringFind(l3t,"M")>=0);   // 2Y+(2M||3M)
+         // tc[0]=tc1; tc[1]=tc2; tc[2]=tc3;
+         // tcc[0]=SL_TC1Color; tcc[1]=SL_TC2Color; tcc[2]=SL_TC3Color; tcc[3]=SL_TC4Color;
+         // tcp[0]="SLTC1_"; tcp[1]="SLTC2_"; tcp[2]="SLTC3_"; tcp[3]="SLTC3_";
+         for(int ti=0; ti<4; ti++)
+         {
+            if(tc[ti])
+            {
+               if(g_tc_from[ti]==0) { g_tc_from[ti]=cur; g_tc_seq[ti]++; }
+               g_tc_last[ti]=cur;
+               g_tc_gap[ti]=0;   // reset false-bar counter
+               // tc0->M15 band(1), tc1->M30 band(2), tc2->H1 band(3)
+               int bi = ti + 1;
+               double bLo = BB_datas[bi].BBLowLV[LA];
+               double bHi = BB_datas[bi].BBUppLV[LA];
+               SL_TagBox(tcp[ti], g_tc_seq[ti], g_tc_from[ti], g_tc_last[ti], tcc[ti], bLo, bHi);
+            }
+            else if(g_tc_from[ti]!=0)
+            {
+               // condition false: bridge short gaps (<= SL_TagBoxMaxGap bars) so
+               // flicker doesn't split the box; close the span only on a sustained gap.
+               g_tc_gap[ti]++;
+               if(g_tc_gap[ti] > SL_TagBoxMaxGap) { g_tc_from[ti]=0; g_tc_gap[ti]=0; }
+               // else: keep span open (bridged), box stays drawn to g_tc_last
+            }
+         }
+      }
+      
+      //--- fly cascade -> picks the trading timeframe (dmt_cur). Extracted verbatim.
+      //--- NOTE: its sw_sl_state writes are overwritten by the reset just below;
+      //--- dmt_cur is the only live output. See SL_SelectTradeTF's header.
+      SL_SelectTradeTF(fly01, fly12, fly23,
+                       r0c, r1c, r2c, r3c, r4c,
+                       bw_rev1, bw_rev3, l0t,
+                       dmt_cur, sw_sl_state,
+                       debug_dmt_cur, debug_sw_sl_state);
+
+      //--- final ladder (authoritative) - now SL_DetectSideway(), extracted verbatim.
+      //--- Sideway is a named detector alongside SL_Breakout / SL_TrendReversal /
+      //--- SL_ShrinkReversal; SL_ClassifyRegime below routes all four into one regime.
+      sw_sl_state = SL_DetectSideway(r1c, r2c, r3c, r4c,
+                                     l0t, l1t, l2t, l3t, l4t,
+                                     l3t_prev, fly23, fly34,
+                                     debug_sw_sl_state);
       //--- track sw_sl_state>=0 spans and draw them (same look as SwConfirm)
       static datetime sw6_from = 0;
       static int      sw6_seq  = 0;
