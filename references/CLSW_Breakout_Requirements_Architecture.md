@@ -249,9 +249,90 @@ SL_Update (new M5 bar)
 | Ready → Breakout | `clready` is per bar; Breakout accepts a trigger only while it is on or up to 6 bars after |
 | Breakout → Trade\_act | only state 10+hi is tradeable; 20+hi is “watch”, −1 is “done” |
 
+## Code map — every function in SL\_MidCluster\_Breakout.mqh
+
+The file runs top to bottom once per new M5 bar. Read it in this order; each name below is a function in the file.
+
+**1. Run order (what SL\_MidCluster\_Breakout calls)**
+
+| # | Function | In one line |
+| --- | --- | --- |
+| 1 | `SL_MidCluster_Breakout` | Entry point, called every tick as `SL_MidCluster_Breakout(BB_datas, g_tradectx)`; does nothing until a new M5 bar opens |
+| 2 | `SL_CLUpdateHist` | Remembers this bar (see section 2) so later steps can ask “in the last hour…?” |
+| 3 | `SL_CLSW_Type` | Stage 0 gate + Stage 1: which sideway types are possible, hi, HTF sideway, strong |
+| 4 | `SL_CLSW_Ready` | Stage 1b: is the hi pair compressed right now (Ready on / off) |
+| 5 | `SL_CLSW_Breakout` | Stage 2 trigger → Stage 3 price confirm → Stage 4 end |
+| 6 | `SL_CLLog` | Prints one `[CLSW]` and one `[CLREQ2]` line |
+| 7 | `SL_CLDraw` | Draws the type circle, the Ready circle + dotted line, and the breakout span |
+
+**2. What the EA remembers each bar (`SL_CLUpdateHist`)**
+
+| Memory | Holds | Used by |
+| --- | --- | --- |
+| `g_clsw_cls`, `g_clsw_d3` | last 24 bars (2 h): each TF’s direction (+1 / −1 / 0) and whether dmt == 3 | T3, T1r, T2, hi, htf\_sw |
+| `g_clsw_touch_t[10]` | last time each midline pair was within its CL\_SW | T1l, hi, strong |
+| `g_clsw_m5m15_5_t` | last time the M5–M15 gap was ≤ 5 | T1r |
+| `g_clsw_m5sw_t` | last time M5 was sideway (dmtsw ≥ 3) | T4 |
+| `g_clsw_shr[5]` | how many bars in a row each TF’s band has been shrinking | T1 trigger (“shrink done”) |
+| `g_clsw_m5_before` | M5 direction just before its current sideway run | T4 trigger (“M5 reverses”) |
+
+**3. Small question helpers — each answers one yes/no or number**
+
+| Function | Answers | Example |
+| --- | --- | --- |
+| `SL_CLTouch(ctx, lo, hi, th, k)` | Is the midline gap lo–hi between 0 and th on bar k? (negative gap = not loaded = no) | `SL_CLTouch(ctx, 0, 1, 9)` → M5–M15 gap ≤ 9 now |
+| `SL_CLSw(ctx, tf, k)` | Is this TF midtrend sideway on bar k? Today `dmtsw ≥ 3`; the one place to swap in the flat-midline test after \[CLREQ2\] | `SL_CLSw(ctx, 0, 1)` → M5 was sideway last bar |
+| `SL_CLRecent(t, mins)` | Did that event happen within the last `mins` minutes? | `SL_CLRecent(g_clsw_m5sw_t, 60)` → M5 sideway in the last hour |
+| `SL_CLShare3(tf, n)` | Share of the last n bars where this TF’s dmt == 3 | `SL_CLShare3(4, 24) ≥ 0.5` → H4 sideway half of the last 2 h |
+| `SL_CLShare3Both(a, b, n)` | Same, but both TFs sideway on the same bar | `SL_CLShare3Both(3, 4, 24)` → H1 and H4 together (T3) |
+| `SL_CLShareDir(tf, d, n)` | Share of the last n bars where this TF went direction d | `SL_CLShareDir(2, 1, 12) ≥ 0.6` → M30 up 60 % of the last hour |
+| `SL_CLTrending(tf, n)` | Did this TF keep one direction on all n bars? | M30 trending → hi cannot be M30 |
+| `SL_CLFly(a, b, n, dir)` | Share of the last n bars where TFs a and b moved the same way, and that direction | `SL_CLFly(3, 4, 12, d) ≥ 0.5` → H1H4 fly (T2) |
+| `SL_CLBandPos(BB_datas)` | Where the M5 close sits in the M15 band: 0 = lower band, 1 = upper band | ≥ 0.8 → price confirms UP |
+| `SL_CLDir(dmt)` | dmt code → direction: 1/5 = +1, 2/4 = −1, 3/0 = 0 |  |
+| `SL_CLNum(lo, hi)` | TF pair → pair index 0..9 (your ctx.c / cl map) | `SL_CLNum(1, 2)` = 1 (m15m30) |
+
+**4. Stage functions**
+
+| Function | Stage | Does |
+| --- | --- | --- |
+| `SL_CLLevels` | 1 | Counts the T1 ladder: M15 then M30 then H1 each must shrink and go sideway, in that order → `step` 0..3 |
+| `SL_CLReadyOk` | 1b → 2 | Ready is on, or switched off ≤ `CLSW_ReadyGrace` bars ago |
+| `SL_CLTrigT1` | 2 | A TF below hi had a sideway, hi’s band just stopped shrinking (≥ 2 shrinking bars, now ≥ 0), the TF above hi still shrinking |
+| `SL_CLTrigT2` | 2 | The sideway TF under the fly just left sideway and M5 goes the fly’s way |
+| `SL_CLTrigT3` | 2 | hi band (H1/H4) still shrinking while the M5 and M15 bands speed up |
+| `SL_CLTrigT4` | 2 | M5 sideway just ended and M5 now goes against its direction before the run |
+| `SL_CLPrimary` | 2 | With the live direction, picks the primary type: T3, then T1r if dir is against M30, then T2 if dir is with the fly, then T1l, else T4 |
+| `SL_CLEnd` | 4 | Ends a breakout (`brk = −1`) and records why: flip / sw-over / preempt / back-in |
+
+**5. Setup, names and output helpers**
+
+| Function | Does |
+| --- | --- |
+| `SL_CLSW_Reset` | Call once in OnInit: clears everything |
+| `SL_CLSW_Clear` | Clears Stage 1–4, keeps the gate; runs when a new sideway opens or after a breakout ends |
+| `SL_CLSwSl`, `SL_CLM15Upp`, `SL_CLM15Low`, `SL_CLDmid`, `SL_CLClose` | The only lines that name your struct fields (`sw_sl_state`, `BBUppLV`, `BBLowLV`, `BB_diffMid`, close); fix a compile error here |
+| `SL_CLProvType` | Provisional type before the direction is known (T3, T1r, T2, T1l, T4) — drives the ❶–❹ circle |
+| `SL_CLCandStr`, `SL_CLTF`, `SL_CLPairName` | Turn bits / TF numbers / pair numbers into text for the log and tooltips |
+
+**6. Inputs**
+
+| Input | Default | Meaning |
+| --- | --- | --- |
+| `CLSW_GateCluster` | false | D1: also open the gate on midline clusters when the ladder is off |
+| `CLSW_LatchCand` | false | false = types recomputed every bar (the February replay that scored 36 / 37); true = add-only latch |
+| `CLSW_ReadyGrace` | 6 | D8: bars a trigger may still fire after Ready switched off |
+| `CLSW_EndBackIn` | false | D3: also end when price is back inside the M15 band middle |
+| `CLSW_Log` | true | Print `[CLSW]` + `[CLREQ2]` every M5 bar |
+| `CLSW_DrawType` / `CLSW_TypeHold` / `CLSW_TypeOnce` | true / 3 / true | Type circle ❶–❹; a type must hold 3 bars; each type once per sideway |
+| `CLSW_DrawReady` | true | Violet circle when Ready switches on, dotted line to when it switches off |
+| `CLSW_DrawSpan` | true | Blue line from the confirmed breakout to its end, tooltip with type, hi, move, end reason |
+
+All state lives in one global struct, `g_clsw`; a doc field `clX` is `g_clsw.X` (e.g. `clcand` = `g_clsw.cand`, `clbrk` = `g_clsw.brk`).
+
 ## ctx fields and function interfaces
 
-Two functions share one set of named ctx fields; `clbrkok[0..2]` stops being repurposed and is no longer shifted as history.
+The functions share one set of named fields, kept in the global g\_clsw (doc name clX = g\_clsw.X); `clbrkok[0..2]` stops being repurposed and is no longer shifted as history.
 
 | Field | Type | Written by | Meaning |
 | --- | --- | --- | --- |
@@ -334,128 +415,58 @@ Eleven choices change behaviour and are yours to make.
 
 ## Sequence — how type detection runs each M5 bar
 
-Read top to bottom: each vertical line is a function or the ctx struct, each arrow is one call or one field write, in the order the EA runs them. Type sets candidate bits and latches hi; Ready switches on and off every bar; the type becomes final in Breakout, once a trigger fires while Ready is on and the live direction is known.
+Read top to bottom: each vertical line is a function in the file (or the state `g_clsw`), each arrow is one call or one write, in the order the EA runs them on every new M5 bar. The helper names on the arrows are explained in the Code map above.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant EA as SL_Update
-    participant INIT as SL_init
+    participant EA as SL_Update (EA)
     participant MCB as SL_MidCluster_Breakout
+    participant MEM as SL_CLUpdateHist (memory)
     participant TYP as SL_CLSW_Type
     participant RDY as SL_CLSW_Ready
-    participant HLP as Helpers (touch, fly, sw, trending, opens)
-    participant CTX as ctx (SL_TradeCtx)
     participant BRK as SL_CLSW_Breakout
-    participant TA as Trade_act
+    participant H as Helpers (SL_CLTouch, SL_CLSw, SL_CLShare*, SL_CLFly)
+    participant G as g_clsw (state)
+    participant OUT as SL_CLLog + SL_CLDraw
 
-    EA->>INIT: new M5 bar
-    INIT->>CTX: write dmt[5], dmtsw[5], cl[lo][hi][k]
-    EA->>MCB: SL_MidCluster_Breakout(BB_datas, ctx)
-    MCB->>MCB: M5 self-gate, return if same bar
-    MCB->>TYP: SL_CLSW_Type(BB_datas, ctx)
+    EA->>MCB: SL_MidCluster_Breakout(BB_datas, g_tradectx)
+    MCB->>MCB: new M5 bar? no -> return
+    MCB->>MEM: remember this bar
+    MEM->>MEM: last 24 bars: M5..H4 direction, dmt == 3 flags
+    MEM->>MEM: last time each pair touched, last M5 sideway, shrink counters
 
-    Note over TYP,CTX: Stage 0 - context gate
-    TYP->>CTX: read sw_sl_state[0] and top pairs m5m15, m15m30, m30h1
-    alt neither ladder nor cluster for 2 bars
-        TYP->>CTX: clgate = 0, clear clcand, clhi, clfly_sw, clstrong
-        TYP-->>MCB: return (Stage 4 E2 end:sw-over)
-    else ladder on or a top pair touches
-        TYP->>CTX: clgate = 1 ladder or 2 cluster-only, clgate_t on open
-    end
+    MCB->>TYP: SL_CLSW_Type
+    Note over TYP,G: Stage 0 - gate
+    TYP->>G: gate = 1 when sw_sl_state >= 0, closes after 2 bars off (SL_CLSW_Clear on open)
+    Note over TYP,G: Stage 1 - candidate types, recomputed every bar
+    TYP->>TYP: SL_CLLevels - T1 ladder steps M15 to M30 to H1 (step 0..3)
+    TYP->>H: T3? SL_CLShare3Both(H1,H4) 50% of 2 h, SL_CLFly none
+    TYP->>H: T1r? SL_CLRecent(m5m15 gap 5 or less, 30 min) and SL_CLShareDir(M30) 60% of 1 h
+    TYP->>H: T2? SL_CLFly(H1H4 or M30H1) 50% of 1 h
+    TYP->>H: T1l? SL_CLRecent(m5m15 touch, 30 min) and step 1 or more
+    TYP->>H: T4? SL_CLRecent(M5 sideway, 60 min)
+    TYP->>G: cand bits, m30_dir, fly_dir, fly_lo, fly_sw
+    Note over TYP,G: Stage 1 - hi, HTF sideway, strong (frozen while a breakout is pending)
+    TYP->>H: hi: M5 touched M30 (M30 not trending), H1, H4 (only with T3) in 90 min
+    TYP->>G: hi, hi_t3, htf_sw, strong, reason
 
-    Note over TYP,HLP: Stage 1 - candidate types (bits only add)
-    TYP->>HLP: T3? H1 and H4 dmt == 3 on 50% of last 2 h, no fly M30H1 or H1H4
-    HLP-->>TYP: true or false
-    opt T3 true
-        TYP->>CTX: clcand |= 1 (T3)
-    end
-    TYP->>HLP: T1 reversal? touch(m5,m15) gap 5 or less in last 30 min, M30 trending 60% of last 1 h
-    HLP-->>TYP: true or false, M30 direction
-    opt T1 reversal true
-        TYP->>CTX: clcand |= 2 (T1r), clm30_dir
-    end
-    TYP->>HLP: T2? fly(M30,H1) or fly(H1,H4) on 50% of last 1 h
-    HLP-->>TYP: true or false, fly direction, fly lower TF
-    opt T2 true
-        TYP->>CTX: clcand |= 4 (T2), clfly_dir, clfly_lo
-    end
-    TYP->>HLP: T1 levels? touch(m5,m15) 9 or less in last 30 min, levels done in order since clgate_t
-    HLP-->>TYP: true or false, levels completed
-    opt T1 levels true
-        TYP->>CTX: clcand |= 8 (T1l), clstep
-    end
-    TYP->>HLP: T4? M5 sideway run in last 60 min
-    HLP-->>TYP: true or false
-    opt T4 true
-        TYP->>CTX: clcand |= 16 (T4)
+    MCB->>RDY: SL_CLSW_Ready
+    RDY->>H: pair P = (hi, hi+1): gap at or below CL_SW 2 bars after being above, band shrinking
+    RDY->>G: ready on / off, ready_t, ready_off_t, ready_pair
+
+    MCB->>BRK: SL_CLSW_Breakout
+    alt breakout live (brk 10..19)
+        BRK->>G: Stage 4 - SL_CLEnd on flip, sw-over, preempt, back-in
+    else waiting for price (brk 20+)
+        BRK->>H: Stage 3 - SL_CLBandPos 0.8 or more in dir within 3 bars
+        BRK->>G: brk = 10 + hi (BREAK) or 0 + block (pxfail)
+    else idle and SL_CLReadyOk
+        BRK->>H: Stage 2 - SL_CLTrigT1, T2, T3, T4 for each candidate bit
+        BRK->>BRK: SL_CLPrimary(cand, dir) - fired type must be primary
+        BRK->>G: type, brk = 20 + hi, brk_dir, brk_t
     end
 
-    Note over TYP,HLP: Stage 1 - hi, T2 sideway TF, HTF sideway, strong
-    TYP->>HLP: hi: touch(m5,m30) with M30 not trending or opens, touch(m5,h1), last 90 min
-    HLP-->>TYP: highest TF M5 touched (default M15)
-    TYP->>CTX: clhi (upgrade only), clreason
-    opt T2 bit set
-        TYP->>HLP: highest TF below the fly lower TF with sw since clgate_t
-        HLP-->>TYP: sideway TF under the fly (M5 if none)
-        TYP->>CTX: clfly_sw (T1 and T3 use hi, T4 uses M5)
-    end
-    TYP->>HLP: HTF sideway: highest of M30, H1, H4 with dmt == 3 on 50% of last 2 h
-    HLP-->>TYP: TF or none
-    TYP->>CTX: clhtf_sw (background only, no trigger uses it yet)
-    TYP->>HLP: strong: one bar with gap(m5,m15) 9, gap(m5,hi) 4, gap(m15,hi) 4 or less
-    HLP-->>TYP: true or false
-    opt strong true
-        TYP->>CTX: clstrong = 1 (latched)
-    end
-    TYP-->>MCB: done
-
-    MCB->>RDY: SL_CLSW_Ready(BB_datas, ctx)
-    Note over RDY,CTX: Stage 1b - compression before the breakout (draft, 02.04 02:10)
-    RDY->>CTX: read clhi, clcand, clgate
-    RDY->>RDY: ready pair P = (hi, hi+1), T4 uses (M5, M15), T3 open (D7)
-    RDY->>HLP: gap(P) at or below CL_SW[P] for 2 bars, after being above it?
-    HLP-->>RDY: true or false
-    RDY->>HLP: a band from hi to hi+2 shrinking (BB_diffBBW[LA] below 0)?
-    HLP-->>RDY: true or false
-    alt both true and clready = 0
-        RDY->>CTX: clready = 1, clready_t, clready_pair = P
-    else clready = 1 and (gap(P) above 2 x CL_SW[P] or gate closed)
-        RDY->>CTX: clready = 0, keep clready_t for the 6-bar grace (D8)
-    end
-    RDY-->>MCB: done
-
-    MCB->>BRK: SL_CLSW_Breakout(BB_datas, ctx)
-    BRK->>CTX: read clcand, clhi, clfly_sw, clm30_dir, clfly_dir, clready, clready_t
-    Note over BRK,HLP: Stage 2 - trigger per candidate, only while ready
-    opt clready = 1 or at most 6 bars since it went off
-        loop every bit set in clcand
-            BRK->>HLP: that type's trigger (T1: hi band shrink done with tw = clhi, T2: clfly_sw leaves sideway, T3: hi shrink with M5 M15 opening, T4: M5 reverses)
-            HLP-->>BRK: fired or not
-        end
-        alt a trigger fired
-            BRK->>BRK: dir = cls(dmt[M5]) on this bar
-            BRK->>BRK: primary by order T3, T1r if dir = -clm30_dir, T2 if dir = clfly_dir, T1l, T4
-            alt fired candidate is not the primary for dir
-                BRK->>BRK: ignore trigger
-            else fired candidate is primary
-                BRK->>CTX: cltype, clbrk = 20 + hi, clbrk_dir, clbrk_t
-            end
-        end
-    end
-
-    Note over BRK,CTX: Stage 3 - price confirm within 3 bars
-    alt M5 close at 0.8 of M15 band or more in clbrk_dir
-        BRK->>CTX: clbrk = 10 + hi
-        BRK->>TA: tradeable breakout (after D6 dedupe with SL_TrendReversal)
-    else no confirm after 3 bars
-        BRK->>CTX: clbrk = 0, clblock until trigger resets
-    end
-
-    Note over BRK,CTX: Stage 4 - end (E1 flip, E2 sw-over, E3 preempt, E4 back-in)
-    opt an end rule is met
-        BRK->>CTX: clbrk = -1, clready = 0, next bar clear cltype, clcand, clhi, clfly_sw, clstrong
-    end
-    BRK-->>MCB: done
-    MCB->>MCB: SL_CLLog prints [CLSW] and [CLREQ2]
+    MCB->>OUT: SL_CLLog prints [CLSW] and [CLREQ2]
+    MCB->>OUT: SL_CLDraw - type circle, Ready circle and line, breakout span
 ```
