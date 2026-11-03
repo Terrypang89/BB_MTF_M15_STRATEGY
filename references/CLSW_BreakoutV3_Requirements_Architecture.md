@@ -180,7 +180,7 @@ Strong 1 is a sequence since the gate opened: M15’s band shrinks, M5 comes ont
 | --- | --- | --- | --- | --- |
 | 1 | The M15 band shrinks (`BB_diffBBW` < 0) | any bar since the reset, remembered | — | `m15shr:Y` |
 | 2 | Then the M5–M15 gap comes within 2.25 | any bar after step 1, remembered | `CLSW_S1Close` | `close:Y` |
-| 3 | A Ready A or B whose level list includes M15 | this bar | — | `RA` / `RB` |
+| 3 | A Ready A with M5 on M15 (M5–M15 ≤ 9); Ready B and the M15 loop start at M30, so they never give strong 1 | this bar | — | `RA` / `RB` |
 | 4 | M5 midtrend sideway 2+ bars in a row | this bar | `CLSW_S1M5Run` | `m5sw:Y(run 2)` |
 | 5 | M5 slope quiet: \|M5 diffMid\| ≤ 0.33, or smaller than the bar before | this bar | `CLSW_S1M5Quiet`, `CLSW_S1M5Dmid` | `m5quiet:Y(0.14)` |
 | 6 | The M30 band is shrinking | this bar | — | `m30shr:Y` |
@@ -190,28 +190,39 @@ Strong 1 is a sequence since the gate opened: M15’s band shrinks, M5 comes ont
 
 ```mermaid
 sequenceDiagram
-    autonumber
+    participant HIST as SL_CLUpdateHist
     participant TYP as SL_CLSW_Type
-    participant TRK as SL_CLS1Track (memory)
+    participant TRK as SL_CLS1Track
     participant RDY as SL_CLSW_Ready
-    participant ABC as SL_CLStrongABC at M15
-    participant NEED as SL_CLStrongNeed
-    participant G as g_clsw
+    participant SET as SL_CLSetStrong
+    participant AT as SL_CLStrongAt
+    participant ABC as SL_CLStrongABC
+    participant M1 as SL_CLStrongM15H1
+    participant NEED as SL_CLStrongNeedOK
 
-    Note over TYP,TRK: every gate bar since the reset
-    TYP->>TRK: M15 band shrinking? (diffBBW below 0) - remember m15shr
-    TYP->>TRK: after that, M5-M15 within 2.25? - remember close
-    Note over RDY,G: on a Ready A or B whose level list includes M15
-    RDY->>ABC: check strong at hi M15
-    ABC->>ABC: 1 m15shr and 2 close remembered?
-    ABC->>ABC: 3 M5 midtrend sideway 2+ bars in a row?
-    ABC->>ABC: 4 M5 slope quiet - abs diffMid 0.33 or less, or smaller than last bar?
-    ABC->>ABC: 5 M30 band shrinking?
-    ABC->>ABC: 6 wait - M15-M30 closing and M30 shrinking means no
-    ABC-->>RDY: all pass - A, B, C = 1 (log S1seq ... -> S1)
-    RDY->>NEED: strong 1 needs M15 sideway-ish on this bar
-    NEED-->>RDY: no - dropped (log NEED)
-    RDY->>G: strong_a / b / c, ready_strong = 1 (log _S1)
+    HIST->>HIST: every bar - g_clsw_m5_run, last 3 values of each gap
+    TYP->>TRK: gate open - after SL_CLLadder
+    TRK->>TRK: step 1 - M15 diffBBW below 0 - g_clsw_s1_m15shr = true
+    TRK->>TRK: step 2 - m15shr and M5-M15 ≤ 2.25 - g_clsw_s1_close = true
+    RDY->>RDY: step 3 - SL_CLM5Event and SL_CLM5Cluster = M15 (M5-M15 ≤ 9)
+    Note over RDY,SET: strong 1 only comes from a Ready A at M15 - Ready B and the M15 loop start at M30
+    RDY->>SET: SL_CLSetStrong(1, lvl15)
+    SET->>AT: SL_CLStrongAt(1)
+    AT->>ABC: SL_CLStrongABC(1)
+    ABC->>ABC: step 4 - SL_CLSw(M5) and m5_run ≥ 2
+    ABC->>ABC: step 5 - abs M5 diffMid ≤ 0.33 or smaller than last bar
+    ABC->>ABC: step 6 - SL_CLBandShrink(M30)
+    ABC->>ABC: step 7 wait - SL_CLGapShrinking(M15-M30) and SL_CLBandShrink(M30)
+    ABC-->>AT: steps 1-6 pass, no wait - 1, 1, 1 (log S1seq ... S1)
+    AT->>M1: SL_CLStrongM15H1
+    M1-->>AT: H1 flat and M15 on H1 - becomes 3, not 1
+    AT-->>SET: sa, sb, sc
+    SET->>NEED: step 8 via SL_CLStrongNeed - grade 1 needs SL_CLSideIsh(M15)
+    NEED-->>SET: no - becomes 0 (log NEED)
+    opt M15 also clustered with M30, H1 or H4 (lvl15)
+        SET->>AT: SL_CLStrongAt(tf) - strong 2, 3 or 4 there beats 1
+    end
+    SET->>SET: step 9 - SL_CLKeep, grade by CLSW_StrongMode, ready_strong = 1 (log _S1)
 ```
 
 Examples: 6 Feb 23:15 strong 1 (run 2, slope 0.14, M30 −20.7); 24 Feb 11:00–12:25 waits (M15–M30 13.6 → 3.7, M30 −21 → −55); 3 Feb 23:20 no (run 1); 9 Feb 04:30 no (M5 trending).
@@ -241,26 +252,43 @@ Strong 2 is checked when the Ready is at M30 or M15 sits on M30 (≤ 5), and pas
 
 ```mermaid
 sequenceDiagram
-    autonumber
+    participant HIST as SL_CLUpdateHist
     participant RDY as SL_CLSW_Ready
-    participant AT as SL_CLStrongAt at M30
+    participant SET as SL_CLSetStrong
+    participant AT as SL_CLStrongAt
     participant ABC as SL_CLStrongABC
-    participant SEQ as S2 sequence
-    participant NEED as SL_CLStrongNeed
-    participant G as g_clsw
+    participant M5Q as SL_CLM5QuietSw
+    participant M1 as SL_CLStrongM15H1
+    participant NEED as SL_CLStrongNeedOK
 
-    Note over RDY,AT: Ready at M30, or M15 clustered with M30 (5 or less)
-    RDY->>AT: check strong at hi M30
-    AT->>ABC: route 2 - rules A, B, C with below M15, step H1
-    ABC-->>AT: A / B / C = 2 or 0
-    AT->>SEQ: route 1 - M15 sideway-ish?
-    AT->>SEQ: M5 midtrend sideway 2+ bars with a quiet slope?
-    AT->>SEQ: M30 band shrinking?
-    SEQ-->>AT: all yes - A, B, C = 2 (log S2seq ... -> S2)
-    AT->>RDY: grades
-    RDY->>NEED: strong 2 needs M5 sideway 2+ bars OR M15 sideway-ish
-    NEED-->>RDY: no - dropped (log NEED)
-    RDY->>G: each rule keeps its highest grade of the bar, ready_strong (log _S2)
+    HIST->>HIST: every bar - g_clsw_m5_run, last 3 values of M15-M30 and M30-H1
+    alt Ready A, M5's highest cluster M30 (≤ 3)
+        RDY->>SET: SL_CLSetStrong(2, lvl15)
+        SET->>AT: SL_CLStrongAt(2)
+    else Ready A, M5 on M15 and M15 on M30 (≤ 5)
+        RDY->>SET: SL_CLSetStrong(1, lvl15)
+        SET->>AT: SL_CLTouch(M15, M30) yes - SL_CLStrongAt(2), log M15 on M30
+    else Ready B, M15 on M30 (≤ 5)
+        RDY->>SET: SL_CLSetStrong(2, -1)
+        SET->>AT: SL_CLStrongAt(2)
+    end
+    AT->>ABC: SL_CLStrongABC(2) - below M15, hi M30, step H1
+    ABC->>ABC: lad - g_clsw.step ≥ 2 (ladder reached M30)
+    ABC->>ABC: pinch - SL_CLGapShrinking(M15-M30) and gap ≤ 2.5
+    ABC->>ABC: bands - SL_CLBandShrink(M30) and SL_CLBandShrink(H1)
+    ABC->>ABC: step_cl - SL_CLGapShrinking(M30-H1), step_band - SL_CLBandShrink(H1)
+    ABC->>ABC: route 2 - rules A, B, C = 2 or 0
+    ABC->>ABC: route 1 (CLSW_S2Seq) - SL_CLSideIsh(M15)?
+    ABC->>M5Q: and M5 sideway 2+ bars with a quiet slope?
+    M5Q-->>ABC: true / false
+    ABC->>ABC: and SL_CLBandShrink(M30)? all yes - 2, 2, 2 (log S2seq ... S2)
+    ABC-->>AT: sa, sb, sc
+    AT->>M1: SL_CLStrongM15H1
+    M1-->>AT: yes - becomes 3
+    AT-->>SET: sa, sb, sc
+    SET->>NEED: via SL_CLStrongNeed - grade 2 needs M5 run ≥ 2 OR SL_CLSideIsh(M15)
+    NEED-->>SET: no - becomes 0 (log NEED)
+    SET->>SET: highest per rule over levels, SL_CLKeep, ready_strong = 2 (log _S2)
 ```
 
 Examples: 11 Feb 11:25–11:40 (route 1: M5 on M30 2.5, run 2–5, M30 shrinking); 13 Feb 11:20 (route 1 via M15 on M30 4.2); 4 Feb 01:10 and 23 Feb 15:15 (route 2); 23 Feb 15:20–15:55 kept by the M5 run while M15 trends up.
@@ -289,25 +317,35 @@ Strong 3 is checked when the Ready is at H1 or M15 sits on H1 (≤ 2), and passe
 
 ```mermaid
 sequenceDiagram
-    autonumber
     participant RDY as SL_CLSW_Ready
-    participant AT as SL_CLStrongAt at H1
+    participant SET as SL_CLSetStrong
+    participant AT as SL_CLStrongAt
     participant ABC as SL_CLStrongABC
     participant M1 as SL_CLStrongM15H1
-    participant NEED as SL_CLStrongNeed
-    participant G as g_clsw
+    participant NEED as SL_CLStrongNeedOK
 
-    Note over RDY,AT: Ready at H1, or M15 clustered with H1 (2 or less)
-    RDY->>AT: check strong at hi H1
-    AT->>ABC: route 1 - rules A, B, C with below M30, step H4
-    ABC-->>AT: A / B / C = 3 or 0
-    Note over AT,M1: route 2 runs at every checked level
-    AT->>M1: H1 flat by diffMid? M15 sideway-ish? M15-H1 gap 1 or less?
-    M1-->>AT: all yes - A, B, C = 3 (log S3m15h1)
-    AT->>RDY: grades
-    RDY->>NEED: strong 3 needs M5 sideway 2+ bars OR M15 sideway-ish
-    NEED-->>RDY: no - dropped (log NEED)
-    RDY->>G: strong_a / b / c, ready_strong = 3 (log _S3)
+    alt Ready A, M5's highest cluster H1 (≤ 4)
+        RDY->>SET: SL_CLSetStrong(3, lvl15)
+    else Ready A, M15 on H1 (≤ 2) above M5's level
+        RDY->>SET: SL_CLSetStrong(lvl, lvl15) - the loop reaches H1
+    else Ready B, M15 on H1 (≤ 2)
+        RDY->>SET: SL_CLSetStrong(3, -1)
+    end
+    SET->>AT: SL_CLStrongAt(3)
+    AT->>ABC: route 1 - SL_CLStrongABC(3) - below M30, hi H1, step H4
+    ABC->>ABC: lad - g_clsw.step ≥ 3 (ladder reached H1)
+    ABC->>ABC: pinch - SL_CLGapShrinking(M30-H1) and gap ≤ 2
+    ABC->>ABC: bands - SL_CLBandShrink(H1) and SL_CLBandShrink(H4)
+    ABC->>ABC: step_cl - SL_CLGapShrinking(H1-H4), step_band - SL_CLBandShrink(H4)
+    ABC-->>AT: rules A, B, C = 3 or 0 (log S3:H1)
+    Note over AT,M1: route 2 runs inside SL_CLStrongAt at EVERY level, so a Ready at M15 or M30 can also give strong 3
+    AT->>M1: route 2 - SL_CLStrongM15H1
+    M1->>M1: SL_CLFlat(H1), M15 SL_CLSw or SL_CLFlat or SL_CLSideIsh, gap M15-H1 ≤ 1
+    M1-->>AT: all yes - 3, 3, 3 (log S3m15h1)
+    AT-->>SET: sa, sb, sc
+    SET->>NEED: via SL_CLStrongNeed - grade 3 needs M5 run ≥ 2 OR SL_CLSideIsh(M15)
+    NEED-->>SET: no - becomes 0 (log NEED)
+    SET->>SET: highest per rule over levels, SL_CLKeep, ready_strong = 3 (log _S3)
 ```
 
 Examples: 2 Feb 23:20 (route 2: H1 diffMid −1.53 after −6.36, M15–H1 0.0, M30 still 29 away); 3 Feb 01:15 keeps it. Strong 3 is the second-noisiest grade (68 % inside your sideways).
@@ -326,23 +364,34 @@ Strong 4 is a Ready at H4 judged by the squeeze under it: H1–H4 has no CL\_SW,
 
 ```mermaid
 sequenceDiagram
-    autonumber
     participant RDY as SL_CLSW_Ready
+    participant SET as SL_CLSetStrong
     participant AT as SL_CLStrongAt
-    participant H1 as H1 checks (strong 3 routes)
-    participant NEED as SL_CLStrongNeed
-    participant G as g_clsw
+    participant ABC as SL_CLStrongABC
+    participant M1 as SL_CLStrongM15H1
+    participant NEED as SL_CLStrongNeedOK
 
-    Note over RDY,AT: Ready at H4 - M5-H4 3.1 or less, or M15-H4 1 or less
-    RDY->>AT: check strong at H4
-    AT->>AT: CLSW_StrongH4Fall off - no strong 4
-    AT->>H1: judge the squeeze under H4 with the H1 checks (log hi H4 -> H1 checks)
-    H1-->>AT: rules A / B / C at H1, or M15 on H1 - grade 3 or 0
+    alt Ready A, M5 on H4 (≤ 3.1)
+        RDY->>SET: SL_CLSetStrong(4, lvl15)
+    else Ready A, M15 on H4 (≤ 1) above M5's level
+        RDY->>SET: SL_CLSetStrong(lvl, 4) - the loop reaches H4
+    else Ready B, M15 on H4 (≤ 1)
+        RDY->>SET: SL_CLSetStrong(4, -1)
+    end
+    SET->>AT: SL_CLStrongAt(4)
+    alt CLSW_StrongH4Fall off
+        AT-->>SET: 0, 0, 0 - no strong 4
+    end
+    AT->>AT: lvl = 3 (log hi H4 to H1 checks)
+    AT->>ABC: SL_CLStrongABC(3) - same checks as strong 3 route 1
+    ABC-->>AT: 3 or 0 per rule
+    AT->>M1: SL_CLStrongM15H1 - same as strong 3 route 2
+    M1-->>AT: yes - 3, 3, 3
     AT->>AT: every non-zero grade becomes 4
-    AT->>RDY: grades
-    RDY->>NEED: strong 4 needs M15 sideway-ish on this bar
-    NEED-->>RDY: no - dropped (log NEED)
-    RDY->>G: strong_a / b / c, ready_strong = 4 (log _S4)
+    AT-->>SET: sa, sb, sc
+    SET->>NEED: via SL_CLStrongNeed - grade 4 needs SL_CLSideIsh(M15)
+    NEED-->>SET: no - becomes 0 (log NEED)
+    SET->>SET: highest per rule over levels, SL_CLKeep, ready_strong = 4 (log _S4)
 ```
 
 Example: 27 Feb from 13:50 (M5 on H4, M30–H1 1.1 and closing, H1 and H4 bands shrinking, M15 sideway-ish from 13:50) → breakout 14:45. Strong 4 is the weakest grade: 17 bars, mostly 26 Feb, outside your sideways.
@@ -392,6 +441,272 @@ sequenceDiagram
     end
     DR->>G: after the log - a rule's kept grade changed?
     DR->>DR: draw A n, B n, C n labels above the M5 band
+```
+
+## Strong call chain
+
+How the strong functions call each other on one M5 bar. The first diagram is the whole chain; the next six open one function each. A solid arrow is a call or a check, a dashed arrow is what comes back.
+
+| Function | Called by | Calls | Returns |
+| --- | --- | --- | --- |
+| SL\_CLSetStrong | SL\_CLSW\_Ready (Ready A / B) | SL\_CLStrongAt, SL\_CLStrongNeed, SL\_CLTouch, SL\_CLKeep | nothing; writes strong\_a / b / c, ready\_strong, g\_clsw\_strong\_now |
+| SL\_CLStrongAt | SL\_CLSetStrong | SL\_CLStrongABC, SL\_CLStrongM15H1 | sa, sb, sc at one level (H4 → H1 checks, relabelled 4) |
+| SL\_CLStrongABC | SL\_CLStrongAt | SL\_CLGapShrinking, SL\_CLBandShrink, SL\_CLSw, SL\_CLSideIsh, SL\_CLM5QuietSw | sa, sb, sc = 0 or the grade (S1 sequence, rules A / B / C, S2 sequence) |
+| SL\_CLStrongM15H1 | SL\_CLStrongAt (every level) | SL\_CLFlat, SL\_CLSw, SL\_CLSideIsh | true → all three rules = 3 |
+| SL\_CLStrongNeed / SL\_CLStrongNeedOK | SL\_CLSetStrong (per level) | SL\_CLSideIsh (→ SL\_CLFlat, SL\_CLSw), SL\_CLSw | grades that lack their need set to 0 |
+| SL\_CLM5QuietSw | SL\_CLStrongABC (strong 2 sequence) | SL\_CLSw; reads g\_clsw\_m5\_run from SL\_CLUpdateHist | true when M5 is sideway 2+ bars with a quiet slope, plus d0 |
+
+### Whole chain
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant TYP as SL_CLSW_Type
+    participant RDY as SL_CLSW_Ready
+    participant SET as SL_CLSetStrong
+    participant AT as SL_CLStrongAt
+    participant ABC as SL_CLStrongABC
+    participant M5Q as SL_CLM5QuietSw
+    participant M1 as SL_CLStrongM15H1
+    participant NEED as SL_CLStrongNeed
+    participant OK as SL_CLStrongNeedOK
+    participant KP as SL_CLKeep
+
+    Note over TYP: earlier on the same bar, gate open
+    TYP->>TYP: SL_CLLadder - g_clsw.step
+    TYP->>TYP: SL_CLS1Track - g_clsw_s1_m15shr, g_clsw_s1_close
+    RDY->>RDY: SL_CLM5Cluster - lvl, SL_CLM15Cluster - lvl15
+    alt Ready A
+        RDY->>SET: SL_CLSetStrong(lvl, lvl15)
+    else Ready B
+        RDY->>SET: SL_CLSetStrong(lvl15, -1)
+    end
+    SET->>AT: SL_CLStrongAt(lvl)
+    AT->>ABC: SL_CLStrongABC(lvl, or 3 when lvl is H4)
+    opt lvl = 2 (M30), strong 2 sequence
+        ABC->>M5Q: M5 quiet sideway?
+        M5Q-->>ABC: true / false
+    end
+    ABC-->>AT: sa, sb, sc
+    AT->>M1: SL_CLStrongM15H1 (at every level)
+    M1-->>AT: true - all three = 3
+    AT-->>SET: sa, sb, sc (non-zero becomes 4 when lvl is H4)
+    SET->>NEED: SL_CLStrongNeed(sa, sb, sc)
+    loop each non-zero grade
+        NEED->>OK: SL_CLStrongNeedOK(grade)
+        OK-->>NEED: true keeps it, false sets it to 0
+    end
+    loop every TF from lvl+1 to lvl2 that M15 touches
+        SET->>AT: SL_CLStrongAt(tf) - same path as above
+        SET->>NEED: SL_CLStrongNeed - same as above
+        SET->>SET: each rule keeps the higher grade
+    end
+    SET->>KP: SL_CLKeep for strong_a, strong_b, strong_c, ready_strong
+    KP-->>SET: kept grade
+```
+
+### SL\_CLSetStrong
+
+The top of the chain. It grades the Ready level, then every higher TF that M15 is clustered with, keeps the highest grade per rule, and writes the kept grades.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant RDY as SL_CLSW_Ready
+    participant SET as SL_CLSetStrong
+    participant AT as SL_CLStrongAt
+    participant NEED as SL_CLStrongNeed
+    participant TCH as SL_CLTouch
+    participant KP as SL_CLKeep
+    participant G as g_clsw
+
+    RDY->>SET: (lvl, lvl2, only1 = false)
+    SET->>AT: SL_CLStrongAt(lvl)
+    AT-->>SET: sa, sb, sc
+    SET->>NEED: SL_CLStrongNeed(sa, sb, sc)
+    NEED-->>SET: a grade that lacks its need becomes 0
+    opt lvl2 above lvl (Ready A only)
+        loop tf = lvl+1 to lvl2
+            SET->>TCH: gap M15-tf within CL_SW? (M30 5, H1 2, H4 1)
+            alt no
+                TCH-->>SET: skip this tf
+            else yes
+                SET->>AT: SL_CLStrongAt(tf) - log M15 on tf
+                AT-->>SET: ta, tb, tc
+                SET->>NEED: SL_CLStrongNeed(ta, tb, tc)
+                SET->>SET: sa = max(sa, ta), sb = max(sb, tb), sc = max(sc, tc)
+            end
+        end
+    end
+    opt only1 (no-Ready bars, CLSW_StrongNoReady 1)
+        SET->>SET: any grade other than 1 becomes 0
+    end
+    SET->>G: any grade non-zero - g_clsw_strong_now = true
+    SET->>KP: strong_a, strong_b, strong_c = SL_CLKeep(old, new)
+    SET->>SET: grade = sa, sb or sc by CLSW_StrongMode (0 A, 1 B, 2 C)
+    alt grade 0
+        SET-->>RDY: return, ready_strong kept
+    else grade 1 to 4
+        SET->>KP: SL_CLKeep(ready_strong, grade)
+        KP-->>SET: latest (CLSW_StrongKeep 0) or higher TF (1)
+        SET->>G: ready_strong, ready_strong_t (log _S grade)
+    end
+```
+
+### SL\_CLStrongAt
+
+Grades one level. H4 has no level above it to squeeze into, so it borrows the H1 checks and relabels the result 4. The M15-on-H1 route runs after rules A / B / C at every level, and wins.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant SET as SL_CLSetStrong
+    participant AT as SL_CLStrongAt
+    participant ABC as SL_CLStrongABC
+    participant M1 as SL_CLStrongM15H1
+
+    SET->>AT: (lvl)
+    AT->>AT: sa = sb = sc = 0
+    alt lvl = 4 (H4) and CLSW_StrongH4Fall off
+        AT-->>SET: return 0, 0, 0
+    else lvl = 4 and CLSW_StrongH4Fall on
+        AT->>AT: lvl = 3 (log hi H4 to H1 checks)
+    end
+    AT->>ABC: SL_CLStrongABC(lvl)
+    ABC-->>AT: sa, sb, sc (each 0 or lvl)
+    AT->>M1: SL_CLStrongM15H1()
+    M1-->>AT: true - sa = sb = sc = 3 (wins over 1 or 2)
+    opt lvl was 4
+        AT->>AT: each non-zero grade becomes 4
+    end
+    AT-->>SET: sa, sb, sc
+```
+
+### SL\_CLStrongABC
+
+Works out the shared parts (lad, pinch, bands, step\_cl, step\_band, wait), then takes one of two paths: the strong 1 sequence at M15, or rules A / B / C at M30 and H1 with the strong 2 sequence added at M30. The strong 1 path checks M5's quiet slope inline; it does not call SL\_CLM5QuietSw.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant AT as SL_CLStrongAt
+    participant ABC as SL_CLStrongABC
+    participant GS as SL_CLGapShrinking
+    participant BS as SL_CLBandShrink
+    participant M5Q as SL_CLM5QuietSw
+    participant SI as SL_CLSideIsh
+
+    AT->>ABC: (lvl) - hi = lvl, below = lvl-1, step = lvl+1
+    alt lvl not 1 to 3
+        ABC-->>AT: 0, 0, 0
+    end
+    ABC->>ABC: lad = g_clsw.step ≥ lvl
+    ABC->>GS: gap (below, hi) closing?
+    ABC->>ABC: pinch = closing and gap (below, hi) ≤ half CL_SW
+    ABC->>BS: hi band shrinking? step band shrinking?
+    ABC->>ABC: bands = both shrinking
+    ABC->>GS: gap (hi, step) closing? - step_cl
+    ABC->>BS: step band shrinking? - step_band
+    ABC->>ABC: wait = CLSW_StrongWait1 and lvl 1 and step_cl and step_band
+    alt lvl 1 and CLSW_S1Seq on
+        ABC->>ABC: m5sw = SL_CLSw(M5) and g_clsw_m5_run ≥ 2
+        ABC->>ABC: m5q = abs M5 diffMid ≤ 0.33 or smaller than last bar
+        ABC->>BS: M30 band shrinking? - m30shr
+        ABC->>ABC: ok = m15shr and close and m5sw and m5q and m30shr and not wait
+        ABC-->>AT: ok - 1, 1, 1, else 0, 0, 0 (log S1seq) and return
+    else lvl 2 or 3 (or lvl 1 with CLSW_S1Seq off)
+        ABC->>ABC: A = lad and pinch and bands
+        ABC->>ABC: unless wait - sa = A, sb = A or (lad and step_cl), sc = A or (lad and step_cl and step_band)
+        opt lvl 2 and CLSW_S2Seq on
+            ABC->>SI: M15 sideway-ish?
+            ABC->>M5Q: M5 quiet sideway?
+            ABC->>BS: M30 band shrinking?
+            ABC->>ABC: all three - sa = sb = sc = 2 (log S2seq)
+        end
+        ABC-->>AT: sa, sb, sc (log lad pinch bands step stepBand)
+    end
+```
+
+### SL\_CLStrongM15H1
+
+Strong 3 through M15: H1 has gone flat and M15 sits on the H1 midline, even while M30 is still trending away.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant AT as SL_CLStrongAt
+    participant M1 as SL_CLStrongM15H1
+    participant FL as SL_CLFlat
+    participant SW as SL_CLSw
+    participant SI as SL_CLSideIsh
+
+    AT->>M1: ()
+    alt CLSW_StrongM15H1 off
+        M1-->>AT: false
+    end
+    M1->>FL: H1 flat by diffMid? - h1f
+    M1->>SW: M15 midtrend sideway (dmtsw ≥ 3)?
+    M1->>FL: or M15 flat by diffMid?
+    M1->>SI: or M15 sideway-ish? - m15s
+    M1->>M1: near = gap M15-H1 between 0 and 1 (half of CL_SW 2)
+    M1->>M1: log S3m15h1 H1flat, M15, gap
+    M1-->>AT: h1f and m15s and near
+```
+
+### SL\_CLStrongNeed and SL\_CLStrongNeedOK
+
+The per-grade need, applied to each level before the levels are combined. SL\_CLStrongNeed loops over the three rules; SL\_CLStrongNeedOK answers for one grade.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant SET as SL_CLSetStrong
+    participant NEED as SL_CLStrongNeed
+    participant OK as SL_CLStrongNeedOK
+    participant SI as SL_CLSideIsh
+    participant FL as SL_CLFlat
+    participant SW as SL_CLSw
+
+    SET->>NEED: (a, b, c)
+    loop each of a, b, c above 0
+        NEED->>OK: (grade g)
+        alt CLSW_StrongNeedM15 off
+            OK-->>NEED: true
+        end
+        OK->>SI: M15 sideway-ish?
+        SI->>FL: M15 flat by diffMid? (CLSW_FlatDiffMid)
+        SI->>SW: or M15 dmtsw ≥ 3, or M15 dmt 4 / 5
+        SI-->>OK: m15
+        OK->>SW: M5 dmtsw ≥ 3 and g_clsw_m5_run ≥ 2? - m5
+        alt g = 1 or 4
+            OK-->>NEED: m15
+        else g = 2 or 3
+            OK-->>NEED: m5 or m15
+        end
+        NEED->>NEED: false - that grade becomes 0
+    end
+    NEED-->>SET: a, b, c (log NEED ... dropped if any became 0)
+```
+
+### SL\_CLM5QuietSw
+
+M5 sideway for 2+ bars in a row with its slope going quiet. Only the strong 2 sequence calls it; the strong 1 path runs the same test inline.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant HIST as SL_CLUpdateHist
+    participant ABC as SL_CLStrongABC
+    participant M5Q as SL_CLM5QuietSw
+    participant SW as SL_CLSw
+
+    HIST->>HIST: earlier on the bar - g_clsw_m5_run = M5 sideway bars in a row
+    ABC->>M5Q: (d0 by reference) - strong 2 sequence
+    M5Q->>M5Q: d0 = abs M5 diffMid this bar, d1 = last bar
+    M5Q->>SW: M5 dmtsw ≥ 3?
+    M5Q->>M5Q: sw = that and g_clsw_m5_run ≥ CLSW_S1M5Run (2)
+    M5Q->>M5Q: q = CLSW_S1M5Quiet off, or d0 ≤ 0.33, or d0 smaller than d1
+    M5Q-->>ABC: sw and q, plus d0 for the log
 ```
 
 ## February replay
