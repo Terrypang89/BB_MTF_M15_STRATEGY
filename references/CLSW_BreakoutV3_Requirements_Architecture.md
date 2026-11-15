@@ -739,6 +739,193 @@ With all V3 defaults (rule C), strong fires on 290 Ready bars, 84 % of them insi
 
 Known leftovers: 26 Feb 07:05 comes back as strong 3 (M5 sideway, outside your sideways); 26 Feb 14:35–16:05 strong 4 (outside). Replay limits: values come from your log lines (completed bars for M15 and above), so the EA can move by a bar.
 
+## Breakout trade (M5)
+
+Once a strong fires, V3 trades the M5 midtrend until the M30 band starts widening; on the Feb replay this made +237 pts over 78 trades with a max drawdown of 70. The module is section 13 of `SL_MidCluster_Breakout_V3.mqh` (`SL_BRK_Step`), runs once per new M5 bar right after `SL_CLSW_Ready`, and is virtual: it draws and logs but sends no orders.
+
+| State | Enters when | What it does |
+| --- | --- | --- |
+| IDLE | start, or after END | nothing; clears `wait_reset` when strong is off |
+| ARMED | strong is on (`gate > 0` and `ready_strong > 0`) and `wait_reset` is false | follows the closed M5 midtrend; gate and swsl are ignored from here |
+| END | first M5 bar of a new M30 bar after the arm bar, M30 `diffBBW > 0` | closes the trade, sets `wait_reset`, back to IDLE |
+
+**Rules while ARMED** (closed M5 bar, `BB_diffMid_Trend[LA_1]`):
+
+| M5 midtrend | Action |
+| --- | --- |
+| 1 (or 5 when `BRK_WeakCodes`) | close a sell, open or keep a buy |
+| 2 (or 4 when `BRK_WeakCodes`) | close a buy, open or keep a sell |
+| 3 | do nothing |
+
+**Re-arm:** after END, a new window needs strong to switch off, then on again; re-arming at once while strong stays on cost about 85 pts in the replay.
+
+**February replay** (V38.35.18 log, 952 labelled bars, 0.3 per entry, no stops):
+
+| END rule | Codes | Trades | Win | PnL | Max DD | Inside labels | Outside |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `diffBBW > 0` (EndMode 1, default) | 1/5 buy, 2/4 sell | 78 | 53.8% | +237.1 | 70.3 | −32.4 | +269.4 |
+| `diffBBW > 0` (EndMode 1) | 1 buy, 2 sell | 38 | 57.9% | +226.0 | 49.9 | +16.3 | +209.7 |
+| stage 511/512/521/522 and `diffBBW > 0` (EndMode 0) | 1/5 buy, 2/4 sell | 93 | 47.3% | +189.3 | 192.1 | −181.1 | +370.4 |
+| stage 511/512/521/522 and `diffBBW > 0` (EndMode 0) | 1 buy, 2 sell | 47 | 55.3% | +262.7 | 97.7 | −60.6 | +323.3 |
+
+The stage-free END wins on drawdown because it closes the window before most of the in-range flips; 38 to 93 trades in one month is a small sample, so check another month before trusting the numbers.
+
+### Breakout trade flow
+
+Three states; END is the only way out of ARMED, and only a fresh strong re-arms.
+
+```mermaid
+stateDiagram-v2
+    [*] --> IDLE
+
+    IDLE --> IDLE : strong OFF / wait_reset = false
+    IDLE --> ARMED : strong ON (gate > 0, ready_strong > 0) and not wait_reset / arm_t = this bar, arm_g = grade
+
+    state ARMED {
+        [*] --> FLAT
+        FLAT --> LONG : M5 midtrend 1 (or 5) / open BUY
+        FLAT --> SHORT : M5 midtrend 2 (or 4) / open SELL
+        LONG --> SHORT : M5 midtrend 2 (or 4) / close BUY, open SELL
+        SHORT --> LONG : M5 midtrend 1 (or 5) / close SELL, open BUY
+        LONG --> LONG : midtrend 3 / hold
+        SHORT --> SHORT : midtrend 3 / hold
+        FLAT --> FLAT : midtrend 3 / wait
+    }
+
+    ARMED --> END : new M30 bar after arm_t and M30 diffBBW > 0 (EndMode 1), or stage 511/512/521/522 and diffBBW > 0 (EndMode 0)
+    note right of ARMED
+        gate closing or swsl < 0
+        does NOT end the window
+    end note
+
+    END --> IDLE : close open trade, draw window box, wait_reset = true
+```
+
+### Breakout trade sequence
+
+**One M5 bar.** `SL_BRK_Step` runs between Ready and the log, so the `[CLSW2]` line already carries this bar's `brk:` field.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant EA as EA OnTick
+    participant MCB as SL_MidCluster_Breakout
+    participant RDY as SL_CLSW_Type / Ready
+    participant BRK as SL_BRK_Step
+    participant M30 as BB_datas[2] (M30)
+    participant M5 as BB_datas[0] (M5)
+    participant LOG as SL_CLLog / draw
+
+    EA->>MCB: every tick
+    alt not a new M5 bar
+        MCB-->>EA: return
+    end
+    MCB->>RDY: gaps, history, gate, candidates, Ready, strong
+    RDY-->>MCB: g_clsw.gate, g_clsw.ready_strong
+    MCB->>BRK: SL_BRK_Step(BB_datas)
+    BRK->>BRK: clear g_brk_ev, px = M5 close of bar 0, strong_on = gate > 0 and ready_strong > 0
+    opt strong_on is false
+        BRK->>BRK: wait_reset = false
+    end
+    alt not armed
+        alt strong_on and not wait_reset
+            BRK->>BRK: ARMED, arm_t = now, arm_g = ready_strong, ev += ARMg, draw ARMg
+        else
+            BRK-->>MCB: return (idle or waiting)
+        end
+    end
+    BRK->>BRK: widen window box with bar high / low
+    opt first M5 bar of a new M30 bar and now > arm_t
+        BRK->>M30: BBW_stage[LA], BB_diffBBW[LA]
+        M30-->>BRK: stage, diffBBW
+        alt diffBBW > 0 and (EndMode 1 or stage 511/512/521/522)
+            BRK->>BRK: close trade (CE pnl), win_n++, draw window box
+            BRK->>BRK: armed = false, wait_reset = true, ev += END stage/bbw
+            BRK-->>MCB: return
+        end
+    end
+    BRK->>M5: BB_diffMid_Trend[LA_1] (closed bar)
+    M5-->>BRK: k
+    alt k = 1 (or 5 with BRK_WeakCodes)
+        BRK->>BRK: if short: close (CF pnl), if not long: open BUY (OB px)
+    else k = 2 (or 4 with BRK_WeakCodes)
+        BRK->>BRK: if long: close (CF pnl), if not short: open SELL (OS px)
+    else k = 3
+        BRK->>BRK: do nothing
+    end
+    BRK-->>MCB: done
+    MCB->>LOG: one [CLSW2] line, ends with brk:state{events}=cum/n/win%/dd/w
+    LOG-->>EA: chart marks (Ready circles, A/B/C, ARM, trades, box)
+```
+
+**One whole window.** A typical run from strong to the next arm: the gate closing mid-window changes nothing, and only a fresh strong opens the next window.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant CL as CLSW (gate, strong)
+    participant BRK as Breakout module
+    participant M5 as M5 midtrend (closed bar)
+    participant M30 as M30 band (new M30 bar)
+
+    Note over CL,M30: range forming, module IDLE
+    CL->>BRK: strong fires (ready_strong = 2), gate open
+    BRK->>BRK: ARM2, window opens
+    M5->>BRK: 3
+    BRK->>BRK: stay flat
+    M5->>BRK: 1
+    BRK->>BRK: open BUY
+    M30->>BRK: new bar, diffBBW <= 0
+    BRK->>BRK: keep window open
+    M5->>BRK: 3
+    BRK->>BRK: hold BUY
+    M5->>BRK: 2
+    BRK->>BRK: close BUY (CF), open SELL
+    CL->>BRK: gate closes (swsl < 0)
+    BRK->>BRK: ignored, keep SELL
+    M5->>BRK: 1
+    BRK->>BRK: close SELL (CF), open BUY
+    M30->>BRK: new bar, diffBBW > 0
+    BRK->>BRK: close BUY (CE), draw window box, END
+    BRK->>BRK: wait_reset = true
+    CL->>BRK: strong still on
+    BRK->>BRK: no re-arm while waiting
+    CL->>BRK: gate resets, strong OFF
+    BRK->>BRK: wait_reset = false, IDLE
+    CL->>BRK: next strong fires
+    BRK->>BRK: ARM again, new window
+```
+
+### Breakout trade inputs, log and chart
+
+The defaults reproduce the best Feb row (EndMode 1, your codes).
+
+| Input | Default | Meaning |
+| --- | --- | --- |
+| `BRK_Enable` | true | run the module |
+| `BRK_EndMode` | 1 | 1 = END on M30 `diffBBW > 0` · 0 = stage 511/512/521/522 and `diffBBW > 0` |
+| `BRK_WeakCodes` | true | true = buy 1/5, sell 2/4 · false = buy 1, sell 2 only |
+| `BRK_Spread` | 0.3 | virtual cost per entry, price units |
+| `BRK_Draw` | true | draw ARM, trades and the window box |
+| `BRK_Log` | true | add the `brk:` field to `[CLSW2]` |
+
+**`brk:` field in `[CLSW2]`** (no separate log lines; totals only on bars with an event):
+
+| Value | Meaning |
+| --- | --- |
+| `brk:-` | idle |
+| `brk:W` | window ended, waiting for strong OFF |
+| `brk:A2B` | armed on strong 2, holding a buy (`S` sell, `-` flat) |
+| `{ARM2}` | window opened on strong 2 |
+| `{OB5023.41}` / `{OS…}` | opened a buy / sell at that price |
+| `{CF-1.2}` / `{CE+3.4}` | closed by FLIP / END, that trade's pnl |
+| `{END512/3.4}` | window ended, M30 stage 512, diffBBW 3.4 |
+| `=+14.6/9/56%/dd4.1/w3` | cum pnl / trades / win rate / max drawdown / windows |
+
+**Chart marks:** orange `ARM1`–`ARM4` above the M5 band where a window opens; blue buy and red sell arrows at entries; a green or red line from entry to exit with the pnl beside it; a dotted orange box over the whole window, its tooltip giving the M30 stage and diffBBW at END.
+
+**Hook for real orders:** `SL_BRK_Pos()` returns +1 / −1 / 0 and `SL_BRK_Armed()` the window state; nothing in the EA reads them yet.
+
 ## Code map
 
 `SL_MidCluster_Breakout_V3.mqh` has the same entry call as V1 / V2 (`SL_CLSW_Reset()` in OnInit, `SL_MidCluster_Breakout(BB_datas, g_tradectx)` on tick); include only one of V1, V2, V3.
